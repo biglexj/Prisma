@@ -12,8 +12,7 @@ export type AppView =
   | "videos"
   | "settings"
   | "favorites"
-  | "playlists"
-  | "history";
+  | "playlists";
 
 interface AppSidebarProps {
   activeView: AppView;
@@ -43,7 +42,6 @@ const libraryItems: SidebarItem[] = [
 const collectionItems: SidebarItem[] = [
   { icon: "heart", label: "Favoritos", view: "favorites" },
   { icon: "list-music", label: "Listas de reproducción", view: "playlists" },
-  { icon: "history", label: "Historial", view: "history" },
 ];
 
 export function AppSidebar({ activeView, backend, enabled, onNavigate }: AppSidebarProps) {

@@ -708,8 +708,8 @@
   max-width: 15px !important;
   max-height: 15px !important;
   flex-shrink: 0;
-  margin-left: 4px !important; /* Desplaza el conjunto 4px hacia la derecha */
-  margin-right: 5px !important; /* Espaciado compacto y ceñido con el texto */
+  margin-left: 6px !important; /* Desplaza el conjunto 6px hacia la derecha */
+  margin-right: 6px !important; /* Espaciado compacto y ceñido con el texto */
 }
 
 .video-audio-option span {

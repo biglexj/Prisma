@@ -42,11 +42,9 @@ export function usePlaylists() {
   }, []);
 
   useEffect(() => {
-    // Si ya tenemos caché en memoria, no mostramos pantalla de carga; refrescamos en segundo plano
+    // Si no hay listas en caché, cargamos inicialmente
     if (cachedPlaylists === null) {
       void refresh(true);
-    } else {
-      void refresh(false);
     }
   }, [refresh]);
 

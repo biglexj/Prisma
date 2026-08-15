@@ -265,9 +265,6 @@ export function ImageViewer({
           <h2 className="image-viewer-title" title={currentItem.title}>
             {currentItem.title}
           </h2>
-          <span className="image-viewer-subtitle" title={cleanPath(currentItem.path)}>
-            {cleanPath(currentItem.path)}
-          </span>
         </div>
 
         <div className="image-viewer-top-right">

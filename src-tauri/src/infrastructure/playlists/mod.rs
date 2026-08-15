@@ -340,6 +340,64 @@ pub fn scan_playlists_recursive(folder: &Path, max_depth: usize) -> Vec<Playlist
     result
 }
 
+fn quick_scan_playlist_meta(path: &Path) -> (usize, usize, usize, usize, String) {
+    let Ok(raw_bytes) = std::fs::read(path) else {
+        return (0, 0, 0, 0, "music".to_owned());
+    };
+    let content = decode_text_auto(&raw_bytes);
+    let mut count: usize = 0;
+    let mut video_count: usize = 0;
+
+    let is_xspf = content.contains("<track>");
+    if is_xspf {
+        for block in content.split("</track>") {
+            if block.contains("<location>") {
+                count += 1;
+                let lower = block.to_lowercase();
+                if VIDEO_EXTENSIONS.iter().any(|ext| lower.contains(&format!(".{ext}"))) {
+                    video_count += 1;
+                }
+            }
+        }
+    } else {
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            count += 1;
+            let lower = line.to_lowercase();
+            if VIDEO_EXTENSIONS.iter().any(|ext| {
+                lower.ends_with(ext) || lower.contains(&format!(".{ext}?")) || lower.contains(&format!(".{ext}#"))
+            }) {
+                video_count += 1;
+            }
+        }
+    }
+
+    let audios = count.saturating_sub(video_count);
+    let kind = if video_count > 0 && audios == 0 {
+        "video"
+    } else if audios > 0 && video_count == 0 {
+        "music"
+    } else if video_count > 0 && audios > 0 {
+        if video_count >= audios {
+            "video"
+        } else {
+            "music"
+        }
+    } else {
+        let lower = path.to_string_lossy().to_lowercase();
+        if lower.contains("vídeos") || lower.contains("videos") {
+            "video"
+        } else {
+            "music"
+        }
+    };
+
+    (count, count, video_count, audios, kind.to_owned())
+}
+
 fn scan_playlists_internal(folder: &Path, current_depth: usize, max_depth: usize, out: &mut Vec<PlaylistMeta>) {
     if current_depth > max_depth {
         return;
@@ -380,30 +438,8 @@ fn scan_playlists_internal(folder: &Path, current_depth: usize, max_depth: usize
             .map(|d| d.as_secs())
             .unwrap_or(0);
 
-        // Parsear para obtener conteo exacto, disponibilidad real y tipo de medio
-        let (item_count, valid_count, video_count, audio_count, media_kind) = if let Ok(items) = parse_playlist(&path) {
-            let total = items.len();
-            let valid = items.iter().filter(|it| it.is_available).count();
-            let videos = items.iter().filter(|it| it.is_video).count();
-            let audios = total.saturating_sub(videos);
-            let kind = if videos > 0 && audios == 0 {
-                "video"
-            } else if audios > 0 && videos == 0 {
-                "music"
-            } else if videos > 0 && audios > 0 {
-                if videos >= audios { "video" } else { "music" }
-            } else {
-                let lower = path.to_string_lossy().to_lowercase();
-                if lower.contains("v\u{ed}deos") || lower.contains("videos") {
-                    "video"
-                } else {
-                    "music"
-                }
-            };
-            (total, valid, videos, audios, kind.to_owned())
-        } else {
-            (0, 0, 0, 0, "music".to_owned())
-        };
+        // Conteo y detección ligera en memoria sin I/O bloqueante por archivo
+        let (item_count, valid_count, video_count, audio_count, media_kind) = quick_scan_playlist_meta(&path);
 
         out.push(PlaylistMeta {
             name,

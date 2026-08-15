@@ -18,7 +18,6 @@ import { LibrarySources } from "./ui/LibrarySources";
 import { parseTrackInfo } from "../features/music_library/model/trackInfo";
 import { FavoritesView } from "../features/collections/ui/FavoritesView";
 import { PlaylistsView } from "../features/collections/ui/PlaylistsView";
-import { HistoryView } from "../features/collections/ui/HistoryView";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
 import "../features/visual_library/ui/video-player.css";
@@ -34,7 +33,6 @@ const VIEW_TITLES: Record<AppView, string> = {
   settings: "Configuración",
   favorites: "Favoritos",
   playlists: "Listas de reproducción",
-  history: "Historial",
 };
 
 export function App() {
@@ -287,7 +285,6 @@ export function App() {
               onPlayVideo={playVideoItem}
             />
           ) : null}
-          {activeView === "history" ? <HistoryView /> : null}
         </main>
       </div>
     </div>

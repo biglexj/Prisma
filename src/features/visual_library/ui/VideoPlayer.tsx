@@ -654,11 +654,6 @@ export function VideoPlayer({
           <h2 className="video-player-title" title={title}>
             {title}
           </h2>
-          {path ? (
-            <span className="video-player-subtitle" title={path}>
-              {cleanPath(path)}
-            </span>
-          ) : null}
         </div>
 
         <div className="video-header-right">

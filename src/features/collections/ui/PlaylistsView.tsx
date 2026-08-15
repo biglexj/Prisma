@@ -72,12 +72,7 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
     return nonHidden;
   }, [playlists, activeFilter]);
 
-  // Auto-seleccionar la primera lista visible si ninguna está seleccionada
-  useEffect(() => {
-    if (displayedPlaylists.length > 0 && !selectedPlaylist) {
-      void selectPlaylist(displayedPlaylists[0]);
-    }
-  }, [displayedPlaylists, selectedPlaylist, selectPlaylist]);
+
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -422,7 +417,13 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
                   selectedPlaylist?.path === playlist.path ? "is-selected" : ""
                 }`}
                 key={playlist.path}
-                onClick={() => selectPlaylist(playlist)}
+                onClick={() => {
+                  if (selectedPlaylist?.path === playlist.path) {
+                    selectPlaylist(null);
+                  } else {
+                    selectPlaylist(playlist);
+                  }
+                }}
               >
                 <div className="playlist-card-cover">
                   <Icon name={isVideoPlaylist ? "video" : "list-music"} />
@@ -533,6 +534,13 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
                 disabled={selectedItems.length === 0}
               >
                 <Icon name="play" /> Reproducir todo
+              </button>
+              <button
+                className="icon-button"
+                onClick={() => selectPlaylist(null)}
+                title="Cerrar detalle de lista"
+              >
+                <Icon name="close" />
               </button>
               <button
                 className="icon-button"
