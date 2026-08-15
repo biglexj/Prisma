@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTheme } from "./useTheme";
 import "../features/music_library/ui/music-library.css";
+import "../features/visual_library/ui/visual-library.css";
+import "../features/visual_library/ui/video-player.css";
 import { HomeDashboard } from "../features/home/ui/HomeDashboard";
 import { useMusicLibrary } from "../features/music_library/useMusicLibrary";
 import { usePlaybackController } from "../features/playback/usePlaybackController";
