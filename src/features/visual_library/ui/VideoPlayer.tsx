@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { formatTime, mediaTitle } from "../../playback/ui/formatters";
 import { Icon } from "../../../shared/ui/Icon";
 import { cleanPath, toPlatformPath } from "../../../shared/mediaTree";
@@ -254,12 +255,33 @@ export function VideoPlayer({
     }
   };
 
+  const handleBack = async () => {
+    if (document.pictureInPictureElement) {
+      try {
+        await document.exitPictureInPicture();
+      } catch {}
+    }
+    onBack();
+  };
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const onEnter = () => setIsPipActive(true);
-    const onLeave = () => setIsPipActive(false);
+    const onEnter = () => {
+      setIsPipActive(true);
+    };
+
+    const onLeave = () => {
+      setIsPipActive(false);
+      try {
+        const appWindow = getCurrentWindow();
+        void appWindow.unminimize();
+        void appWindow.setFocus();
+      } catch (e) {
+        console.warn("No se pudo re-enfocar la ventana tras salir de PiP:", e);
+      }
+    };
 
     video.addEventListener("enterpictureinpicture", onEnter);
     video.addEventListener("leavepictureinpicture", onLeave);
@@ -516,7 +538,7 @@ export function VideoPlayer({
           } else if (isFullscreen) {
             toggleFullscreen();
           } else {
-            onBack();
+            void handleBack();
           }
           break;
       }
@@ -565,7 +587,7 @@ export function VideoPlayer({
           <button
             aria-label="Volver a la galería"
             className="video-top-btn is-icon-only"
-            onClick={onBack}
+            onClick={() => void handleBack()}
             title="Volver (Esc)"
           >
             <Icon name="arrow-left" />
@@ -678,6 +700,32 @@ export function VideoPlayer({
             </div>
           )}
 
+          {isPipActive ? (
+            <div className="video-pip-overlay" onClick={(e) => e.stopPropagation()}>
+              <div className="video-pip-badge-icon">
+                <Icon name="pip" />
+              </div>
+              <h3>Reproduciendo en modo flotante (Picture-in-Picture)</h3>
+              <p>El vídeo continúa en la ventana flotante en miniatura.</p>
+              <div className="video-pip-actions">
+                <button
+                  className="filled-button"
+                  onClick={() => void togglePiP()}
+                  title="Restaurar el vídeo dentro de la ventana de Prisma"
+                >
+                  <Icon name="fullscreen" /> Restaurar en esta ventana
+                </button>
+                <button
+                  className="tonal-button"
+                  onClick={() => void handleBack()}
+                  title="Volver a la galería y cerrar PiP"
+                >
+                  <Icon name="arrow-left" /> Volver a la galería
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           {isFastForwarding ? (
             <div className="video-ffw-indicator">
               <span>⏩ 3.0x Velocidad Rápida</span>
@@ -788,7 +836,7 @@ export function VideoPlayer({
                   }}
                   title="Pistas de audio y canales (B)"
                 >
-                  <Icon name="volume" />
+                  <Icon name="disc" />
                 </button>
 
                 {showAudioMenu ? (

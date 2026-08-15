@@ -747,3 +747,104 @@
   80% { opacity: 1; transform: translate(-50%, 0) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -10px) scale(0.95); }
 }
+
+/* ── Overlay de Picture-in-Picture ── */
+.video-pip-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: radial-gradient(circle at center, rgba(32, 24, 30, 0.94) 0%, rgba(12, 10, 14, 0.98) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  padding: 32px;
+  text-align: center;
+  animation: fadeInPip 260ms cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+@keyframes fadeInPip {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.video-pip-badge-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: rgba(224, 82, 115, 0.18);
+  border: 1px solid rgba(224, 82, 115, 0.4);
+  color: #ff6e8a;
+  margin-bottom: 2px;
+}
+
+.video-pip-badge-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.video-pip-overlay h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 750;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.video-pip-overlay p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 440px;
+  line-height: 1.45;
+}
+
+.video-pip-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.video-pip-actions .filled-button,
+.video-pip-actions .tonal-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  font-size: 0.88rem;
+  font-weight: 650;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.video-pip-actions .filled-button {
+  background: #e05273;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 16px rgba(224, 82, 115, 0.35);
+}
+
+.video-pip-actions .filled-button:hover {
+  background: #f06283;
+  transform: translateY(-1px);
+}
+
+.video-pip-actions .tonal-button {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.video-pip-actions .tonal-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
