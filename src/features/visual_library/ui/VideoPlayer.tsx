@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { formatTime, mediaTitle } from "../../playback/ui/formatters";
 import { Icon } from "../../../shared/ui/Icon";
-import { cleanPath } from "../../../shared/mediaTree";
+import { cleanPath, toPlatformPath } from "../../../shared/mediaTree";
 import type { VisualLibraryItem } from "../model/types";
 import { VideoThumbnail } from "./VideoThumbnail";
 import { useFavorites } from "../../../shared/useFavorites";
@@ -88,7 +88,7 @@ export function VideoPlayer({
 
   const hasMedia = Boolean(path);
   const title = path ? mediaTitle(path) : "Sin vídeo seleccionado";
-  const videoSrc = path ? convertFileSrc(path) : "";
+  const videoSrc = path ? convertFileSrc(toPlatformPath(path)) : "";
 
   // Sincronizar cola local si cambian los props
   useEffect(() => {
@@ -857,51 +857,53 @@ export function VideoPlayer({
               <Icon name="shuffle" />
             </button>
 
-            {/* Ancla Popover de Audio */}
-            <div className="video-popover-anchor" ref={audioMenuRef}>
-              <button
-                className={`video-icon-btn ${showAudioMenu || selectedTrackIdx > 0 || channelMode === "mono" ? "is-active" : ""}`}
-                onClick={() => {
-                  setShowAudioMenu(!showAudioMenu);
-                  setShowSubMenu(false);
-                }}
-                title="Pistas de audio y canales (B)"
-              >
-                <Icon name="volume" />
-              </button>
+            {/* Ancla Popover de Audio: solo aparece si hay más de 1 pista */}
+            {audioTracksList.length > 1 ? (
+              <div className="video-popover-anchor" ref={audioMenuRef}>
+                <button
+                  className={`video-icon-btn ${showAudioMenu || selectedTrackIdx > 0 || channelMode === "mono" ? "is-active" : ""}`}
+                  onClick={() => {
+                    setShowAudioMenu(!showAudioMenu);
+                    setShowSubMenu(false);
+                  }}
+                  title="Pistas de audio y canales (B)"
+                >
+                  <Icon name="volume" />
+                </button>
 
-              {showAudioMenu ? (
-                <div className="video-audio-popover">
-                  <p className="video-audio-popover-title">Pistas de audio ({audioTracksList.length})</p>
-                  {audioTracksList.map((track) => (
+                {showAudioMenu ? (
+                  <div className="video-audio-popover">
+                    <p className="video-audio-popover-title">Pistas de audio ({audioTracksList.length})</p>
+                    {audioTracksList.map((track) => (
+                      <button
+                        className={`video-audio-option ${selectedTrackIdx === track.index ? "is-active" : ""}`}
+                        key={track.index}
+                        onClick={() => selectAudioTrack(track.index)}
+                      >
+                        <Icon name="volume" />
+                        <span>{track.label || `Pista ${track.index + 1}`}</span>
+                      </button>
+                    ))}
+
+                    <p className="video-audio-popover-title" style={{ marginTop: 8 }}>Canales de salida</p>
                     <button
-                      className={`video-audio-option ${selectedTrackIdx === track.index ? "is-active" : ""}`}
-                      key={track.index}
-                      onClick={() => selectAudioTrack(track.index)}
+                      className={`video-audio-option ${channelMode === "stereo" ? "is-active" : ""}`}
+                      onClick={() => applyChannelMode("stereo")}
+                    >
+                      <Icon name="disc" />
+                      <span>Estéreo</span>
+                    </button>
+                    <button
+                      className={`video-audio-option ${channelMode === "mono" ? "is-active" : ""}`}
+                      onClick={() => applyChannelMode("mono")}
                     >
                       <Icon name="volume" />
-                      <span>{track.label || `Pista ${track.index + 1}`}</span>
+                      <span>Mono</span>
                     </button>
-                  ))}
-
-                  <p className="video-audio-popover-title" style={{ marginTop: 8 }}>Canales de salida</p>
-                  <button
-                    className={`video-audio-option ${channelMode === "stereo" ? "is-active" : ""}`}
-                    onClick={() => applyChannelMode("stereo")}
-                  >
-                    <Icon name="disc" />
-                    <span>Estéreo</span>
-                  </button>
-                  <button
-                    className={`video-audio-option ${channelMode === "mono" ? "is-active" : ""}`}
-                    onClick={() => applyChannelMode("mono")}
-                  >
-                    <Icon name="volume" />
-                    <span>Mono</span>
-                  </button>
-                </div>
-              ) : null}
-            </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             {/* Ancla Popover de Subtítulos */}
             <div className="video-popover-anchor" ref={subMenuRef}>

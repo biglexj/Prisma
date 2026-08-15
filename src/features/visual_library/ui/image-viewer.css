@@ -53,16 +53,17 @@
 }
 
 .image-viewer-media {
-  max-width: 100vw;
-  max-height: 100vh;
+  /* Sin restricciones: el transform scale() es el único que controla el tamaño.
+     Así zoomScale=1 = 100% de los píxeles originales, sin doble escalado. */
   width: auto;
   height: auto;
-  object-fit: contain;
+  object-fit: none;
   border: none;
   border-radius: 0;
   box-shadow: none;
   background: transparent;
   pointer-events: none;
+  display: block;
 }
 
 .image-viewer-zoom-controls {

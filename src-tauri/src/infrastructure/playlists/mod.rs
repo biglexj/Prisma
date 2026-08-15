@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+use crate::features::folder_session::{clean_path, clean_path_str};
+
 const VIDEO_EXTENSIONS: &[&str] = &["mp4", "mkv", "avi", "webm", "mov", "wmv", "flv", "m4v", "ts", "3gp"];
 const PLAYLIST_EXTENSIONS: &[&str] = &["m3u", "m3u8", "pls", "xspf"];
 
@@ -127,7 +129,7 @@ fn parse_m3u_text(content: &str, base_dir: &PathBuf) -> Vec<PlaylistItem> {
         };
 
         items.push(PlaylistItem {
-            path: resolved.to_string_lossy().into_owned(),
+            path: clean_path(&resolved),
             title,
             duration_secs: pending_duration,
             is_available,
@@ -182,7 +184,7 @@ fn parse_xspf(content: &str, base_dir: &PathBuf) -> Vec<PlaylistItem> {
         };
 
         items.push(PlaylistItem {
-            path: resolved.to_string_lossy().into_owned(),
+            path: clean_path(&resolved),
             title,
             duration_secs,
             is_available,
@@ -245,7 +247,7 @@ fn parse_pls(content: &str, base_dir: &PathBuf) -> Vec<PlaylistItem> {
             let duration_secs = lengths.get(&k).cloned().unwrap_or(0);
 
             items.push(PlaylistItem {
-                path: resolved.to_string_lossy().into_owned(),
+                path: clean_path(&resolved),
                 title,
                 duration_secs,
                 is_available,
@@ -291,18 +293,21 @@ fn unescape_xml(s: &str) -> String {
 
 /// Crea un archivo .m3u extendido con los ítems dados codificado en UTF-8 estándar.
 pub fn write_m3u(m3u_path: &Path, name: &str, items: &[PlaylistItem]) -> Result<(), String> {
-    let base_dir = m3u_path
-        .parent()
-        .unwrap_or_else(|| Path::new("."))
-        .to_path_buf();
-
     let mut lines = vec!["#EXTM3U".to_owned()];
 
     for item in items {
-        let item_path = Path::new(&item.path);
-        let rel = make_relative(item_path, &base_dir);
+        let clean = clean_path_str(&item.path);
+        let item_path = Path::new(&clean);
+        let abs_path = if item_path.is_absolute() {
+            clean
+        } else {
+            let base_dir = m3u_path
+                .parent()
+                .unwrap_or_else(|| Path::new("."));
+            clean_path(&base_dir.join(item_path))
+        };
         lines.push(format!("#EXTINF:{},{}", item.duration_secs, item.title));
-        lines.push(rel);
+        lines.push(abs_path);
     }
 
     lines.push(format!("# Creado por Prisma — {name}"));
@@ -340,7 +345,8 @@ pub fn add_files_to_m3u(m3u_path: &Path, file_paths: &[String]) -> Result<Vec<Pl
 
     let mut items = parse_playlist(m3u_path)?;
     for file_path in file_paths {
-        let p = Path::new(file_path);
+        let clean = clean_path_str(file_path);
+        let p = Path::new(&clean);
         let is_available = p.is_file();
         let ext = p
             .extension()
@@ -354,7 +360,7 @@ pub fn add_files_to_m3u(m3u_path: &Path, file_paths: &[String]) -> Result<Vec<Pl
             .unwrap_or_else(|| "Pista".to_owned());
 
         items.push(PlaylistItem {
-            path: file_path.to_owned(),
+            path: clean,
             title,
             duration_secs: 0,
             is_available,
@@ -431,7 +437,8 @@ pub fn relink_item_in_m3u(
         return Err("No se encontró la pista indicada en la lista para reconectar.".to_owned());
     };
 
-    let p = Path::new(new_path);
+    let clean = clean_path_str(new_path);
+    let p = Path::new(&clean);
     let is_avail = p.is_file();
     let ext = p
         .extension()
@@ -439,15 +446,16 @@ pub fn relink_item_in_m3u(
         .map(|e| e.to_lowercase())
         .unwrap_or_default();
     let is_video = VIDEO_EXTENSIONS.contains(&ext.as_str());
+    let new_title_opt = p.file_stem().and_then(|s| s.to_str()).map(|s| s.to_owned());
 
-    items[idx].path = new_path.to_owned();
+    items[idx].path = clean;
     items[idx].is_available = is_avail;
     items[idx].is_video = is_video;
 
     // Si el título estaba vacío o genérico ("Pista sin título"), actualizarlo con el nuevo archivo
     if items[idx].title.is_empty() || items[idx].title == "Pista sin título" {
-        if let Some(new_title) = p.file_stem().and_then(|s| s.to_str()) {
-            items[idx].title = new_title.to_owned();
+        if let Some(new_title) = new_title_opt {
+            items[idx].title = new_title;
         }
     }
 
@@ -503,7 +511,7 @@ pub fn relink_folder_in_m3u(m3u_path: &Path, search_folder: &Path) -> Result<Rel
         let lower_name = file_name.to_lowercase();
 
         if let Some(found_path) = file_map.get(&lower_name) {
-            item.path = found_path.to_string_lossy().into_owned();
+            item.path = clean_path(found_path);
             item.is_available = true;
             let ext = found_path
                 .extension()
@@ -780,7 +788,7 @@ fn url_decode(s: &str) -> String {
 }
 
 fn resolve_path(raw: &str, base_dir: &PathBuf) -> PathBuf {
-    let cleaned = if let Some(stripped) = raw.strip_prefix("file:///") {
+    let mut cleaned = if let Some(stripped) = raw.strip_prefix("file:///") {
         stripped
     } else if let Some(stripped) = raw.strip_prefix("file://") {
         stripped
@@ -788,8 +796,16 @@ fn resolve_path(raw: &str, base_dir: &PathBuf) -> PathBuf {
         raw
     };
 
+    // Si tiene un slash inicial delante de una letra de unidad en Windows (ej. /D:/...), eliminarlo
+    if cleaned.len() >= 3
+        && (cleaned.starts_with('/') || cleaned.starts_with('\\'))
+        && cleaned.as_bytes()[2] == b':'
+    {
+        cleaned = &cleaned[1..];
+    }
+
     let p = Path::new(cleaned);
-    if p.is_absolute() {
+    if p.is_absolute() || (p.is_file() && (cleaned.contains(':') || cleaned.starts_with(r"\\"))) {
         return p.to_path_buf();
     }
 

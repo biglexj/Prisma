@@ -1,6 +1,7 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
+import { toPlatformPath } from "../../../shared/mediaTree";
 import { visualLibraryClient } from "../tauri/client";
 import "./video-thumbnail.css";
 
@@ -75,7 +76,7 @@ export function VideoThumbnail({
       const video = document.createElement("video");
       video.muted = true;
       video.preload = "auto";
-      video.src = convertFileSrc(path);
+      video.src = convertFileSrc(toPlatformPath(path));
 
       let cleaned = false;
       function cleanup() {

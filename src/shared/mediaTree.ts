@@ -30,6 +30,16 @@ export function normalizePathSeparators(path: string): string {
   return cleanPath(path).replace(/\\/g, "/").replace(/\/$/, "");
 }
 
+/**
+ * Normaliza una ruta asegurando que en Windows tenga backslashes
+ * para que convertFileSrc de Tauri codifique la ruta completa correctamente.
+ */
+export function toPlatformPath(path: string | null | undefined): string {
+  if (!path) return "";
+  const cleaned = cleanPath(path);
+  return cleaned.replace(/\//g, "\\");
+}
+
 export function getCleanRelativeFolder(relativeFolder: string | null | undefined): string {
   if (!relativeFolder) return "Carpeta principal";
   const norm = normalizePathSeparators(relativeFolder);

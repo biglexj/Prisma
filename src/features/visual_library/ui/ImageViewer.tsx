@@ -52,8 +52,10 @@ export function ImageViewer({
     setIsAutoFitActive(value);
   };
 
-  const resetImageTransform = () => {
-    setZoomScale(1);
+  const resetImageTransform = (fitScale?: number) => {
+    // Volver al ajuste de pantalla (fit) no a 1:1 pixel crudo
+    const scale = fitScale ?? zoomScale;
+    setZoomScale(scale);
     setPanOffset({ x: 0, y: 0 });
     setIsDragging(false);
     setAutoFit(false);
@@ -112,10 +114,9 @@ export function ImageViewer({
     if (activeList.length === 0 || currentIndex < 0) return;
     const prevIndex = (currentIndex - 1 + activeList.length) % activeList.length;
     const nextItem = activeList[prevIndex];
-    // Mantener pan; autofit se re-aplica en onLoad si está activo (via isAutoFitRef)
     setPanOffset({ x: 0, y: 0 });
     setIsDragging(false);
-    if (!isAutoFitRef.current) setZoomScale(1);
+    // onLoad recalculará fitScale para la nueva imagen en ambos modos
     setCurrentItem(nextItem);
     onSelectImage?.(nextItem);
   };
@@ -126,7 +127,7 @@ export function ImageViewer({
     const nextItem = activeList[nextIndex];
     setPanOffset({ x: 0, y: 0 });
     setIsDragging(false);
-    if (!isAutoFitRef.current) setZoomScale(1);
+    // onLoad recalculará fitScale para la nueva imagen en ambos modos
     setCurrentItem(nextItem);
     onSelectImage?.(nextItem);
   };
@@ -151,8 +152,20 @@ export function ImageViewer({
   };
 
   const handleResetZoom = () => {
-    resetImageTransform();
-    showZoomToast(1);
+    // Volver al ajuste de pantalla calculando la escala actual desde las dimensiones del img
+    const img = imgRef.current;
+    if (img && img.naturalWidth) {
+      const scaleX = window.innerWidth / img.naturalWidth;
+      const scaleY = window.innerHeight / img.naturalHeight;
+      const fitScale = Math.round(Math.min(scaleX, scaleY) * 10000) / 10000;
+      setZoomScale(fitScale);
+      setPanOffset({ x: 0, y: 0 });
+      setIsDragging(false);
+      setAutoFit(false);
+      showZoomToast(fitScale);
+    } else {
+      resetImageTransform();
+    }
   };
 
   const handleToggleZoom = () => {
@@ -425,9 +438,18 @@ export function ImageViewer({
             ref={imgRef}
             src={convertFileSrc(cleanPath(currentItem.path))}
             onLoad={(e) => {
-              if (isAutoFitRef.current) {
-                applyAutoFitToImage(e.currentTarget);
-              }
+              const img = e.currentTarget;
+              const naturalW = img.naturalWidth || img.width;
+              const naturalH = img.naturalHeight || img.height;
+              if (!naturalW || !naturalH) return;
+
+              const scaleX = window.innerWidth / naturalW;
+              const scaleY = window.innerHeight / naturalH;
+              const fitScale = Math.round(Math.min(scaleX, scaleY) * 10000) / 10000;
+
+              // Siempre ajustar a pantalla al cargar (el % refleja la proporción real vs original)
+              setZoomScale(fitScale);
+              setPanOffset({ x: 0, y: 0 });
             }}
           />
         </div>
