@@ -18,6 +18,12 @@ const VISIBLE_ITEM_LIMIT = 400;
 
 type ViewMode = "timeline" | "folders" | "tree";
 
+// Memoria de sesión para recordar pestaña y carpeta abierta en imágenes y vídeos
+const sessionVisualState: Record<VisualMediaKind, { viewMode: ViewMode; folderPath: string }> = {
+  image: { viewMode: "timeline", folderPath: "" },
+  video: { viewMode: "timeline", folderPath: "" },
+};
+
 interface TimelineSection {
   title: string;
   items: VisualLibraryItem[];
@@ -44,8 +50,8 @@ export function VisualLibrary({
   onOpenVideo,
   onOpenFolders,
 }: VisualLibraryProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>("timeline");
-  const [currentFolderPath, setCurrentFolderPath] = useState<string>("");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => sessionVisualState[kind].viewMode);
+  const [currentFolderPath, setCurrentFolderPath] = useState<string>(() => sessionVisualState[kind].folderPath);
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
   const favorites = useFavorites();
@@ -137,7 +143,12 @@ export function VisualLibrary({
 
   const handleSwitchMode = (mode: ViewMode) => {
     setViewMode(mode);
-    setCurrentFolderPath("");
+    sessionVisualState[kind].viewMode = mode;
+  };
+
+  const handleNavigateFolder = (path: string) => {
+    setCurrentFolderPath(path);
+    sessionVisualState[kind].folderPath = path;
   };
 
   return (
@@ -264,7 +275,7 @@ export function VisualLibrary({
             <FolderBreadcrumbHeader
               currentPath={currentFolderPath}
               itemCount={treeLevel.allRecursiveItems.length}
-              onNavigate={(path) => setCurrentFolderPath(path ?? "")}
+              onNavigate={(path) => handleNavigateFolder(path ?? "")}
               onPlayFolder={!isImage ? () => handlePlayFolderVideos(treeLevel.allRecursiveItems) : undefined}
             />
           ) : null}
@@ -278,7 +289,7 @@ export function VisualLibrary({
                     folder={folder}
                     isImage={isImage}
                     key={folder.id}
-                    onOpen={() => setCurrentFolderPath(folder.id)}
+                    onOpen={() => handleNavigateFolder(folder.id)}
                     onPlayVideo={!isImage ? () => handlePlayFolderVideos(folder.allRecursiveItems) : undefined}
                   />
                 ))}

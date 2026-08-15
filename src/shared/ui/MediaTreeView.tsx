@@ -35,6 +35,15 @@ interface MediaTreeViewProps<T extends MediaTreeItem> {
   onAddFolderToQueue?: (items: T[]) => void;
 }
 
+// Memoria de sesión para preservar las carpetas expandidas por tipo de medio
+const sessionTreeExpandedPaths = new Map<string, Set<string>>([
+  ["music", new Set<string>()],
+  ["image", new Set<string>()],
+  ["video", new Set<string>()],
+]);
+
+const TREE_CHILDREN_DISPLAY_LIMIT = 250;
+
 export function MediaTreeView<T extends MediaTreeItem>({
   items,
   mediaType,
@@ -44,9 +53,9 @@ export function MediaTreeView<T extends MediaTreeItem>({
   onAddFolderToQueue,
 }: MediaTreeViewProps<T>) {
   const favorites = useFavorites();
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(
-    () => new Set(["virtual_favorites", "virtual_all"]),
-  );
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => {
+    return new Set(sessionTreeExpandedPaths.get(mediaType) || []);
+  });
 
   const toggleExpand = (path: string) => {
     setExpandedPaths((prev) => {
@@ -56,11 +65,12 @@ export function MediaTreeView<T extends MediaTreeItem>({
       } else {
         next.add(path);
       }
+      sessionTreeExpandedPaths.set(mediaType, next);
       return next;
     });
   };
 
-  // Build tree structure
+  // Construcción de la estructura de árbol jerárquico
   const rootNodes = useMemo(() => {
     const favItems = items.filter((it) => favorites.isFavorite(it.path));
 
@@ -113,7 +123,7 @@ export function MediaTreeView<T extends MediaTreeItem>({
       })),
     };
 
-    // Directory hierarchy builder
+    // Constructor de jerarquía de directorios físicos
     interface DirBucket {
       name: string;
       fullPath: string;
@@ -206,6 +216,11 @@ export function MediaTreeView<T extends MediaTreeItem>({
       const isFav = node.isVirtual && node.virtualType === "favorites";
       const isAll = node.isVirtual && node.virtualType === "all";
 
+      const visibleChildren = isExpanded
+        ? node.children.slice(0, TREE_CHILDREN_DISPLAY_LIMIT)
+        : [];
+      const hasMoreChildren = node.children.length > TREE_CHILDREN_DISPLAY_LIMIT;
+
       return (
         <div className="media-tree-node-group" key={node.path}>
           <div
@@ -262,7 +277,15 @@ export function MediaTreeView<T extends MediaTreeItem>({
 
           {isExpanded && node.children.length > 0 ? (
             <div className="media-tree-children">
-              {node.children.map(renderNode)}
+              {visibleChildren.map(renderNode)}
+              {hasMoreChildren ? (
+                <div
+                  className="media-tree-limit-hint"
+                  style={{ paddingLeft: `${indentPx + 36}px` }}
+                >
+                  Mostrando los primeros {TREE_CHILDREN_DISPLAY_LIMIT} de {node.children.length} elementos para máxima fluidez.
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

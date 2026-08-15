@@ -17,6 +17,12 @@ const VISIBLE_ITEM_LIMIT = 400;
 
 type ViewMode = "timeline" | "folders" | "tree";
 
+// Memoria de sesión para recordar la pestaña y carpeta abierta
+const sessionMusicState = {
+  viewMode: "timeline" as ViewMode,
+  folderPath: "",
+};
+
 interface MusicLibraryProps {
   folders: MusicFolderSource[];
   items: MusicLibraryItem[];
@@ -51,8 +57,8 @@ export function MusicLibrary({
   onAddToQueue,
   onOpenFolders,
 }: MusicLibraryProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>("timeline");
-  const [currentFolderPath, setCurrentFolderPath] = useState<string>("");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => sessionMusicState.viewMode);
+  const [currentFolderPath, setCurrentFolderPath] = useState<string>(() => sessionMusicState.folderPath);
   const favorites = useFavorites();
 
   const chooseFolder = async () => {
@@ -112,7 +118,12 @@ export function MusicLibrary({
 
   const handleSwitchMode = (mode: ViewMode) => {
     setViewMode(mode);
-    setCurrentFolderPath("");
+    sessionMusicState.viewMode = mode;
+  };
+
+  const handleNavigateFolder = (path: string) => {
+    setCurrentFolderPath(path);
+    sessionMusicState.folderPath = path;
   };
 
   return (
@@ -222,7 +233,7 @@ export function MusicLibrary({
             <FolderBreadcrumbHeader
               currentPath={currentFolderPath}
               itemCount={treeLevel.allRecursiveItems.length}
-              onNavigate={(path) => setCurrentFolderPath(path ?? "")}
+              onNavigate={(path) => handleNavigateFolder(path ?? "")}
               onPlayFolder={() => handlePlayFolder(treeLevel.allRecursiveItems, treeLevel.currentDisplayName)}
               onAddFolderToQueue={onAddToQueue ? () => handleAddFolderToQueue(treeLevel.allRecursiveItems) : undefined}
             />
@@ -236,7 +247,7 @@ export function MusicLibrary({
                   <MusicFolderCard
                     folder={folder}
                     key={folder.id}
-                    onOpen={() => setCurrentFolderPath(folder.id)}
+                    onOpen={() => handleNavigateFolder(folder.id)}
                     onPlay={() => handlePlayFolder(folder.allRecursiveItems, folder.displayName)}
                   />
                 ))}
