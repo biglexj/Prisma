@@ -3,8 +3,8 @@ export const ALL_MEDIA_FOLDER_ID = "prisma://all";
 
 export interface HierarchicalFolder<T> {
   id: string; // Full relative path or virtual ID
-  displayName: string; // Immediate folder name (e.g. "Ending" instead of "Anime Music/Black Clover/Ending")
-  parentPath: string; // Immediate parent path
+  displayName: string; // Display name
+  parentPath: string;
   isVirtual?: boolean;
   virtualType?: "favorites" | "all";
   directItems: T[];
@@ -25,24 +25,21 @@ export function normalizePathSeparators(path: string): string {
   return path.replace(/\\/g, "/").replace(/\/$/, "");
 }
 
-/**
- * Extrae la carpeta relativa limpia a partir de la ruta y carpeta relativa reportada
- */
 export function getCleanRelativeFolder(relativeFolder: string | null | undefined): string {
-  if (!relativeFolder) return "";
+  if (!relativeFolder) return "Carpeta principal";
   const norm = normalizePathSeparators(relativeFolder);
-  if (norm === "." || norm === "/" || norm === "Carpeta principal") return "";
+  if (norm === "." || norm === "/" || norm === "") return "Carpeta principal";
   return norm.replace(/^\/+/, "").replace(/\/+$/, "");
 }
 
 /**
- * Construye el nivel actual de navegación en árbol jerárquico.
- * A diferencia de una lista plana, en la raíz solo muestra las carpetas de primer nivel
- * y permite navegar progresivamente hacia subcarpetas con migas de pan.
+ * Resuelve la vista de carpetas de Prisma.
+ * En la raíz presenta todas las carpetas reconocidas de la biblioteca,
+ * precedidas por las carpetas virtuales Favoritos y Todas.
  */
 export function resolveTreeLevel<T extends { path: string; relativeFolder?: string }>(
   items: T[],
-  currentPath: string, // "" para raíz, o "Anime Music", o "Anime Music/Black Clover"
+  currentPath: string,
   favoritePaths: Set<string>,
   libraryLabel: { allName: string; mediaType: "music" | "image" | "video" },
 ): TreeNavigationLevel<T> {
@@ -75,95 +72,85 @@ export function resolveTreeLevel<T extends { path: string; relativeFolder?: stri
     };
   }
 
-  // Caso 3: Navegación real en árbol físico
-  const subfolderMap = new Map<string, { displayName: string; fullPath: string; recursive: T[] }>();
-  const directItems: T[] = [];
-  const allRecursiveItems: T[] = [];
+  // Caso 3: Vista interna de una carpeta física seleccionada
+  if (normCurrent !== "") {
+    const folderItems = items.filter((it) => {
+      const folder = getCleanRelativeFolder(it.relativeFolder);
+      return folder === normCurrent || folder.startsWith(`${normCurrent}/`);
+    });
 
-  const prefix = normCurrent ? `${normCurrent}/` : "";
+    const currentDisplayName = normCurrent.split("/").pop() || normCurrent;
+
+    return {
+      currentPath: normCurrent,
+      currentDisplayName,
+      isVirtual: false,
+      subfolders: [],
+      directItems: folderItems,
+      allRecursiveItems: folderItems,
+    };
+  }
+
+  // Caso 4: Raíz ("") -> Mostrar TODAS las carpetas de la biblioteca
+  const foldersMap = new Map<string, T[]>();
 
   for (const item of items) {
-    const itemFolder = getCleanRelativeFolder(item.relativeFolder);
-
-    // ¿Pertenece a la rama actual?
-    if (normCurrent === "" || itemFolder === normCurrent || itemFolder.startsWith(prefix)) {
-      allRecursiveItems.push(item);
-
-      if (itemFolder === normCurrent) {
-        // Archivo directo en este nivel
-        directItems.push(item);
-      } else if (itemFolder.startsWith(prefix)) {
-        // Archivo en una subcarpeta de este nivel
-        const remaining = itemFolder.slice(prefix.length);
-        const immediateChildName = remaining.split("/")[0];
-        const immediateChildFullPath = normCurrent ? `${normCurrent}/${immediateChildName}` : immediateChildName;
-
-        const existing = subfolderMap.get(immediateChildFullPath);
-        if (existing) {
-          existing.recursive.push(item);
-        } else {
-          subfolderMap.set(immediateChildFullPath, {
-            displayName: immediateChildName,
-            fullPath: immediateChildFullPath,
-            recursive: [item],
-          });
-        }
-      }
+    const folder = getCleanRelativeFolder(item.relativeFolder);
+    const existing = foldersMap.get(folder);
+    if (existing) {
+      existing.push(item);
+    } else {
+      foldersMap.set(folder, [item]);
     }
   }
 
   const subfolders: HierarchicalFolder<T>[] = [];
 
-  // En la raíz, anteponer las carpetas virtuales Favoritos y Todas
-  if (normCurrent === "") {
-    const favItems = items.filter((it) => favoritePaths.has(it.path));
-    subfolders.push({
-      id: FAVORITES_FOLDER_ID,
-      displayName: "Favoritos",
-      parentPath: "",
-      isVirtual: true,
-      virtualType: "favorites",
-      directItems: favItems,
-      allRecursiveItems: favItems,
-    });
+  // 1. Tarjeta virtual Favoritos
+  const favItems = items.filter((it) => favoritePaths.has(it.path));
+  subfolders.push({
+    id: FAVORITES_FOLDER_ID,
+    displayName: "Favoritos",
+    parentPath: "",
+    isVirtual: true,
+    virtualType: "favorites",
+    directItems: favItems,
+    allRecursiveItems: favItems,
+  });
 
-    subfolders.push({
-      id: ALL_MEDIA_FOLDER_ID,
-      displayName: libraryLabel.allName,
-      parentPath: "",
-      isVirtual: true,
-      virtualType: "all",
-      directItems: items,
-      allRecursiveItems: items,
-    });
-  }
+  // 2. Tarjeta virtual Todas
+  subfolders.push({
+    id: ALL_MEDIA_FOLDER_ID,
+    displayName: libraryLabel.allName,
+    parentPath: "",
+    isVirtual: true,
+    virtualType: "all",
+    directItems: items,
+    allRecursiveItems: items,
+  });
 
-  // Añadir las subcarpetas físicas ordenadas alfabéticamente
-  const sortedPhysical = Array.from(subfolderMap.values()).sort((a, b) =>
-    a.displayName.localeCompare(b.displayName, undefined, { numeric: true, sensitivity: "base" }),
+  // 3. Todas las carpetas físicas de la biblioteca
+  const sortedFolders = Array.from(foldersMap.entries()).sort(([a], [b]) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
   );
 
-  for (const group of sortedPhysical) {
+  for (const [folderPath, folderItems] of sortedFolders) {
     subfolders.push({
-      id: group.fullPath,
-      displayName: group.displayName,
-      parentPath: normCurrent,
+      id: folderPath,
+      displayName: folderPath,
+      parentPath: "",
       isVirtual: false,
-      directItems: [],
-      allRecursiveItems: group.recursive,
+      directItems: folderItems,
+      allRecursiveItems: folderItems,
     });
   }
 
-  const currentDisplayName = normCurrent
-    ? normCurrent.split("/").pop() || normCurrent
-    : "Biblioteca";
-
   return {
-    currentPath: normCurrent,
-    currentDisplayName,
+    currentPath: "",
+    currentDisplayName: "Biblioteca",
     isVirtual: false,
     subfolders,
-    directItems,
-    allRecursiveItems,
+    directItems: [],
+    allRecursiveItems: items,
   };
 }
