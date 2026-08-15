@@ -3,7 +3,6 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
-import { MediaTreeView } from "../../../shared/ui/MediaTreeView";
 import {
   resolveTreeLevel,
   type HierarchicalFolder,
@@ -16,7 +15,12 @@ import "./visual-library.css";
 
 const VISIBLE_ITEM_LIMIT = 400;
 
-type ViewMode = "bento" | "folders" | "tree";
+type ViewMode = "timeline" | "folders";
+
+interface TimelineSection {
+  title: string;
+  items: VisualLibraryItem[];
+}
 
 interface VisualLibraryProps {
   kind: VisualMediaKind;
@@ -39,7 +43,7 @@ export function VisualLibrary({
   onOpenVideo,
   onOpenFolders,
 }: VisualLibraryProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>("bento");
+  const [viewMode, setViewMode] = useState<ViewMode>("timeline");
   const [currentFolderPath, setCurrentFolderPath] = useState<string>("");
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
@@ -58,6 +62,7 @@ export function VisualLibrary({
   };
 
   const visibleItems = items.slice(0, VISIBLE_ITEM_LIMIT);
+  const timelineSections = groupByTimeline(visibleItems);
 
   // Árbol jerárquico y colecciones
   const treeLevel = resolveTreeLevel(items, currentFolderPath, favorites.favorites, {
@@ -67,7 +72,7 @@ export function VisualLibrary({
 
   const isInsideFolder = currentFolderPath !== "";
 
-  // Active list for current view (for next/prev in image viewer or video player queue)
+  // Active list for current view
   const currentActiveList = isInsideFolder
     ? (treeLevel.directItems.length > 0 ? treeLevel.directItems : treeLevel.allRecursiveItems)
     : items;
@@ -142,8 +147,8 @@ export function VisualLibrary({
           <h1>{label}</h1>
           <p>
             {isImage
-              ? "Explora tus fotografías e ilustraciones en Bento Grid adaptativo, mosaico de carpetas o árbol de directorios."
-              : "Organiza y reproduce tus vídeos locales con Bento Grid, carpetas, favoritos, árbol de directorios y reproductor de cine."}
+              ? "Explora tus fotografías e ilustraciones organizadas en Bento Grid adaptativo, árbol jerárquico de carpetas y visor cinematográfico."
+              : "Organiza y reproduce tus vídeos locales con árbol de carpetas, favoritos, gestión de colas y reproductor de cine."}
           </p>
         </div>
         <div className="visual-heading-actions">
@@ -183,28 +188,20 @@ export function VisualLibrary({
 
         <div className="visual-view-mode-tabs">
           <button
-            className={viewMode === "bento" ? "is-active" : ""}
-            onClick={() => handleSwitchMode("bento")}
-            title="Cuadrícula Bento"
+            className={viewMode === "timeline" ? "is-active" : ""}
+            onClick={() => handleSwitchMode("timeline")}
+            title="Línea de tiempo"
           >
-            <Icon name="layout" />
-            <span>Bento Grid</span>
+            <Icon name="clock" />
+            <span>Tiempo</span>
           </button>
           <button
             className={viewMode === "folders" ? "is-active" : ""}
             onClick={() => handleSwitchMode("folders")}
-            title="Colecciones de carpetas"
+            title="Carpetas"
           >
             <Icon name="folder" />
             <span>Carpetas</span>
-          </button>
-          <button
-            className={viewMode === "tree" ? "is-active" : ""}
-            onClick={() => handleSwitchMode("tree")}
-            title="Vista en árbol"
-          >
-            <Icon name="folder-open" />
-            <span>Árbol</span>
           </button>
         </div>
       </div>
@@ -220,29 +217,39 @@ export function VisualLibrary({
             <Icon name="folder" /> Seleccionar carpeta
           </button>
         </div>
-      ) : viewMode === "bento" ? (
-        /* ── 1. Cuadrícula Bento Dinámica Adaptativa ── */
+      ) : viewMode === "timeline" ? (
+        /* ── 1. Cuadrícula Bento Dinámica Adaptativa con Tiempo ── */
         <div className="visual-timeline-container" aria-busy={loading}>
-          <div className="visual-grid bento-grid-layout">
-            {visibleItems.map((item, idx) => (
-              <VisualCard
-                index={idx}
-                isFavorite={favorites.isFavorite(item.path)}
-                isImage={isImage}
-                item={item}
-                key={item.path}
-                onClick={() =>
-                  isImage
-                    ? setSelectedImage(item)
-                    : onOpenVideo(item.path, visibleItems)
-                }
-                onToggleFavorite={() => favorites.toggleFavorite(item.path)}
-              />
-            ))}
-          </div>
+          {timelineSections.map((section) => (
+            <div className="visual-section" key={section.title}>
+              <header className="visual-section-header">
+                <h3>{section.title}</h3>
+                <span className="visual-section-count">
+                  {section.items.length} {section.items.length === 1 ? "elemento" : "elementos"}
+                </span>
+              </header>
+              <div className="visual-grid bento-grid-layout">
+                {section.items.map((item, idx) => (
+                  <VisualCard
+                    index={idx}
+                    isFavorite={favorites.isFavorite(item.path)}
+                    isImage={isImage}
+                    item={item}
+                    key={item.path}
+                    onClick={() =>
+                      isImage
+                        ? setSelectedImage(item)
+                        : onOpenVideo(item.path, section.items)
+                    }
+                    onToggleFavorite={() => favorites.toggleFavorite(item.path)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
-      ) : viewMode === "folders" ? (
-        /* ── 2. Vista de Colecciones de Carpetas ── */
+      ) : (
+        /* ── 2. Vista de Colecciones de Carpetas como Álbumes ── */
         <div className="visual-folder-tree-view" aria-busy={loading}>
           {isInsideFolder ? (
             <FolderBreadcrumbHeader
@@ -293,23 +300,9 @@ export function VisualLibrary({
             </div>
           ) : null}
         </div>
-      ) : (
-        /* ── 3. Vista en Árbol Expandible (Lienzo Style) ── */
-        <MediaTreeView
-          items={items}
-          mediaType={isImage ? "image" : "video"}
-          onPlayFolder={!isImage ? (folderItems) => handlePlayFolderVideos(folderItems) : undefined}
-          onPlayItem={(item, list) => {
-            if (isImage) {
-              setSelectedImage(item);
-            } else {
-              onOpenVideo(item.path, list);
-            }
-          }}
-        />
       )}
 
-      {items.length > VISIBLE_ITEM_LIMIT && viewMode === "bento" ? (
+      {items.length > VISIBLE_ITEM_LIMIT && viewMode === "timeline" ? (
         <p className="visual-limit-note">
           Se muestran los {VISIBLE_ITEM_LIMIT} elementos más recientes para mantener la interfaz ligera.
         </p>
@@ -561,6 +554,41 @@ function VisualFolderCard({
       </div>
     </div>
   );
+}
+
+function groupByTimeline(items: VisualLibraryItem[]): TimelineSection[] {
+  const groupsMap = new Map<string, VisualLibraryItem[]>();
+
+  const now = new Date();
+  const todayTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const yesterdayTimestamp = todayTimestamp - 86400000;
+
+  for (const item of items) {
+    const itemDate = new Date(item.modifiedAtMillis);
+    const itemDayTimestamp = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate()).getTime();
+
+    let title: string;
+    if (itemDayTimestamp === todayTimestamp) {
+      title = "Hoy";
+    } else if (itemDayTimestamp === yesterdayTimestamp) {
+      title = "Ayer";
+    } else {
+      title = itemDate.toLocaleDateString("es-ES", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+    }
+
+    const existing = groupsMap.get(title);
+    if (existing) {
+      existing.push(item);
+    } else {
+      groupsMap.set(title, [item]);
+    }
+  }
+
+  return Array.from(groupsMap.entries()).map(([title, items]) => ({ title, items }));
 }
 
 function formatBytes(bytes: number) {

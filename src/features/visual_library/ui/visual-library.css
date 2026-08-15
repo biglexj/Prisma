@@ -149,16 +149,19 @@
   gap: 12px;
 }
 
+.visual-media-card-wrapper.bento-card-square,
 .visual-media-card.bento-card-square {
   grid-column: span 2;
   grid-row: span 2;
 }
 
+.visual-media-card-wrapper.bento-card-horizontal,
 .visual-media-card.bento-card-horizontal {
   grid-column: span 4;
   grid-row: span 2;
 }
 
+.visual-media-card-wrapper.bento-card-vertical,
 .visual-media-card.bento-card-vertical {
   grid-column: span 2;
   grid-row: span 4;
