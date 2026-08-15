@@ -30,7 +30,7 @@ export function usePlaylists() {
   const [showHidden, setShowHidden] = useState(false);
 
   const refresh = useCallback(async (showLoading = false) => {
-    if (showLoading || cachedPlaylists === null) {
+    if (showLoading && cachedPlaylists === null) {
       setLoading(true);
     }
     try {
@@ -56,12 +56,15 @@ export function usePlaylists() {
   }, []);
 
   useEffect(() => {
-    // Si no hay listas en caché, cargamos inicialmente
+    // Si no hay listas en caché, cargamos con indicador de carga
     if (cachedPlaylists === null) {
       void refresh(true);
+    } else {
+      // Si ya hay listas en caché, refrescar silenciosamente en segundo plano (stale-while-revalidate)
+      void refresh(false);
     }
     // Si hay un playlist seleccionado pero sin ítems en caché (caché stale),
-    // re-leer del disco automáticamente al montar el componente.
+    // re-leer del disco en segundo plano.
     if (cachedSelectedPlaylist !== null && cachedSelectedItems.length === 0) {
       void selectPlaylist(cachedSelectedPlaylist);
     }

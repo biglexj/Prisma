@@ -149,29 +149,37 @@ async fn scan_in_background(
 #[tauri::command]
 pub async fn show_in_file_manager(path: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let clean_path = path.trim_start_matches(r"\\?\").to_string();
-        let target = Path::new(&clean_path);
+        let clean_path = path.trim_start_matches(r"\\?\").trim_start_matches(r"\\?\UNC\").to_string();
         #[cfg(target_os = "windows")]
         {
             use std::process::Command;
+            let win_path = clean_path.replace('/', "\\");
+            let target = Path::new(&win_path);
             if target.exists() {
                 let _ = Command::new("explorer")
-                    .args(["/select,", &clean_path])
+                    .args(["/select,", &win_path])
                     .spawn();
             } else if let Some(parent) = target.parent() {
+                let parent_str = parent.to_string_lossy().to_string();
                 let _ = Command::new("explorer")
-                    .arg(parent)
+                    .arg(&parent_str)
                     .spawn();
             }
         }
         #[cfg(not(target_os = "windows"))]
         {
+            let target = Path::new(&clean_path);
             let _ = target;
         }
         Ok(())
     })
     .await
     .map_err(|e| format!("Error al abrir explorador de archivos: {e}"))?
+}
+
+#[tauri::command]
+pub async fn open_in_file_manager(path: String) -> Result<(), String> {
+    show_in_file_manager(path).await
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

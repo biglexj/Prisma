@@ -14,15 +14,20 @@ use crate::{
 /// Lista todas las playlists encontradas en todas las fuentes de música y vídeos/imágenes
 /// escaneando de forma recursiva sus subdirectorios y anotando si están ocultas.
 #[tauri::command]
-pub fn playlists_list(
+pub async fn playlists_list(
     music_state: State<'_, MusicLibraryState>,
     visual_state: State<'_, VisualLibraryState>,
     app: AppHandle,
 ) -> Result<Vec<PlaylistMeta>, String> {
-    let mut all: Vec<PlaylistMeta> = Vec::new();
+    let music_folders = music_state.paths().unwrap_or_default();
+    let video_folders = visual_state.paths(VisualMediaKind::Video).unwrap_or_default();
+    let image_folders = visual_state.paths(VisualMediaKind::Image).unwrap_or_default();
+    let app_dir = app.path().app_data_dir().ok();
 
-    // 1. Escaneo recursivo en fuentes de música (hasta 5 niveles)
-    if let Ok(music_folders) = music_state.paths() {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut all: Vec<PlaylistMeta> = Vec::new();
+
+        // 1. Escaneo recursivo en fuentes de música (hasta 5 niveles)
         for folder_path in &music_folders {
             let path = Path::new(folder_path);
             if path.is_dir() {
@@ -30,10 +35,8 @@ pub fn playlists_list(
                 all.append(&mut found);
             }
         }
-    }
 
-    // 2. Escaneo recursivo en fuentes de vídeo
-    if let Ok(video_folders) = visual_state.paths(VisualMediaKind::Video) {
+        // 2. Escaneo recursivo en fuentes de vídeo
         for folder_path in &video_folders {
             let path = Path::new(folder_path);
             if path.is_dir() {
@@ -41,10 +44,8 @@ pub fn playlists_list(
                 all.append(&mut found);
             }
         }
-    }
 
-    // 3. Escaneo recursivo en fuentes de imágenes
-    if let Ok(image_folders) = visual_state.paths(VisualMediaKind::Image) {
+        // 3. Escaneo recursivo en fuentes de imágenes
         for folder_path in &image_folders {
             let path = Path::new(folder_path);
             if path.is_dir() {
@@ -52,28 +53,32 @@ pub fn playlists_list(
                 all.append(&mut found);
             }
         }
-    }
 
-    // 3. Deduplicar por ruta normalizada
-    all.sort_by(|a, b| a.path.to_lowercase().cmp(&b.path.to_lowercase()));
-    all.dedup_by(|a, b| a.path.eq_ignore_ascii_case(&b.path));
+        // 4. Deduplicar por ruta normalizada
+        all.sort_by(|a, b| a.path.to_lowercase().cmp(&b.path.to_lowercase()));
+        all.dedup_by(|a, b| a.path.eq_ignore_ascii_case(&b.path));
 
-    // 4. Marcar si están ocultas según la base de listas ocultas
-    if let Ok(app_dir) = app.path().app_data_dir() {
-        let hidden_store = HiddenPlaylistsStore::load_from_dir(&app_dir);
-        for meta in &mut all {
-            meta.is_hidden = hidden_store.is_hidden(&meta.path);
+        // 5. Marcar si están ocultas según la base de listas ocultas
+        if let Some(dir) = app_dir {
+            let hidden_store = HiddenPlaylistsStore::load_from_dir(&dir);
+            for meta in &mut all {
+                meta.is_hidden = hidden_store.is_hidden(&meta.path);
+            }
         }
-    }
 
-    all.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-    Ok(all)
+        all.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        Ok(all)
+    })
+    .await
+    .map_err(|e| format!("Error en tarea en segundo plano al listar playlists: {e}"))?
 }
 
-/// Carga y parsea el contenido de una playlist .m3u/.m3u8 por su ruta, verificando archivos.
+/// Carga y parsea el contenido de una playlist .m3u/.m3u8 por su ruta, verificando archivos de forma asíncrona.
 #[tauri::command]
-pub fn playlists_read(path: String) -> Result<Vec<PlaylistItem>, String> {
-    parse_m3u(Path::new(&path))
+pub async fn playlists_read(path: String) -> Result<Vec<PlaylistItem>, String> {
+    tauri::async_runtime::spawn_blocking(move || parse_m3u(Path::new(&path)))
+        .await
+        .map_err(|e| format!("Error leyendo playlist en segundo plano: {e}"))?
 }
 
 /// Crea una nueva playlist vacía con el nombre dado en la fuente de música o vídeo correspondiente.

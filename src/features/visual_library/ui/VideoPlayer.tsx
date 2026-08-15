@@ -913,7 +913,7 @@ export function VideoPlayer({
               </button>
               <button
                 className="video-top-btn"
-                onClick={() => invoke("open_in_file_manager", { path }).catch(() => {})}
+                onClick={() => invoke("show_in_file_manager", { path }).catch(() => {})}
                 title="Abrir ubicación en el explorador"
               >
                 <Icon name="folder" />
