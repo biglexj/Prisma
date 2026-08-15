@@ -372,7 +372,7 @@ export function VideoPlayer({
       </div>
 
       <footer className="video-player-footer">
-        <label className="video-seek-bar">
+        <label className="preview-progress video-seek-bar">
           <input
             max={Math.max(duration, 1)}
             min={0}
@@ -381,10 +381,8 @@ export function VideoPlayer({
             type="range"
             value={position}
           />
-          <div className="video-time-row">
-            <span>{formatTime(position)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
+          <span>{formatTime(position)}</span>
+          <span>{formatTime(duration)}</span>
         </label>
 
         <div className="video-controls-row">
