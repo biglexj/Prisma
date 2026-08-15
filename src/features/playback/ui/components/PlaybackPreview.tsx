@@ -1,8 +1,8 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import type { PlaybackCapabilities, PlaybackSnapshot } from "../../model/types";
 import type { PlaybackQueueState } from "../../usePlaybackQueue";
 import { Icon } from "../../../../shared/ui/Icon";
-import { useMusicArtwork } from "../../../music_library/useMusicArtwork";
+import { useMusicArtwork, prefetchArtwork } from "../../../music_library/useMusicArtwork";
 import { VisualThumbnail } from "../../../visual_library/ui/VisualThumbnail";
 import { VideoThumbnail } from "../../../visual_library/ui/VideoThumbnail";
 import { useAlbumPalette } from "../useAlbumPalette";
@@ -69,6 +69,22 @@ export function PlaybackPreview({
 
   const queueCount = queueState?.queue.items.length ?? 0;
 
+  // Precarga fluida de carátulas para pistas siguientes y anteriores en la cola
+  useEffect(() => {
+    if (!queueState || queueState.queue.items.length === 0) return;
+    const items = queueState.queue.items;
+    const currentIdx = queueState.queue.currentIndex;
+    if (currentIdx + 1 < items.length) {
+      prefetchArtwork(items[currentIdx + 1].path);
+    }
+    if (currentIdx + 2 < items.length) {
+      prefetchArtwork(items[currentIdx + 2].path);
+    }
+    if (currentIdx > 0) {
+      prefetchArtwork(items[currentIdx - 1].path);
+    }
+  }, [queueState?.queue.currentIndex, queueState?.queue.items]);
+
   return (
     <section className={`preview-screen ${palette ? "has-album-palette" : ""}`} id="studio-home" style={adaptiveStyle}>
       <header className="preview-heading">
@@ -118,7 +134,13 @@ export function PlaybackPreview({
             onSeek={onSeek}
           />
         ) : (
-          <div className={`preview-artwork ${hasMedia ? "has-media" : "is-empty"} ${isVideo ? "is-video-surface" : ""}`}>
+          <div
+            className={`preview-artwork ${hasMedia ? "has-media" : "is-empty"} ${isVideo ? "is-video-surface" : ""} ${isAudio ? "is-interactive" : ""}`}
+            onClick={isAudio && hasMedia ? () => setViewMode("lyrics") : undefined}
+            title={isAudio && hasMedia ? "Haz clic en la carátula para ver las letras" : undefined}
+            role={isAudio && hasMedia ? "button" : undefined}
+            tabIndex={isAudio && hasMedia ? 0 : undefined}
+          >
             {artwork ? <span className="preview-cover-artwork"><img alt={`Carátula de ${title}`} src={artwork} /></span> : null}
             {isImage && snapshot.path ? <VisualThumbnail key={snapshot.path} className="preview-cover-artwork" path={snapshot.path} alt={title} eager fit="contain" /> : null}
             {isVideo && snapshot.path ? <VideoThumbnail key={snapshot.path} className="preview-cover-artwork" path={snapshot.path} title={title} /> : null}
@@ -129,6 +151,13 @@ export function PlaybackPreview({
               <span>PRISMA</span>
               <strong>{hasMedia ? family : "TU BIBLIOTECA LOCAL"}</strong>
             </div>
+
+            {isAudio && hasMedia ? (
+              <span className="preview-artwork-lyrics-hint" aria-hidden="true">
+                <Icon name="music" />
+                <span>Ver letras</span>
+              </span>
+            ) : null}
           </div>
         )}
 

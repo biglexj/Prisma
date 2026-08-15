@@ -52,8 +52,74 @@
     inset 0 1px rgb(255 255 255 / 24%);
 }
 
+.preview-artwork.is-interactive {
+  cursor: pointer;
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.preview-artwork.is-interactive:hover {
+  transform: scale(1.015);
+}
+
+.preview-artwork.is-interactive:active {
+  transform: scale(0.99);
+}
+
+.preview-cover-artwork img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: artworkSmoothFadeIn 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes artworkSmoothFadeIn {
+  from {
+    opacity: 0.7;
+    transform: scale(1.02);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.preview-artwork-lyrics-hint {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  pointer-events: none;
+}
+
+.preview-artwork-lyrics-hint svg {
+  width: 14px;
+  height: 14px;
+  color: var(--album-accent, #e05273);
+}
+
+.preview-artwork:hover .preview-artwork-lyrics-hint {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .preview-screen::before {
+  .preview-screen::before,
+  .preview-cover-artwork img {
     transition: none;
+    animation: none;
   }
 }

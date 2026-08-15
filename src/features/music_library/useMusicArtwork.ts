@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { musicLibraryClient } from "./tauri/client";
 
-const MAX_CACHE_ITEMS = 96;
-const MAX_CACHE_BYTES = 24 * 1024 * 1024; // 24 MiB budget
+const MAX_CACHE_ITEMS = 128;
+const MAX_CACHE_BYTES = 32 * 1024 * 1024; // 32 MiB budget
 
 interface CacheEntry {
   data: string | null;
@@ -17,38 +17,62 @@ function estimateBytes(dataUrl: string | null): number {
   return dataUrl ? dataUrl.length * 2 : 64;
 }
 
+/**
+ * Hook de carátula de música con transición continua sin parpadeos.
+ * Mantiene la carátula previa hasta que la nueva esté completamente lista,
+ * evitando destellos o pases a blanco durante cambios de canción.
+ */
 export function useMusicArtwork(path: string | null, enabled = true) {
-  const [artwork, setArtwork] = useState<string | null | undefined>(() => {
+  const [artwork, setArtwork] = useState<string | null>(() => {
     if (!path) return null;
     const entry = artworkCache.get(path);
     return entry ? entry.data : null;
   });
 
+  const activePathRef = useRef<string | null>(path);
+
   useEffect(() => {
+    activePathRef.current = path;
+
     if (!path) {
       setArtwork(null);
       return;
     }
+
     const cached = artworkCache.get(path);
     if (cached !== undefined) {
-      // LRU refresh
+      // Hit inmediato en caché LRU (0ms delay)
       artworkCache.delete(path);
       artworkCache.set(path, cached);
       setArtwork(cached.data);
       return;
     }
-    setArtwork(undefined);
+
     if (!enabled) return;
+
     let cancelled = false;
+
+    // Se solicita la carátula sin resetear abruptamente el estado visual anterior
     requestArtwork(path).then((dataUrl) => {
-      if (!cancelled) setArtwork(dataUrl);
+      if (!cancelled && activePathRef.current === path) {
+        setArtwork(dataUrl);
+      }
     });
+
     return () => {
       cancelled = true;
     };
   }, [enabled, path]);
 
-  return artwork ?? null;
+  return artwork;
+}
+
+/**
+ * Precarga de carátulas para canciones adyacentes en la cola de reproducción.
+ */
+export function prefetchArtwork(path: string | null | undefined): void {
+  if (!path || artworkCache.has(path) || pendingArtwork.has(path)) return;
+  void requestArtwork(path);
 }
 
 function requestArtwork(path: string): Promise<string | null> {
@@ -58,8 +82,10 @@ function requestArtwork(path: string): Promise<string | null> {
     artworkCache.set(path, cached);
     return Promise.resolve(cached.data);
   }
+
   const existingRequest = pendingArtwork.get(path);
   if (existingRequest) return existingRequest;
+
   const request = musicLibraryClient
     .artwork(path)
     .catch(() => null)
@@ -86,6 +112,7 @@ function requestArtwork(path: string): Promise<string | null> {
       return dataUrl;
     })
     .finally(() => pendingArtwork.delete(path));
+
   pendingArtwork.set(path, request);
   return request;
 }
