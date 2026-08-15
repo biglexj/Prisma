@@ -1,0 +1,149 @@
+.folder-breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface-container-low, rgba(28, 28, 30, 0.6));
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.08));
+  border-radius: 14px;
+  padding: 8px 14px;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+}
+
+.breadcrumb-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.breadcrumb-root-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.08));
+  color: var(--on-surface, #f4f4f5);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.breadcrumb-root-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.breadcrumb-up-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.08));
+  color: var(--on-surface-variant, #a1a1aa);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.breadcrumb-up-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.breadcrumb-trail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.breadcrumb-segment-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.breadcrumb-separator {
+  color: var(--on-surface-variant, rgba(255, 255, 255, 0.3));
+  font-size: 0.8rem;
+}
+
+.breadcrumb-segment.is-link {
+  background: transparent;
+  border: none;
+  color: var(--on-surface-variant, #a1a1aa);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.breadcrumb-segment.is-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.breadcrumb-segment.is-current {
+  color: var(--album-accent, #60a5fa);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 2px 6px;
+}
+
+.breadcrumb-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.breadcrumb-count-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--on-surface-variant, #a1a1aa);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.breadcrumb-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.1));
+  color: var(--on-surface, #f4f4f5);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.breadcrumb-action-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.breadcrumb-action-btn.is-primary {
+  background: var(--album-accent, #3b82f6);
+  border-color: transparent;
+  color: #fff;
+}
+
+.breadcrumb-action-btn.is-primary:hover {
+  background: #2563eb;
+}

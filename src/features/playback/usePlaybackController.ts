@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { PlaybackCapabilities, PlaybackSnapshot } from "./model/types";
+import type { MusicQueueItem } from "./model/queue";
 import { playbackClient } from "./tauri/client";
+import { usePlaybackQueue } from "./usePlaybackQueue";
 
 const EMPTY_SNAPSHOT: PlaybackSnapshot = {
   path: null,
@@ -18,14 +20,19 @@ export function usePlaybackController() {
   const [snapshot, setSnapshot] = useState(EMPTY_SNAPSHOT);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const queue = usePlaybackQueue();
+  const lastCompletedPathRef = useRef<string | null>(null);
 
   const run = useCallback(async (action: () => Promise<PlaybackSnapshot>) => {
     setBusy(true);
     setError(null);
     try {
-      setSnapshot(await action());
+      const snap = await action();
+      setSnapshot(snap);
+      return snap;
     } catch (reason) {
       setError(String(reason));
+      throw reason;
     } finally {
       setBusy(false);
     }
@@ -37,21 +44,93 @@ export function usePlaybackController() {
     });
   }, []);
 
+  const loadPath = useCallback(
+    async (path: string) => {
+      lastCompletedPathRef.current = null;
+      return run(() => playbackClient.load(path));
+    },
+    [run],
+  );
+
+  const playQueue = useCallback(
+    (items: MusicQueueItem[], startIndex = 0, name?: string) => {
+      const target = queue.playQueue(items, startIndex, name);
+      if (target) {
+        void loadPath(target.path);
+      }
+    },
+    [queue, loadPath],
+  );
+
+  const playQueueAt = useCallback(
+    (index: number) => {
+      const target = queue.playQueueAt(index);
+      if (target) {
+        void loadPath(target.path);
+      }
+    },
+    [queue, loadPath],
+  );
+
+  const next = useCallback(() => {
+    if (queue.queue.items.length > 0) {
+      const res = queue.advanceNext();
+      if (res) {
+        if (res.replay) {
+          void run(() => playbackClient.seek(0));
+        } else {
+          void loadPath(res.item.path);
+        }
+        return;
+      }
+    }
+    void run(playbackClient.next);
+  }, [queue, run, loadPath]);
+
+  const previous = useCallback(() => {
+    if (queue.queue.items.length > 0) {
+      const res = queue.advancePrevious(snapshot.positionSeconds ?? 0);
+      if (res) {
+        if (res.replay) {
+          void run(() => playbackClient.seek(0));
+        } else {
+          void loadPath(res.item.path);
+        }
+        return;
+      }
+    }
+    void run(playbackClient.previous);
+  }, [queue, snapshot.positionSeconds, run, loadPath]);
+
+  // Polling with auto-advance on track completion
   useEffect(() => {
     if (!capabilities?.available || !snapshot.path) return;
 
     const interval = snapshot.paused ? 1500 : 500;
     const timer = window.setInterval(() => {
-      playbackClient.snapshot().then(setSnapshot).catch(() => undefined);
+      playbackClient
+        .snapshot()
+        .then((snap) => {
+          setSnapshot(snap);
+
+          // Auto-advance when track finishes
+          const duration = snap.durationSeconds ?? 0;
+          const pos = snap.positionSeconds ?? 0;
+          if (
+            duration > 1 &&
+            pos >= duration - 0.4 &&
+            snap.path &&
+            lastCompletedPathRef.current !== snap.path
+          ) {
+            lastCompletedPathRef.current = snap.path;
+            next();
+          }
+        })
+        .catch(() => undefined);
     }, interval);
 
     return () => window.clearInterval(timer);
-  }, [capabilities?.available, snapshot.path, snapshot.paused]);
-
-  const loadPath = useCallback(
-    async (path: string) => run(() => playbackClient.load(path)),
-    [run],
-  );
+  }, [capabilities?.available, snapshot.path, snapshot.paused, next]);
 
   const chooseFile = useCallback(async () => {
     const selection = await open({
@@ -71,11 +150,14 @@ export function usePlaybackController() {
     error,
     busy,
     enabled: capabilities?.available === true,
+    queue,
     chooseFile,
     loadPath,
-    previous: () => run(playbackClient.previous),
+    playQueue,
+    playQueueAt,
+    previous,
     toggle: () => run(playbackClient.togglePause),
-    next: () => run(playbackClient.next),
+    next,
     seek: (seconds: number) => run(() => playbackClient.seek(seconds)),
     setVolume: (volume: number) => run(() => playbackClient.setVolume(volume)),
     setSpeed: (speed: number) => run(() => playbackClient.setSpeed(speed)),

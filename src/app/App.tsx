@@ -36,7 +36,20 @@ export function App() {
 
   const playMusicItem = (path: string) => {
     setActiveView("player");
-    void playback.loadPath(path);
+    const foundIdx = library.items.findIndex((it) => it.path === path);
+    if (foundIdx >= 0) {
+      const queueItems = library.items.map((it) => ({
+        id: it.path,
+        path: it.path,
+        title: it.title,
+        artist: it.relativeFolder,
+        folder: it.relativeFolder,
+        sizeBytes: it.sizeBytes,
+      }));
+      playback.playQueue(queueItems, foundIdx, "Música");
+    } else {
+      void playback.loadPath(path);
+    }
   };
 
   const playVideoItem = (path: string) => {
@@ -118,6 +131,11 @@ export function App() {
               error={library.error}
               onAdd={library.addFolder}
               onPlay={playMusicItem}
+              onPlayQueue={(items, idx, name) => {
+                setActiveView("player");
+                playback.playQueue(items, idx, name);
+              }}
+              onAddToQueue={(items) => playback.queue.addToQueue(items)}
               onOpenFolders={() => setActiveView("folders")}
             />
           ) : null}
@@ -165,12 +183,14 @@ export function App() {
                 snapshot={playback.snapshot}
                 busy={playback.busy}
                 enabled={playback.enabled}
+                queueState={playback.queue}
                 onOpen={() => void playback.chooseFile()}
                 onPrevious={() => void playback.previous()}
                 onToggle={() => void playback.toggle()}
                 onNext={() => void playback.next()}
                 onSeek={(seconds) => void playback.seek(seconds)}
                 onVolume={(volume) => void playback.setVolume(volume)}
+                onSelectQueueIndex={playback.playQueueAt}
               />
             </>
           ) : null}

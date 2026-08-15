@@ -1,12 +1,15 @@
 import { useState, type CSSProperties } from "react";
 import type { PlaybackCapabilities, PlaybackSnapshot } from "../../model/types";
+import type { PlaybackQueueState } from "../../usePlaybackQueue";
 import { Icon } from "../../../../shared/ui/Icon";
 import { useMusicArtwork } from "../../../music_library/useMusicArtwork";
 import { VisualThumbnail } from "../../../visual_library/ui/VisualThumbnail";
 import { VideoThumbnail } from "../../../visual_library/ui/VideoThumbnail";
 import { useAlbumPalette } from "../useAlbumPalette";
 import { LyricsPreview } from "./LyricsPreview";
+import { PlaybackQueuePanel } from "./PlaybackQueuePanel";
 import "./album-adaptive.css";
+import "./playback-queue.css";
 import {
   familyLabel,
   folderName,
@@ -22,12 +25,14 @@ interface PlaybackPreviewProps {
   snapshot: PlaybackSnapshot;
   busy: boolean;
   enabled: boolean;
+  queueState?: PlaybackQueueState;
   onOpen: () => void;
   onPrevious: () => void;
   onToggle: () => void;
   onNext: () => void;
   onSeek: (seconds: number) => void;
   onVolume: (volume: number) => void;
+  onSelectQueueIndex?: (index: number) => void;
 }
 
 export function PlaybackPreview({
@@ -35,20 +40,22 @@ export function PlaybackPreview({
   snapshot,
   busy,
   enabled,
+  queueState,
   onOpen,
   onPrevious,
   onToggle,
   onNext,
   onSeek,
   onVolume,
+  onSelectQueueIndex,
 }: PlaybackPreviewProps) {
-  const [viewMode, setViewMode] = useState<"cover" | "lyrics">("cover");
+  const [viewMode, setViewMode] = useState<"cover" | "lyrics" | "queue">("cover");
   const hasMedia = Boolean(snapshot.path);
   const duration = snapshot.durationSeconds ?? 0;
   const position = Math.min(snapshot.positionSeconds ?? 0, Math.max(duration, 1));
   const title = mediaTitle(snapshot.path);
   const family = familyLabel(snapshot.session?.family);
-  const isAudio = snapshot.session?.family === "audio";
+  const isAudio = snapshot.session?.family === "audio" || (!snapshot.session && hasMedia);
   const isImage = snapshot.session?.family === "image";
   const isVideo = snapshot.session?.family === "video";
   const artwork = useMusicArtwork(isAudio ? snapshot.path : null, isAudio && hasMedia);
@@ -59,6 +66,8 @@ export function PlaybackPreview({
     "--album-accent-deep": palette.accentDeep,
     "--album-on-accent": palette.onAccent,
   } as CSSProperties) : undefined;
+
+  const queueCount = queueState?.queue.items.length ?? 0;
 
   return (
     <section className={`preview-screen ${palette ? "has-album-palette" : ""}`} id="studio-home" style={adaptiveStyle}>
@@ -81,12 +90,27 @@ export function PlaybackPreview({
           >
             <Icon name="music" /> <span>Letras</span>
           </button>
-          <button disabled title="Cola · Próximamente"><Icon name="queue" /><span className="sr-only">Cola</span></button>
+          <button
+            className={viewMode === "queue" ? "is-active" : ""}
+            onClick={() => setViewMode("queue")}
+            title="Cola de reproducción"
+          >
+            <Icon name="queue" />
+            <span>Cola</span>
+            {queueCount > 0 ? <span className="badge">{queueCount}</span> : null}
+          </button>
         </div>
       </header>
 
       <div className="preview-player">
-        {viewMode === "lyrics" ? (
+        {viewMode === "queue" && queueState ? (
+          <PlaybackQueuePanel
+            queueState={queueState}
+            onSelectTrack={(idx) => {
+              if (onSelectQueueIndex) onSelectQueueIndex(idx);
+            }}
+          />
+        ) : viewMode === "lyrics" ? (
           <LyricsPreview
             title={title}
             positionSeconds={position}
@@ -136,7 +160,7 @@ export function PlaybackPreview({
           <div className="preview-transport">
             <button
               aria-label="Anterior"
-              disabled={busy || !snapshot.session?.canGoPrevious}
+              disabled={busy || (!snapshot.session?.canGoPrevious && !queueState?.canGoPrevious)}
               onClick={onPrevious}
             ><Icon name="chevron-left" /></button>
             <button
@@ -149,16 +173,23 @@ export function PlaybackPreview({
             </button>
             <button
               aria-label="Siguiente"
-              disabled={busy || !snapshot.session?.canGoNext}
+              disabled={busy || (!snapshot.session?.canGoNext && !queueState?.canGoNext)}
               onClick={onNext}
             ><Icon name="chevron-right" /></button>
           </div>
 
           <div className="preview-actions">
-            <button disabled title="Aleatorio · Próximamente" aria-label="Aleatorio"><Icon name="shuffle" /></button>
+            <button
+              className={queueState?.shuffleMode ? "is-active" : ""}
+              onClick={queueState?.toggleShuffle}
+              title={queueState?.shuffleMode ? "Aleatorio activo (Pulsar para desactivar)" : "Activar modo aleatorio"}
+              aria-label="Aleatorio"
+            >
+              <Icon name="shuffle" />
+            </button>
             <div className="session-indicator">
-              <span>SESIÓN</span>
-              <strong>{formatSession(snapshot.session)}</strong>
+              <span>{queueCount > 0 ? "COLA" : "SESIÓN"}</span>
+              <strong>{queueCount > 0 ? `${(queueState?.queue.currentIndex ?? 0) + 1} de ${queueCount}` : formatSession(snapshot.session)}</strong>
             </div>
             <label className="preview-volume">
               <Icon name="volume" />
@@ -173,9 +204,24 @@ export function PlaybackPreview({
               />
               <span>{Math.round(snapshot.volume)}%</span>
             </label>
-            <button disabled title="Repetición · Próximamente" aria-label="Repetición"><Icon name="repeat" /></button>
+            <button
+              className={queueState?.repeatMode !== "off" ? "is-active" : ""}
+              onClick={queueState?.toggleRepeat}
+              title={`Repetición: ${queueState?.repeatMode ?? "off"}`}
+              aria-label="Repetición"
+            >
+              <Icon name="repeat" />
+              {queueState?.repeatMode === "one" ? <span className="repeat-indicator">1</span> : null}
+            </button>
             <button onClick={onOpen} title="Abrir otro archivo" aria-label="Abrir otro archivo"><Icon name="folder" /></button>
-            <button disabled title="Más opciones · Próximamente" aria-label="Más opciones"><Icon name="more" /></button>
+            <button
+              className={viewMode === "queue" ? "is-active" : ""}
+              onClick={() => setViewMode(viewMode === "queue" ? "cover" : "queue")}
+              title="Ver cola de reproducción"
+              aria-label="Cola"
+            >
+              <Icon name="queue" />
+            </button>
           </div>
 
           <div className="preview-runtime">

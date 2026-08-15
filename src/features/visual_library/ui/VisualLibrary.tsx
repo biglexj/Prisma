@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
+import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
 import type { VisualFolderSource, VisualLibraryItem, VisualMediaKind } from "../model/types";
 import { VisualThumbnail } from "./VisualThumbnail";
 import { VideoThumbnail } from "./VideoThumbnail";
@@ -180,28 +181,11 @@ export function VisualLibrary({
       ) : openedFolder ? (
         /* ── Vista interna de carpeta ── */
         <div className="visual-folder-view" aria-busy={loading}>
-          <header className="visual-folder-view-header">
-            <button
-              className="visual-folder-back"
-              onClick={() => setSelectedFolder(null)}
-              title="Volver a carpetas"
-            >
-              <Icon name="arrow-left" />
-            </button>
-            <span className="visual-folder-breadcrumb">
-              <button
-                className="visual-folder-breadcrumb-root"
-                onClick={() => setSelectedFolder(null)}
-              >
-                Carpetas
-              </button>
-              <Icon name="chevron-right" />
-              <strong>{openedFolder.folderName}</strong>
-            </span>
-            <span className="visual-section-count">
-              {openedFolder.items.length} {openedFolder.items.length === 1 ? "archivo" : "archivos"}
-            </span>
-          </header>
+          <FolderBreadcrumbHeader
+            currentPath={openedFolder.folderName}
+            itemCount={openedFolder.items.length}
+            onNavigate={() => setSelectedFolder(null)}
+          />
           <div className="visual-grid bento-grid-layout">
             {openedFolder.items.map((item, idx) => (
               <VisualCard

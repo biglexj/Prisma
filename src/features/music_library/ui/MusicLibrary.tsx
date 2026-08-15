@@ -1,13 +1,16 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
+import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
 import type { MusicFolderSource, MusicLibraryItem } from "../model/types";
+import type { MusicQueueItem } from "../../playback/model/queue";
 import { MusicArtwork } from "./MusicArtwork";
 import "./music-library.css";
 
-const VISIBLE_ITEM_LIMIT = 240;
+const VISIBLE_ITEM_LIMIT = 300;
 
 type ViewMode = "timeline" | "folders";
+type FolderNavState = { folderName: string } | null;
 
 interface MusicLibraryProps {
   folders: MusicFolderSource[];
@@ -16,6 +19,8 @@ interface MusicLibraryProps {
   error: string | null;
   onAdd: (path: string) => Promise<void>;
   onPlay: (path: string) => void;
+  onPlayQueue?: (items: MusicQueueItem[], startIndex?: number, name?: string) => void;
+  onAddToQueue?: (items: MusicQueueItem[]) => void;
   onOpenFolders: () => void;
 }
 
@@ -29,6 +34,17 @@ interface FolderSection {
   items: MusicLibraryItem[];
 }
 
+function toQueueItem(item: MusicLibraryItem): MusicQueueItem {
+  return {
+    id: item.path,
+    path: item.path,
+    title: item.title,
+    artist: item.relativeFolder,
+    folder: item.relativeFolder,
+    sizeBytes: item.sizeBytes,
+  };
+}
+
 export function MusicLibrary({
   folders,
   items,
@@ -36,9 +52,12 @@ export function MusicLibrary({
   error,
   onAdd,
   onPlay,
+  onPlayQueue,
+  onAddToQueue,
   onOpenFolders,
 }: MusicLibraryProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("timeline");
+  const [selectedFolder, setSelectedFolder] = useState<FolderNavState>(null);
 
   const chooseFolder = async () => {
     const selection = await open({
@@ -55,6 +74,51 @@ export function MusicLibrary({
   const timelineSections = groupByTimeline(visibleItems);
   const folderSections = groupByFolder(visibleItems);
 
+  const openedFolder = selectedFolder
+    ? (folderSections.find((s) => s.folderName === selectedFolder.folderName) ?? null)
+    : null;
+
+  const handlePlayAll = () => {
+    if (items.length === 0) return;
+    const queueItems = items.map(toQueueItem);
+    if (onPlayQueue) {
+      onPlayQueue(queueItems, 0, "Toda la Música");
+    } else {
+      onPlay(items[0].path);
+    }
+  };
+
+  const handlePlayFolder = (folderName: string) => {
+    const target = folderSections.find((s) => s.folderName === folderName);
+    if (!target || target.items.length === 0) return;
+    const queueItems = target.items.map(toQueueItem);
+    if (onPlayQueue) {
+      onPlayQueue(queueItems, 0, target.folderName);
+    } else {
+      onPlay(target.items[0].path);
+    }
+  };
+
+  const handleAddFolderToQueue = (folderName: string) => {
+    const target = folderSections.find((s) => s.folderName === folderName);
+    if (!target || !onAddToQueue) return;
+    onAddToQueue(target.items.map(toQueueItem));
+  };
+
+  const handlePlayItemInList = (list: MusicLibraryItem[], index: number, queueName?: string) => {
+    if (onPlayQueue) {
+      const queueItems = list.map(toQueueItem);
+      onPlayQueue(queueItems, index, queueName ?? "Música");
+    } else {
+      onPlay(list[index].path);
+    }
+  };
+
+  const handleSwitchMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    setSelectedFolder(null);
+  };
+
   return (
     <section className="music-library">
       <header className="music-library-heading">
@@ -62,10 +126,15 @@ export function MusicLibrary({
           <span className="preview-kicker">BIBLIOTECA MUSICAL</span>
           <h1>Música</h1>
           <p>
-            Explora tu colección de canciones locales organizadas en línea de tiempo y vista por carpetas con carátulas y reproducción instantánea.
+            Explora tu colección de canciones locales organizadas en línea de tiempo, árbol de carpetas con carátulas y gestión de colas.
           </p>
         </div>
         <div className="music-heading-actions">
+          {items.length > 0 ? (
+            <button className="tonal-button is-primary" onClick={handlePlayAll} title="Reproducir toda la música en cola">
+              <Icon name="play" /> Reproducir todo
+            </button>
+          ) : null}
           <button className="tonal-button" onClick={onOpenFolders}>
             <Icon name="folder" /> Administrar fuentes
           </button>
@@ -98,7 +167,7 @@ export function MusicLibrary({
         <div className="music-view-mode-tabs">
           <button
             className={viewMode === "timeline" ? "is-active" : ""}
-            onClick={() => setViewMode("timeline")}
+            onClick={() => handleSwitchMode("timeline")}
             title="Línea de tiempo"
           >
             <Icon name="clock" />
@@ -106,7 +175,7 @@ export function MusicLibrary({
           </button>
           <button
             className={viewMode === "folders" ? "is-active" : ""}
-            onClick={() => setViewMode("folders")}
+            onClick={() => handleSwitchMode("folders")}
             title="Carpetas"
           >
             <Icon name="folder" />
@@ -137,37 +206,49 @@ export function MusicLibrary({
                 </span>
               </header>
               <div className="music-auto-grid">
-                {section.items.map((item) => (
+                {section.items.map((item, idx) => (
                   <MusicCard
                     item={item}
                     key={item.path}
-                    onClick={() => onPlay(item.path)}
+                    onClick={() => handlePlayItemInList(section.items, idx, section.title)}
+                    onAddToQueue={onAddToQueue ? () => onAddToQueue([toQueueItem(item)]) : undefined}
                   />
                 ))}
               </div>
             </div>
           ))}
         </div>
+      ) : openedFolder ? (
+        /* ── Vista interna de carpeta con Breadcrumbs de Lienzo ── */
+        <div className="music-folder-internal-view" aria-busy={loading}>
+          <FolderBreadcrumbHeader
+            currentPath={openedFolder.folderName}
+            itemCount={openedFolder.items.length}
+            onNavigate={() => setSelectedFolder(null)}
+            onPlayFolder={() => handlePlayFolder(openedFolder.folderName)}
+            onAddFolderToQueue={onAddToQueue ? () => handleAddFolderToQueue(openedFolder.folderName) : undefined}
+          />
+          <div className="music-auto-grid">
+            {openedFolder.items.map((item, idx) => (
+              <MusicCard
+                item={item}
+                key={item.path}
+                onClick={() => handlePlayItemInList(openedFolder.items, idx, openedFolder.folderName)}
+                onAddToQueue={onAddToQueue ? () => onAddToQueue([toQueueItem(item)]) : undefined}
+              />
+            ))}
+          </div>
+        </div>
       ) : (
-        <div className="music-timeline-container" aria-busy={loading}>
+        /* ── Vista de colecciones de carpetas en árbol/mosaico ── */
+        <div className="music-folder-collections" aria-busy={loading}>
           {folderSections.map((section) => (
-            <div className="music-section" key={section.folderName}>
-              <header className="music-section-header">
-                <h3>📁 {section.folderName}</h3>
-                <span className="music-section-count">
-                  {section.items.length} {section.items.length === 1 ? "canción" : "canciones"}
-                </span>
-              </header>
-              <div className="music-auto-grid">
-                {section.items.map((item) => (
-                  <MusicCard
-                    item={item}
-                    key={item.path}
-                    onClick={() => onPlay(item.path)}
-                  />
-                ))}
-              </div>
-            </div>
+            <MusicFolderCard
+              key={section.folderName}
+              section={section}
+              onOpen={() => setSelectedFolder({ folderName: section.folderName })}
+              onPlay={() => handlePlayFolder(section.folderName)}
+            />
           ))}
         </div>
       )}
@@ -184,39 +265,100 @@ export function MusicLibrary({
 interface MusicCardProps {
   item: MusicLibraryItem;
   onClick: () => void;
+  onAddToQueue?: () => void;
 }
 
-function MusicCard({ item, onClick }: MusicCardProps) {
+function MusicCard({ item, onClick, onAddToQueue }: MusicCardProps) {
   return (
-    <button className="music-media-card" onClick={onClick} title={`${item.title} — ${item.relativeFolder}`}>
-      <span className="music-media-frame">
-        <span className="music-frame-placeholder">
-          <Icon name="music" />
+    <div className="music-media-card-wrapper">
+      <button className="music-media-card" onClick={onClick} title={`${item.title} — ${item.relativeFolder}`}>
+        <span className="music-media-frame">
+          <span className="music-frame-placeholder">
+            <Icon name="music" />
+          </span>
+          <MusicArtwork alt={item.title} className="music-card-artwork" path={item.path} />
+
+          <span className="music-hover-overlay">
+            <i className="music-play-badge">
+              <Icon name="play" />
+            </i>
+            <div className="music-hover-info">
+              <strong className="music-hover-title" title={item.title}>
+                {item.title}
+              </strong>
+              <span className="music-hover-artist" title={item.relativeFolder}>
+                {item.relativeFolder}
+              </span>
+            </div>
+          </span>
         </span>
-        <MusicArtwork alt={item.title} className="music-card-artwork" path={item.path} />
-        
-        <span className="music-hover-overlay">
-          <i className="music-play-badge">
+        <span className="music-card-caption">
+          <strong>{item.title}</strong>
+          <small>
+            {item.relativeFolder}
+            {item.sizeBytes ? ` · ${formatBytes(item.sizeBytes)}` : ""}
+          </small>
+        </span>
+      </button>
+
+      {onAddToQueue ? (
+        <button
+          className="music-card-queue-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddToQueue();
+          }}
+          title="Añadir a la cola"
+        >
+          <Icon name="queue" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+interface MusicFolderCardProps {
+  section: FolderSection;
+  onOpen: () => void;
+  onPlay: () => void;
+}
+
+function MusicFolderCard({ section, onOpen, onPlay }: MusicFolderCardProps) {
+  const preview = section.items.slice(0, 4);
+
+  return (
+    <div className="music-folder-card" onClick={onOpen} title={`Carpeta ${section.folderName}`}>
+      <div className="music-folder-mosaic">
+        {preview.map((item, idx) => (
+          <span className="music-folder-mosaic-cell" key={item.path} data-index={idx}>
+            <MusicArtwork alt={item.title} className="music-card-artwork" path={item.path} />
+          </span>
+        ))}
+        {preview.length === 0 && (
+          <span className="music-folder-mosaic-empty">
+            <Icon name="folder" />
+          </span>
+        )}
+        <div className="music-folder-hover-overlay">
+          <button
+            className="music-folder-play-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlay();
+            }}
+            title="Reproducir carpeta"
+          >
             <Icon name="play" />
-          </i>
-          <div className="music-hover-info">
-            <strong className="music-hover-title" title={item.title}>
-              {item.title}
-            </strong>
-            <span className="music-hover-artist" title={item.relativeFolder}>
-              {item.relativeFolder}
-            </span>
-          </div>
+          </button>
+        </div>
+      </div>
+      <div className="music-folder-info">
+        <strong className="music-folder-title">{section.folderName}</strong>
+        <span className="music-folder-count">
+          {section.items.length} {section.items.length === 1 ? "canción" : "canciones"}
         </span>
-      </span>
-      <span className="music-card-caption">
-        <strong>{item.title}</strong>
-        <small>
-          {item.relativeFolder}
-          {item.sizeBytes ? ` · ${formatBytes(item.sizeBytes)}` : ""}
-        </small>
-      </span>
-    </button>
+      </div>
+    </div>
   );
 }
 
