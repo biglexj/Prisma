@@ -69,12 +69,15 @@ export function HomeDashboard({
       ) : null}
 
       {images.length > 0 ? (
-        <MediaShelf title="Imágenes recientes" kicker="TU LIENZO" onOpen={onOpenImages}>
-          <div className="home-visual-grid">
-            {images.slice(0, 6).map((item, index) => (
-              <button className={index === 0 ? "home-visual-card is-featured" : "home-visual-card"} key={item.path} onClick={onOpenImages}>
-                <VisualThumbnail path={item.path} alt={item.title} className="home-visual-thumbnail" />
-                <span><strong>{item.title}</strong><small>{item.relativeFolder}</small></span>
+        <MediaShelf title="Imágenes recientes" kicker="IMÁGENES" onOpen={onOpenImages}>
+          <div className="home-media-row">
+            {images.slice(0, 8).map((item) => (
+              <button className="home-media-card" key={item.path} onClick={onOpenImages} title={item.title}>
+                <span className="home-media-frame">
+                  <VisualThumbnail path={item.path} alt={item.title} className="home-media-thumbnail" />
+                </span>
+                <strong>{item.title}</strong>
+                <small>{item.relativeFolder}</small>
               </button>
             ))}
           </div>
@@ -83,11 +86,16 @@ export function HomeDashboard({
 
       {musicItems.length > 0 ? (
         <MediaShelf title="Volver a escuchar" kicker="MÚSICA" onOpen={() => onPlayMusic(musicItems[0].path)}>
-          <div className="home-album-row">
+          <div className="home-media-row">
             {musicItems.slice(0, 8).map((item) => (
-              <button className="home-album-card" key={item.path} onClick={() => onPlayMusic(item.path)}>
-                <span><Icon name="music" /><MusicArtwork className="home-album-art" path={item.path} alt={`Carátula de ${item.title}`} /><i><Icon name="play" /></i></span>
-                <strong>{item.title}</strong><small>{item.relativeFolder}</small>
+              <button className="home-media-card" key={item.path} onClick={() => onPlayMusic(item.path)} title={item.title}>
+                <span className="home-media-frame">
+                  <Icon name="music" />
+                  <MusicArtwork className="home-media-thumbnail" path={item.path} alt={`Carátula de ${item.title}`} />
+                  <i className="home-media-play-btn"><Icon name="play" /></i>
+                </span>
+                <strong>{item.title}</strong>
+                <small>{item.relativeFolder}</small>
               </button>
             ))}
           </div>
@@ -95,15 +103,16 @@ export function HomeDashboard({
       ) : null}
 
       {videos.length > 0 ? (
-        <MediaShelf title="Vídeos recientes" kicker="CINE LOCAL" onOpen={onOpenVideos}>
-          <div className="home-video-row">
-            {videos.slice(0, 5).map((item) => (
-              <button className="home-video-card" key={item.path} onClick={() => onPlayVideo(item.path)}>
-                <span>
-                  <VideoThumbnail path={item.path} title={item.title} className="home-video-thumbnail" />
-                  <i><Icon name="play" /></i>
+        <MediaShelf title="Vídeos recientes" kicker="VÍDEOS" onOpen={onOpenVideos}>
+          <div className="home-media-row">
+            {videos.slice(0, 8).map((item) => (
+              <button className="home-media-card" key={item.path} onClick={() => onPlayVideo(item.path)} title={item.title}>
+                <span className="home-media-frame">
+                  <VideoThumbnail path={item.path} title={item.title} className="home-media-thumbnail" />
+                  <i className="home-media-play-btn"><Icon name="play" /></i>
                 </span>
-                <strong>{item.title}</strong><small>{item.relativeFolder}</small>
+                <strong>{item.title}</strong>
+                <small>{item.relativeFolder}</small>
               </button>
             ))}
           </div>
