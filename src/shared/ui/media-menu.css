@@ -1,0 +1,197 @@
+/* ── Menú contextual flotante ── */
+.media-context-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.media-context-menu {
+  position: fixed;
+  z-index: 1001;
+  min-width: 200px;
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.08));
+  border-radius: 14px;
+  padding: 6px;
+  background: var(--surface-container-high, #f1e8e8);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.media-context-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  border-radius: 9px;
+  padding: 9px 12px;
+  color: var(--on-surface, #1a0e11);
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 130ms ease;
+}
+
+.media-context-item svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  color: var(--on-surface-variant, #6f5c61);
+}
+
+.media-context-item:hover:not(:disabled),
+.media-context-item:focus-visible {
+  outline: none;
+  background: var(--surface-container-highest, #24181b);
+}
+
+.media-context-item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.media-context-item.is-danger {
+  color: var(--error, #ba1a1a);
+}
+
+.media-context-item.is-danger svg {
+  color: var(--error, #ba1a1a);
+}
+
+.media-context-item.is-danger:hover:not(:disabled),
+.media-context-item.is-danger:focus-visible {
+  background: color-mix(in srgb, var(--error, #ba1a1a) 14%, transparent);
+}
+
+/* ── Diálogo de confirmación ── */
+.media-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: media-dialog-fade 160ms ease;
+}
+
+@keyframes media-dialog-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.media-dialog-card {
+  width: min(420px, 100%);
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.1));
+  border-radius: 20px;
+  padding: 26px 24px 22px;
+  background: var(--surface-container-high, #f1e8e8);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  text-align: center;
+  animation: media-dialog-pop 180ms ease;
+}
+
+@keyframes media-dialog-pop {
+  from { transform: scale(0.96) translateY(8px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.media-dialog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  color: var(--on-surface-variant, #6f5c61);
+  background: var(--surface-container, #f9efef);
+}
+
+.media-dialog-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.media-dialog-icon.is-danger {
+  color: var(--error, #ba1a1a);
+  background: color-mix(in srgb, var(--error, #ba1a1a) 14%, transparent);
+}
+
+.media-dialog-card h3 {
+  margin: 0 0 8px;
+  color: var(--on-surface, #1a0e11);
+  font-size: 1.05rem;
+}
+
+.media-dialog-message {
+  margin: 0 0 22px;
+  color: var(--on-surface-variant, #6f5c61);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.media-dialog-message strong {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--on-surface, #1a0e11);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.media-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.media-dialog-actions button {
+  border: 0;
+  border-radius: 22px;
+  padding: 10px 20px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 140ms ease, transform 120ms ease, box-shadow 140ms ease;
+}
+
+.media-dialog-actions button:active {
+  transform: scale(0.97);
+}
+
+.media-dialog-cancel {
+  color: var(--on-surface-variant, #6f5c61);
+  background: var(--surface-container-highest, #24181b);
+}
+
+.media-dialog-cancel:hover {
+  background: var(--surface-container-high, #f1e8e8);
+}
+
+.media-dialog-confirm {
+  color: var(--on-primary, #ffffff);
+  background: var(--primary, #c90045);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--primary, #c90045) 35%, transparent);
+}
+
+.media-dialog-confirm:hover {
+  filter: brightness(1.06);
+}
+
+.media-dialog-confirm.is-danger {
+  color: var(--on-error, #ffffff);
+  background: var(--error, #ba1a1a);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--error, #ba1a1a) 35%, transparent);
+}
+
+.media-dialog-confirm.is-danger:hover {
+  filter: brightness(1.08);
+}

@@ -36,8 +36,8 @@ const principalItems: SidebarItem[] = [
 
 const libraryItems: SidebarItem[] = [
   { icon: "music", label: "Música", view: "music" },
-  { icon: "video", label: "Vídeos", view: "videos" },
   { icon: "image", label: "Imágenes", view: "images" },
+  { icon: "video", label: "Vídeos", view: "videos" },
 ];
 
 const collectionItems: SidebarItem[] = [

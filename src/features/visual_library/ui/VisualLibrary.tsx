@@ -4,12 +4,15 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
 import { MediaTreeView } from "../../../shared/ui/MediaTreeView";
+import { ContextMenu } from "../../../shared/ui/ContextMenu";
+import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
 import {
   cleanPath,
   resolveTreeLevel,
   type HierarchicalFolder,
 } from "../../../shared/mediaTree";
 import { useFavorites } from "../../../shared/useFavorites";
+import { useMediaDelete } from "../../../shared/useMediaDelete";
 import type { VisualFolderSource, VisualLibraryItem, VisualMediaKind } from "../model/types";
 import { VisualThumbnail } from "./VisualThumbnail";
 import { VideoThumbnail } from "./VideoThumbnail";
@@ -21,7 +24,7 @@ import "./visual-library.css";
 const VISIBLE_ITEM_LIMIT = 400;
 
 type ViewMode = "timeline" | "folders" | "tree";
-export type VisualSortField = "date" | "name" | "size";
+export type VisualSortField = "date" | "name" | "size" | "random";
 export type VisualSortDirection = "desc" | "asc";
 
 // Memoria de sesión para recordar pestaña, carpeta abierta y criterio de ordenación en imágenes y vídeos
@@ -54,6 +57,8 @@ interface VisualLibraryProps {
   onAdd: (path: string) => Promise<void>;
   onOpenVideo: (path: string, sessionItems?: VisualLibraryItem[]) => void;
   onOpenFolders: () => void;
+  confirmDeletion: boolean;
+  onRefresh: () => void | Promise<void>;
 }
 
 export function VisualLibrary({
@@ -67,17 +72,30 @@ export function VisualLibrary({
   onAdd,
   onOpenVideo,
   onOpenFolders,
+  confirmDeletion,
+  onRefresh,
 }: VisualLibraryProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(() => sessionVisualState[kind].viewMode);
   const [currentFolderPath, setCurrentFolderPath] = useState<string>(() => sessionVisualState[kind].folderPath);
   const [sortField, setSortField] = useState<VisualSortField>(() => sessionVisualState[kind].sortField);
   const [sortDirection, setSortDirection] = useState<VisualSortDirection>(() => sessionVisualState[kind].sortDirection);
+  const [randomSeed, setRandomSeed] = useState(1);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
   const [activeImageSessionList, setActiveImageSessionList] = useState<VisualLibraryItem[] | null>(null);
   const favorites = useFavorites();
+  const mediaDelete = useMediaDelete({
+    confirmDeletion,
+    onRefresh,
+    onDeleted: (item) => {
+      if (selectedImage && item.path === selectedImage.path) {
+        setSelectedImage(null);
+        setActiveImageSessionList(null);
+      }
+    },
+  });
 
   const isImage = kind === "image";
   const label = isImage ? "Imágenes" : "Vídeos";
@@ -106,6 +124,15 @@ export function VisualLibrary({
 
   const nonExcludedItems = items.filter((it) => !it.isExcluded);
 
+  // Hash determinista para ordenación aleatoria pero estable
+  const hashString = (str: string, seed: number) => {
+    let hash = seed;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+    }
+    return hash;
+  };
+
   // Función de ordenación pura aplicable a cualquier colección de ítems
   const sortItemList = (itemList: VisualLibraryItem[]): VisualLibraryItem[] => {
     return [...itemList].sort((a, b) => {
@@ -116,6 +143,10 @@ export function VisualLibrary({
         comparison = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" });
       } else if (sortField === "size") {
         comparison = (b.sizeBytes || 0) - (a.sizeBytes || 0);
+      } else if (sortField === "random") {
+        const hashA = hashString(a.path, randomSeed);
+        const hashB = hashString(b.path, randomSeed);
+        comparison = hashA - hashB;
       }
       return sortDirection === "asc" ? -comparison : comparison;
     });
@@ -180,6 +211,51 @@ export function VisualLibrary({
     }
   };
 
+  const handleCardContextMenu = (event: React.MouseEvent, item: VisualLibraryItem) => {
+    mediaDelete.openMenu(event, {
+      path: item.path,
+      title: item.title,
+      kind: isImage ? "image" : "video",
+    });
+  };
+
+  const handleCardDeleteRequest = (item: VisualLibraryItem) => {
+    mediaDelete.requestDelete({
+      path: item.path,
+      title: item.title,
+      kind: isImage ? "image" : "video",
+    });
+  };
+
+  const buildMenuItems = () => {
+    const target = mediaDelete.menu;
+    if (!target) return [];
+    const isFav = favorites.isFavorite(target.item.path);
+    return [
+      {
+        id: "favorite",
+        label: isFav ? "Quitar de favoritos" : "Añadir a favoritos",
+        icon: "heart" as const,
+        onSelect: () => favorites.toggleFavorite(target.item.path, kind),
+      },
+      {
+        id: "show",
+        label: "Mostrar en carpeta",
+        icon: "folder-open" as const,
+        onSelect: () => {
+          void invoke("show_in_file_manager", { path: target.item.path }).catch(() => {});
+        },
+      },
+      {
+        id: "delete",
+        label: "Eliminar",
+        icon: "trash" as const,
+        danger: true,
+        onSelect: () => mediaDelete.requestDelete(target.item),
+      },
+    ];
+  };
+
   // Abrir imagen seleccionada externamente (por ejemplo, desde Inicio)
   useEffect(() => {
     if (initialSelectedImagePath && items.length > 0) {
@@ -238,6 +314,13 @@ export function VisualLibrary({
         </div>
       ) : null}
 
+      {mediaDelete.deleteError ? (
+        <div className="error-banner" role="alert">
+          <strong>No se pudo eliminar el archivo</strong>
+          <span>{mediaDelete.deleteError}</span>
+        </div>
+      ) : null}
+
       <div className="visual-controls-bar">
         <div className="visual-summary" aria-live="polite">
           <span>
@@ -260,9 +343,9 @@ export function VisualLibrary({
               title="Cambiar orden de visualización"
               type="button"
             >
-              <Icon name={sortDirection === "asc" ? "sort-asc" : "sort-desc"} />
+              <Icon name={sortField === "random" ? "shuffle" : sortDirection === "asc" ? "sort-asc" : "sort-desc"} />
               <span>
-                {sortField === "date" ? "Fecha" : sortField === "name" ? "Nombre" : "Tamaño"}
+                {sortField === "date" ? "Fecha" : sortField === "name" ? "Nombre" : sortField === "size" ? "Tamaño" : "Aleatorio"}
               </span>
               <Icon className="sort-chevron" name="chevron-down" />
             </button>
@@ -303,35 +386,64 @@ export function VisualLibrary({
                   <span>Tamaño de archivo</span>
                   {sortField === "size" ? <Icon name="check" /> : null}
                 </button>
+                <button
+                  className={`visual-sort-item ${sortField === "random" ? "is-selected" : ""}`}
+                  onClick={() => {
+                    setSortField("random");
+                    setRandomSeed(Date.now());
+                    sessionVisualState[kind].sortField = "random";
+                  }}
+                  type="button"
+                >
+                  <span>🎲 Aleatorio (Mezclar)</span>
+                  {sortField === "random" ? <Icon name="check" /> : null}
+                </button>
 
-                <div className="visual-sort-divider" />
-                <span className="visual-sort-section-title">Dirección</span>
-                <button
-                  className={`visual-sort-item ${sortDirection === "desc" ? "is-selected" : ""}`}
-                  onClick={() => {
-                    setSortDirection("desc");
-                    sessionVisualState[kind].sortDirection = "desc";
-                  }}
-                  type="button"
-                >
-                  <span>
-                    {sortField === "date" ? "Más recientes primero" : sortField === "name" ? "Z a A" : "Más pesados primero"}
-                  </span>
-                  {sortDirection === "desc" ? <Icon name="check" /> : null}
-                </button>
-                <button
-                  className={`visual-sort-item ${sortDirection === "asc" ? "is-selected" : ""}`}
-                  onClick={() => {
-                    setSortDirection("asc");
-                    sessionVisualState[kind].sortDirection = "asc";
-                  }}
-                  type="button"
-                >
-                  <span>
-                    {sortField === "date" ? "Más antiguos primero" : sortField === "name" ? "A a Z" : "Más ligeros primero"}
-                  </span>
-                  {sortDirection === "asc" ? <Icon name="check" /> : null}
-                </button>
+                {sortField !== "random" ? (
+                  <>
+                    <div className="visual-sort-divider" />
+                    <span className="visual-sort-section-title">Dirección</span>
+                    <button
+                      className={`visual-sort-item ${sortDirection === "desc" ? "is-selected" : ""}`}
+                      onClick={() => {
+                        setSortDirection("desc");
+                        sessionVisualState[kind].sortDirection = "desc";
+                      }}
+                      type="button"
+                    >
+                      <span>
+                        {sortField === "date" ? "Más recientes primero" : sortField === "name" ? "Z a A" : "Más pesados primero"}
+                      </span>
+                      {sortDirection === "desc" ? <Icon name="check" /> : null}
+                    </button>
+                    <button
+                      className={`visual-sort-item ${sortDirection === "asc" ? "is-selected" : ""}`}
+                      onClick={() => {
+                        setSortDirection("asc");
+                        sessionVisualState[kind].sortDirection = "asc";
+                      }}
+                      type="button"
+                    >
+                      <span>
+                        {sortField === "date" ? "Más antiguos primero" : sortField === "name" ? "A a Z" : "Más ligeros primero"}
+                      </span>
+                      {sortDirection === "asc" ? <Icon name="check" /> : null}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="visual-sort-divider" />
+                    <button
+                      className="visual-sort-item"
+                      onClick={() => setRandomSeed(Date.now())}
+                      style={{ color: "var(--primary)" }}
+                      type="button"
+                    >
+                      <span>⚡ Volver a mezclar</span>
+                      <Icon name="refresh" />
+                    </button>
+                  </>
+                )}
               </div>
             ) : null}
           </div>
@@ -400,6 +512,8 @@ export function VisualLibrary({
                         ? handleSelectImage(item, items)
                         : onOpenVideo(item.path, items)
                     }
+                    onContextMenu={(event) => handleCardContextMenu(event, item)}
+                    onDeleteRequest={() => handleCardDeleteRequest(item)}
                     onToggleFavorite={() => favorites.toggleFavorite(item.path, kind)}
                   />
                 ))}
@@ -452,6 +566,8 @@ export function VisualLibrary({
                         ? handleSelectImage(item, sortedDirectItems)
                         : onOpenVideo(item.path, sortedDirectItems)
                     }
+                    onContextMenu={(event) => handleCardContextMenu(event, item)}
+                    onDeleteRequest={() => handleCardDeleteRequest(item)}
                     onToggleFavorite={() => favorites.toggleFavorite(item.path, kind)}
                   />
                 ))}
@@ -473,6 +589,8 @@ export function VisualLibrary({
               onOpenVideo(item.path, list);
             }
           }}
+          onOpenItemMenu={handleCardContextMenu}
+          onDeleteRequest={handleCardDeleteRequest}
         />
       )}
 
@@ -491,6 +609,31 @@ export function VisualLibrary({
           onSelectImage={(item) => handleSelectImage(item, currentActiveList)}
         />
       ) : null}
+
+      {mediaDelete.menu ? (
+        <ContextMenu
+          items={buildMenuItems()}
+          onClose={mediaDelete.closeMenu}
+          x={mediaDelete.menu.x}
+          y={mediaDelete.menu.y}
+        />
+      ) : null}
+
+      {mediaDelete.pendingDelete ? (
+        <ConfirmDialog
+          cancelLabel="Cancelar"
+          confirmLabel="Eliminar"
+          message={
+            <span>
+              Se enviará <strong>{mediaDelete.pendingDelete.title}</strong> a la papelera de
+              reciclaje. Esta acción no se puede deshacer.
+            </span>
+          }
+          onCancel={mediaDelete.cancelDelete}
+          onConfirm={mediaDelete.confirmDelete}
+          title={`Eliminar ${isImage ? "imagen" : "vídeo"}`}
+        />
+      ) : null}
     </section>
   );
 }
@@ -502,9 +645,11 @@ interface VisualCardProps {
   isFavorite: boolean;
   onClick: () => void;
   onToggleFavorite?: () => void;
+  onContextMenu?: (event: React.MouseEvent) => void;
+  onDeleteRequest?: () => void;
 }
 
-function VisualCard({ item, index, isImage, isFavorite, onClick, onToggleFavorite }: VisualCardProps) {
+function VisualCard({ item, index, isImage, isFavorite, onClick, onToggleFavorite, onContextMenu, onDeleteRequest }: VisualCardProps) {
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
   let layoutClass = isImage
@@ -528,7 +673,19 @@ function VisualCard({ item, index, isImage, isFavorite, onClick, onToggleFavorit
 
   return (
     <div className={`visual-media-card-wrapper ${layoutClass}`}>
-      <button className="visual-media-card" onClick={onClick} title={cleanPath(item.path)}>
+      <button
+        className="visual-media-card"
+        onClick={onClick}
+        onContextMenu={onContextMenu}
+        onKeyDown={(event) => {
+          if (onDeleteRequest && (event.key === "Delete" || event.key === "Supr")) {
+            event.preventDefault();
+            event.stopPropagation();
+            onDeleteRequest();
+          }
+        }}
+        title={cleanPath(item.path)}
+      >
         <span className="visual-media-frame">
           {isImage ? (
             <VisualThumbnail

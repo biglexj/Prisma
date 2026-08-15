@@ -39,9 +39,11 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
     quickLookShortcut,
     autostart,
     minimizeToTray,
+    confirmDeletion,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
+    setConfirmDeletion,
   } = useSystemSettings();
 
   const isQuickLookActive = quickLookShortcut !== "disabled";
@@ -70,6 +72,7 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
       <div className="settings-tab-content">
         {activeTab === "general" ? (
           <div className="settings-panel">
+            <div className="settings-cards-grid">
             {/* ── Quick Look (Previsualización Rápida) ── */}
             <div className="settings-card">
               <div className="settings-card-header-row">
@@ -151,6 +154,32 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
               </div>
             </div>
 
+            {/* ── Eliminación de archivos ── */}
+            <div className="settings-card">
+              <h3>Eliminar archivos</h3>
+              <p>
+                Controla si Prisma pide confirmación antes de enviar una canción, imagen o vídeo a la papelera de reciclaje.
+              </p>
+
+              <div className="system-toggles-list">
+                <div className="system-toggle-item">
+                  <div className="system-toggle-info">
+                    <strong>Pedir confirmación al eliminar</strong>
+                    <p>Con la confirmación activada, la tecla Supr o la opción Eliminar piden confirmación antes de borrar. Desactívala para eliminar directamente a la papelera sin preguntar.</p>
+                  </div>
+                  <label className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={confirmDeletion}
+                      onChange={(e) => setConfirmDeletion(e.target.checked)}
+                      aria-label="Pedir confirmación al eliminar"
+                    />
+                    <span className="toggle-slider" />
+                  </label>
+                </div>
+              </div>
+            </div>
+
             {/* ── Theme picker ── */}
             <div className="settings-card">
               <h3>Apariencia</h3>
@@ -172,6 +201,7 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
             </div>
 
             {/* ── Library sources ── */}
+            </div>
             <LibrarySources images={images} music={music} onPlay={onPlay} videos={videos} />
           </div>
         ) : (

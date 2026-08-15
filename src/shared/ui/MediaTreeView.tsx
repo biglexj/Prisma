@@ -35,6 +35,8 @@ interface MediaTreeViewProps<T extends MediaTreeItem> {
   onAddToQueue?: (item: T) => void;
   onAddFolderToQueue?: (items: T[]) => void;
   onCreatePlaylistFromFolder?: (items: T[], folderName: string) => void;
+  onOpenItemMenu?: (event: React.MouseEvent, item: T) => void;
+  onDeleteRequest?: (item: T) => void;
 }
 
 // Memoria de sesión para preservar las carpetas expandidas por tipo de medio (Almacenamiento Local siempre abierto por defecto)
@@ -54,6 +56,8 @@ export function MediaTreeView<T extends MediaTreeItem>({
   onAddToQueue,
   onAddFolderToQueue,
   onCreatePlaylistFromFolder,
+  onOpenItemMenu,
+  onDeleteRequest,
 }: MediaTreeViewProps<T>) {
   const favorites = useFavorites();
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => {
@@ -327,7 +331,17 @@ export function MediaTreeView<T extends MediaTreeItem>({
         className="media-tree-row is-file"
         key={node.path}
         onClick={() => onPlayItem(file, contextList)}
+        onContextMenu={onOpenItemMenu ? (event) => onOpenItemMenu(event, file) : undefined}
+        onKeyDown={(event) => {
+          if (onDeleteRequest && (event.key === "Delete" || event.key === "Supr")) {
+            event.preventDefault();
+            event.stopPropagation();
+            onDeleteRequest(file);
+          }
+        }}
+        role="treeitem"
         style={{ paddingLeft: `${indentPx + 24}px` }}
+        tabIndex={0}
       >
         <span className="media-tree-file-thumb">
           {mediaType === "music" ? (

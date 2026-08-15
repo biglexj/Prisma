@@ -100,13 +100,68 @@ export function VideoPlayer({
   const hasNext = currentIndex >= 0 && currentIndex < localVideoItems.length - 1;
   const hasPrevious = currentIndex > 0;
 
+  // Audio secundario sincronizado para pistas múltiples
+  const secondaryAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [extractedAudioUrl, setExtractedAudioUrl] = useState<string | null>(null);
+
   // ── Selección de Pistas de Audio ──
-  const selectAudioTrack = (trackIndex: number) => {
+  const selectAudioTrack = async (trackIndex: number) => {
     setSelectedTrackIdx(trackIndex);
+
+    // 1. Intentar cambiar vía audioTracks HTML5 nativo si existe
     const video = videoRef.current as unknown as { audioTracks?: AudioTrackInfo[] };
     if (video && video.audioTracks && video.audioTracks.length > 0) {
       for (let i = 0; i < video.audioTracks.length; i++) {
         video.audioTracks[i].enabled = i === trackIndex;
+      }
+      return;
+    }
+
+    // 2. Si el video tiene pista 0 (predeterminada del archivo de video)
+    if (trackIndex === 0) {
+      if (secondaryAudioRef.current) {
+        secondaryAudioRef.current.pause();
+        secondaryAudioRef.current.src = "";
+      }
+      if (videoRef.current) {
+        videoRef.current.muted = false;
+      }
+      setExtractedAudioUrl(null);
+      return;
+    }
+
+    // 3. Pista 1 o superior en WebView2: extraer pista con ffmpeg y sincronizar
+    if (path) {
+      try {
+        setShuffleToastText("⏳ Cambiando de pista...");
+        const audioFilePath = await invoke<string>("video_extract_audio_track", {
+          path,
+          trackIndex,
+        });
+
+        const audioSrc = convertFileSrc(toPlatformPath(audioFilePath));
+        setExtractedAudioUrl(audioSrc);
+
+        if (videoRef.current) {
+          videoRef.current.muted = true; // Silenciar el video original para que suene la pista 2
+          const currentPos = videoRef.current.currentTime;
+          const isPaused = videoRef.current.paused;
+
+          if (secondaryAudioRef.current) {
+            secondaryAudioRef.current.src = audioSrc;
+            secondaryAudioRef.current.currentTime = currentPos;
+            secondaryAudioRef.current.volume = volume / 100;
+            if (!isPaused) {
+              secondaryAudioRef.current.play().catch(() => {});
+            }
+          }
+        }
+        setShuffleToastText(`🔊 Pista ${trackIndex + 1} activa`);
+        setTimeout(() => setShuffleToastText(null), 1800);
+      } catch (err) {
+        console.error("Error al extraer pista de audio:", err);
+        setShuffleToastText("❌ Error al cambiar pista");
+        setTimeout(() => setShuffleToastText(null), 1800);
       }
     }
   };
@@ -119,9 +174,7 @@ export function VideoPlayer({
       return;
     }
     const nextIdx = (selectedTrackIdx + 1) % audioTracksList.length;
-    selectAudioTrack(nextIdx);
-    setShuffleToastText(`🔊 Pista ${nextIdx + 1}`);
-    setTimeout(() => setShuffleToastText(null), 1800);
+    void selectAudioTrack(nextIdx);
   };
 
   // ── Conmutar Canales (Estéreo / Mono) ──
@@ -396,8 +449,15 @@ export function VideoPlayer({
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
       void videoRef.current.play();
+      if (secondaryAudioRef.current && extractedAudioUrl) {
+        secondaryAudioRef.current.currentTime = videoRef.current.currentTime;
+        void secondaryAudioRef.current.play().catch(() => {});
+      }
     } else {
       videoRef.current.pause();
+      if (secondaryAudioRef.current) {
+        secondaryAudioRef.current.pause();
+      }
     }
   };
 
@@ -405,6 +465,9 @@ export function VideoPlayer({
     if (!videoRef.current) return;
     videoRef.current.currentTime = newTime;
     setPosition(newTime);
+    if (secondaryAudioRef.current && extractedAudioUrl) {
+      secondaryAudioRef.current.currentTime = newTime;
+    }
   };
 
   const handleVolumeChange = (newVolume: number) => {
@@ -414,6 +477,9 @@ export function VideoPlayer({
     setVolume(newVolume);
     if (videoRef.current) {
       videoRef.current.volume = newVolume / 100;
+    }
+    if (secondaryAudioRef.current) {
+      secondaryAudioRef.current.volume = newVolume / 100;
     }
   };
 
@@ -433,6 +499,9 @@ export function VideoPlayer({
     setPlaybackSpeed(nextSpeed);
     if (videoRef.current) {
       videoRef.current.playbackRate = nextSpeed;
+    }
+    if (secondaryAudioRef.current) {
+      secondaryAudioRef.current.playbackRate = nextSpeed;
     }
   };
 
@@ -695,59 +764,59 @@ export function VideoPlayer({
           }}
         >
           {hasMedia ? (
-            <video
-              autoPlay
-              className="video-stage-surface"
-              onError={() => setVideoError(true)}
-              onLoadedMetadata={(e) => {
-                const video = e.currentTarget;
-                setDuration(video.duration || 0);
-                setPaused(video.paused);
+            <>
+              <video
+                autoPlay
+                className="video-stage-surface"
+                onError={() => setVideoError(true)}
+                onLoadedMetadata={(e) => {
+                  const video = e.currentTarget;
+                  setDuration(video.duration || 0);
+                  setPaused(video.paused);
 
-                // Detectar pistas de audio nativas reales del elemento
-                const rawTracks = (video as unknown as { audioTracks?: { length: number; [i: number]: AudioTrackInfo } }).audioTracks;
-                const apiSupported = rawTracks !== undefined && rawTracks !== null;
-                setAudioApiSupported(apiSupported);
-
-                if (apiSupported && rawTracks!.length > 0) {
-                  // API soportada y hay pistas reales
-                  const list: AudioTrackInfo[] = [];
-                  for (let i = 0; i < rawTracks!.length; i++) {
-                    list.push({
-                      index: i,
-                      id: rawTracks![i].id || String(i),
-                      label: rawTracks![i].label || `Pista ${i + 1}`,
-                      language: rawTracks![i].language || "",
-                      enabled: rawTracks![i].enabled,
-                    });
+                  // Si el elemento HTML5 soporta nativamente audioTracks y tiene datos, sincronizarlos
+                  const rawTracks = (video as unknown as { audioTracks?: { length: number; [i: number]: AudioTrackInfo } }).audioTracks;
+                  if (rawTracks && rawTracks.length > 0) {
+                    const list: AudioTrackInfo[] = [];
+                    for (let i = 0; i < rawTracks.length; i++) {
+                      list.push({
+                        index: i,
+                        id: rawTracks[i].id || String(i),
+                        label: rawTracks[i].label || `Pista ${i + 1}`,
+                        language: rawTracks[i].language || "",
+                        enabled: rawTracks[i].enabled,
+                      });
+                    }
+                    setAudioTracksList(list);
+                    const active = list.findIndex((t) => t.enabled);
+                    if (active >= 0) setSelectedTrackIdx(active);
                   }
-                  setAudioTracksList(list);
-                  const active = list.findIndex((t) => t.enabled);
-                  if (active >= 0) setSelectedTrackIdx(active);
-                } else {
-                  // API no soportada (WebView2) O realmente sin audio
-                  setAudioTracksList([]);
-                }
-              }}
-              onPause={() => setPaused(true)}
-              onPlay={() => setPaused(false)}
-              onTimeUpdate={(e) => {
-                setPosition(e.currentTarget.currentTime || 0);
-              }}
-              playsInline
-              ref={videoRef}
-              src={videoSrc}
-            >
-              {activeVttUrl ? (
-                <track
-                  default
-                  kind="subtitles"
-                  label={subtitlesList[selectedSubIdx ?? 0]?.label || "Subtítulo"}
-                  src={activeVttUrl}
-                  srcLang={subtitlesList[selectedSubIdx ?? 0]?.language || "es"}
-                />
-              ) : null}
-            </video>
+                }}
+                onPause={() => setPaused(true)}
+                onPlay={() => setPaused(false)}
+                onTimeUpdate={(e) => {
+                  setPosition(e.currentTarget.currentTime || 0);
+                }}
+                playsInline
+                ref={videoRef}
+                src={videoSrc}
+              >
+                {activeVttUrl ? (
+                  <track
+                    default
+                    kind="subtitles"
+                    label={subtitlesList[selectedSubIdx ?? 0]?.label || "Subtítulo"}
+                    src={activeVttUrl}
+                    srcLang={subtitlesList[selectedSubIdx ?? 0]?.language || "es"}
+                  />
+                ) : null}
+              </video>
+              {/* Audio secundario sincronizado cuando se selecciona Pista 2 o superior */}
+              <audio
+                ref={secondaryAudioRef}
+                style={{ display: "none" }}
+              />
+            </>
           ) : (
             <div className="video-empty-stage">
               <Icon name="video" />

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useTheme } from "./useTheme";
+import { useSystemSettings } from "./useSystemSettings";
 
 import { HomeDashboard } from "../features/home/ui/HomeDashboard";
 import { useMusicLibrary } from "../features/music_library/useMusicLibrary";
@@ -46,6 +47,7 @@ export function App() {
   const [activeInitialImagePath, setActiveInitialImagePath] = useState<string | null>(null);
   const [isPip, setIsPip] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { confirmDeletion } = useSystemSettings();
   const playback = usePlaybackController();
   const library = useMusicLibrary();
   const imageLibrary = useVisualLibrary("image");
@@ -206,6 +208,8 @@ export function App() {
                 setActiveView("player");
                 playback.playFolder(folderName, items, idx);
               }}
+              confirmDeletion={confirmDeletion}
+              onRefresh={() => library.refresh()}
             />
           ) : null}
 
@@ -221,6 +225,8 @@ export function App() {
               onClearInitialSelectedImage={() => setActiveInitialImagePath(null)}
               onOpenFolders={() => setActiveView("folders")}
               onOpenVideo={playVideoItem}
+              confirmDeletion={confirmDeletion}
+              onRefresh={() => imageLibrary.refresh()}
             />
           ) : null}
 
@@ -234,6 +240,8 @@ export function App() {
               onAdd={videoLibrary.addFolder}
               onOpenFolders={() => setActiveView("folders")}
               onOpenVideo={playVideoItem}
+              confirmDeletion={confirmDeletion}
+              onRefresh={() => videoLibrary.refresh()}
             />
           ) : null}
 

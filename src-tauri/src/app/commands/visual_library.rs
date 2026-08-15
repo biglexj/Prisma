@@ -401,3 +401,79 @@ pub fn video_get_audio_tracks(path: String) -> Result<Vec<AudioTrackMeta>, Strin
 
     Ok(tracks)
 }
+
+/// Extrae una pista de audio específica del vídeo a un archivo temporal rápido (.m4a / .mp3) para reproducirla en sincronía.
+#[tauri::command]
+pub fn video_extract_audio_track(path: String, track_index: usize) -> Result<String, String> {
+    let clean = path.trim_start_matches(r"\\?\");
+
+    let mut ffprobe_candidates = vec![
+        "ffmpeg".to_string(),
+        r"C:\Users\biglexj\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe".to_string(),
+        r"C:\Program Files\Krita (x64)\bin\ffmpeg.exe".to_string(),
+    ];
+
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(parent) = exe_path.parent() {
+            ffprobe_candidates.push(parent.join("ffmpeg.exe").to_string_lossy().into_owned());
+        }
+    }
+
+    if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+        ffprobe_candidates.push(format!(r"{}\Microsoft\WinGet\Links\ffmpeg.exe", local_appdata));
+    }
+
+    let temp_dir = std::env::temp_dir().join("prisma_audio_tracks");
+    let _ = std::fs::create_dir_all(&temp_dir);
+
+    use std::hash::{DefaultHasher, Hasher};
+    let mut hasher = DefaultHasher::new();
+    hasher.write(clean.as_bytes());
+    hasher.write_usize(track_index);
+    let hash = hasher.finish();
+
+    let out_file = temp_dir.join(format!("track_{}_{}.m4a", hash, track_index));
+
+    // Si ya existe y no está vacío, reutilizarlo inmediatamente
+    if out_file.exists() && out_file.metadata().map(|m| m.len() > 0).unwrap_or(false) {
+        return Ok(out_file.to_string_lossy().into_owned());
+    }
+
+    let mut success = false;
+    for candidate in &ffprobe_candidates {
+        if candidate.is_empty() {
+            continue;
+        }
+
+        // Intento 1: Copia directa stream copy (ultra instantáneo, 0ms)
+        let mut cmd = std::process::Command::new(candidate);
+        cmd.args([
+            "-y",
+            "-i", clean,
+            "-map", &format!("0:a:{}", track_index),
+            "-c:a", "aac",
+            "-b:a", "192k",
+            &out_file.to_string_lossy(),
+        ]);
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+
+        if let Ok(status) = cmd.status() {
+            if status.success() && out_file.exists() {
+                success = true;
+                break;
+            }
+        }
+    }
+
+    if success {
+        Ok(out_file.to_string_lossy().into_owned())
+    } else {
+        Err("No se pudo extraer la pista de audio con ffmpeg".to_string())
+    }
+}
+

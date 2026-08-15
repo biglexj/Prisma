@@ -7,6 +7,7 @@ interface SystemSettings {
   quickLookShortcut: QuickLookShortcutMode;
   autostart: boolean;
   minimizeToTray: boolean;
+  confirmDeletion: boolean;
 }
 
 const STORAGE_KEY = "prisma.system-settings.v1";
@@ -15,6 +16,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   quickLookShortcut: "space",
   autostart: false,
   minimizeToTray: true,
+  confirmDeletion: true,
 };
 
 function loadStoredSettings(): SystemSettings {
@@ -44,13 +46,16 @@ export function useSystemSettings() {
         ]);
 
         if (isMounted) {
-          const synced: SystemSettings = {
-            quickLookShortcut: (shortcut as QuickLookShortcutMode) || "space",
-            autostart,
-            minimizeToTray,
-          };
-          setSettings(synced);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
+          setSettings((prev) => {
+            const synced: SystemSettings = {
+              quickLookShortcut: (shortcut as QuickLookShortcutMode) || "space",
+              autostart,
+              minimizeToTray,
+              confirmDeletion: prev.confirmDeletion,
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
+            return synced;
+          });
           setIsLoaded(true);
         }
       } catch {
@@ -104,13 +109,23 @@ export function useSystemSettings() {
     }
   }, []);
 
+  const setConfirmDeletion = useCallback((enabled: boolean) => {
+    setSettings((prev) => {
+      const next = { ...prev, confirmDeletion: enabled };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   return {
     isLoaded,
     quickLookShortcut: settings.quickLookShortcut,
     autostart: settings.autostart,
     minimizeToTray: settings.minimizeToTray,
+    confirmDeletion: settings.confirmDeletion,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
+    setConfirmDeletion,
   };
 }

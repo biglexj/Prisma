@@ -1,13 +1,17 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
 import { MediaTreeView } from "../../../shared/ui/MediaTreeView";
+import { ContextMenu } from "../../../shared/ui/ContextMenu";
+import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
 import {
   resolveTreeLevel,
   type HierarchicalFolder,
 } from "../../../shared/mediaTree";
 import { useFavorites } from "../../../shared/useFavorites";
+import { useMediaDelete } from "../../../shared/useMediaDelete";
 import type { MusicFolderSource, MusicLibraryItem } from "../model/types";
 import type { MusicQueueItem } from "../../playback/model/queue";
 import { MusicArtwork } from "./MusicArtwork";
@@ -20,10 +24,15 @@ const VISIBLE_ITEM_LIMIT = 400;
 
 type ViewMode = "timeline" | "folders" | "tree";
 
-// Memoria de sesión para recordar la pestaña y carpeta abierta
+export type MusicSortField = "date" | "name" | "size" | "random";
+export type MusicSortDirection = "desc" | "asc";
+
+// Memoria de sesión para recordar la pestaña, carpeta abierta y criterio de ordenación
 const sessionMusicState = {
   viewMode: "timeline" as ViewMode,
   folderPath: "",
+  sortField: "date" as MusicSortField,
+  sortDirection: "desc" as MusicSortDirection,
 };
 
 interface MusicLibraryProps {
@@ -39,6 +48,8 @@ interface MusicLibraryProps {
   onPlayFolder?: (folderName: string, items: MusicQueueItem[], startIndex?: number) => void;
   onAddToQueue?: (items: MusicQueueItem[]) => void;
   onOpenFolders: () => void;
+  confirmDeletion: boolean;
+  onRefresh: () => void | Promise<void>;
 }
 
 function toQueueItem(item: MusicLibraryItem): MusicQueueItem {
@@ -66,10 +77,35 @@ export function MusicLibrary({
   onPlayFolder,
   onAddToQueue,
   onOpenFolders,
+  confirmDeletion,
+  onRefresh,
 }: MusicLibraryProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(() => sessionMusicState.viewMode);
   const [currentFolderPath, setCurrentFolderPath] = useState<string>(() => sessionMusicState.folderPath);
+  const [sortField, setSortField] = useState<MusicSortField>(() => sessionMusicState.sortField);
+  const [sortDirection, setSortDirection] = useState<MusicSortDirection>(() => sessionMusicState.sortDirection);
+  const [randomSeed, setRandomSeed] = useState(1);
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+
   const favorites = useFavorites();
+  const mediaDelete = useMediaDelete({
+    confirmDeletion,
+    onRefresh,
+  });
+
+  // Cerrar menú de ordenación al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+        setShowSortMenu(false);
+      }
+    };
+    if (showSortMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSortMenu]);
 
   const chooseFolder = async () => {
     const selection = await open({
@@ -83,13 +119,45 @@ export function MusicLibrary({
   };
 
   const nonExcludedItems = items.filter((it) => !it.isExcluded);
-  const visibleItems = nonExcludedItems.slice(0, VISIBLE_ITEM_LIMIT);
 
-  // Árbol jerárquico y colecciones (contiene todas las carpetas y archivos para navegación en Carpetas y Árbol)
+  // Hash determinista para ordenación aleatoria pero estable
+  const hashString = (str: string, seed: number) => {
+    let hash = seed;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+    }
+    return hash;
+  };
+
+  // Función de ordenación pura aplicable a cualquier colección de canciones
+  const sortItemList = (itemList: MusicLibraryItem[]): MusicLibraryItem[] => {
+    return [...itemList].sort((a, b) => {
+      let comparison = 0;
+      if (sortField === "date") {
+        comparison = (b.modifiedAtMillis || 0) - (a.modifiedAtMillis || 0);
+      } else if (sortField === "name") {
+        comparison = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" });
+      } else if (sortField === "size") {
+        comparison = (b.sizeBytes || 0) - (a.sizeBytes || 0);
+      } else if (sortField === "random") {
+        const hashA = hashString(a.path, randomSeed);
+        const hashB = hashString(b.path, randomSeed);
+        comparison = hashA - hashB;
+      }
+      return sortDirection === "asc" ? -comparison : comparison;
+    });
+  };
+
+  const sortedNonExcludedItems = sortItemList(nonExcludedItems);
+  const visibleItems = sortedNonExcludedItems.slice(0, VISIBLE_ITEM_LIMIT);
+
+  // Árbol jerárquico y colecciones
   const treeLevel = resolveTreeLevel(items, currentFolderPath, favorites.favorites, {
     allName: "Todas las canciones",
     mediaType: "music",
   });
+
+  const sortedDirectItems = sortItemList(treeLevel.directItems);
 
   const isInsideFolder = currentFolderPath !== "";
 
@@ -159,6 +227,56 @@ export function MusicLibrary({
   // Preservar y restaurar la posición exacta del scroll al navegar o volver
   useScrollRestoration(`view:music:${viewMode}:${currentFolderPath}`, !loading);
 
+  const buildTrackDisplayTitle = (item: MusicLibraryItem) => {
+    const { title, artist } = parseTrackInfo(item.title);
+    return artist ? `${artist} — ${title}` : title;
+  };
+
+  const handleCardContextMenu = (event: React.MouseEvent, item: MusicLibraryItem) => {
+    mediaDelete.openMenu(event, {
+      path: item.path,
+      title: buildTrackDisplayTitle(item),
+      kind: "music",
+    });
+  };
+
+  const handleCardDeleteRequest = (item: MusicLibraryItem) => {
+    mediaDelete.requestDelete({
+      path: item.path,
+      title: buildTrackDisplayTitle(item),
+      kind: "music",
+    });
+  };
+
+  const buildMenuItems = () => {
+    const target = mediaDelete.menu;
+    if (!target) return [];
+    const isFav = favorites.isFavorite(target.item.path);
+    return [
+      {
+        id: "favorite",
+        label: isFav ? "Quitar de favoritos" : "Añadir a favoritos",
+        icon: "heart" as const,
+        onSelect: () => favorites.toggleFavorite(target.item.path),
+      },
+      {
+        id: "show",
+        label: "Mostrar en carpeta",
+        icon: "folder-open" as const,
+        onSelect: () => {
+          void invoke("show_in_file_manager", { path: target.item.path }).catch(() => {});
+        },
+      },
+      {
+        id: "delete",
+        label: "Eliminar",
+        icon: "trash" as const,
+        danger: true,
+        onSelect: () => mediaDelete.requestDelete(target.item),
+      },
+    ];
+  };
+
   const handleSwitchMode = (mode: ViewMode) => {
     setViewMode(mode);
     sessionMusicState.viewMode = mode;
@@ -201,6 +319,13 @@ export function MusicLibrary({
         </div>
       ) : null}
 
+      {mediaDelete.deleteError ? (
+        <div className="error-banner" role="alert">
+          <strong>No se pudo eliminar el archivo</strong>
+          <span>{mediaDelete.deleteError}</span>
+        </div>
+      ) : null}
+
       <div className="music-controls-bar">
         <div className="music-summary" aria-live="polite">
           <span>
@@ -214,31 +339,146 @@ export function MusicLibrary({
           </span>
         </div>
 
-        <div className="music-view-mode-tabs">
-          <button
-            className={viewMode === "timeline" ? "is-active" : ""}
-            onClick={() => handleSwitchMode("timeline")}
-            title="Línea de tiempo"
-          >
-            <Icon name="clock" />
-            <span>Tiempo</span>
-          </button>
-          <button
-            className={viewMode === "folders" ? "is-active" : ""}
-            onClick={() => handleSwitchMode("folders")}
-            title="Carpetas"
-          >
-            <Icon name="folder" />
-            <span>Carpetas</span>
-          </button>
-          <button
-            className={viewMode === "tree" ? "is-active" : ""}
-            onClick={() => handleSwitchMode("tree")}
-            title="Vista en árbol"
-          >
-            <Icon name="folder-open" />
-            <span>Árbol</span>
-          </button>
+        <div className="music-controls-right">
+          {/* Selector de Ordenación Material 3 Expressive para Música */}
+          <div className="music-sort-container" ref={sortMenuRef}>
+            <button
+              className={`music-sort-trigger ${showSortMenu ? "is-open" : ""}`}
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              title="Cambiar orden de las canciones"
+              type="button"
+            >
+              <Icon name={sortField === "random" ? "shuffle" : sortDirection === "asc" ? "sort-asc" : "sort-desc"} />
+              <span>
+                {sortField === "date" ? "Fecha" : sortField === "name" ? "Nombre" : sortField === "size" ? "Tamaño" : "Aleatorio"}
+              </span>
+              <Icon className="sort-chevron" name="chevron-down" />
+            </button>
+
+            {showSortMenu ? (
+              <div className="music-sort-menu" role="menu">
+                <span className="music-sort-section-title">Ordenar por</span>
+                <button
+                  className={`music-sort-item ${sortField === "date" ? "is-selected" : ""}`}
+                  onClick={() => {
+                    setSortField("date");
+                    sessionMusicState.sortField = "date";
+                  }}
+                  type="button"
+                >
+                  <span>Fecha de modificación</span>
+                  {sortField === "date" ? <Icon name="check" /> : null}
+                </button>
+                <button
+                  className={`music-sort-item ${sortField === "name" ? "is-selected" : ""}`}
+                  onClick={() => {
+                    setSortField("name");
+                    sessionMusicState.sortField = "name";
+                  }}
+                  type="button"
+                >
+                  <span>Nombre de la canción</span>
+                  {sortField === "name" ? <Icon name="check" /> : null}
+                </button>
+                <button
+                  className={`music-sort-item ${sortField === "size" ? "is-selected" : ""}`}
+                  onClick={() => {
+                    setSortField("size");
+                    sessionMusicState.sortField = "size";
+                  }}
+                  type="button"
+                >
+                  <span>Tamaño de archivo</span>
+                  {sortField === "size" ? <Icon name="check" /> : null}
+                </button>
+                <button
+                  className={`music-sort-item ${sortField === "random" ? "is-selected" : ""}`}
+                  onClick={() => {
+                    setSortField("random");
+                    setRandomSeed(Date.now());
+                    sessionMusicState.sortField = "random";
+                  }}
+                  type="button"
+                >
+                  <span>🎲 Aleatorio (Mezclar)</span>
+                  {sortField === "random" ? <Icon name="check" /> : null}
+                </button>
+
+                {sortField !== "random" ? (
+                  <>
+                    <div className="music-sort-divider" />
+                    <span className="music-sort-section-title">Dirección</span>
+                    <button
+                      className={`music-sort-item ${sortDirection === "desc" ? "is-selected" : ""}`}
+                      onClick={() => {
+                        setSortDirection("desc");
+                        sessionMusicState.sortDirection = "desc";
+                      }}
+                      type="button"
+                    >
+                      <span>
+                        {sortField === "date" ? "Más recientes primero" : sortField === "name" ? "Z a A" : "Más pesados primero"}
+                      </span>
+                      {sortDirection === "desc" ? <Icon name="check" /> : null}
+                    </button>
+                    <button
+                      className={`music-sort-item ${sortDirection === "asc" ? "is-selected" : ""}`}
+                      onClick={() => {
+                        setSortDirection("asc");
+                        sessionMusicState.sortDirection = "asc";
+                      }}
+                      type="button"
+                    >
+                      <span>
+                        {sortField === "date" ? "Más antiguos primero" : sortField === "name" ? "A a Z" : "Más ligeros primero"}
+                      </span>
+                      {sortDirection === "asc" ? <Icon name="check" /> : null}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="music-sort-divider" />
+                    <button
+                      className="music-sort-item"
+                      onClick={() => setRandomSeed(Date.now())}
+                      style={{ color: "var(--primary)" }}
+                      type="button"
+                    >
+                      <span>⚡ Volver a mezclar</span>
+                      <Icon name="refresh" />
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="music-view-mode-tabs">
+            <button
+              className={viewMode === "timeline" ? "is-active" : ""}
+              onClick={() => handleSwitchMode("timeline")}
+              title="Línea de tiempo"
+            >
+              <Icon name="clock" />
+              <span>Tiempo</span>
+            </button>
+            <button
+              className={viewMode === "folders" ? "is-active" : ""}
+              onClick={() => handleSwitchMode("folders")}
+              title="Carpetas"
+            >
+              <Icon name="folder" />
+              <span>Carpetas</span>
+            </button>
+            <button
+              className={viewMode === "tree" ? "is-active" : ""}
+              onClick={() => handleSwitchMode("tree")}
+              title="Vista en árbol"
+            >
+              <Icon name="folder-open" />
+              <span>Árbol</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -265,6 +505,8 @@ export function MusicLibrary({
                 key={item.path}
                 onClick={() => handlePlayItemInList(visibleItems, idx, "Música")}
                 onAddToQueue={onAddToQueue ? () => onAddToQueue([toQueueItem(item)]) : undefined}
+                onContextMenu={(event) => handleCardContextMenu(event, item)}
+                onDeleteRequest={() => handleCardDeleteRequest(item)}
                 onToggleFavorite={() => favorites.toggleFavorite(item.path)}
               />
             ))}
@@ -300,17 +542,19 @@ export function MusicLibrary({
           ) : null}
 
           {/* Canciones directas o lista de carpeta virtual */}
-          {treeLevel.directItems.length > 0 ? (
+          {sortedDirectItems.length > 0 ? (
             <div className="music-direct-items-section">
               <div className="music-auto-grid">
-                {treeLevel.directItems.slice(0, VISIBLE_ITEM_LIMIT).map((item, idx) => (
+                {sortedDirectItems.slice(0, VISIBLE_ITEM_LIMIT).map((item, idx) => (
                   <MusicCard
                     isFavorite={favorites.isFavorite(item.path)}
                     isPlaying={isPlaying && currentPlayingPath === item.path}
                     item={item}
                     key={item.path}
-                    onClick={() => handlePlayItemInList(treeLevel.directItems, idx, treeLevel.currentDisplayName)}
+                    onClick={() => handlePlayItemInList(sortedDirectItems, idx, treeLevel.currentDisplayName)}
                     onAddToQueue={onAddToQueue ? () => onAddToQueue([toQueueItem(item)]) : undefined}
+                    onContextMenu={(event) => handleCardContextMenu(event, item)}
+                    onDeleteRequest={() => handleCardDeleteRequest(item)}
                     onToggleFavorite={() => favorites.toggleFavorite(item.path)}
                   />
                 ))}
@@ -331,6 +575,8 @@ export function MusicLibrary({
             const idx = list.findIndex((it) => it.path === item.path);
             handlePlayItemInList(list, idx >= 0 ? idx : 0, "Árbol de Música");
           }}
+          onOpenItemMenu={(event, item) => handleCardContextMenu(event, item)}
+          onDeleteRequest={handleCardDeleteRequest}
         />
       )}
 
@@ -338,6 +584,31 @@ export function MusicLibrary({
         <p className="music-limit-note">
           Se muestran las {VISIBLE_ITEM_LIMIT} canciones más recientes para mantener la interfaz fluida.
         </p>
+      ) : null}
+
+      {mediaDelete.menu ? (
+        <ContextMenu
+          items={buildMenuItems()}
+          onClose={mediaDelete.closeMenu}
+          x={mediaDelete.menu.x}
+          y={mediaDelete.menu.y}
+        />
+      ) : null}
+
+      {mediaDelete.pendingDelete ? (
+        <ConfirmDialog
+          cancelLabel="Cancelar"
+          confirmLabel="Eliminar"
+          message={
+            <span>
+              Se enviará <strong>{mediaDelete.pendingDelete.title}</strong> a la papelera de
+              reciclaje. Esta acción no se puede deshacer.
+            </span>
+          }
+          onCancel={mediaDelete.cancelDelete}
+          onConfirm={mediaDelete.confirmDelete}
+          title="Eliminar canción"
+        />
       ) : null}
     </section>
   );
@@ -350,9 +621,11 @@ interface MusicCardProps {
   onClick: () => void;
   onAddToQueue?: () => void;
   onToggleFavorite?: () => void;
+  onContextMenu?: (event: React.MouseEvent) => void;
+  onDeleteRequest?: () => void;
 }
 
-function MusicCard({ item, isFavorite, isPlaying, onClick, onAddToQueue, onToggleFavorite }: MusicCardProps) {
+function MusicCard({ item, isFavorite, isPlaying, onClick, onAddToQueue, onToggleFavorite, onContextMenu, onDeleteRequest }: MusicCardProps) {
   const { title, artist } = parseTrackInfo(item.title);
 
   return (
@@ -360,6 +633,14 @@ function MusicCard({ item, isFavorite, isPlaying, onClick, onAddToQueue, onToggl
       <button
         className="music-media-card"
         onClick={onClick}
+        onContextMenu={onContextMenu}
+        onKeyDown={(event) => {
+          if (onDeleteRequest && (event.key === "Delete" || event.key === "Supr")) {
+            event.preventDefault();
+            event.stopPropagation();
+            onDeleteRequest();
+          }
+        }}
         title={artist ? `${artist} — ${title}` : title}
       >
         <span className={`music-media-frame ${isPlaying ? "is-now-playing" : ""}`}>

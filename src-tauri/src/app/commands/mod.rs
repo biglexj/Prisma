@@ -1,4 +1,5 @@
 pub mod favorites;
+pub mod media;
 pub mod music_library;
 pub mod playback;
 pub mod playlists;
