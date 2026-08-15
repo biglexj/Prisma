@@ -1,0 +1,67 @@
+.library-sources .section-heading {
+  margin-bottom: 24px;
+}
+
+.library-safety-note {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 16px;
+  border-radius: 18px;
+  padding: 14px 16px;
+  color: var(--on-surface-variant);
+  background: var(--surface-container);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.library-safety-note svg {
+  width: 21px;
+  flex: 0 0 auto;
+  color: var(--primary);
+}
+
+.library-sources-three-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.folder-manager.is-embedded {
+  border: 1px solid var(--outline-variant);
+  border-radius: 28px;
+  padding: 24px;
+  background: var(--surface-bright);
+}
+
+.folder-manager.is-embedded .folder-manager-heading {
+  margin-bottom: 16px;
+}
+
+.folder-manager.is-embedded .folder-manager-heading h1 {
+  font-size: 1.3rem;
+}
+
+.folder-manager.is-embedded .folder-manager-heading p {
+  font-size: 0.68rem;
+}
+
+.library-excluded-heading {
+  margin-top: 36px;
+  margin-bottom: 20px;
+}
+
+.source-status.is-excluded i {
+  background: var(--error, #ba1a1a);
+}
+
+.source-status.is-excluded {
+  color: var(--error, #ba1a1a);
+}
+
+@media (max-width: 1024px) {
+  .library-sources-three-columns {
+    grid-template-columns: 1fr;
+  }
+}

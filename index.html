@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b1118" />
+    <link rel="icon" type="image/png" href="/icon/icon.png" />
+    <title>Prisma · Multimedia local</title>
+    <!-- Anti-FOUC: apply theme before first paint -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("prisma_theme") || "system";
+          var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var isDark = t === "dark" || (t === "system" && prefersDark);
+          document.documentElement.setAttribute("data-theme", t);
+          if (isDark) document.documentElement.classList.add("dark");
+        } catch (_) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

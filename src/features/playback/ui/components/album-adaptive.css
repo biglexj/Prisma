@@ -1,0 +1,59 @@
+.preview-screen {
+  --album-accent: var(--primary);
+  --album-accent-soft: var(--primary-container);
+  --album-accent-deep: var(--on-primary-container);
+  --album-on-accent: var(--on-primary);
+  position: relative;
+  isolation: isolate;
+}
+
+.preview-screen::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -26px;
+  border-radius: 42px;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 19% 45%, color-mix(in srgb, var(--album-accent) 18%, transparent), transparent 34%),
+    radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--album-accent-soft) 72%, transparent), transparent 31%);
+  transition: opacity 360ms ease, background-color 360ms ease;
+  pointer-events: none;
+}
+
+.preview-screen.has-album-palette::before {
+  opacity: 1;
+}
+
+.preview-screen.has-album-palette .preview-kicker,
+.preview-screen.has-album-palette .preview-track-title > div > span {
+  color: var(--album-accent-deep);
+}
+
+.preview-screen.has-album-palette .preview-modes button.is-active,
+.preview-screen.has-album-palette .preview-transport .preview-play {
+  color: var(--album-on-accent);
+  background: var(--album-accent);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--album-accent) 25%, transparent);
+}
+
+.preview-screen.has-album-palette .preview-transport button:not(.preview-play) {
+  color: var(--album-accent-deep);
+  background: var(--album-accent-soft);
+}
+
+.preview-screen.has-album-palette input[type="range"] {
+  accent-color: var(--album-accent);
+}
+
+.preview-screen.has-album-palette .preview-artwork {
+  box-shadow:
+    0 30px 74px color-mix(in srgb, var(--album-accent-deep) 26%, transparent),
+    inset 0 1px rgb(255 255 255 / 24%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-screen::before {
+    transition: none;
+  }
+}

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/vendor/libmpv/
+*.log
+.idea/
+.vscode/
+
+# Archivos temporales de agentes y construcciones
+/temp/
+/test/
+/scratch/
+/releases/
+/release/

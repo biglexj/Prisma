@@ -1,0 +1,152 @@
+@media (max-width: 580px) {
+  .studio-shell {
+    grid-template-rows: minmax(0, 1fr) 70px;
+  }
+
+  .studio-workspace {
+    grid-row: 1;
+  }
+
+  .music-sidebar {
+    z-index: 10;
+    display: flex !important;
+    grid-row: 2;
+    min-height: 70px;
+    border-top: 1px solid var(--outline-variant);
+    border-right: 0;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(22px);
+  }
+
+  .music-sidebar .brand-lockup,
+  .music-sidebar .sidebar-search,
+  .music-sidebar .sidebar-engine,
+  .music-sidebar .sidebar-section-title,
+  .music-sidebar .sidebar-item:disabled {
+    display: none !important;
+  }
+
+  .music-sidebar .sidebar-navigation {
+    display: flex;
+    width: 100%;
+    flex: 1;
+    align-items: stretch;
+    overflow: visible;
+    padding: 5px 7px;
+  }
+
+  .music-sidebar .sidebar-section {
+    display: contents;
+  }
+
+  .music-sidebar .sidebar-item {
+    min-width: 0;
+    min-height: 58px;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    border-radius: 19px;
+    padding: 5px 2px;
+  }
+
+  .music-sidebar .sidebar-item svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .music-sidebar .sidebar-item .sidebar-copy {
+    display: block !important;
+    flex: 0;
+    font-size: 0.5rem;
+    font-weight: 800;
+  }
+
+  .music-sidebar .sidebar-item.is-active {
+    color: var(--on-primary-container);
+    background: var(--primary-container);
+  }
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px;
+  border-top: 1px solid var(--outline-variant);
+}
+
+.sidebar-settings-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 16px;
+  padding: 10px 12px;
+  color: var(--on-surface);
+  background: var(--surface-container);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.sidebar-settings-button:hover {
+  border-color: var(--outline);
+  background: var(--surface-container-high);
+}
+
+.sidebar-settings-button.is-active {
+  border-color: var(--primary);
+  color: var(--on-primary-container);
+  background: var(--primary-container);
+}
+
+.sidebar-settings-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.sidebar-settings-button.is-active .sidebar-settings-icon {
+  color: var(--on-primary);
+  background: var(--primary);
+}
+
+.sidebar-settings-button .sidebar-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.sidebar-settings-button .sidebar-copy strong {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.sidebar-settings-button .sidebar-copy span {
+  display: block;
+  color: var(--on-surface-variant);
+  font-size: 0.64rem;
+  line-height: 1.2;
+}
+
+.sidebar-settings-button .engine-dot {
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--outline);
+}
+
+.sidebar-settings-button .engine-dot.is-ready {
+  background: var(--success);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--success) 50%, transparent);
+}
