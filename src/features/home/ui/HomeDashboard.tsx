@@ -57,10 +57,21 @@ export function HomeDashboard({
       {error ? <div className="error-banner" role="alert"><strong>No se pudo completar la biblioteca</strong><span>{error}</span></div> : null}
 
       <div className="home-stat-row" aria-busy={loading}>
-        <button onClick={onOpenFolders}><span><Icon name="folder" /></span><strong>{totalFolders}</strong><small>Carpetas</small></button>
-        <button onClick={() => musicItems[0] && onPlayMusic(musicItems[0].path)}><span><Icon name="music" /></span><strong>{musicItems.length}</strong><small>Canciones</small></button>
-        <button onClick={onOpenImages}><span><Icon name="image" /></span><strong>{images.length}</strong><small>Imágenes</small></button>
-        <button onClick={onOpenVideos}><span><Icon name="video" /></span><strong>{videos.length}</strong><small>Vídeos</small></button>
+        <button onClick={() => musicItems[0] && onPlayMusic(musicItems[0].path)}>
+          <span><Icon name="music" /></span>
+          <strong>{musicItems.length}</strong>
+          <small>Canciones</small>
+        </button>
+        <button onClick={onOpenImages}>
+          <span><Icon name="image" /></span>
+          <strong>{images.length}</strong>
+          <small>Imágenes</small>
+        </button>
+        <button onClick={onOpenVideos}>
+          <span><Icon name="video" /></span>
+          <strong>{videos.length}</strong>
+          <small>Vídeos</small>
+        </button>
       </div>
 
       {!hasLibrary ? (
