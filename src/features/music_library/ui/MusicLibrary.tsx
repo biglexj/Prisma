@@ -2,6 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
+import { MediaTreeView } from "../../../shared/ui/MediaTreeView";
 import {
   resolveTreeLevel,
   type HierarchicalFolder,
@@ -14,7 +15,7 @@ import "./music-library.css";
 
 const VISIBLE_ITEM_LIMIT = 400;
 
-type ViewMode = "timeline" | "folders";
+type ViewMode = "timeline" | "folders" | "tree";
 
 interface MusicLibraryProps {
   folders: MusicFolderSource[];
@@ -121,7 +122,7 @@ export function MusicLibrary({
           <span className="preview-kicker">BIBLIOTECA MUSICAL</span>
           <h1>Música</h1>
           <p>
-            Explora tu colección de canciones locales organizadas en cuadrícula fluida o colecciones por carpetas.
+            Explora tu colección de canciones locales organizadas en cuadrícula fluida, colecciones por carpetas o vista en árbol.
           </p>
         </div>
         <div className="music-heading-actions">
@@ -176,6 +177,14 @@ export function MusicLibrary({
             <Icon name="folder" />
             <span>Carpetas</span>
           </button>
+          <button
+            className={viewMode === "tree" ? "is-active" : ""}
+            onClick={() => handleSwitchMode("tree")}
+            title="Vista en árbol"
+          >
+            <Icon name="folder-open" />
+            <span>Árbol</span>
+          </button>
         </div>
       </div>
 
@@ -206,7 +215,7 @@ export function MusicLibrary({
             ))}
           </div>
         </div>
-      ) : (
+      ) : viewMode === "folders" ? (
         /* ── 2. Vista de Colecciones de Carpetas como Álbumes ── */
         <div className="music-folder-tree-view" aria-busy={loading}>
           {isInsideFolder ? (
@@ -253,6 +262,19 @@ export function MusicLibrary({
             </div>
           ) : null}
         </div>
+      ) : (
+        /* ── 3. Vista en Árbol Expandible ── */
+        <MediaTreeView
+          items={items}
+          mediaType="music"
+          onAddFolderToQueue={onAddToQueue ? (folderItems) => onAddToQueue(folderItems.map(toQueueItem)) : undefined}
+          onAddToQueue={onAddToQueue ? (item) => onAddToQueue([toQueueItem(item)]) : undefined}
+          onPlayFolder={(folderItems, name) => handlePlayFolder(folderItems, name)}
+          onPlayItem={(item, list) => {
+            const idx = list.findIndex((it) => it.path === item.path);
+            handlePlayItemInList(list, idx >= 0 ? idx : 0, "Árbol de Música");
+          }}
+        />
       )}
 
       {items.length > VISIBLE_ITEM_LIMIT && viewMode === "timeline" ? (

@@ -46,30 +46,41 @@
 .visual-view-mode-tabs {
   display: flex;
   gap: 4px;
-  border-radius: 24px;
-  padding: 4px;
+  border-radius: 28px;
+  padding: 5px;
   background: var(--surface-container);
 }
 
 .visual-view-mode-tabs button {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   border: 0;
-  border-radius: 20px;
-  padding: 8px 16px;
+  border-radius: 22px;
+  padding: 8px 18px;
   color: var(--on-surface-variant);
   background: transparent;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background-color 160ms ease, color 160ms ease;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.visual-view-mode-tabs button svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .visual-view-mode-tabs button.is-active {
   color: var(--on-primary);
   background: var(--primary);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 32%, transparent);
+}
+
+.visual-view-mode-tabs button:hover:not(.is-active) {
+  color: var(--on-surface);
+  background: var(--surface-container-high);
 }
 
 .visual-timeline-container {

@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
+import { MediaTreeView } from "../../../shared/ui/MediaTreeView";
 import {
   resolveTreeLevel,
   type HierarchicalFolder,
@@ -15,7 +16,7 @@ import "./visual-library.css";
 
 const VISIBLE_ITEM_LIMIT = 400;
 
-type ViewMode = "timeline" | "folders";
+type ViewMode = "timeline" | "folders" | "tree";
 
 interface TimelineSection {
   title: string;
@@ -203,6 +204,14 @@ export function VisualLibrary({
             <Icon name="folder" />
             <span>Carpetas</span>
           </button>
+          <button
+            className={viewMode === "tree" ? "is-active" : ""}
+            onClick={() => handleSwitchMode("tree")}
+            title="Vista en árbol"
+          >
+            <Icon name="folder-open" />
+            <span>Árbol</span>
+          </button>
         </div>
       </div>
 
@@ -248,7 +257,7 @@ export function VisualLibrary({
             </div>
           ))}
         </div>
-      ) : (
+      ) : viewMode === "folders" ? (
         /* ── 2. Vista de Colecciones de Carpetas como Álbumes ── */
         <div className="visual-folder-tree-view" aria-busy={loading}>
           {isInsideFolder ? (
@@ -300,6 +309,20 @@ export function VisualLibrary({
             </div>
           ) : null}
         </div>
+      ) : (
+        /* ── 3. Vista en Árbol Expandible (Lienzo Style) ── */
+        <MediaTreeView
+          items={items}
+          mediaType={isImage ? "image" : "video"}
+          onPlayFolder={!isImage ? (folderItems) => handlePlayFolderVideos(folderItems) : undefined}
+          onPlayItem={(item, list) => {
+            if (isImage) {
+              setSelectedImage(item);
+            } else {
+              onOpenVideo(item.path, list);
+            }
+          }}
+        />
       )}
 
       {items.length > VISIBLE_ITEM_LIMIT && viewMode === "timeline" ? (
