@@ -386,7 +386,38 @@ export function VideoPlayer({
         </label>
 
         <div className="video-controls-row">
+          {/* Lado Izquierdo: Velocidad, Bucle y Cola */}
           <div className="video-controls-left">
+            <button
+              className="video-speed-pill"
+              onClick={cyclePlaybackSpeed}
+              title="Velocidad de reproducción"
+            >
+              <span>{playbackSpeed}x</span>
+            </button>
+
+            <button
+              className={`video-icon-btn ${repeatMode !== "off" ? "is-active" : ""}`}
+              onClick={toggleRepeat}
+              title={`Bucle / Repetición: ${repeatMode === "off" ? "Desactivada" : repeatMode === "all" ? "Toda la lista" : "Este vídeo"}`}
+            >
+              <Icon name="repeat" />
+              {repeatMode === "one" ? <span className="repeat-badge">1</span> : null}
+            </button>
+
+            {videoItems.length > 0 ? (
+              <button
+                className={`video-icon-btn ${showPlaylist ? "is-active" : ""}`}
+                onClick={() => setShowPlaylist(!showPlaylist)}
+                title="Cola / Lista de reproducción"
+              >
+                <Icon name="queue" />
+              </button>
+            ) : null}
+          </div>
+
+          {/* Centro: Retroceder, -10s, Play/Pause, +10s, Avanzar */}
+          <div className="video-controls-center">
             <button
               aria-label="Anterior"
               className="video-icon-btn"
@@ -396,6 +427,7 @@ export function VideoPlayer({
             >
               <Icon name="chevron-left" />
             </button>
+
             <button
               aria-label="Retroceder 10s"
               className="video-icon-btn"
@@ -406,21 +438,11 @@ export function VideoPlayer({
                   setPosition(nextPos);
                 }
               }}
-              title="Retroceder 10 segundos (←)"
+              title="Retroceder 10 segundos (← / J)"
             >
               <span className="btn-label-icon">-10s</span>
             </button>
-            <button
-              aria-label="Alternar pantalla completa"
-              className="video-icon-btn"
-              onClick={toggleFullscreen}
-              title="Pantalla completa (F)"
-            >
-              <Icon name="layout" />
-            </button>
-          </div>
 
-          <div className="video-controls-center">
             <button
               className="video-play-btn"
               disabled={!hasMedia}
@@ -428,24 +450,6 @@ export function VideoPlayer({
             >
               <Icon name={paused ? "play" : "pause"} />
               <span>{paused ? "Reproducir" : "Pausar"}</span>
-            </button>
-            <button
-              className="video-speed-pill"
-              onClick={cyclePlaybackSpeed}
-              title="Velocidad de reproducción"
-            >
-              <span>{playbackSpeed}x</span>
-            </button>
-          </div>
-
-          <div className="video-controls-right">
-            <button
-              className={`video-icon-btn ${repeatMode !== "off" ? "is-active" : ""}`}
-              onClick={toggleRepeat}
-              title={`Repetición: ${repeatMode === "off" ? "Desactivada" : repeatMode === "all" ? "Toda la lista" : "Este vídeo"}`}
-            >
-              <Icon name="repeat" />
-              {repeatMode === "one" ? <span className="repeat-badge">1</span> : null}
             </button>
 
             <button
@@ -458,7 +462,7 @@ export function VideoPlayer({
                   setPosition(nextPos);
                 }
               }}
-              title="Avanzar 10 segundos (→)"
+              title="Avanzar 10 segundos (→ / L)"
             >
               <span className="btn-label-icon">+10s</span>
             </button>
@@ -472,7 +476,10 @@ export function VideoPlayer({
             >
               <Icon name="chevron-right" />
             </button>
+          </div>
 
+          {/* Lado Derecho: Volumen y Pantalla Completa */}
+          <div className="video-controls-right">
             <div className="video-volume-group">
               <button
                 aria-label="Silenciar"
@@ -492,15 +499,14 @@ export function VideoPlayer({
               <span className="video-volume-value">{volume}%</span>
             </div>
 
-            {videoItems.length > 0 ? (
-              <button
-                className={`video-icon-btn ${showPlaylist ? "is-active" : ""}`}
-                onClick={() => setShowPlaylist(!showPlaylist)}
-                title="Lista de reproducción"
-              >
-                <Icon name="queue" />
-              </button>
-            ) : null}
+            <button
+              aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+              className="video-icon-btn"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "Salir de pantalla completa (F / Esc)" : "Pantalla completa (F)"}
+            >
+              <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen"} />
+            </button>
           </div>
         </div>
       </footer>
