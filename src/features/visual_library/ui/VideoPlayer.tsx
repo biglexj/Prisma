@@ -107,6 +107,9 @@ export function VideoPlayer({
 
   // Limpieza y reinicio atómico de pistas secundarias al cambiar de vídeo
   useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = false;
+    }
     if (secondaryAudioRef.current) {
       secondaryAudioRef.current.pause();
       secondaryAudioRef.current.src = "";
@@ -964,6 +967,7 @@ export function VideoPlayer({
                 onError={() => setVideoError(true)}
                 onLoadedMetadata={(e) => {
                   const video = e.currentTarget;
+                  video.muted = false;
                   setDuration(video.duration || 0);
                   setPaused(false);
                   void video.play().catch(() => {});

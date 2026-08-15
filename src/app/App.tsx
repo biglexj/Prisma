@@ -204,8 +204,13 @@ export function App() {
               onOpenFolders={() => setActiveView("folders")}
               onOpenImages={() => setActiveView("images")}
               onOpenVideos={() => setActiveView("videos")}
+              onOpenPlaylists={() => setActiveView("playlists")}
               onPlayMusic={(path) => playMusicItem(path, false)}
               onPlayVideo={playVideoItem}
+              onPlayPlaylist={(path) => {
+                addToHistory(path, "playlist");
+                setActiveView("playlists");
+              }}
               videoFolders={videoLibrary.folders}
               videos={videoLibrary.items}
               confirmDeletion={confirmDeletion}
