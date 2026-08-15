@@ -700,19 +700,53 @@ button:disabled {
   white-space: nowrap;
 }
 
+.preview-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.preview-fav-btn,
 .preview-track-title > button {
   display: grid;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
   place-items: center;
   border: 0;
   border-radius: 50%;
-  background: transparent;
+  color: var(--on-surface-variant, rgba(255, 255, 255, 0.7));
+  background: var(--surface-container, rgba(255, 255, 255, 0.08));
+  cursor: pointer;
+  transition: all 180ms ease;
 }
 
+.preview-fav-btn:hover:not(:disabled),
+.preview-track-title > button:hover:not(:disabled) {
+  color: var(--on-surface, #ffffff);
+  background: var(--surface-container-high, rgba(255, 255, 255, 0.16));
+  transform: scale(1.08);
+}
+
+.preview-fav-btn.is-favorite {
+  color: #ff3366 !important;
+  background: rgba(255, 51, 102, 0.18) !important;
+}
+
+.preview-fav-btn.is-favorite svg {
+  fill: #ff3366;
+}
+
+.preview-fav-btn svg,
 .preview-track-title svg {
-  width: 26px;
+  width: 22px;
+  height: 22px;
+}
+
+.preview-fav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .preview-progress {

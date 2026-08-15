@@ -54,6 +54,10 @@ export function VisualLibrary({
   const [currentFolderPath, setCurrentFolderPath] = useState<string>(() => sessionVisualState[kind].folderPath);
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const favorites = useFavorites();
 
   const isImage = kind === "image";
@@ -88,8 +92,20 @@ export function VisualLibrary({
     ? currentActiveList.findIndex((it) => it.path === selectedImage.path)
     : -1;
 
+  const resetImageTransform = () => {
+    setZoomScale(1);
+    setPanOffset({ x: 0, y: 0 });
+    setIsDragging(false);
+  };
+
+  const handleSelectImage = (item: VisualLibraryItem) => {
+    resetImageTransform();
+    setSelectedImage(item);
+  };
+
   const handlePreviousImage = () => {
     if (currentActiveList.length === 0 || selectedImageIndex < 0) return;
+    resetImageTransform();
     const prevIdx =
       selectedImageIndex > 0 ? selectedImageIndex - 1 : currentActiveList.length - 1;
     setSelectedImage(currentActiveList[prevIdx]);
@@ -97,9 +113,66 @@ export function VisualLibrary({
 
   const handleNextImage = () => {
     if (currentActiveList.length === 0 || selectedImageIndex < 0) return;
+    resetImageTransform();
     const nextIdx =
       selectedImageIndex < currentActiveList.length - 1 ? selectedImageIndex + 1 : 0;
     setSelectedImage(currentActiveList[nextIdx]);
+  };
+
+  const handleZoomIn = () => {
+    setZoomScale((prev) => Math.min(5, Math.round((prev + 0.25) * 100) / 100));
+  };
+
+  const handleZoomOut = () => {
+    setZoomScale((prev) => {
+      const next = Math.max(0.5, Math.round((prev - 0.25) * 100) / 100);
+      if (next <= 1) setPanOffset({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const handleResetZoom = () => {
+    setZoomScale(1);
+    setPanOffset({ x: 0, y: 0 });
+  };
+
+  const handleToggleZoom = () => {
+    if (zoomScale > 1) {
+      handleResetZoom();
+    } else {
+      setZoomScale(2);
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.stopPropagation();
+    if (e.deltaY < 0) {
+      setZoomScale((prev) => Math.min(5, Math.round((prev + 0.15) * 100) / 100));
+    } else {
+      setZoomScale((prev) => {
+        const next = Math.max(0.5, Math.round((prev - 0.15) * 100) / 100);
+        if (next <= 1) setPanOffset({ x: 0, y: 0 });
+        return next;
+      });
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoomScale <= 1 || e.button !== 0) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || zoomScale <= 1) return;
+    setPanOffset({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
   };
 
   // Keyboard navigation for image lightbox
@@ -107,8 +180,21 @@ export function VisualLibrary({
     if (!selectedImage) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setSelectedImage(null);
-        setIsSlideshowActive(false);
+        if (zoomScale > 1) {
+          handleResetZoom();
+        } else {
+          setSelectedImage(null);
+          setIsSlideshowActive(false);
+        }
+      } else if ((event.ctrlKey || event.metaKey) && (event.key === "+" || event.key === "=")) {
+        event.preventDefault();
+        handleZoomIn();
+      } else if ((event.ctrlKey || event.metaKey) && (event.key === "-" || event.key === "_")) {
+        event.preventDefault();
+        handleZoomOut();
+      } else if ((event.ctrlKey || event.metaKey) && event.key === "0") {
+        event.preventDefault();
+        handleResetZoom();
       } else if (event.key === "ArrowLeft") {
         handlePreviousImage();
       } else if (event.key === "ArrowRight") {
@@ -120,7 +206,7 @@ export function VisualLibrary({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedImage, selectedImageIndex, currentActiveList]);
+  }, [selectedImage, selectedImageIndex, currentActiveList, zoomScale]);
 
   // Slideshow timer
   useEffect(() => {
@@ -159,7 +245,7 @@ export function VisualLibrary({
           <h1>{label}</h1>
           <p>
             {isImage
-              ? "Explora tus fotografías e ilustraciones organizadas en Bento Grid adaptativo, árbol jerárquico de carpetas y visor cinematográfico."
+              ? "Explora tus fotografías e ilustraciones organizadas en Bento Grid adaptativo, árbol jerárquico de carpetas y visor cinematográfico con zoom."
               : "Organiza y reproduce tus vídeos locales con árbol de carpetas, favoritos, gestión de colas y reproductor de cine."}
           </p>
         </div>
@@ -258,7 +344,7 @@ export function VisualLibrary({
                     key={item.path}
                     onClick={() =>
                       isImage
-                        ? setSelectedImage(item)
+                        ? handleSelectImage(item)
                         : onOpenVideo(item.path, section.items)
                     }
                     onToggleFavorite={() => favorites.toggleFavorite(item.path)}
@@ -310,7 +396,7 @@ export function VisualLibrary({
                     key={item.path}
                     onClick={() =>
                       isImage
-                        ? setSelectedImage(item)
+                        ? handleSelectImage(item)
                         : onOpenVideo(item.path, treeLevel.directItems)
                     }
                     onToggleFavorite={() => favorites.toggleFavorite(item.path)}
@@ -328,7 +414,7 @@ export function VisualLibrary({
           onPlayFolder={!isImage ? (folderItems) => handlePlayFolderVideos(folderItems) : undefined}
           onPlayItem={(item, list) => {
             if (isImage) {
-              setSelectedImage(item);
+              handleSelectImage(item);
             } else {
               onOpenVideo(item.path, list);
             }
@@ -342,7 +428,7 @@ export function VisualLibrary({
         </p>
       ) : null}
 
-      {/* Visor Cinematográfico de Imágenes */}
+      {/* Visor Cinematográfico de Imágenes con Zoom y Pan */}
       {selectedImage ? (
         <div
           aria-label={selectedImage.title}
@@ -351,6 +437,7 @@ export function VisualLibrary({
           onClick={() => {
             setSelectedImage(null);
             setIsSlideshowActive(false);
+            resetImageTransform();
           }}
           role="dialog"
         >
@@ -380,6 +467,7 @@ export function VisualLibrary({
                 onClick={() => {
                   setSelectedImage(null);
                   setIsSlideshowActive(false);
+                  resetImageTransform();
                 }}
               >
                 <Icon name="close" />
@@ -412,18 +500,50 @@ export function VisualLibrary({
             </>
           ) : null}
 
-          <figure onClick={(event) => event.stopPropagation()}>
-            <img
-              alt={selectedImage.title}
-              className="image-viewer-media"
-              src={convertFileSrc(selectedImage.path)}
-              style={{ objectFit: "contain" }}
-            />
+          <figure
+            className="image-viewer-stage"
+            onClick={(event) => event.stopPropagation()}
+            onDoubleClick={handleToggleZoom}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onWheel={handleWheel}
+            style={{
+              cursor: zoomScale > 1 ? (isDragging ? "grabbing" : "grab") : "default",
+            }}
+          >
+            <div
+              className="image-viewer-media-container"
+              style={{
+                transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale})`,
+                transition: isDragging ? "none" : "transform 0.16s ease-out",
+              }}
+            >
+              <img
+                alt={selectedImage.title}
+                className="image-viewer-media"
+                draggable={false}
+                src={convertFileSrc(selectedImage.path)}
+              />
+            </div>
             <figcaption>
               <strong>{selectedImage.title}</strong>
               <span>{selectedImage.path}</span>
             </figcaption>
           </figure>
+
+          {/* Barra de control de Zoom */}
+          <div className="image-viewer-zoom-controls" onClick={(e) => e.stopPropagation()}>
+            <button onClick={handleZoomOut} title="Alejar (Ctrl - / Rueda abajo)">
+              <Icon name="minus" />
+            </button>
+            <button className="image-viewer-zoom-level" onClick={handleResetZoom} title="Restablecer zoom 100% (Ctrl 0)">
+              {Math.round(zoomScale * 100)}%
+            </button>
+            <button onClick={handleZoomIn} title="Acercar (Ctrl + / Rueda arriba)">
+              <Icon name="plus" />
+            </button>
+          </div>
         </div>
       ) : null}
     </section>

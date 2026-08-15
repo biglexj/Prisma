@@ -14,6 +14,7 @@ export type IconName =
   | "home"
   | "image"
   | "layout"
+  | "minus"
   | "more"
   | "music"
   | "pause"
@@ -43,6 +44,7 @@ const paths: Record<IconName, ReactNode> = {
   home: <path d="m3 11 9-8 9 8 M5 10v10h14V10 M9 20v-6h6v6" />,
   image: <><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9" r="1.5" /><path d="m4 17 5-5 4 4 2-2 5 5" /></>,
   layout: <path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm10 0h6v6h-6v-6Z" />,
+  minus: <path d="M5 12h14" />,
   more: <path d="M12 6h.01 M12 12h.01 M12 18h.01" />,
   music: <path d="M9 18V5l11-2v13 M9 9l11-2 M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm11-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />,
   pause: <path d="M9 6v12 M15 6v12" />,
