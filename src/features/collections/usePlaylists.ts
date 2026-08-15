@@ -8,6 +8,8 @@ import {
   playlistsImport,
   playlistsList,
   playlistsRead,
+  playlistsRelinkFolder,
+  playlistsRelinkItem,
   playlistsRemoveItem,
   playlistsSaveFromItems,
   playlistsToggleHidden,
@@ -162,6 +164,38 @@ export function usePlaylists() {
     [refresh]
   );
 
+  const relinkItem = useCallback(
+    async (playlistPath: string, oldItemPath: string, newItemPath: string) => {
+      try {
+        const updated = await playlistsRelinkItem(playlistPath, oldItemPath, newItemPath);
+        cachedSelectedItems = updated;
+        setSelectedItems(updated);
+        await refresh(false);
+        return updated;
+      } catch (err) {
+        console.error("Error reconectando pista:", err);
+        throw err;
+      }
+    },
+    [refresh]
+  );
+
+  const relinkFolder = useCallback(
+    async (playlistPath: string, searchFolder: string) => {
+      try {
+        const result = await playlistsRelinkFolder(playlistPath, searchFolder);
+        cachedSelectedItems = result.updatedItems;
+        setSelectedItems(result.updatedItems);
+        await refresh(false);
+        return result;
+      } catch (err) {
+        console.error("Error reconectando pistas desde carpeta:", err);
+        throw err;
+      }
+    },
+    [refresh]
+  );
+
   const addItem = useCallback(
     async (playlistPath: string, itemPath: string, itemTitle: string, itemDuration = 0) => {
       try {
@@ -212,6 +246,8 @@ export function usePlaylists() {
     deletePlaylist,
     toggleHidden,
     cleanMissingItems,
+    relinkItem,
+    relinkFolder,
     addItem,
     removeItem,
   };

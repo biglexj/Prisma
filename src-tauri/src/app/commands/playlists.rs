@@ -5,8 +5,8 @@ use crate::{
     app::state::{MusicLibraryState, VisualLibraryState},
     features::visual_library::VisualMediaKind,
     infrastructure::playlists::{
-        HiddenPlaylistsStore, PlaylistItem, PlaylistMeta, clean_missing_from_m3u, delete_m3u,
-        parse_m3u, scan_playlists_recursive, write_m3u,
+        HiddenPlaylistsStore, PlaylistItem, PlaylistMeta, RelinkResult, clean_missing_from_m3u, delete_m3u,
+        parse_m3u, relink_folder_in_m3u, relink_item_in_m3u, scan_playlists_recursive, write_m3u,
     },
 };
 
@@ -309,3 +309,23 @@ pub fn playlists_remove_item(playlist_path: String, item_path: String) -> Result
     write_m3u(m3u_path, &name, &items)?;
     Ok(items.len())
 }
+
+/// Reconecta una pista individual de la lista asignándole su nueva ruta en disco.
+#[tauri::command]
+pub fn playlists_relink_item(
+    playlist_path: String,
+    old_item_path: String,
+    new_item_path: String,
+) -> Result<Vec<PlaylistItem>, String> {
+    relink_item_in_m3u(Path::new(&playlist_path), &old_item_path, &new_item_path)
+}
+
+/// Escanea recursivamente una carpeta para reconectar automáticamente pistas no encontradas (estilo DaVinci Relink).
+#[tauri::command]
+pub fn playlists_relink_folder(
+    playlist_path: String,
+    search_folder: String,
+) -> Result<RelinkResult, String> {
+    relink_folder_in_m3u(Path::new(&playlist_path), Path::new(&search_folder))
+}
+

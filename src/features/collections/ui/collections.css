@@ -742,6 +742,7 @@
   border: 1px solid var(--outline-variant);
   color: var(--on-surface);
   font-size: 0.82rem;
+  flex-wrap: wrap;
 }
 
 .playlist-health-banner-text {
@@ -754,6 +755,13 @@
   width: 16px !important;
   height: 16px !important;
   color: var(--tertiary, #b86200);
+}
+
+.playlist-health-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 /* ── Playlist Items Loading & Table ── */
@@ -912,14 +920,24 @@
 }
 
 .col-actions {
-  width: 32px;
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 4px;
 }
 
 .col-actions .icon-button svg {
   width: 14px !important;
   height: 14px !important;
+}
+
+.relink-btn {
+  color: var(--primary);
+}
+
+.relink-btn:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
 }
 
 .remove-btn:hover {

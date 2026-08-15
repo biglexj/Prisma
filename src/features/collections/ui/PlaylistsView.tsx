@@ -32,6 +32,8 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
     deletePlaylist,
     toggleHidden,
     cleanMissingItems,
+    relinkItem,
+    relinkFolder,
     removeItem,
     refresh,
   } = usePlaylists();
@@ -130,6 +132,55 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
       await cleanMissingItems(meta.path);
     } catch (err) {
       alert(`Error limpiando pistas: ${err}`);
+    }
+  };
+
+  const handleRelinkSingleItem = async (item: PlaylistItem) => {
+    if (!selectedPlaylist) return;
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        filters: [
+          {
+            name: "Archivos multimedia",
+            extensions: item.isVideo
+              ? ["mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "m4v", "ts"]
+              : ["mp3", "flac", "wav", "m4a", "aac", "ogg", "opus", "wma"],
+          },
+        ],
+        title: `Reconectar archivo: ${item.title}`,
+      });
+
+      if (typeof selected === "string") {
+        await relinkItem(selectedPlaylist.path, item.path, selected);
+      }
+    } catch (err) {
+      console.error("Error reconectando pista:", err);
+      alert(`Error reconectando archivo: ${err}`);
+    }
+  };
+
+  const handleRelinkFolder = async () => {
+    if (!selectedPlaylist) return;
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: `Seleccionar carpeta para buscar y reconectar medios de "${selectedPlaylist.name}"`,
+      });
+
+      if (typeof selected === "string") {
+        const result = await relinkFolder(selectedPlaylist.path, selected);
+        if (result.reconnectedCount > 0) {
+          alert(`✅ ¡Se reconectaron exitosamente ${result.reconnectedCount} archivo(s)!`);
+        } else {
+          alert("ℹ️ No se encontraron archivos coincidentes con los nombres faltantes en la carpeta seleccionada.");
+        }
+      }
+    } catch (err) {
+      console.error("Error reconectando desde carpeta:", err);
+      alert(`Error buscando archivos: ${err}`);
     }
   };
 
@@ -559,21 +610,31 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
             </div>
           </div>
 
-          {/* Banner de alerta de archivos faltantes con botón de limpieza */}
+          {/* Banner de alerta de archivos faltantes con reconexión y limpieza */}
           {missingCount > 0 ? (
             <div className="playlist-health-banner">
               <div className="playlist-health-banner-text">
                 <Icon name="trash" />
                 <span>
-                  Atención: {missingCount} de {selectedItems.length} archivos no fueron encontrados en el disco o cambiaron de ruta.
+                  Atención: {missingCount} de {selectedItems.length} archivos no fueron encontrados en el disco.
                 </span>
               </div>
-              <button
-                className="tonal-button is-destructive"
-                onClick={() => handleCleanMissing(selectedPlaylist)}
-              >
-                🪄 Limpiar pistas no encontradas ({missingCount})
-              </button>
+              <div className="playlist-health-banner-actions">
+                <button
+                  className="filled-button"
+                  onClick={handleRelinkFolder}
+                  title="Buscar en una carpeta para reconectar automáticamente las pistas faltantes (estilo DaVinci Relink)"
+                >
+                  <Icon name="link" /> Reconectar pistas…
+                </button>
+                <button
+                  className="tonal-button is-destructive"
+                  onClick={() => handleCleanMissing(selectedPlaylist)}
+                  title="Eliminar de la lista únicamente las pistas que no existen"
+                >
+                  <Icon name="trash" /> Limpiar ({missingCount})
+                </button>
+              </div>
             </div>
           ) : null}
 
@@ -638,6 +699,15 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
                     </div>
                     <span className="col-dur">{formatDuration(item.durationSecs)}</span>
                     <div className="col-actions" onClick={(e) => e.stopPropagation()}>
+                      {item.isAvailable === false ? (
+                        <button
+                          className="icon-button relink-btn"
+                          onClick={() => handleRelinkSingleItem(item)}
+                          title="Reconectar / Re-vincular archivo"
+                        >
+                          <Icon name="link" />
+                        </button>
+                      ) : null}
                       <button
                         className="icon-button remove-btn"
                         onClick={() => removeItem(selectedPlaylist.path, item.path)}

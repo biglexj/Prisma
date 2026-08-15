@@ -178,6 +178,62 @@ export async function playlistsRemoveItem(
   });
 }
 
+export async function playlistsRelinkItem(
+  playlistPath: string,
+  oldItemPath: string,
+  newItemPath: string
+): Promise<PlaylistItem[]> {
+  const result = await invoke<Array<{
+    path: string;
+    title: string;
+    duration_secs: number;
+    is_available: boolean;
+    is_video: boolean;
+  }>>("playlists_relink_item", {
+    playlistPath,
+    oldItemPath,
+    newItemPath,
+  });
+
+  return result.map((item) => ({
+    path: item.path,
+    title: item.title,
+    durationSecs: item.duration_secs,
+    isAvailable: item.is_available,
+    isVideo: item.is_video,
+  }));
+}
+
+export async function playlistsRelinkFolder(
+  playlistPath: string,
+  searchFolder: string
+): Promise<{ reconnectedCount: number; updatedItems: PlaylistItem[] }> {
+  const result = await invoke<{
+    reconnected_count: number;
+    updated_items: Array<{
+      path: string;
+      title: string;
+      duration_secs: number;
+      is_available: boolean;
+      is_video: boolean;
+    }>;
+  }>("playlists_relink_folder", {
+    playlistPath,
+    searchFolder,
+  });
+
+  return {
+    reconnectedCount: result.reconnected_count,
+    updatedItems: result.updated_items.map((item) => ({
+      path: item.path,
+      title: item.title,
+      durationSecs: item.duration_secs,
+      isAvailable: item.is_available,
+      isVideo: item.is_video,
+    })),
+  };
+}
+
 // ── Favoritos ──
 export async function favoritesGetAll(): Promise<FavoritesStore> {
   return await invoke<FavoritesStore>("favorites_get_all");

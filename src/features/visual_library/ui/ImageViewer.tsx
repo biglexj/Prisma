@@ -237,12 +237,11 @@ export function ImageViewer({
       <div className="image-viewer-top-bar" onClick={(event) => event.stopPropagation()}>
         <div className="image-viewer-top-left">
           <button
-            className="image-viewer-top-btn image-viewer-back-btn"
+            className="image-viewer-top-btn is-icon-only image-viewer-back-btn"
             onClick={closeViewer}
             title="Volver (Esc)"
           >
-            <Icon name="chevron-left" />
-            <span>Volver</span>
+            <Icon name="arrow-left" />
           </button>
           {activeList.length > 1 ? (
             <span className="image-viewer-pill-badge">
@@ -356,7 +355,7 @@ export function ImageViewer({
         </div>
       </figure>
 
-      {/* Barra de control de Zoom y Pantalla Completa */}
+      {/* Barra de control de Zoom */}
       <div className="image-viewer-zoom-controls" onClick={(e) => e.stopPropagation()}>
         <button onClick={handleZoomOut} title="Alejar (Ctrl - / Rueda abajo)">
           <Icon name="minus" />
@@ -366,15 +365,6 @@ export function ImageViewer({
         </button>
         <button onClick={handleZoomIn} title="Acercar (Ctrl + / Rueda arriba)">
           <Icon name="plus" />
-        </button>
-        <div className="image-viewer-zoom-divider" />
-        <button
-          aria-label={isFullscreen ? "Salir de pantalla completa (F)" : "Pantalla completa (F)"}
-          className={`image-viewer-expand-btn ${isFullscreen ? "is-active" : ""}`}
-          onClick={toggleFullscreen}
-          title={isFullscreen ? "Restaurar tamaño con margen (F)" : "Expandir pantalla completa (F)"}
-        >
-          <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen"} />
         </button>
       </div>
     </div>

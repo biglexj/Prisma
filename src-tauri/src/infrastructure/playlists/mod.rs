@@ -332,6 +332,127 @@ pub fn clean_missing_from_m3u(m3u_path: &Path) -> Result<Vec<PlaylistItem>, Stri
     Ok(valid_items)
 }
 
+/// Reconecta una pista específica cambiando su ruta por la nueva ruta válida en el archivo de lista .m3u
+pub fn relink_item_in_m3u(m3u_path: &Path, old_path: &str, new_path: &str) -> Result<Vec<PlaylistItem>, String> {
+    let mut items = parse_playlist(m3u_path)?;
+    let mut found = false;
+    for item in &mut items {
+        if item.path == old_path
+            || item.path.replace('/', "\\").eq_ignore_ascii_case(&old_path.replace('/', "\\"))
+        {
+            item.path = new_path.to_owned();
+            let p = Path::new(new_path);
+            item.is_available = p.is_file();
+            let ext = p
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.to_lowercase())
+                .unwrap_or_default();
+            item.is_video = VIDEO_EXTENSIONS.contains(&ext.as_str());
+            found = true;
+        }
+    }
+
+    if !found {
+        return Err("No se encontró la pista indicada en la lista para reconectar.".to_owned());
+    }
+
+    let name = m3u_path
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "Lista".to_owned());
+    write_m3u(m3u_path, &name, &items)?;
+    Ok(items)
+}
+
+/// Resultado de reconexión por lote desde carpeta
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RelinkResult {
+    pub reconnected_count: usize,
+    pub updated_items: Vec<PlaylistItem>,
+}
+
+/// Escanea recursivamente una carpeta buscando coincidencias de nombre de archivo para
+/// reconectar automáticamente todas las pistas no encontradas en la lista (estilo DaVinci Relink).
+pub fn relink_folder_in_m3u(m3u_path: &Path, search_folder: &Path) -> Result<RelinkResult, String> {
+    if !search_folder.is_dir() {
+        return Err("La carpeta seleccionada para reconectar no existe o no es un directorio.".to_owned());
+    }
+
+    let mut items = parse_playlist(m3u_path)?;
+    let missing_indices: Vec<usize> = items
+        .iter()
+        .enumerate()
+        .filter(|(_, it)| !it.is_available)
+        .map(|(idx, _)| idx)
+        .collect();
+
+    if missing_indices.is_empty() {
+        return Ok(RelinkResult {
+            reconnected_count: 0,
+            updated_items: items,
+        });
+    }
+
+    // Mapa de filename en minúsculas -> Vec<PathBuf>
+    let mut file_map: HashMap<String, PathBuf> = HashMap::new();
+    collect_files_recursive(search_folder, 0, 6, &mut file_map);
+
+    let mut reconnected = 0;
+    for idx in missing_indices {
+        let item = &mut items[idx];
+        let original_path = Path::new(&item.path);
+        let Some(file_name) = original_path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        let lower_name = file_name.to_lowercase();
+
+        if let Some(found_path) = file_map.get(&lower_name) {
+            item.path = found_path.to_string_lossy().into_owned();
+            item.is_available = true;
+            let ext = found_path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.to_lowercase())
+                .unwrap_or_default();
+            item.is_video = VIDEO_EXTENSIONS.contains(&ext.as_str());
+            reconnected += 1;
+        }
+    }
+
+    if reconnected > 0 {
+        let name = m3u_path
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Lista".to_owned());
+        write_m3u(m3u_path, &name, &items)?;
+    }
+
+    Ok(RelinkResult {
+        reconnected_count: reconnected,
+        updated_items: items,
+    })
+}
+
+fn collect_files_recursive(folder: &Path, current_depth: usize, max_depth: usize, out: &mut HashMap<String, PathBuf>) {
+    if current_depth > max_depth {
+        return;
+    }
+    let Ok(entries) = std::fs::read_dir(folder) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let p = entry.path();
+        if p.is_dir() {
+            collect_files_recursive(&p, current_depth + 1, max_depth, out);
+        } else if p.is_file() {
+            if let Some(name) = p.file_name().and_then(|n| n.to_str()) {
+                out.entry(name.to_lowercase()).or_insert(p);
+            }
+        }
+    }
+}
+
 /// Escanea recursivamente un directorio en busca de archivos .m3u / .m3u8 / .pls / .xspf.
 pub fn scan_playlists_recursive(folder: &Path, max_depth: usize) -> Vec<PlaylistMeta> {
     let mut result = Vec::new();

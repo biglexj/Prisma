@@ -18,8 +18,9 @@ use app::commands::playback::{
 };
 use app::commands::playlists::{
     playlists_add_item, playlists_clean_missing, playlists_create, playlists_delete,
-    playlists_import, playlists_list, playlists_read, playlists_remove_item,
-    playlists_save_from_items, playlists_toggle_hidden,
+    playlists_import, playlists_list, playlists_read, playlists_relink_folder,
+    playlists_relink_item, playlists_remove_item, playlists_save_from_items,
+    playlists_toggle_hidden,
 };
 use app::commands::quick_look::{
     autostart_get_status, autostart_set, get_minimize_to_tray, is_minimize_to_tray_enabled,
@@ -220,6 +221,8 @@ pub fn run() {
             playlists_delete,
             playlists_toggle_hidden,
             playlists_clean_missing,
+            playlists_relink_item,
+            playlists_relink_folder,
             playlists_add_item,
             playlists_remove_item,
             favorites_get_all,
