@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTheme } from "./useTheme";
-import "../features/music_library/ui/music-library.css";
-import "../features/visual_library/ui/visual-library.css";
-import "../features/visual_library/ui/video-player.css";
 import { HomeDashboard } from "../features/home/ui/HomeDashboard";
 import { useMusicLibrary } from "../features/music_library/useMusicLibrary";
 import { usePlaybackController } from "../features/playback/usePlaybackController";
@@ -16,6 +13,9 @@ import type { VisualLibraryItem } from "../features/visual_library/model/types";
 import { AppSettings } from "./ui/AppSettings";
 import { AppSidebar, type AppView } from "./ui/AppSidebar";
 import { LibrarySources } from "./ui/LibrarySources";
+import "../features/music_library/ui/music-library.css";
+import "../features/visual_library/ui/visual-library.css";
+import "../features/visual_library/ui/video-player.css";
 
 const VIEW_TITLES: Record<AppView, string> = {
   home: "Inicio",
@@ -93,81 +93,83 @@ export function App() {
       />
 
       <div className="studio-workspace">
-        <header className="workspace-header">
-          <div><span className="workspace-kicker">PRISMA</span><strong>{VIEW_TITLES[activeView]}</strong></div>
-          <span className={`connection-pill ${playback.enabled ? "is-ready" : ""}`}>
-            <i /> {playback.enabled ? "Motor listo" : "Comprobando motor"}
-          </span>
-        </header>
+        {activeView !== "video_player" ? (
+          <header className="workspace-header">
+            <div><span className="workspace-kicker">PRISMA</span><strong>{VIEW_TITLES[activeView]}</strong></div>
+            <span className={`connection-pill ${playback.enabled ? "is-ready" : ""}`}>
+              <i /> {playback.enabled ? "Motor listo" : "Comprobando motor"}
+            </span>
+          </header>
+        ) : null}
 
-        <main className="studio-content">
+        <main className={`studio-content ${activeView === "video_player" ? "is-cinema-mode" : ""}`}>
           {activeView === "home" ? (
             <HomeDashboard
-              musicFolders={library.folders}
-              musicItems={library.items}
+              error={library.error ?? imageLibrary.error ?? videoLibrary.error}
               imageFolders={imageLibrary.folders}
               images={imageLibrary.items}
-              videoFolders={videoLibrary.folders}
-              videos={videoLibrary.items}
               loading={library.loading || imageLibrary.loading || videoLibrary.loading}
-              error={library.error ?? imageLibrary.error ?? videoLibrary.error}
+              musicFolders={library.folders}
+              musicItems={library.items}
               onOpenFolders={() => setActiveView("folders")}
               onOpenImages={() => setActiveView("images")}
               onOpenVideos={() => setActiveView("videos")}
               onPlayMusic={playMusicItem}
               onPlayVideo={playVideoItem}
+              videoFolders={videoLibrary.folders}
+              videos={videoLibrary.items}
             />
           ) : null}
 
           {activeView === "folders" ? (
             <LibrarySources
-              music={library}
               images={imageLibrary}
-              videos={videoLibrary}
+              music={library}
               onPlay={playMusicItem}
+              videos={videoLibrary}
             />
           ) : null}
 
           {activeView === "music" ? (
             <MusicLibrary
+              error={library.error}
               folders={library.folders}
               items={library.items}
               loading={library.loading}
-              error={library.error}
               onAdd={library.addFolder}
+              onAddToQueue={(items) => playback.queue.addToQueue(items)}
+              onOpenFolders={() => setActiveView("folders")}
               onPlay={playMusicItem}
               onPlayQueue={(items, idx, name) => {
                 setActiveView("player");
                 playback.playQueue(items, idx, name);
               }}
-              onAddToQueue={(items) => playback.queue.addToQueue(items)}
-              onOpenFolders={() => setActiveView("folders")}
             />
           ) : null}
 
           {activeView === "images" ? (
             <VisualLibrary
-              kind="image"
+              error={imageLibrary.error}
               folders={imageLibrary.folders}
               items={imageLibrary.items}
+              kind="image"
               loading={imageLibrary.loading}
-              error={imageLibrary.error}
               onAdd={imageLibrary.addFolder}
-              onOpenVideo={playVideoItem}
               onOpenFolders={() => setActiveView("folders")}
+              onOpenVideo={playVideoItem}
             />
           ) : null}
 
           {activeView === "videos" ? (
             <VisualLibrary
-              kind="video"
+              error={videoLibrary.error}
               folders={videoLibrary.folders}
               items={videoLibrary.items}
+              kind="video"
               loading={videoLibrary.loading}
-              error={videoLibrary.error}
               onAdd={videoLibrary.addFolder}
-              onOpenVideo={playVideoItem}
               onOpenFolders={() => setActiveView("folders")}
+              onOpenVideo={playVideoItem}
             />
           ) : null}
 
@@ -184,18 +186,18 @@ export function App() {
                 </div>
               ) : null}
               <PlaybackPreview
-                capabilities={playback.capabilities}
-                snapshot={playback.snapshot}
                 busy={playback.busy}
+                capabilities={playback.capabilities}
                 enabled={playback.enabled}
-                queueState={playback.queue}
+                onNext={() => void playback.next()}
                 onOpen={() => void playback.chooseFile()}
                 onPrevious={() => void playback.previous()}
-                onToggle={() => void playback.toggle()}
-                onNext={() => void playback.next()}
                 onSeek={(seconds) => void playback.seek(seconds)}
-                onVolume={(volume) => void playback.setVolume(volume)}
                 onSelectQueueIndex={playback.playQueueAt}
+                onToggle={() => void playback.toggle()}
+                onVolume={(volume) => void playback.setVolume(volume)}
+                queueState={playback.queue}
+                snapshot={playback.snapshot}
               />
             </>
           ) : null}
@@ -214,9 +216,9 @@ export function App() {
               images={imageLibrary}
               music={library}
               onPlay={playMusicItem}
-              videos={videoLibrary}
-              theme={theme}
               onThemeChange={setTheme}
+              theme={theme}
+              videos={videoLibrary}
             />
           ) : null}
         </main>

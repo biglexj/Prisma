@@ -77,15 +77,8 @@ export function VideoPlayer({
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
       void videoRef.current.play();
-      setPaused(false);
-      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
-      controlsTimeoutRef.current = window.setTimeout(() => {
-        setShowControls(false);
-      }, 2200);
     } else {
       videoRef.current.pause();
-      setPaused(true);
-      setShowControls(true);
     }
   };
 
@@ -117,10 +110,10 @@ export function VideoPlayer({
     if (!container) return;
 
     if (!document.fullscreenElement) {
-      void container.requestFullscreen().catch(() => { });
+      void container.requestFullscreen().catch(() => {});
       setIsFullscreen(true);
     } else {
-      void document.exitFullscreen().catch(() => { });
+      void document.exitFullscreen().catch(() => {});
       setIsFullscreen(false);
     }
   };
@@ -145,7 +138,18 @@ export function VideoPlayer({
     if (!paused) {
       controlsTimeoutRef.current = window.setTimeout(() => {
         setShowControls(false);
-      }, 2500);
+      }, 3000);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!paused) {
+      if (controlsTimeoutRef.current) {
+        window.clearTimeout(controlsTimeoutRef.current);
+      }
+      controlsTimeoutRef.current = window.setTimeout(() => {
+        setShowControls(false);
+      }, 1000);
     }
   };
 
@@ -154,9 +158,10 @@ export function VideoPlayer({
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
       controlsTimeoutRef.current = window.setTimeout(() => {
         setShowControls(false);
-      }, 2500);
+      }, 3000);
     } else {
       setShowControls(true);
+      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
     }
   }, [paused]);
 
@@ -242,6 +247,7 @@ export function VideoPlayer({
     <section
       className={`video-player-screen ${isFullscreen ? "is-fullscreen-mode" : ""} ${!showControls && !paused ? "controls-hidden" : ""}`}
       id="video-cinema-container"
+      onMouseLeave={handleMouseLeave}
       onMouseMove={handleUserActivity}
     >
       <header className="video-player-header">
@@ -259,7 +265,7 @@ export function VideoPlayer({
               <button
                 className="video-path-explorer-btn"
                 onClick={() => {
-                  invoke("show_in_file_manager", { path }).catch(() => { });
+                  invoke("show_in_file_manager", { path }).catch(() => {});
                 }}
                 title="Abrir ubicación en el Explorador de Windows"
               >
@@ -312,6 +318,8 @@ export function VideoPlayer({
                 setDuration(video.duration || 0);
                 setPaused(video.paused);
               }}
+              onPause={() => setPaused(true)}
+              onPlay={() => setPaused(false)}
               onTimeUpdate={(e) => {
                 setPosition(e.currentTarget.currentTime || 0);
               }}
@@ -330,17 +338,6 @@ export function VideoPlayer({
             <div className="video-ffw-indicator">
               <span>⏩ 3.0x Velocidad Rápida</span>
             </div>
-          ) : null}
-
-          {/* Central play trigger: ONLY visible when paused and controls are active */}
-          {hasMedia && paused && showControls ? (
-            <button
-              aria-label="Reproducir vídeo"
-              className="video-center-trigger is-paused"
-              onClick={togglePlay}
-            >
-              <Icon name="play" />
-            </button>
           ) : null}
         </div>
 
