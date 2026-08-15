@@ -21,11 +21,21 @@ import "./visual-library.css";
 const VISIBLE_ITEM_LIMIT = 400;
 
 type ViewMode = "timeline" | "folders" | "tree";
+export type VisualSortField = "date" | "name" | "size";
+export type VisualSortDirection = "desc" | "asc";
 
-// Memoria de sesión para recordar pestaña y carpeta abierta en imágenes y vídeos
-const sessionVisualState: Record<VisualMediaKind, { viewMode: ViewMode; folderPath: string }> = {
-  image: { viewMode: "timeline", folderPath: "" },
-  video: { viewMode: "timeline", folderPath: "" },
+// Memoria de sesión para recordar pestaña, carpeta abierta y criterio de ordenación en imágenes y vídeos
+const sessionVisualState: Record<
+  VisualMediaKind,
+  {
+    viewMode: ViewMode;
+    folderPath: string;
+    sortField: VisualSortField;
+    sortDirection: VisualSortDirection;
+  }
+> = {
+  image: { viewMode: "timeline", folderPath: "", sortField: "date", sortDirection: "desc" },
+  video: { viewMode: "timeline", folderPath: "", sortField: "date", sortDirection: "desc" },
 };
 
 interface TimelineSection {
@@ -60,12 +70,30 @@ export function VisualLibrary({
 }: VisualLibraryProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(() => sessionVisualState[kind].viewMode);
   const [currentFolderPath, setCurrentFolderPath] = useState<string>(() => sessionVisualState[kind].folderPath);
+  const [sortField, setSortField] = useState<VisualSortField>(() => sessionVisualState[kind].sortField);
+  const [sortDirection, setSortDirection] = useState<VisualSortDirection>(() => sessionVisualState[kind].sortDirection);
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
   const [activeImageSessionList, setActiveImageSessionList] = useState<VisualLibraryItem[] | null>(null);
   const favorites = useFavorites();
 
   const isImage = kind === "image";
   const label = isImage ? "Imágenes" : "Vídeos";
+
+  // Cerrar menú de ordenación al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+        setShowSortMenu(false);
+      }
+    };
+    if (showSortMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSortMenu]);
 
   const chooseFolder = async () => {
     const selection = await open({
@@ -77,21 +105,41 @@ export function VisualLibrary({
   };
 
   const nonExcludedItems = items.filter((it) => !it.isExcluded);
-  const visibleItems = nonExcludedItems.slice(0, VISIBLE_ITEM_LIMIT);
-  const timelineSections = groupByTimeline(visibleItems);
 
-  // Árbol jerárquico y colecciones (incluye todas las carpetas y archivos para navegación en Carpetas y Árbol)
+  // Función de ordenación pura aplicable a cualquier colección de ítems
+  const sortItemList = (itemList: VisualLibraryItem[]): VisualLibraryItem[] => {
+    return [...itemList].sort((a, b) => {
+      let comparison = 0;
+      if (sortField === "date") {
+        comparison = (b.modifiedAtMillis || 0) - (a.modifiedAtMillis || 0);
+      } else if (sortField === "name") {
+        comparison = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: "base" });
+      } else if (sortField === "size") {
+        comparison = (b.sizeBytes || 0) - (a.sizeBytes || 0);
+      }
+      return sortDirection === "asc" ? -comparison : comparison;
+    });
+  };
+
+  // En la línea de tiempo: los bloques de tiempo se agrupan, y dentro de cada día se ordenan los elementos según sortField/sortDirection
+  const visibleItems = nonExcludedItems.slice(0, VISIBLE_ITEM_LIMIT);
+  const timelineSections = groupByTimeline(visibleItems, sortItemList);
+
+  // Árbol jerárquico y colecciones
   const treeLevel = resolveTreeLevel(items, currentFolderPath, favorites.favorites, {
     allName: isImage ? "Todas las imágenes" : "Todos los vídeos",
     mediaType: isImage ? "image" : "video",
   });
+
+  // Ítems directos ordenados para la vista de carpetas
+  const sortedDirectItems = sortItemList(treeLevel.directItems);
 
   const isInsideFolder = currentFolderPath !== "";
 
   // Active list for current view
   const currentActiveList = activeImageSessionList ?? (
     isInsideFolder
-      ? (treeLevel.directItems.length > 0 ? treeLevel.directItems : treeLevel.allRecursiveItems)
+      ? (sortedDirectItems.length > 0 ? sortedDirectItems : sortItemList(treeLevel.allRecursiveItems))
       : (viewMode === "timeline" ? nonExcludedItems : items)
   );
 
@@ -203,31 +251,117 @@ export function VisualLibrary({
           </span>
         </div>
 
-        <div className="visual-view-mode-tabs">
-          <button
-            className={viewMode === "timeline" ? "is-active" : ""}
-            onClick={() => handleSwitchMode("timeline")}
-            title="Línea de tiempo"
-          >
-            <Icon name="clock" />
-            <span>Tiempo</span>
-          </button>
-          <button
-            className={viewMode === "folders" ? "is-active" : ""}
-            onClick={() => handleSwitchMode("folders")}
-            title="Carpetas"
-          >
-            <Icon name="folder" />
-            <span>Carpetas</span>
-          </button>
-          <button
-            className={viewMode === "tree" ? "is-active" : ""}
-            onClick={() => handleSwitchMode("tree")}
-            title="Vista en árbol"
-          >
-            <Icon name="folder-open" />
-            <span>Árbol</span>
-          </button>
+        <div className="visual-controls-right">
+          {/* Selector de Ordenación Material 3 Expressive */}
+          <div className="visual-sort-container" ref={sortMenuRef}>
+            <button
+              className={`visual-sort-trigger ${showSortMenu ? "is-open" : ""}`}
+              onClick={() => setShowSortMenu(!showSortMenu)}
+              title="Cambiar orden de visualización"
+              type="button"
+            >
+              <Icon name={sortDirection === "asc" ? "sort-asc" : "sort-desc"} />
+              <span>
+                {sortField === "date" ? "Fecha" : sortField === "name" ? "Nombre" : "Tamaño"}
+              </span>
+              <Icon className="sort-chevron" name="chevron-down" />
+            </button>
+
+            {showSortMenu ? (
+              <div className="visual-sort-menu" role="menu">
+                <span className="visual-sort-section-title">Ordenar por</span>
+                <button
+                  className={`visual-sort-item ${sortField === "date" ? "is-selected" : ""}`}
+                  onClick={() => {
+                    setSortField("date");
+                    sessionVisualState[kind].sortField = "date";
+                  }}
+                  type="button"
+                >
+                  <span>Fecha de modificación</span>
+                  {sortField === "date" ? <Icon name="star" /> : null}
+                </button>
+                <button
+                  className={`visual-sort-item ${sortField === "name" ? "is-selected" : ""}`}
+                  onClick={() => {
+                    setSortField("name");
+                    sessionVisualState[kind].sortField = "name";
+                  }}
+                  type="button"
+                >
+                  <span>Nombre del archivo</span>
+                  {sortField === "name" ? <Icon name="star" /> : null}
+                </button>
+                <button
+                  className={`visual-sort-item ${sortField === "size" ? "is-selected" : ""}`}
+                  onClick={() => {
+                    setSortField("size");
+                    sessionVisualState[kind].sortField = "size";
+                  }}
+                  type="button"
+                >
+                  <span>Tamaño de archivo</span>
+                  {sortField === "size" ? <Icon name="star" /> : null}
+                </button>
+
+                <div className="visual-sort-divider" />
+                <span className="visual-sort-section-title">Dirección</span>
+                <button
+                  className={`visual-sort-item ${sortDirection === "desc" ? "is-selected" : ""}`}
+                  onClick={() => {
+                    setSortDirection("desc");
+                    sessionVisualState[kind].sortDirection = "desc";
+                  }}
+                  type="button"
+                >
+                  <span>
+                    {sortField === "date" ? "Más recientes primero" : sortField === "name" ? "Z a A" : "Más pesados primero"}
+                  </span>
+                  {sortDirection === "desc" ? <Icon name="sort-desc" /> : null}
+                </button>
+                <button
+                  className={`visual-sort-item ${sortDirection === "asc" ? "is-selected" : ""}`}
+                  onClick={() => {
+                    setSortDirection("asc");
+                    sessionVisualState[kind].sortDirection = "asc";
+                  }}
+                  type="button"
+                >
+                  <span>
+                    {sortField === "date" ? "Más antiguos primero" : sortField === "name" ? "A a Z" : "Más ligeros primero"}
+                  </span>
+                  {sortDirection === "asc" ? <Icon name="sort-asc" /> : null}
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="visual-view-mode-tabs">
+            <button
+              className={viewMode === "timeline" ? "is-active" : ""}
+              onClick={() => handleSwitchMode("timeline")}
+              title="Línea de tiempo"
+            >
+              <Icon name="clock" />
+              <span>Tiempo</span>
+            </button>
+            <button
+              className={viewMode === "folders" ? "is-active" : ""}
+              onClick={() => handleSwitchMode("folders")}
+              title="Carpetas"
+            >
+              <Icon name="folder" />
+              <span>Carpetas</span>
+            </button>
+            <button
+              className={viewMode === "tree" ? "is-active" : ""}
+              onClick={() => handleSwitchMode("tree")}
+              title="Vista en árbol"
+            >
+              <Icon name="folder-open" />
+              <span>Árbol</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -303,10 +437,10 @@ export function VisualLibrary({
           ) : null}
 
           {/* Archivos directos o lista de carpeta virtual */}
-          {treeLevel.directItems.length > 0 ? (
+          {sortedDirectItems.length > 0 ? (
             <div className="visual-direct-items-section">
               <div className={`visual-grid ${isImage ? "bento-grid-layout" : "video-grid-layout"}`}>
-                {treeLevel.directItems.map((item, idx) => (
+                {sortedDirectItems.map((item, idx) => (
                   <VisualCard
                     index={idx}
                     isFavorite={favorites.isFavorite(item.path)}
@@ -315,8 +449,8 @@ export function VisualLibrary({
                     key={item.path}
                     onClick={() =>
                       isImage
-                        ? handleSelectImage(item, treeLevel.directItems)
-                        : onOpenVideo(item.path, treeLevel.directItems)
+                        ? handleSelectImage(item, sortedDirectItems)
+                        : onOpenVideo(item.path, sortedDirectItems)
                     }
                     onToggleFavorite={() => favorites.toggleFavorite(item.path, kind)}
                   />
@@ -520,7 +654,10 @@ function VisualFolderCard({
   );
 }
 
-function groupByTimeline(items: VisualLibraryItem[]): TimelineSection[] {
+function groupByTimeline(
+  items: VisualLibraryItem[],
+  sorter?: (items: VisualLibraryItem[]) => VisualLibraryItem[]
+): TimelineSection[] {
   const groupsMap = new Map<string, VisualLibraryItem[]>();
 
   const now = new Date();
@@ -552,7 +689,11 @@ function groupByTimeline(items: VisualLibraryItem[]): TimelineSection[] {
     }
   }
 
-  return Array.from(groupsMap.entries()).map(([title, items]) => ({ title, items }));
+  return Array.from(groupsMap.entries()).map(([title, groupItems]) => ({
+    title,
+    // Aplica el orden (ej. por nombre A-Z o fecha o tamaño) a los ítems dentro de cada grupo temporal
+    items: sorter ? sorter(groupItems) : groupItems,
+  }));
 }
 
 function formatBytes(bytes: number) {

@@ -160,6 +160,41 @@ export function VideoPlayer({
     };
   }, [path]);
 
+  // ── Cargar Pistas de Audio Reales desde Backend (ffprobe) ──
+  useEffect(() => {
+    if (!path) {
+      setAudioTracksList([]);
+      setSelectedTrackIdx(0);
+      return;
+    }
+
+    let isMounted = true;
+    invoke<Array<{ index: number; label: string; language: string | null; codec: string | null; channels: number | null }>>(
+      "video_get_audio_tracks",
+      { path }
+    )
+      .then((tracks) => {
+        if (!isMounted || !tracks || tracks.length === 0) return;
+        const list: AudioTrackInfo[] = tracks.map((t) => ({
+          index: t.index,
+          id: String(t.index),
+          label: t.label || `Pista ${t.index + 1}`,
+          language: t.language || "",
+          enabled: t.index === 0,
+        }));
+        setAudioTracksList(list);
+        setAudioApiSupported(true);
+        setSelectedTrackIdx(0);
+      })
+      .catch((err) => {
+        console.warn("ffprobe no pudo inspeccionar pistas de audio o no está disponible:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [path]);
+
   // ── Seleccionar Subtítulo ──
   const selectSubtitle = async (subIdx: number | null) => {
     setSelectedSubIdx(subIdx);

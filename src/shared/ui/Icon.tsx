@@ -44,7 +44,10 @@ export type IconName =
   | "volume-1"
   | "volume-mute"
   | "keyboard"
-  | "fit-screen";
+  | "fit-screen"
+  | "sort-asc"
+  | "sort-desc"
+  | "filter";
 
 const paths: Record<IconName, ReactNode> = {
   "arrow-left": <path d="M19 12H5m0 0 7 7m-7-7 7-7" />,
@@ -91,6 +94,9 @@ const paths: Record<IconName, ReactNode> = {
   volume: <path d="M11 5 6 9H3v6h3l5 4V5Z M15.5 8.5a5 5 0 0 1 0 7 M18 6a8 8 0 0 1 0 12" />,
   "volume-1": <path d="M11 5 6 9H3v6h3l5 4V5Z M15.5 8.5a5 5 0 0 1 0 7" />,
   "volume-mute": <><path d="M11 5 6 9H3v6h3l5 4V5Z" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></>,
+  "sort-asc": <><path d="M4 6h7M4 12h5M4 18h3M15 15l3 3 3-3M18 6v12" /></>,
+  "sort-desc": <><path d="M4 6h7M4 12h5M4 18h3M15 9l3-3 3 3M18 18V6" /></>,
+  filter: <><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></>,
 };
 
 export function Icon({ name, ...props }: SVGProps<SVGSVGElement> & { name: IconName }) {
