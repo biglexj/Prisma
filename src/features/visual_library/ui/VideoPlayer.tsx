@@ -61,6 +61,8 @@ export function VideoPlayer({
   const [channelMode, setChannelMode] = useState<AudioChannelMode>("stereo");
   const [audioTracksList, setAudioTracksList] = useState<AudioTrackInfo[]>([]);
   const [selectedTrackIdx, setSelectedTrackIdx] = useState<number>(0);
+  // null = aún no cargado; true = API soportada; false = API no soportada
+  const [audioApiSupported, setAudioApiSupported] = useState<boolean | null>(null);
 
   // Subtítulos
   const [showSubMenu, setShowSubMenu] = useState(false);
@@ -250,7 +252,23 @@ export function VideoPlayer({
       if (document.pictureInPictureElement) {
         await document.exitPictureInPicture();
       } else if (document.pictureInPictureEnabled) {
-        await video.requestPictureInPicture();
+        // Aplicar dimensiones naturales del vídeo al elemento antes de pedir PiP.
+        // Chrome determina el tamaño de la ventana flotante a partir de las dimensiones
+        // CSS del <video>, no de las intrínsecas. Si no lo hacemos, siempre sale 16:9.
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        const hadStyle = { w: video.style.width, h: video.style.height };
+        if (vw > 0 && vh > 0) {
+          video.style.width  = `${vw}px`;
+          video.style.height = `${vh}px`;
+        }
+        try {
+          await video.requestPictureInPicture();
+        } finally {
+          // Restaurar estilos para que el reproductor vuelva a ocupar todo el escenario
+          video.style.width  = hadStyle.w;
+          video.style.height = hadStyle.h;
+        }
       }
     } catch (err) {
       console.error("Error activando Picture-in-Picture:", err);
@@ -648,23 +666,27 @@ export function VideoPlayer({
                 setPaused(video.paused);
 
                 // Detectar pistas de audio nativas reales del elemento
-                const tracks = (video as unknown as { audioTracks?: AudioTrackInfo[] }).audioTracks;
-                if (tracks && tracks.length > 0) {
+                const rawTracks = (video as unknown as { audioTracks?: { length: number; [i: number]: AudioTrackInfo } }).audioTracks;
+                const apiSupported = rawTracks !== undefined && rawTracks !== null;
+                setAudioApiSupported(apiSupported);
+
+                if (apiSupported && rawTracks!.length > 0) {
+                  // API soportada y hay pistas reales
                   const list: AudioTrackInfo[] = [];
-                  for (let i = 0; i < tracks.length; i++) {
+                  for (let i = 0; i < rawTracks!.length; i++) {
                     list.push({
                       index: i,
-                      id: tracks[i].id || String(i),
-                      label: tracks[i].label || `Pista ${i + 1}`,
-                      language: tracks[i].language || "",
-                      enabled: tracks[i].enabled,
+                      id: rawTracks![i].id || String(i),
+                      label: rawTracks![i].label || `Pista ${i + 1}`,
+                      language: rawTracks![i].language || "",
+                      enabled: rawTracks![i].enabled,
                     });
                   }
                   setAudioTracksList(list);
                   const active = list.findIndex((t) => t.enabled);
                   if (active >= 0) setSelectedTrackIdx(active);
                 } else {
-                  // Si no hay múltiples pistas reales detectadas, la lista queda vacía (o solo con la pista única)
+                  // API no soportada (WebView2) O realmente sin audio
                   setAudioTracksList([]);
                 }
               }}
@@ -813,6 +835,7 @@ export function VideoPlayer({
               {showAudioMenu ? (
                 <div className="video-audio-popover">
                   {audioTracksList.length > 0 ? (
+                    // API soportada y hay 2+ pistas reales detectadas
                     <>
                       <p className="video-audio-popover-title">Pistas de audio ({audioTracksList.length})</p>
                       {audioTracksList.map((track) => (
@@ -826,10 +849,23 @@ export function VideoPlayer({
                         </button>
                       ))}
                     </>
-                  ) : (
+                  ) : audioApiSupported === false || audioApiSupported === null ? (
+                    // API no soportada por el browser (WebView2): asumir que existe la pista principal
                     <>
                       <p className="video-audio-popover-title">Pistas de audio</p>
-                      <p className="video-audio-popover-empty">Sin pistas disponibles</p>
+                      <button
+                        className="video-audio-option is-active"
+                        onClick={() => selectAudioTrack(0)}
+                      >
+                        <Icon name="volume" />
+                        <span>Pista 1</span>
+                      </button>
+                    </>
+                  ) : (
+                    // API soportada pero 0 pistas: el vídeo no tiene audio
+                    <>
+                      <p className="video-audio-popover-title">Pistas de audio</p>
+                      <p className="video-audio-popover-empty">Sin pistas</p>
                     </>
                   )}
 

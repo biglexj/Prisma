@@ -89,17 +89,19 @@ export function App() {
 
   /**
    * Gestiona el ciclo de vida de Picture-in-Picture desde App:
-   * - Al activar PiP: vuelve a la vista de galería/origen (limpia el fondo).
-   * - Al desactivar PiP (miniatura flotante cerrada): restaura el reproductor a pantalla completa.
+   * - Al activar PiP: limpia el fondo y muestra la galería/vista de origen.
+   * - Al desactivar PiP por el botón ✕ nativo: limpia el vídeo activo y se queda
+   *   en la vista actual (galería). NO vuelve al reproductor a pantalla completa.
    */
   const handlePipChange = (active: boolean) => {
     setIsPip(active);
     if (active) {
-      // Ocultar el reproductor y mostrar la vista de fondo limpia
+      // Limpiar el fondo: mostrar la galería donde estaba el usuario
       setActiveView(videoReturnView);
     } else {
-      // Restaurar el reproductor completo al salir del modo flotante
-      setActiveView("video_player");
+      // Cerraron la ventana flotante (botón ✕) → limpiar sesión, quedarse en galería
+      setActiveVideoPath(null);
+      setActiveVideoSessionItems([]);
     }
   };
 
