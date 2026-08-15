@@ -657,20 +657,25 @@
   font-weight: 700;
 }
 
-.music-summary strong {
-  color: var(--on-surface);
-  font-size: 0.78rem;
+.music-controls-bar {
+  position: sticky;
+  top: -18px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: clamp(12px, 2cqi, 20px) -8px 18px;
+  padding: 10px 8px;
+  background: color-mix(in srgb, var(--surface, #120c0e) 85%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.06));
+  border-radius: 0 0 16px 16px;
 }
 
-.music-summary i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--outline);
-}
-
-.music-summary i.is-ready {
-  background: var(--success);
+.music-controls-bar .music-summary {
+  margin: 0;
 }
 
 .music-view-mode-tabs {

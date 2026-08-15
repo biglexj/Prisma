@@ -23,11 +23,20 @@
 }
 
 .visual-controls-bar {
+  position: sticky;
+  top: -18px;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: clamp(24px, 4cqi, 42px) 0 18px;
+  margin: clamp(12px, 2cqi, 20px) -8px 18px;
+  padding: 10px 8px;
+  background: color-mix(in srgb, var(--surface, #120c0e) 85%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.06));
+  border-radius: 0 0 16px 16px;
 }
 
 .visual-controls-bar .visual-summary {
