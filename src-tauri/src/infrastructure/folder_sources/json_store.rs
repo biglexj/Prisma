@@ -41,7 +41,24 @@ impl JsonFolderSourceStore {
             ));
         }
 
-        Ok((document.sources, document.excluded_sources))
+        let sources = document
+            .sources
+            .into_iter()
+            .map(|mut s| {
+                s.path = crate::features::folder_session::clean_path_str(&s.path);
+                s
+            })
+            .collect();
+        let excluded_sources = document
+            .excluded_sources
+            .into_iter()
+            .map(|mut s| {
+                s.path = crate::features::folder_session::clean_path_str(&s.path);
+                s
+            })
+            .collect();
+
+        Ok((sources, excluded_sources))
     }
 
     pub fn save(

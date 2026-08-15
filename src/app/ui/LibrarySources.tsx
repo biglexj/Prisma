@@ -3,6 +3,7 @@ import { FolderManager } from "../../features/music_library/ui/FolderManager";
 import type { VisualFolderSource, VisualMediaKind } from "../../features/visual_library/model/types";
 import { VisualSourceManager } from "../../features/visual_library/ui/VisualSourceManager";
 import { Icon } from "../../shared/ui/Icon";
+import { useScrollRestoration } from "../../shared/useScrollRestoration";
 import "./library-sources.css";
 
 interface MusicSourceState {
@@ -44,6 +45,7 @@ export function LibrarySources({
   videos: VisualSourceState;
   onPlay: (path: string) => void;
 }) {
+  useScrollRestoration("view:folders");
   const errors = [music.error, images.error, videos.error].filter(
     (error): error is string => Boolean(error),
   );
@@ -104,9 +106,9 @@ export function LibrarySources({
       </div>
 
       <header className="section-heading library-excluded-heading">
-        <span className="preview-kicker">EXCLUSIONES DE LA BIBLIOTECA</span>
-        <h2>Carpetas Excluidas</h2>
-        <p>Especifica subcarpetas que Prisma ignorará durante el escaneo de música, imágenes o vídeos.</p>
+        <span className="preview-kicker">OCULTAR EN LÍNEA DE TIEMPO</span>
+        <h2>Carpetas Ocultas del Tiempo</h2>
+        <p>Especifica subcarpetas que Prisma no mostrará en la línea de tiempo ni feeds principales. Seguirán estando disponibles en las vistas de Carpetas y Árbol.</p>
       </header>
 
       <div className="library-sources-three-columns">

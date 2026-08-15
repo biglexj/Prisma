@@ -32,14 +32,19 @@
 
 .preview-screen.has-album-palette .preview-modes button.is-active,
 .preview-screen.has-album-palette .preview-transport .preview-play {
-  color: var(--album-on-accent);
-  background: var(--album-accent);
-  box-shadow: 0 12px 30px color-mix(in srgb, var(--album-accent) 25%, transparent);
+  color: var(--album-on-accent) !important;
+  background: var(--album-accent) !important;
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--album-accent) 25%, transparent) !important;
+}
+
+.preview-screen.has-album-palette .preview-transport .preview-play:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--album-accent) 85%, black) !important;
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--album-accent) 40%, transparent) !important;
 }
 
 .preview-screen.has-album-palette .preview-transport button:not(.preview-play) {
-  color: var(--album-accent-deep);
-  background: var(--album-accent-soft);
+  color: var(--album-accent-deep) !important;
+  background: var(--album-accent-soft) !important;
 }
 
 .preview-screen.has-album-palette input[type="range"] {

@@ -10,9 +10,13 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 - [ ] **Estandarización Ecosistema biglexj** — `process/active/2026-08-11_estandarizacion_ecosistema_biglexj/`
 - [ ] **Modo de Reproducción Flotante (PiP / MiniPlayer)** — `process/active/`
-- [x] **Gestión de Colas, Reproducción Continua, Árbol Jerárquico y Favoritos** — `process/active/2026-08-14_gestion-colas-reproduccion-arbol/`
+- [x] **Configuración de Quick Look, Atajos, Autorun y Bandeja del Sistema (System Tray)** — `process/completed/2026/2026-08-15_quick_look_configuracion_autorun_tray/`
+- [x] **Prisma Quick Look (Previsualización Rápida con Espacio en Explorador y Escritorio)** — `process/completed/2026/2026-08-15_quick_look_vista_previa/`
+- [x] **Gestión de Colas, Reproducción Continua, Árbol Jerárquico y Favoritos** — `process/completed/2026/2026-08-14_gestion-colas-reproduccion-arbol/`
 - [x] **Auditoría de Rendimiento Multimedia y Memoria** — `process/completed/2026/2026-08-14_auditoria-rendimiento-multimedia/`
 - [x] **Optimización de Renderizado de Listas de Fotos Masivas y Memoria WebView** — `process/completed/2026/2026-08-13_optimizacion_memoria_webview/`
+
+
 
 ---
 

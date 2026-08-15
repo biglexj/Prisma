@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::features::folder_session::{
-    classify_path, compare_naturally, is_path_excluded,
+    classify_path, clean_path, compare_naturally, is_path_excluded,
 };
 
 use super::{VisualFolderScan, VisualFolderSource, VisualLibraryItem, VisualMediaKind};
@@ -23,7 +23,7 @@ pub fn scan_visual_folder(
         return Err("La ruta seleccionada no es una carpeta.".to_owned());
     }
 
-    let source_path = canonical_root.to_string_lossy().into_owned();
+    let source_path = clean_path(&canonical_root);
     let source_name = canonical_root
         .file_name()
         .and_then(|name| name.to_str())
@@ -34,9 +34,7 @@ pub fn scan_visual_folder(
     let mut items = Vec::new();
 
     while let Some(directory) = pending.pop() {
-        if is_path_excluded(&directory, excluded_paths) {
-            continue;
-        }
+        let is_dir_excluded = is_path_excluded(&directory, excluded_paths);
 
         let entries = match fs::read_dir(&directory) {
             Ok(entries) => entries,
@@ -51,9 +49,6 @@ pub fn scan_visual_folder(
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if is_path_excluded(&path, excluded_paths) {
-                continue;
-            }
 
             let file_type = match entry.file_type() {
                 Ok(file_type) => file_type,
@@ -71,6 +66,8 @@ pub fn scan_visual_folder(
             if !file_type.is_file() || classify_path(&path) != Some(kind.family()) {
                 continue;
             }
+
+            let is_excluded = is_dir_excluded || is_path_excluded(&path, excluded_paths);
 
             let metadata = entry.metadata().ok();
             let modified_at_millis = metadata
@@ -98,12 +95,13 @@ pub fn scan_visual_folder(
                     .and_then(|name| name.to_str())
                     .unwrap_or("Archivo sin nombre")
                     .to_owned(),
-                path: path.to_string_lossy().into_owned(),
+                path: clean_path(&path),
                 source_path: source_path.clone(),
                 relative_folder,
                 kind,
                 modified_at_millis,
                 size_bytes: metadata.map_or(0, |metadata| metadata.len()),
+                is_excluded,
             });
         }
     }
@@ -115,12 +113,14 @@ pub fn scan_visual_folder(
             .then_with(|| compare_naturally(&left.path, &right.path))
     });
 
+    let non_excluded_count = items.iter().filter(|it| !it.is_excluded).count();
+
     Ok(VisualFolderScan {
         source: VisualFolderSource {
             path: source_path,
             name: source_name,
             kind,
-            item_count: items.len(),
+            item_count: non_excluded_count,
             available: true,
         },
         items,
@@ -158,6 +158,9 @@ mod tests {
 
         let excluded_images = scan_visual_folder(&root, VisualMediaKind::Image, &[nested.to_string_lossy().into_owned()]).unwrap();
         assert_eq!(excluded_images.source.item_count, 1);
+        assert_eq!(excluded_images.items.len(), 2);
+        assert_eq!(excluded_images.items.iter().filter(|it| !it.is_excluded).count(), 1);
+        assert_eq!(excluded_images.items.iter().filter(|it| it.is_excluded).count(), 1);
 
         fs::remove_dir_all(root).unwrap();
     }

@@ -8,6 +8,20 @@ pub use natural_sort::compare_naturally;
 
 use std::path::{Path, PathBuf};
 
+pub fn clean_path(path: &Path) -> String {
+    clean_path_str(&path.to_string_lossy())
+}
+
+pub fn clean_path_str(path_str: &str) -> String {
+    if let Some(stripped) = path_str.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{stripped}")
+    } else if let Some(stripped) = path_str.strip_prefix(r"\\?\") {
+        stripped.to_owned()
+    } else {
+        path_str.to_owned()
+    }
+}
+
 pub fn is_path_excluded(path: &Path, excluded_paths: &[String]) -> bool {
     if excluded_paths.is_empty() {
         return false;

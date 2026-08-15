@@ -14,6 +14,10 @@ export interface PlaybackSnapshot {
   volume: number;
   speed: number;
   session: FolderSessionSnapshot | null;
+  eofReached?: boolean | null;
+  trackTitle?: string | null;
+  trackArtist?: string | null;
+  trackAlbum?: string | null;
 }
 
 export interface FolderSessionSnapshot {

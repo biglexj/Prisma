@@ -34,6 +34,10 @@ pub struct PlaybackSnapshot {
     pub volume: f64,
     pub speed: f64,
     pub session: Option<FolderSessionSnapshot>,
+    pub eof_reached: Option<bool>,
+    pub track_title: Option<String>,
+    pub track_artist: Option<String>,
+    pub track_album: Option<String>,
 }
 
 pub fn clamp_volume(volume: f64) -> f64 {

@@ -4,6 +4,7 @@ import { useFavorites } from "../useFavorites";
 import { MusicArtwork } from "../../features/music_library/ui/MusicArtwork";
 import { VisualThumbnail } from "../../features/visual_library/ui/VisualThumbnail";
 import { VideoThumbnail } from "../../features/visual_library/ui/VideoThumbnail";
+import { cleanPath } from "../mediaTree";
 import "./media-tree.css";
 
 export interface MediaTreeItem {
@@ -33,6 +34,7 @@ interface MediaTreeViewProps<T extends MediaTreeItem> {
   onPlayFolder?: (items: T[], folderName: string) => void;
   onAddToQueue?: (item: T) => void;
   onAddFolderToQueue?: (items: T[]) => void;
+  onCreatePlaylistFromFolder?: (items: T[], folderName: string) => void;
 }
 
 // Memoria de sesión para preservar las carpetas expandidas por tipo de medio (Almacenamiento Local siempre abierto por defecto)
@@ -51,6 +53,7 @@ export function MediaTreeView<T extends MediaTreeItem>({
   onPlayFolder,
   onAddToQueue,
   onAddFolderToQueue,
+  onCreatePlaylistFromFolder,
 }: MediaTreeViewProps<T>) {
   const favorites = useFavorites();
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => {
@@ -106,6 +109,8 @@ export function MediaTreeView<T extends MediaTreeItem>({
         ? "Todas las imágenes"
         : "Todos los vídeos";
 
+    const nonExcludedForVirtualAll = items.filter((it) => !(it as { isExcluded?: boolean }).isExcluded);
+
     const allNode: TreeNode<T> = {
       path: "virtual_all",
       name: allLabel,
@@ -113,9 +118,9 @@ export function MediaTreeView<T extends MediaTreeItem>({
       isDirectory: true,
       isVirtual: true,
       virtualType: "all",
-      directItems: items,
-      allRecursiveItems: items,
-      children: items.map((it) => ({
+      directItems: nonExcludedForVirtualAll,
+      allRecursiveItems: nonExcludedForVirtualAll,
+      children: nonExcludedForVirtualAll.map((it) => ({
         path: `all_${it.path}`,
         name: it.title,
         level: 1,
@@ -212,7 +217,7 @@ export function MediaTreeView<T extends MediaTreeItem>({
     return [favNode, allNode, storageNode];
   }, [items, favorites.favorites, mediaType]);
 
-  const renderNode = (node: TreeNode<T>): React.ReactNode => {
+  const renderNode = (node: TreeNode<T>, parentNode?: TreeNode<T>): React.ReactNode => {
     const isExpanded = expandedPaths.has(node.path);
     const indentPx = node.level * 20;
 
@@ -278,11 +283,24 @@ export function MediaTreeView<T extends MediaTreeItem>({
                 <Icon name="queue" />
               </button>
             ) : null}
+
+            {node.allRecursiveItems.length > 0 && onCreatePlaylistFromFolder && !isFav && !isAll ? (
+              <button
+                className="media-tree-playlist-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCreatePlaylistFromFolder(node.allRecursiveItems, node.name);
+                }}
+                title="Guardar carpeta como lista de reproducción M3U"
+              >
+                <Icon name="list-music" />
+              </button>
+            ) : null}
           </div>
 
           {isExpanded && node.children.length > 0 ? (
             <div className="media-tree-children">
-              {visibleChildren.map(renderNode)}
+              {visibleChildren.map((child) => renderNode(child, node))}
               {hasMoreChildren ? (
                 <div
                   className="media-tree-limit-hint"
@@ -300,12 +318,15 @@ export function MediaTreeView<T extends MediaTreeItem>({
     // Leaf file node
     const file = node.item!;
     const isFavorite = favorites.isFavorite(file.path);
+    const contextList = parentNode
+      ? (parentNode.directItems.length > 0 ? parentNode.directItems : parentNode.allRecursiveItems)
+      : items;
 
     return (
       <div
         className="media-tree-row is-file"
         key={node.path}
-        onClick={() => onPlayItem(file, items)}
+        onClick={() => onPlayItem(file, contextList)}
         style={{ paddingLeft: `${indentPx + 24}px` }}
       >
         <span className="media-tree-file-thumb">
@@ -322,8 +343,8 @@ export function MediaTreeView<T extends MediaTreeItem>({
           <strong className="media-tree-file-title" title={file.title}>
             {file.title}
           </strong>
-          <span className="media-tree-file-sub" title={file.relativeFolder}>
-            {file.relativeFolder || "Carpeta principal"}
+          <span className="media-tree-file-sub" title={cleanPath(file.relativeFolder)}>
+            {cleanPath(file.relativeFolder) || "Carpeta principal"}
             {file.sizeBytes ? ` · ${formatBytes(file.sizeBytes)}` : ""}
           </span>
         </div>
@@ -333,7 +354,7 @@ export function MediaTreeView<T extends MediaTreeItem>({
             className={`media-tree-fav-btn ${isFavorite ? "is-favorite" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
-              favorites.toggleFavorite(file.path);
+              favorites.toggleFavorite(file.path, mediaType);
             }}
             title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
           >
@@ -359,7 +380,7 @@ export function MediaTreeView<T extends MediaTreeItem>({
 
   return (
     <div className="media-tree-container">
-      {rootNodes.map(renderNode)}
+      {rootNodes.map((node) => renderNode(node))}
     </div>
   );
 }

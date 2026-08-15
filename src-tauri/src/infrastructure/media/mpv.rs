@@ -26,6 +26,36 @@ impl MpvBackend {
     }
 
     fn read_snapshot(&self) -> PlaybackSnapshot {
+        let track_title = self
+            .mpv
+            .get_property::<String>("metadata/by-key/Title")
+            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/TITLE"))
+            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/title"))
+            .or_else(|_| self.mpv.get_property::<String>("media-title"))
+            .ok()
+            .map(|s| s.trim().to_owned())
+            .filter(|s| !s.is_empty());
+
+        let track_artist = self
+            .mpv
+            .get_property::<String>("metadata/by-key/Artist")
+            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/ARTIST"))
+            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/artist"))
+            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/Album_Artist"))
+            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/album_artist"))
+            .ok()
+            .map(|s| s.trim().to_owned())
+            .filter(|s| !s.is_empty());
+
+        let track_album = self
+            .mpv
+            .get_property::<String>("metadata/by-key/Album")
+            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/ALBUM"))
+            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/album"))
+            .ok()
+            .map(|s| s.trim().to_owned())
+            .filter(|s| !s.is_empty());
+
         PlaybackSnapshot {
             path: self.path.clone(),
             paused: self.mpv.get_property("pause").unwrap_or(true),
@@ -34,6 +64,10 @@ impl MpvBackend {
             volume: self.mpv.get_property("volume").unwrap_or(70.0),
             speed: self.mpv.get_property("speed").unwrap_or(1.0),
             session: None,
+            eof_reached: self.mpv.get_property::<bool>("eof-reached").ok(),
+            track_title,
+            track_artist,
+            track_album,
         }
     }
 }
@@ -53,6 +87,7 @@ impl PlaybackBackend for MpvBackend {
         self.mpv
             .command("loadfile", &[path, "replace"])
             .map_err(debug_error)?;
+        let _ = self.mpv.set_property("pause", false);
         self.path = Some(path.to_owned());
         Ok(self.read_snapshot())
     }

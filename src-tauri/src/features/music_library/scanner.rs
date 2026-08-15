@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::features::folder_session::{
-    MediaFamily, classify_path, compare_naturally, is_path_excluded,
+    MediaFamily, classify_path, clean_path, compare_naturally, is_path_excluded,
 };
 
 use super::{MusicFolderScan, MusicFolderSource, MusicLibraryItem};
@@ -22,7 +22,7 @@ pub fn scan_music_folder(
         return Err("La ruta seleccionada no es una carpeta.".to_owned());
     }
 
-    let source_path = canonical_root.to_string_lossy().into_owned();
+    let source_path = clean_path(&canonical_root);
     let source_name = canonical_root
         .file_name()
         .and_then(|name| name.to_str())
@@ -33,9 +33,7 @@ pub fn scan_music_folder(
     let mut items = Vec::new();
 
     while let Some(directory) = pending.pop() {
-        if is_path_excluded(&directory, excluded_paths) {
-            continue;
-        }
+        let is_dir_excluded = is_path_excluded(&directory, excluded_paths);
 
         let entries = match fs::read_dir(&directory) {
             Ok(entries) => entries,
@@ -45,9 +43,6 @@ pub fn scan_music_folder(
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if is_path_excluded(&path, excluded_paths) {
-                continue;
-            }
 
             let file_type = match entry.file_type() {
                 Ok(file_type) => file_type,
@@ -66,6 +61,8 @@ pub fn scan_music_folder(
             if !file_type.is_file() || classify_path(&path) != Some(MediaFamily::Audio) {
                 continue;
             }
+
+            let is_excluded = is_dir_excluded || is_path_excluded(&path, excluded_paths);
 
             let metadata = entry.metadata().ok();
             let modified_at_millis = metadata
@@ -94,12 +91,13 @@ pub fn scan_music_folder(
                 .unwrap_or_else(|| source_name.clone());
 
             items.push(MusicLibraryItem {
-                path: path.to_string_lossy().into_owned(),
+                path: clean_path(&path),
                 title,
                 source_path: source_path.clone(),
                 relative_folder,
                 modified_at_millis,
                 size_bytes: metadata.map_or(0, |metadata| metadata.len()),
+                is_excluded,
             });
         }
     }
@@ -111,11 +109,13 @@ pub fn scan_music_folder(
             .then_with(|| compare_naturally(&left.path, &right.path))
     });
 
+    let non_excluded_count = items.iter().filter(|it| !it.is_excluded).count();
+
     Ok(MusicFolderScan {
         source: MusicFolderSource {
             path: source_path,
             name: source_name,
-            track_count: items.len(),
+            track_count: non_excluded_count,
             available: true,
         },
         items,
@@ -151,8 +151,10 @@ mod tests {
 
         let excluded_scan = scan_music_folder(&root, &[album.to_string_lossy().into_owned()]).unwrap();
         assert_eq!(excluded_scan.source.track_count, 1);
-        assert_eq!(excluded_scan.items.len(), 1);
+        assert_eq!(excluded_scan.items.len(), 2);
+        assert_eq!(excluded_scan.items.iter().filter(|it| !it.is_excluded).count(), 1);
+        assert_eq!(excluded_scan.items.iter().filter(|it| it.is_excluded).count(), 1);
 
-        std::fs::remove_dir_all(root).unwrap();
+        fs::remove_dir_all(root).unwrap();
     }
 }

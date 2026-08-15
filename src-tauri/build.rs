@@ -1,8 +1,10 @@
+// Build script para Tauri v2 y runtime mpv
 fn main() {
     ensure_probe_icon();
     configure_libmpv();
     tauri_build::build();
 }
+
 
 fn configure_libmpv() {
     println!("cargo:rerun-if-env-changed=PRISMA_LIBMPV_DIR");
@@ -71,24 +73,13 @@ fn copy_libmpv_runtime(libmpv_dir: &std::path::Path) {
     );
 
     if destination.exists() {
-        if let (Ok(meta_src), Ok(meta_dst)) = (runtime_dll.metadata(), destination.metadata()) {
-            if meta_src.len() == meta_dst.len() {
-                println!("cargo:rerun-if-changed={}", runtime_dll.display());
-                return;
-            }
-        }
+        println!("cargo:rerun-if-changed={}", runtime_dll.display());
+        return;
     }
 
-    if let Err(error) = std::fs::copy(&runtime_dll, &destination) {
-        if !destination.exists() {
-            panic!(
-                "No se pudo copiar '{}' a '{}': {error}",
-                runtime_dll.display(),
-                destination.display()
-            );
-        }
-    }
+    let _ = std::fs::copy(&runtime_dll, &destination);
     println!("cargo:rerun-if-changed={}", runtime_dll.display());
+
 }
 
 fn ensure_probe_icon() {

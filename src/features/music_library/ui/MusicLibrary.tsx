@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
 import { MediaTreeView } from "../../../shared/ui/MediaTreeView";
@@ -11,6 +11,9 @@ import { useFavorites } from "../../../shared/useFavorites";
 import type { MusicFolderSource, MusicLibraryItem } from "../model/types";
 import type { MusicQueueItem } from "../../playback/model/queue";
 import { MusicArtwork } from "./MusicArtwork";
+import { parseTrackInfo } from "../model/trackInfo";
+import { playlistsSaveFromItems } from "../../collections/tauri/client";
+import { useScrollRestoration } from "../../../shared/useScrollRestoration";
 import "./music-library.css";
 
 const VISIBLE_ITEM_LIMIT = 400;
@@ -28,19 +31,23 @@ interface MusicLibraryProps {
   items: MusicLibraryItem[];
   loading: boolean;
   error: string | null;
+  currentPlayingPath?: string | null;
+  isPlaying?: boolean;
   onAdd: (path: string) => Promise<void>;
   onPlay: (path: string) => void;
   onPlayQueue?: (items: MusicQueueItem[], startIndex?: number, name?: string) => void;
+  onPlayFolder?: (folderName: string, items: MusicQueueItem[], startIndex?: number) => void;
   onAddToQueue?: (items: MusicQueueItem[]) => void;
   onOpenFolders: () => void;
 }
 
 function toQueueItem(item: MusicLibraryItem): MusicQueueItem {
+  const { title, artist } = parseTrackInfo(item.title);
   return {
     id: item.path,
     path: item.path,
-    title: item.title,
-    artist: item.relativeFolder,
+    title,
+    artist: artist || null,
     folder: item.relativeFolder,
     sizeBytes: item.sizeBytes,
   };
@@ -51,9 +58,12 @@ export function MusicLibrary({
   items,
   loading,
   error,
+  currentPlayingPath,
+  isPlaying,
   onAdd,
   onPlay,
   onPlayQueue,
+  onPlayFolder,
   onAddToQueue,
   onOpenFolders,
 }: MusicLibraryProps) {
@@ -72,9 +82,10 @@ export function MusicLibrary({
     }
   };
 
-  const visibleItems = items.slice(0, VISIBLE_ITEM_LIMIT);
+  const nonExcludedItems = items.filter((it) => !it.isExcluded);
+  const visibleItems = nonExcludedItems.slice(0, VISIBLE_ITEM_LIMIT);
 
-  // Árbol jerárquico y colecciones
+  // Árbol jerárquico y colecciones (contiene todas las carpetas y archivos para navegación en Carpetas y Árbol)
   const treeLevel = resolveTreeLevel(items, currentFolderPath, favorites.favorites, {
     allName: "Todas las canciones",
     mediaType: "music",
@@ -83,20 +94,29 @@ export function MusicLibrary({
   const isInsideFolder = currentFolderPath !== "";
 
   const handlePlayAll = () => {
-    if (items.length === 0) return;
-    const queueItems = items.map(toQueueItem);
+    if (nonExcludedItems.length === 0) return;
+    const queueItems = nonExcludedItems.map(toQueueItem);
     if (onPlayQueue) {
-      onPlayQueue(queueItems, 0, "Toda la Música");
+      onPlayQueue(queueItems, 0, "Árbol de Música");
     } else {
-      onPlay(items[0].path);
+      onPlay(nonExcludedItems[0].path);
     }
   };
 
   const handlePlayFolder = (folderItems: MusicLibraryItem[], name: string) => {
     if (folderItems.length === 0) return;
     const queueItems = folderItems.map(toQueueItem);
-    if (onPlayQueue) {
-      onPlayQueue(queueItems, 0, name);
+    const cleanName = name
+      .replace(/^Álbum:\s*/i, "")
+      .split(/[/\\]/)
+      .filter(Boolean)
+      .slice(-2)
+      .join(" · ") || name;
+
+    if (onPlayFolder) {
+      onPlayFolder(cleanName, queueItems, 0);
+    } else if (onPlayQueue) {
+      onPlayQueue(queueItems, 0, `Árbol de Música · ${cleanName}`);
     } else {
       onPlay(folderItems[0].path);
     }
@@ -110,11 +130,34 @@ export function MusicLibrary({
   const handlePlayItemInList = (list: MusicLibraryItem[], index: number, queueName?: string) => {
     if (onPlayQueue) {
       const queueItems = list.map(toQueueItem);
-      onPlayQueue(queueItems, index, queueName ?? "Música");
+      onPlayQueue(queueItems, index, queueName ?? "Árbol de Música");
     } else {
       onPlay(list[index].path);
     }
   };
+
+  const handleCreatePlaylistFromFolder = async (folderItems: MusicLibraryItem[], folderName: string) => {
+    const cleanName = folderName.replace(/^[⭐📂]\s*/, "");
+    const name = window.prompt("Nombre de la nueva lista de reproducción:", cleanName);
+    if (!name || !name.trim()) return;
+    try {
+      const playlistItems = folderItems.map((it) => {
+        const { title, artist } = parseTrackInfo(it.title);
+        return {
+          path: it.path,
+          title: artist ? `${artist} - ${title}` : title,
+          durationSecs: 0,
+        };
+      });
+      await playlistsSaveFromItems(name.trim(), playlistItems);
+      alert(`✅ Lista "${name.trim()}.m3u" creada exitosamente con ${folderItems.length} canciones.`);
+    } catch (err) {
+      console.error("Error creando lista desde carpeta:", err);
+    }
+  };
+
+  // Preservar y restaurar la posición exacta del scroll al navegar o volver
+  useScrollRestoration(`view:music:${viewMode}:${currentFolderPath}`, !loading);
 
   const handleSwitchMode = (mode: ViewMode) => {
     setViewMode(mode);
@@ -161,7 +204,7 @@ export function MusicLibrary({
       <div className="music-controls-bar">
         <div className="music-summary" aria-live="polite">
           <span>
-            <strong>{items.length}</strong> {items.length === 1 ? "canción" : "canciones"}
+            <strong>{nonExcludedItems.length}</strong> {nonExcludedItems.length === 1 ? "canción" : "canciones"}
           </span>
           <span>
             <strong>{folders.length}</strong> {folders.length === 1 ? "carpeta" : "carpetas"}
@@ -217,6 +260,7 @@ export function MusicLibrary({
             {visibleItems.map((item, idx) => (
               <MusicCard
                 isFavorite={favorites.isFavorite(item.path)}
+                isPlaying={isPlaying && currentPlayingPath === item.path}
                 item={item}
                 key={item.path}
                 onClick={() => handlePlayItemInList(visibleItems, idx, "Música")}
@@ -259,9 +303,10 @@ export function MusicLibrary({
           {treeLevel.directItems.length > 0 ? (
             <div className="music-direct-items-section">
               <div className="music-auto-grid">
-                {treeLevel.directItems.map((item, idx) => (
+                {treeLevel.directItems.slice(0, VISIBLE_ITEM_LIMIT).map((item, idx) => (
                   <MusicCard
                     isFavorite={favorites.isFavorite(item.path)}
+                    isPlaying={isPlaying && currentPlayingPath === item.path}
                     item={item}
                     key={item.path}
                     onClick={() => handlePlayItemInList(treeLevel.directItems, idx, treeLevel.currentDisplayName)}
@@ -280,6 +325,7 @@ export function MusicLibrary({
           mediaType="music"
           onAddFolderToQueue={onAddToQueue ? (folderItems) => onAddToQueue(folderItems.map(toQueueItem)) : undefined}
           onAddToQueue={onAddToQueue ? (item) => onAddToQueue([toQueueItem(item)]) : undefined}
+          onCreatePlaylistFromFolder={handleCreatePlaylistFromFolder}
           onPlayFolder={(folderItems, name) => handlePlayFolder(folderItems, name)}
           onPlayItem={(item, list) => {
             const idx = list.findIndex((it) => it.path === item.path);
@@ -300,41 +346,49 @@ export function MusicLibrary({
 interface MusicCardProps {
   item: MusicLibraryItem;
   isFavorite: boolean;
+  isPlaying?: boolean;
   onClick: () => void;
   onAddToQueue?: () => void;
   onToggleFavorite?: () => void;
 }
 
-function MusicCard({ item, isFavorite, onClick, onAddToQueue, onToggleFavorite }: MusicCardProps) {
+function MusicCard({ item, isFavorite, isPlaying, onClick, onAddToQueue, onToggleFavorite }: MusicCardProps) {
+  const { title, artist } = parseTrackInfo(item.title);
+
   return (
     <div className="music-media-card-wrapper">
-      <button className="music-media-card" onClick={onClick} title={`${item.title} — ${item.relativeFolder}`}>
-        <span className="music-media-frame">
+      <button
+        className="music-media-card"
+        onClick={onClick}
+        title={artist ? `${artist} — ${title}` : title}
+      >
+        <span className={`music-media-frame ${isPlaying ? "is-now-playing" : ""}`}>
           <span className="music-frame-placeholder">
             <Icon name="music" />
           </span>
-          <MusicArtwork alt={item.title} className="music-card-artwork" path={item.path} />
+          <MusicArtwork alt={title} className="music-card-artwork" path={item.path} />
+
+          {isPlaying ? (
+            <span className="music-card-playing-indicator" title="Reproduciendo ahora">
+              <i /><i /><i />
+            </span>
+          ) : null}
 
           <span className="music-hover-overlay">
             <i className="music-play-badge">
               <Icon name="play" />
             </i>
             <div className="music-hover-info">
-              <strong className="music-hover-title" title={item.title}>
-                {item.title}
+              <strong className="music-hover-title" title={title}>
+                {title}
               </strong>
-              <span className="music-hover-artist" title={item.relativeFolder}>
-                {item.relativeFolder}
-              </span>
+              {artist ? (
+                <span className="music-hover-artist" title={artist}>
+                  {artist}
+                </span>
+              ) : null}
             </div>
           </span>
-        </span>
-        <span className="music-card-caption">
-          <strong>{item.title}</strong>
-          <small>
-            {item.relativeFolder}
-            {item.sizeBytes ? ` · ${formatBytes(item.sizeBytes)}` : ""}
-          </small>
         </span>
       </button>
 
@@ -429,10 +483,4 @@ function MusicFolderCard({ folder, onOpen, onPlay }: MusicFolderCardProps) {
       </div>
     </div>
   );
-}
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

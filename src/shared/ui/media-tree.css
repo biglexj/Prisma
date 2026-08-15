@@ -133,7 +133,8 @@
 }
 
 .media-tree-play-btn,
-.media-tree-queue-btn {
+.media-tree-queue-btn,
+.media-tree-playlist-btn {
   width: 32px;
   height: 32px;
   display: grid;
@@ -149,7 +150,8 @@
 }
 
 .media-tree-row:hover .media-tree-play-btn,
-.media-tree-row:hover .media-tree-queue-btn {
+.media-tree-row:hover .media-tree-queue-btn,
+.media-tree-row:hover .media-tree-playlist-btn {
   opacity: 1;
   transform: scale(1);
 }
@@ -164,8 +166,14 @@
   transform: scale(1.1);
 }
 
+.media-tree-playlist-btn:hover {
+  background: #10b981;
+  transform: scale(1.1);
+}
+
 .media-tree-play-btn svg,
-.media-tree-queue-btn svg {
+.media-tree-queue-btn svg,
+.media-tree-playlist-btn svg {
   width: 15px;
   height: 15px;
 }

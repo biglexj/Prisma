@@ -1,4 +1,5 @@
-use std::{fs, io::Cursor, path::Path};
+use std::{fs, io::Cursor, path::Path, sync::LazyLock};
+use tokio::sync::Semaphore;
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use image::{ImageFormat, ImageReader};
@@ -9,8 +10,10 @@ use lofty::{
     probe::Probe,
 };
 
-const MAX_ARTWORK_INPUT_BYTES: usize = 16 * 1024 * 1024;
-const ARTWORK_MAX_DIM: u32 = 512;
+pub static ARTWORK_SEMAPHORE: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(4));
+
+const MAX_ARTWORK_INPUT_BYTES: usize = 8 * 1024 * 1024;
+const ARTWORK_MAX_DIM: u32 = 384;
 const FOLDER_COVER_NAMES: &[&str] = &[
     "cover.jpg",
     "cover.jpeg",

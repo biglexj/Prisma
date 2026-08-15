@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { formatTime, mediaTitle } from "../../playback/ui/formatters";
 import { Icon } from "../../../shared/ui/Icon";
+import { cleanPath } from "../../../shared/mediaTree";
 import type { VisualLibraryItem } from "../model/types";
 import { VideoThumbnail } from "./VideoThumbnail";
 import "./video-player.css";
@@ -11,6 +12,25 @@ interface VideoPlayerProps {
   videoItems?: VisualLibraryItem[];
   onBack: () => void;
   onSelectVideo?: (path: string) => void;
+}
+
+type AudioChannelMode = "stereo" | "mono";
+
+interface AudioTrackInfo {
+  index: number;
+  id: string;
+  label: string;
+  language: string;
+  enabled: boolean;
+}
+
+interface SubtitleTrackInfo {
+  index: number;
+  id: string;
+  label: string;
+  language: string;
+  path?: string;
+  vttContent?: string;
 }
 
 export function VideoPlayer({
@@ -26,23 +46,311 @@ export function VideoPlayer({
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(100);
+  const [prevVolume, setPrevVolume] = useState(80);
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [repeatMode, setRepeatMode] = useState<"off" | "all" | "one">("off");
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [showControls, setShowControls] = useState(true);
 
+  // Multi-Audio y Canales (Estéreo / Mono)
+  const [showAudioMenu, setShowAudioMenu] = useState(false);
+  const [channelMode, setChannelMode] = useState<AudioChannelMode>("stereo");
+  const [audioTracksList, setAudioTracksList] = useState<AudioTrackInfo[]>([]);
+  const [selectedTrackIdx, setSelectedTrackIdx] = useState<number>(0);
+
+  // Subtítulos
+  const [showSubMenu, setShowSubMenu] = useState(false);
+  const [subtitlesList, setSubtitlesList] = useState<SubtitleTrackInfo[]>([]);
+  const [selectedSubIdx, setSelectedSubIdx] = useState<number | null>(null);
+  const [activeVttUrl, setActiveVttUrl] = useState<string | null>(null);
+
+  // One-Shot Shuffle State
+  const [localVideoItems, setLocalVideoItems] = useState<VisualLibraryItem[]>(videoItems);
+  const [shuffleToastText, setShuffleToastText] = useState<string | null>(null);
+
+  // Picture-in-Picture State
+  const [isPipActive, setIsPipActive] = useState(false);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsTimeoutRef = useRef<number | null>(null);
   const fastForwardIntervalRef = useRef<number | null>(null);
+  const audioMenuRef = useRef<HTMLDivElement | null>(null);
+  const subMenuRef = useRef<HTMLDivElement | null>(null);
+
+  // Web Audio Nodes (para conmutación de pistas multicanal y Mono)
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const matrixRef = useRef<{ gainsL: GainNode[]; gainsR: GainNode[] } | null>(null);
 
   const hasMedia = Boolean(path);
   const title = path ? mediaTitle(path) : "Sin vídeo seleccionado";
   const videoSrc = path ? convertFileSrc(path) : "";
 
+  // Sincronizar cola local si cambian los props
+  useEffect(() => {
+    setLocalVideoItems(videoItems);
+  }, [videoItems]);
+
   // Auto-detect current index in video list
-  const currentIndex = videoItems.findIndex((item) => item.path === path);
-  const hasNext = currentIndex >= 0 && currentIndex < videoItems.length - 1;
+  const currentIndex = localVideoItems.findIndex((item) => item.path === path);
+  const hasNext = currentIndex >= 0 && currentIndex < localVideoItems.length - 1;
   const hasPrevious = currentIndex > 0;
+
+  // ── Inicializar Matriz de Audio Multicanal ──
+  const setupWebAudioMatrix = (trackIdx: number, mode: AudioChannelMode) => {
+    if (!audioCtxRef.current && videoRef.current) {
+      try {
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const ctx = new AudioCtx();
+        audioCtxRef.current = ctx;
+        const source = ctx.createMediaElementSource(videoRef.current);
+        sourceNodeRef.current = source;
+
+        const splitter = ctx.createChannelSplitter(6);
+        const merger = ctx.createChannelMerger(2);
+
+        const gainsL: GainNode[] = [];
+        const gainsR: GainNode[] = [];
+        for (let i = 0; i < 6; i++) {
+          const gL = ctx.createGain();
+          const gR = ctx.createGain();
+          splitter.connect(gL, i);
+          splitter.connect(gR, i);
+          gL.connect(merger, 0, 0);
+          gL.connect(merger, 0, 1);
+          gainsL.push(gL);
+          gainsR.push(gR);
+        }
+
+        merger.connect(ctx.destination);
+        matrixRef.current = { gainsL, gainsR };
+      } catch (e) {
+        console.warn("WebAudio matrix init error:", e);
+      }
+    }
+
+    if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
+      void audioCtxRef.current.resume();
+    }
+
+    if (matrixRef.current) {
+      const { gainsL, gainsR } = matrixRef.current;
+      for (let i = 0; i < 6; i++) {
+        gainsL[i].gain.value = 0;
+        gainsR[i].gain.value = 0;
+      }
+
+      const chA = trackIdx * 2;
+      const chB = trackIdx * 2 + 1;
+
+      if (mode === "stereo") {
+        if (gainsL[chA]) gainsL[chA].gain.value = 1.0;
+        if (gainsR[chB]) gainsR[chB].gain.value = 1.0;
+        // Si es pista 2 en estéreo L/R normal
+        if (trackIdx === 1) {
+          if (gainsL[1]) gainsL[1].gain.value = 1.0;
+          if (gainsR[1]) gainsR[1].gain.value = 1.0;
+        }
+      } else {
+        // Mono
+        if (gainsL[chA]) gainsL[chA].gain.value = 0.5;
+        if (gainsR[chA]) gainsR[chA].gain.value = 0.5;
+        if (gainsL[chB]) gainsL[chB].gain.value = 0.5;
+        if (gainsR[chB]) gainsR[chB].gain.value = 0.5;
+      }
+    }
+  };
+
+  // ── Selección de Pistas de Audio ──
+  const selectAudioTrack = (trackIndex: number) => {
+    setSelectedTrackIdx(trackIndex);
+    const video = videoRef.current as unknown as { audioTracks?: AudioTrackInfo[] };
+    if (video && video.audioTracks && video.audioTracks.length > 0) {
+      for (let i = 0; i < video.audioTracks.length; i++) {
+        video.audioTracks[i].enabled = i === trackIndex;
+      }
+    }
+    setupWebAudioMatrix(trackIndex, channelMode);
+  };
+
+  // ── Alternar Pista de Audio con tecla B ──
+  const cycleAudioTrack = () => {
+    const totalTracks = Math.max(audioTracksList.length, 2);
+    const nextIdx = (selectedTrackIdx + 1) % totalTracks;
+    selectAudioTrack(nextIdx);
+    setShuffleToastText(`🔊 Pista ${nextIdx + 1}`);
+    setTimeout(() => setShuffleToastText(null), 1800);
+  };
+
+  // ── Conmutar Canales (Estéreo / Mono) ──
+  const applyChannelMode = (mode: AudioChannelMode) => {
+    setChannelMode(mode);
+    setupWebAudioMatrix(selectedTrackIdx, mode);
+  };
+
+  // ── Cargar Subtítulos Disponibles ──
+  useEffect(() => {
+    if (!path) {
+      setSubtitlesList([]);
+      setSelectedSubIdx(null);
+      return;
+    }
+
+    let isMounted = true;
+    invoke<Array<{ label: string; path: string; format: string; language: string | null }>>(
+      "video_get_subtitles",
+      { videoPath: path }
+    )
+      .then((subs) => {
+        if (!isMounted) return;
+        const list: SubtitleTrackInfo[] = subs.map((s, idx) => ({
+          index: idx,
+          id: s.path,
+          label: s.label || `Subtítulo ${idx + 1}`,
+          language: s.language || "",
+          path: s.path,
+        }));
+        setSubtitlesList(list);
+      })
+      .catch((e) => console.warn("Error buscando subtítulos:", e));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [path]);
+
+  // ── Seleccionar Subtítulo ──
+  const selectSubtitle = async (subIdx: number | null) => {
+    setSelectedSubIdx(subIdx);
+    if (activeVttUrl) {
+      URL.revokeObjectURL(activeVttUrl);
+      setActiveVttUrl(null);
+    }
+
+    if (subIdx === null) {
+      // Desactivar subtítulos
+      const video = videoRef.current;
+      if (video && video.textTracks) {
+        for (let i = 0; i < video.textTracks.length; i++) {
+          video.textTracks[i].mode = "disabled";
+        }
+      }
+      return;
+    }
+
+    const sub = subtitlesList[subIdx];
+    if (!sub || !sub.path) return;
+
+    try {
+      const vttContent = await invoke<string>("video_read_subtitle_vtt", {
+        subtitlePath: sub.path,
+      });
+      const blob = new Blob([vttContent], { type: "text/vtt" });
+      const url = URL.createObjectURL(blob);
+      setActiveVttUrl(url);
+
+      setTimeout(() => {
+        const video = videoRef.current;
+        if (video && video.textTracks && video.textTracks.length > 0) {
+          for (let i = 0; i < video.textTracks.length; i++) {
+            video.textTracks[i].mode = "showing";
+          }
+        }
+      }, 50);
+    } catch (e) {
+      console.error("Error activando subtítulos:", e);
+    }
+  };
+
+  // ── Alternar Subtítulos con tecla V o C ──
+  const cycleSubtitle = () => {
+    if (subtitlesList.length === 0) {
+      setShuffleToastText("💬 Sin subtítulos disponibles");
+      setTimeout(() => setShuffleToastText(null), 1800);
+      return;
+    }
+
+    if (selectedSubIdx === null) {
+      void selectSubtitle(0);
+      setShuffleToastText(`💬 Subtítulo 1: ${subtitlesList[0]?.label}`);
+    } else if (selectedSubIdx + 1 < subtitlesList.length) {
+      const next = selectedSubIdx + 1;
+      void selectSubtitle(next);
+      setShuffleToastText(`💬 Subtítulo ${next + 1}: ${subtitlesList[next]?.label}`);
+    } else {
+      void selectSubtitle(null);
+      setShuffleToastText("💬 Subtítulos desactivados");
+    }
+    setTimeout(() => setShuffleToastText(null), 1800);
+  };
+
+  // ── One-Shot Shuffle ──
+  const handleOneShotShuffle = () => {
+    if (localVideoItems.length <= 1) return;
+
+    const current = localVideoItems.find((it) => it.path === path) || localVideoItems[0];
+    const others = localVideoItems.filter((it) => it.path !== current.path);
+
+    for (let i = others.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [others[i], others[j]] = [others[j], others[i]];
+    }
+
+    const shuffled = [current, ...others];
+    setLocalVideoItems(shuffled);
+
+    setShuffleToastText(`🔀 Cola barajada (${shuffled.length} vídeos en orden aleatorio único)`);
+    setTimeout(() => setShuffleToastText(null), 2400);
+  };
+
+  // ── Picture-in-Picture ──
+  const togglePiP = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (document.pictureInPictureEnabled) {
+        await video.requestPictureInPicture();
+      }
+    } catch (err) {
+      console.error("Error activando Picture-in-Picture:", err);
+    }
+  };
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const onEnter = () => setIsPipActive(true);
+    const onLeave = () => setIsPipActive(false);
+
+    video.addEventListener("enterpictureinpicture", onEnter);
+    video.addEventListener("leavepictureinpicture", onLeave);
+
+    return () => {
+      video.removeEventListener("enterpictureinpicture", onEnter);
+      video.removeEventListener("leavepictureinpicture", onLeave);
+    };
+  }, [path]);
+
+  // Cerrar popovers al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (audioMenuRef.current && !audioMenuRef.current.contains(e.target as Node)) {
+        setShowAudioMenu(false);
+      }
+      if (subMenuRef.current && !subMenuRef.current.contains(e.target as Node)) {
+        setShowSubMenu(false);
+      }
+    };
+    if (showAudioMenu || showSubMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showAudioMenu, showSubMenu]);
 
   const handleNext = () => {
     if (repeatMode === "one" && videoRef.current) {
@@ -51,9 +359,9 @@ export function VideoPlayer({
       return;
     }
     if (hasNext && onSelectVideo) {
-      onSelectVideo(videoItems[currentIndex + 1].path);
-    } else if (repeatMode === "all" && videoItems.length > 0 && onSelectVideo) {
-      onSelectVideo(videoItems[0].path);
+      onSelectVideo(localVideoItems[currentIndex + 1].path);
+    } else if (repeatMode === "all" && localVideoItems.length > 0 && onSelectVideo) {
+      onSelectVideo(localVideoItems[0].path);
     }
   };
 
@@ -63,9 +371,9 @@ export function VideoPlayer({
       return;
     }
     if (hasPrevious && onSelectVideo) {
-      onSelectVideo(videoItems[currentIndex - 1].path);
-    } else if (repeatMode === "all" && videoItems.length > 0 && onSelectVideo) {
-      onSelectVideo(videoItems[videoItems.length - 1].path);
+      onSelectVideo(localVideoItems[currentIndex - 1].path);
+    } else if (repeatMode === "all" && localVideoItems.length > 0 && onSelectVideo) {
+      onSelectVideo(localVideoItems[localVideoItems.length - 1].path);
     }
   };
 
@@ -75,6 +383,9 @@ export function VideoPlayer({
 
   const togglePlay = () => {
     if (!videoRef.current) return;
+    if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
+      void audioCtxRef.current.resume();
+    }
     if (videoRef.current.paused) {
       void videoRef.current.play();
     } else {
@@ -89,9 +400,21 @@ export function VideoPlayer({
   };
 
   const handleVolumeChange = (newVolume: number) => {
+    if (newVolume > 0) {
+      setPrevVolume(newVolume);
+    }
     setVolume(newVolume);
     if (videoRef.current) {
       videoRef.current.volume = newVolume / 100;
+    }
+  };
+
+  const toggleMute = () => {
+    if (volume > 0) {
+      setPrevVolume(volume);
+      handleVolumeChange(0);
+    } else {
+      handleVolumeChange(prevVolume > 0 ? prevVolume : 80);
     }
   };
 
@@ -135,15 +458,15 @@ export function VideoPlayer({
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
     }
-    if (!paused) {
+    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist) {
       controlsTimeoutRef.current = window.setTimeout(() => {
         setShowControls(false);
-      }, 3000);
+      }, 3500);
     }
   };
 
   const handleMouseLeave = () => {
-    if (!paused) {
+    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist) {
       if (controlsTimeoutRef.current) {
         window.clearTimeout(controlsTimeoutRef.current);
       }
@@ -154,16 +477,16 @@ export function VideoPlayer({
   };
 
   useEffect(() => {
-    if (!paused) {
+    if (showAudioMenu || showSubMenu || showPlaylist || paused) {
+      setShowControls(true);
+      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+    } else {
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
       controlsTimeoutRef.current = window.setTimeout(() => {
         setShowControls(false);
-      }, 3000);
-    } else {
-      setShowControls(true);
-      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+      }, 3500);
     }
-  }, [paused]);
+  }, [showAudioMenu, showSubMenu, showPlaylist, paused]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -216,7 +539,16 @@ export function VideoPlayer({
           break;
         case "m":
           e.preventDefault();
-          handleVolumeChange(volume > 0 ? 0 : 80);
+          toggleMute();
+          break;
+        case "b":
+          e.preventDefault();
+          cycleAudioTrack();
+          break;
+        case "c":
+        case "v":
+          e.preventDefault();
+          cycleSubtitle();
           break;
         case "n":
           e.preventDefault();
@@ -230,10 +562,22 @@ export function VideoPlayer({
           e.preventDefault();
           toggleFullscreen();
           break;
+        case "s":
+          e.preventDefault();
+          handleOneShotShuffle();
+          break;
         case "escape":
+          e.preventDefault();
           if (showPlaylist) {
-            e.preventDefault();
             setShowPlaylist(false);
+          } else if (showAudioMenu) {
+            setShowAudioMenu(false);
+          } else if (showSubMenu) {
+            setShowSubMenu(false);
+          } else if (isFullscreen) {
+            toggleFullscreen();
+          } else {
+            onBack();
           }
           break;
       }
@@ -241,96 +585,169 @@ export function VideoPlayer({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [hasMedia, paused, duration, volume, showPlaylist, handleNext, handlePrevious]);
+  }, [
+    hasMedia,
+    paused,
+    duration,
+    volume,
+    prevVolume,
+    showPlaylist,
+    showAudioMenu,
+    showSubMenu,
+    isFullscreen,
+    audioTracksList,
+    selectedTrackIdx,
+    subtitlesList,
+    selectedSubIdx,
+    onBack,
+    handleNext,
+    handlePrevious,
+  ]);
 
   return (
     <section
-      className={`video-player-screen ${isFullscreen ? "is-fullscreen-mode" : ""} ${!showControls && !paused ? "controls-hidden" : ""}`}
+      className={`video-player-screen ${!showControls ? "controls-hidden" : ""} ${
+        isFullscreen ? "is-fullscreen-mode" : ""
+      }`}
       id="video-cinema-container"
-      onMouseLeave={handleMouseLeave}
       onMouseMove={handleUserActivity}
+      onMouseLeave={handleMouseLeave}
     >
-      <header className="video-player-header">
-        <button className="video-back-button" onClick={onBack} title="Volver a la biblioteca de vídeos">
-          <Icon name="chevron-left" />
-          <span>Volver</span>
-        </button>
+      {/* Notificación Toast */}
+      {shuffleToastText ? (
+        <div className="video-toast-indicator">
+          <span>{shuffleToastText}</span>
+        </div>
+      ) : null}
 
-        <div className="video-header-info">
-          <div className="video-header-meta">
-            <span className="video-kicker">
-              CINE LOCAL · {videoItems.length > 0 ? `VÍDEO ${currentIndex + 1} DE ${videoItems.length}` : "REPRODUCTOR DE VÍDEO"}
+      {/* Cabecera Flotante */}
+      <header className={`video-player-header ${showPlaylist ? "has-sidebar-open" : ""}`}>
+        <div className="video-header-left">
+          <button
+            aria-label="Volver a la galería"
+            className="video-top-btn is-icon-only"
+            onClick={onBack}
+            title="Volver (Esc)"
+          >
+            <Icon name="arrow-left" />
+          </button>
+          {currentIndex >= 0 && localVideoItems.length > 0 ? (
+            <span className="video-pill-badge">
+              Vídeo {currentIndex + 1} de {localVideoItems.length}
             </span>
-            {path ? (
-              <button
-                className="video-path-explorer-btn"
-                onClick={() => {
-                  invoke("show_in_file_manager", { path }).catch(() => {});
-                }}
-                title="Abrir ubicación en el Explorador de Windows"
-              >
-                <Icon name="folder" />
-                <span>{path}</span>
-              </button>
-            ) : null}
-          </div>
-          <h1 title={title}>{title}</h1>
+          ) : null}
         </div>
 
-        <div className="video-header-actions">
-          {videoItems.length > 0 ? (
+        <div className="video-header-center">
+          <h2 className="video-player-title" title={title}>
+            {title}
+          </h2>
+          {path ? (
+            <span className="video-player-subtitle" title={path}>
+              {cleanPath(path)}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="video-header-right">
+          {path ? (
             <button
-              className={`video-playlist-toggle-btn ${showPlaylist ? "is-active" : ""}`}
-              onClick={() => setShowPlaylist(!showPlaylist)}
-              title="Cola / Lista de vídeos"
+              className="video-top-btn"
+              onClick={() => invoke("open_in_file_manager", { path }).catch(() => {})}
+              title="Abrir ubicación en el explorador"
             >
-              <Icon name="queue" />
-              <span>Lista ({videoItems.length})</span>
+              <Icon name="folder" />
+              <span>Ubicación</span>
             </button>
           ) : null}
-          <span className="connection-pill is-ready">
-            <i /> Reproductor nativo
-          </span>
         </div>
       </header>
 
+      {/* Escenario de Vídeo */}
       <div className="video-stage-wrapper">
         <div
-          className={`video-stage ${isFastForwarding ? "is-fast-forwarding" : ""}`}
-          onMouseDown={startFastForward}
-          onMouseLeave={stopFastForward}
-          onMouseUp={stopFastForward}
-          onTouchEnd={stopFastForward}
-          onTouchStart={startFastForward}
+          className="video-stage"
+          onClick={togglePlay}
+          onDoubleClick={toggleFullscreen}
+          onMouseDown={(e) => {
+            if (e.button === 0 && e.detail === 1) {
+              fastForwardIntervalRef.current = window.setTimeout(startFastForward, 350);
+            }
+          }}
+          onMouseUp={() => {
+            if (fastForwardIntervalRef.current) {
+              window.clearTimeout(fastForwardIntervalRef.current);
+            }
+            if (isFastForwarding) {
+              stopFastForward();
+            }
+          }}
         >
-          {hasMedia && !videoError ? (
+          {hasMedia ? (
             <video
               autoPlay
-              className="video-stage-surface video-element-surface"
-              onClick={togglePlay}
-              onEnded={() => {
-                setPaused(true);
-                handleNext();
-              }}
+              className="video-stage-surface"
               onError={() => setVideoError(true)}
               onLoadedMetadata={(e) => {
                 const video = e.currentTarget;
                 setDuration(video.duration || 0);
                 setPaused(video.paused);
+
+                // Detectar pistas de audio nativas
+                const tracks = (video as unknown as { audioTracks?: AudioTrackInfo[] }).audioTracks;
+                if (tracks && tracks.length > 0) {
+                  const list: AudioTrackInfo[] = [];
+                  for (let i = 0; i < tracks.length; i++) {
+                    list.push({
+                      index: i,
+                      id: tracks[i].id || String(i),
+                      label: tracks[i].label || `Pista ${i + 1}`,
+                      language: tracks[i].language || "",
+                      enabled: tracks[i].enabled,
+                    });
+                  }
+                  setAudioTracksList(list);
+                  const active = list.findIndex((t) => t.enabled);
+                  if (active >= 0) setSelectedTrackIdx(active);
+                } else {
+                  setAudioTracksList([
+                    { index: 0, id: "0", label: "Pista 1", language: "", enabled: true },
+                    { index: 1, id: "1", label: "Pista 2", language: "", enabled: false },
+                  ]);
+                }
               }}
               onPause={() => setPaused(true)}
-              onPlay={() => setPaused(false)}
+              onPlay={() => {
+                setPaused(false);
+                if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
+                  void audioCtxRef.current.resume();
+                }
+              }}
               onTimeUpdate={(e) => {
                 setPosition(e.currentTarget.currentTime || 0);
               }}
               playsInline
               ref={videoRef}
               src={videoSrc}
-            />
+            >
+              {activeVttUrl ? (
+                <track
+                  default
+                  kind="subtitles"
+                  label={subtitlesList[selectedSubIdx ?? 0]?.label || "Subtítulo"}
+                  src={activeVttUrl}
+                  srcLang={subtitlesList[selectedSubIdx ?? 0]?.language || "es"}
+                />
+              ) : null}
+            </video>
           ) : (
             <div className="video-empty-stage">
               <Icon name="video" />
-              <p>{videoError ? "No se pudo cargar el formato del archivo de vídeo." : "Selecciona un vídeo para iniciar la proyección."}</p>
+              <p>
+                {videoError
+                  ? "No se pudo cargar el formato del archivo de vídeo."
+                  : "Selecciona un vídeo para iniciar la proyección."}
+              </p>
             </div>
           )}
 
@@ -342,10 +759,10 @@ export function VideoPlayer({
         </div>
 
         {/* Playlist Lateral Desplegable */}
-        {showPlaylist && videoItems.length > 0 ? (
+        {showPlaylist && localVideoItems.length > 0 ? (
           <aside className="video-playlist-sidebar">
             <div className="video-playlist-header">
-              <h3>Cola de Proyección ({videoItems.length})</h3>
+              <h3>Cola de Proyección ({localVideoItems.length})</h3>
               <button
                 aria-label="Cerrar lista"
                 className="video-playlist-close"
@@ -355,7 +772,7 @@ export function VideoPlayer({
               </button>
             </div>
             <div className="video-playlist-items">
-              {videoItems.map((item, idx) => {
+              {localVideoItems.map((item, idx) => {
                 const isSelected = item.path === path;
                 return (
                   <div
@@ -374,7 +791,7 @@ export function VideoPlayer({
                     </div>
                     <div className="video-playlist-item-info">
                       <strong title={item.title}>{item.title}</strong>
-                      <small>{item.relativeFolder}</small>
+                      <small>{cleanPath(item.relativeFolder)}</small>
                     </div>
                   </div>
                 );
@@ -384,6 +801,7 @@ export function VideoPlayer({
         ) : null}
       </div>
 
+      {/* Barra de Controles Inferior */}
       <footer className="video-player-footer">
         <label className="preview-progress video-seek-bar">
           <input
@@ -399,30 +817,127 @@ export function VideoPlayer({
         </label>
 
         <div className="video-controls-row">
-          {/* Lado Izquierdo: Velocidad, Bucle y Cola */}
+          {/* Lado Izquierdo: Velocidad, Bucle, Shuffle, Audio, Subtítulos y Cola */}
           <div className="video-controls-left">
             <button
-              className="video-speed-pill"
+              className="video-icon-btn video-speed-btn"
               onClick={cyclePlaybackSpeed}
               title="Velocidad de reproducción"
             >
-              <span>{playbackSpeed}x</span>
+              <span className="btn-speed-label">{playbackSpeed}x</span>
             </button>
 
             <button
               className={`video-icon-btn ${repeatMode !== "off" ? "is-active" : ""}`}
               onClick={toggleRepeat}
-              title={`Bucle / Repetición: ${repeatMode === "off" ? "Desactivada" : repeatMode === "all" ? "Toda la lista" : "Este vídeo"}`}
+              title={`Bucle: ${
+                repeatMode === "off"
+                  ? "Desactivada"
+                  : repeatMode === "all"
+                  ? "Toda la lista"
+                  : "Este vídeo"
+              }`}
             >
               <Icon name="repeat" />
               {repeatMode === "one" ? <span className="repeat-badge">1</span> : null}
             </button>
 
-            {videoItems.length > 0 ? (
+            <button
+              className="video-icon-btn"
+              onClick={handleOneShotShuffle}
+              title="Barajar cola aleatoriamente (S)"
+            >
+              <Icon name="shuffle" />
+            </button>
+
+            {/* Ancla Popover de Audio */}
+            <div className="video-popover-anchor" ref={audioMenuRef}>
+              <button
+                className={`video-icon-btn ${showAudioMenu || selectedTrackIdx > 0 || channelMode === "mono" ? "is-active" : ""}`}
+                onClick={() => {
+                  setShowAudioMenu(!showAudioMenu);
+                  setShowSubMenu(false);
+                }}
+                title="Pistas de audio y canales (B)"
+              >
+                <Icon name="volume" />
+              </button>
+
+              {showAudioMenu ? (
+                <div className="video-audio-popover">
+                  <p className="video-audio-popover-title">Pistas de audio ({audioTracksList.length})</p>
+                  {audioTracksList.map((track) => (
+                    <button
+                      className={`video-audio-option ${selectedTrackIdx === track.index ? "is-active" : ""}`}
+                      key={track.index}
+                      onClick={() => selectAudioTrack(track.index)}
+                    >
+                      <Icon name="volume" />
+                      <span>{track.label || `Pista ${track.index + 1}`}</span>
+                    </button>
+                  ))}
+
+                  <p className="video-audio-popover-title" style={{ marginTop: 8 }}>Canales de salida</p>
+                  <button
+                    className={`video-audio-option ${channelMode === "stereo" ? "is-active" : ""}`}
+                    onClick={() => applyChannelMode("stereo")}
+                  >
+                    <Icon name="disc" />
+                    <span>Estéreo</span>
+                  </button>
+                  <button
+                    className={`video-audio-option ${channelMode === "mono" ? "is-active" : ""}`}
+                    onClick={() => applyChannelMode("mono")}
+                  >
+                    <Icon name="volume" />
+                    <span>Mono</span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Ancla Popover de Subtítulos */}
+            <div className="video-popover-anchor" ref={subMenuRef}>
+              <button
+                className={`video-icon-btn ${showSubMenu || selectedSubIdx !== null ? "is-active" : ""}`}
+                onClick={() => {
+                  setShowSubMenu(!showSubMenu);
+                  setShowAudioMenu(false);
+                }}
+                title="Subtítulos (CC / V)"
+              >
+                <Icon name="subtitles" />
+              </button>
+
+              {showSubMenu ? (
+                <div className="video-subtitles-popover">
+                  <p className="video-audio-popover-title">Subtítulos ({subtitlesList.length})</p>
+                  <button
+                    className={`video-audio-option ${selectedSubIdx === null ? "is-active" : ""}`}
+                    onClick={() => selectSubtitle(null)}
+                  >
+                    <Icon name="close" />
+                    <span>Desactivados</span>
+                  </button>
+                  {subtitlesList.map((sub) => (
+                    <button
+                      className={`video-audio-option ${selectedSubIdx === sub.index ? "is-active" : ""}`}
+                      key={sub.index}
+                      onClick={() => selectSubtitle(sub.index)}
+                    >
+                      <Icon name="subtitles" />
+                      <span>{sub.label}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            {localVideoItems.length > 0 ? (
               <button
                 className={`video-icon-btn ${showPlaylist ? "is-active" : ""}`}
                 onClick={() => setShowPlaylist(!showPlaylist)}
-                title="Cola / Lista de reproducción"
+                title="Cola de reproducción"
               >
                 <Icon name="queue" />
               </button>
@@ -491,15 +1006,24 @@ export function VideoPlayer({
             </button>
           </div>
 
-          {/* Lado Derecho: Volumen y Pantalla Completa */}
+          {/* Lado Derecho: Volumen, PiP y Pantalla Completa */}
           <div className="video-controls-right">
             <div className="video-volume-group">
               <button
-                aria-label="Silenciar"
+                aria-label={volume === 0 ? "Activar sonido" : "Silenciar"}
                 className="video-icon-btn"
-                onClick={() => handleVolumeChange(volume > 0 ? 0 : 80)}
+                onClick={toggleMute}
+                title={volume === 0 ? "Activar sonido (M)" : "Silenciar (M)"}
               >
-                <Icon name="volume" />
+                <Icon
+                  name={
+                    volume === 0
+                      ? "volume-mute"
+                      : volume <= 50
+                      ? "volume-1"
+                      : "volume"
+                  }
+                />
               </button>
               <input
                 className="video-volume-slider"
@@ -511,6 +1035,15 @@ export function VideoPlayer({
               />
               <span className="video-volume-value">{volume}%</span>
             </div>
+
+            <button
+              aria-label="Picture-in-Picture (Ventana flotante)"
+              className={`video-icon-btn ${isPipActive ? "is-active" : ""}`}
+              onClick={togglePiP}
+              title="Picture-in-Picture (Ventana flotante)"
+            >
+              <Icon name="pip" />
+            </button>
 
             <button
               aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}

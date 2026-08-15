@@ -122,7 +122,7 @@
   gap: 8px;
 }
 
-.visual-summary > span {
+.visual-summary>span {
   display: flex;
   min-height: 40px;
   align-items: center;
@@ -199,6 +199,87 @@
   }
 }
 
+/* ══════════════════════════════════════════════
+   16:9 VIDEO GRID LAYOUT (YOUTUBE / CINEMATIC STYLE)
+   ══════════════════════════════════════════════ */
+.visual-grid.video-grid-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: clamp(14px, 1.8cqi, 22px);
+  width: 100%;
+}
+
+.visual-media-card-wrapper.video-card-16-9 {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: auto;
+}
+
+.visual-media-card-wrapper.video-card-16-9 .visual-media-card {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  border-radius: 20px;
+  padding: 8px;
+  background: var(--surface-container-lowest, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.06));
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.visual-media-card-wrapper.video-card-16-9 .visual-media-card:hover {
+  transform: translateY(-4px);
+  background: var(--surface-container, rgba(255, 255, 255, 0.08));
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+}
+
+.visual-media-card-wrapper.video-card-16-9 .visual-media-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  flex: none;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.visual-media-card-wrapper.video-card-16-9 .visual-card-caption {
+  position: relative;
+  inset: auto;
+  opacity: 1;
+  transform: none;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  padding: 10px 4px 4px;
+  color: var(--on-surface);
+  pointer-events: auto;
+  gap: 3px;
+}
+
+.visual-media-card-wrapper.video-card-16-9 .visual-card-caption strong {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--on-surface, #f4f4f5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+.visual-media-card-wrapper.video-card-16-9 .visual-card-caption small {
+  font-size: 0.68rem;
+  color: var(--on-surface-variant, #a1a1aa);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
 .visual-media-card {
   position: relative;
   display: flex;
@@ -236,6 +317,18 @@
   border-radius: 24px;
   color: var(--on-primary-container);
   background: var(--surface-container-high);
+}
+
+.visual-thumbnail,
+.visual-media-frame .video-thumbnail-container,
+.folder-cover-thumbnail,
+.folder-collection-cover-frame .video-thumbnail-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .visual-card-caption {
@@ -338,20 +431,20 @@
   margin-left: 2px;
 }
 
-.visual-media-card > strong,
-.visual-media-card > small {
+.visual-media-card>strong,
+.visual-media-card>small {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.visual-media-card > strong {
+.visual-media-card>strong {
   margin: 10px 3px 0;
   font-size: 0.76rem;
 }
 
-.visual-media-card > small {
+.visual-media-card>small {
   margin: 3px 3px 0;
   color: var(--on-surface-variant);
   font-size: 0.58rem;
@@ -369,7 +462,7 @@
   background: var(--surface-bright);
 }
 
-.visual-empty-state > span {
+.visual-empty-state>span {
   display: grid;
   width: 82px;
   height: 82px;
@@ -379,7 +472,7 @@
   background: var(--primary-container);
 }
 
-.visual-empty-state > span svg {
+.visual-empty-state>span svg {
   width: 36px;
 }
 
@@ -402,157 +495,6 @@
   text-align: center;
 }
 
-.image-viewer {
-  position: fixed;
-  z-index: 50;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  background: rgba(12, 8, 10, 0.92);
-  backdrop-filter: blur(26px);
-  -webkit-backdrop-filter: blur(26px);
-  overflow: hidden;
-  user-select: none;
-}
-
-.image-viewer-stage {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100vw;
-  height: 100vh;
-  margin: 0;
-  overflow: hidden;
-}
-
-.image-viewer-media-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 100vw;
-  max-height: calc(100vh - 90px);
-  will-change: transform;
-}
-
-.image-viewer-media {
-  max-width: calc(100vw - 60px);
-  max-height: calc(100vh - 120px);
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  border-radius: 14px;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
-  pointer-events: none;
-}
-
-.image-viewer figcaption {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.65);
-  padding: 8px 22px;
-  border-radius: 20px;
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  max-width: min(700px, 80vw);
-  text-align: center;
-  pointer-events: auto;
-  z-index: 28;
-}
-
-.image-viewer figcaption strong {
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.image-viewer figcaption span {
-  overflow: hidden;
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 0.64rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-
-.image-viewer-close {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  color: white;
-  background: rgba(255, 255, 255, 0.14);
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.image-viewer-close:hover {
-  background: rgba(255, 255, 255, 0.28);
-  transform: scale(1.08);
-}
-
-.image-viewer-close svg {
-  width: 20px;
-  height: 20px;
-}
-
-.image-viewer-zoom-controls {
-  position: absolute;
-  bottom: 22px;
-  right: 28px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 4px;
-  border-radius: 24px;
-  backdrop-filter: blur(14px);
-  z-index: 30;
-}
-
-.image-viewer-zoom-controls button {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 50%;
-  color: #fff;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.image-viewer-zoom-controls button:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.image-viewer-zoom-controls button.image-viewer-zoom-level {
-  width: auto;
-  padding: 0 10px;
-  border-radius: 12px;
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-.image-viewer-zoom-controls button svg {
-  width: 16px;
-  height: 16px;
-}
-
 .visual-source-manager {
   border: 1px solid var(--outline-variant);
   border-radius: 28px;
@@ -560,23 +502,23 @@
   background: var(--surface-bright);
 }
 
-.visual-source-manager > header,
-.visual-source-manager > header > div {
+.visual-source-manager>header,
+.visual-source-manager>header>div {
   display: flex;
   align-items: center;
 }
 
-.visual-source-manager > header {
+.visual-source-manager>header {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 14px;
 }
 
-.visual-source-manager > header > div {
+.visual-source-manager>header>div {
   gap: 12px;
 }
 
-.visual-source-manager > header > div > svg {
+.visual-source-manager>header>div>svg {
   width: 25px;
   color: var(--primary);
 }
@@ -598,7 +540,7 @@
   gap: 8px;
 }
 
-.visual-source-list > p {
+.visual-source-list>p {
   margin: 0;
   border-radius: 16px;
   padding: 18px;
@@ -621,31 +563,31 @@
   grid-column: 1;
 }
 
-.visual-source-list article > strong,
-.visual-source-list article > small {
+.visual-source-list article>strong,
+.visual-source-list article>small {
   grid-column: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.visual-source-list article > strong {
+.visual-source-list article>strong {
   font-size: 0.76rem;
 }
 
-.visual-source-list article > small {
+.visual-source-list article>small {
   color: var(--on-surface-variant);
   font-size: 0.56rem;
 }
 
-.visual-source-list article > b {
+.visual-source-list article>b {
   grid-row: 1 / 4;
   grid-column: 2;
   color: var(--primary);
   font-size: 1.1rem;
 }
 
-.visual-source-list article > div {
+.visual-source-list article>div {
   display: flex;
   grid-row: 1 / 4;
   grid-column: 3;
@@ -689,11 +631,11 @@
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .visual-source-list article > b {
+  .visual-source-list article>b {
     display: none;
   }
 
-  .visual-source-list article > div {
+  .visual-source-list article>div {
     grid-column: 2;
   }
 }
@@ -922,124 +864,6 @@
 }
 
 /* ══════════════════════════════════════════════
-   IMAGE VIEWER NAVIGATION & SLIDESHOW CONTROLS
-   ══════════════════════════════════════════════ */
-
-.image-viewer-top-bar {
-  position: absolute;
-  top: 18px;
-  left: 24px;
-  right: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  z-index: 30;
-  pointer-events: auto;
-}
-
-.image-viewer-counter {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 6px 14px;
-  border-radius: 20px;
-  backdrop-filter: blur(8px);
-}
-
-.image-viewer-slideshow-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff;
-  font-size: 0.76rem;
-  font-weight: 600;
-  padding: 6px 16px;
-  border-radius: 20px;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: all 0.18s ease;
-}
-
-.image-viewer-slideshow-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.image-viewer-slideshow-btn.is-active {
-  background: var(--primary, #e05273);
-  border-color: transparent;
-  box-shadow: 0 0 16px rgba(224, 82, 115, 0.5);
-}
-
-.image-viewer-slideshow-btn svg {
-  width: 14px;
-  height: 14px;
-}
-
-.image-viewer-nav-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 25;
-  width: 52px;
-  height: 52px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(12px);
-  color: #fff;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.image-viewer-nav-btn.is-prev {
-  left: 24px;
-}
-
-.image-viewer-nav-btn.is-next {
-  right: 24px;
-}
-
-.image-viewer-nav-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-50%) scale(1.1);
-}
-
-.image-viewer-nav-btn svg {
-  width: 24px;
-  height: 24px;
-}
-
-/* Botón de reproducción de carpeta de vídeos */
-.folder-play-overlay-btn {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: var(--primary, #e05273);
-  border: none;
-  color: #fff;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  transform: scale(0.9);
-  transition: transform 0.18s ease;
-}
-
-.folder-play-overlay-btn:hover {
-  transform: scale(1.1);
-}
-
-.folder-play-overlay-btn svg {
-  width: 24px;
-  height: 24px;
-}
-
-/* ══════════════════════════════════════════════
    VIRTUAL FOLDERS & FAVORITES (TREE VIEW)
    ══════════════════════════════════════════════ */
 
@@ -1129,41 +953,7 @@
   height: 15px;
 }
 
-.image-viewer-top-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 
-.image-viewer-fav-btn {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.image-viewer-fav-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: scale(1.08);
-}
-
-.image-viewer-fav-btn.is-favorite {
-  background: #e11d48;
-  border-color: transparent;
-  color: #fff;
-  box-shadow: 0 0 16px rgba(225, 29, 72, 0.6);
-}
-
-.image-viewer-fav-btn svg {
-  width: 18px;
-  height: 18px;
-}
 
 .visual-empty-folder-state {
   display: grid;
@@ -1181,4 +971,3 @@
   height: 42px;
   opacity: 0.5;
 }
-

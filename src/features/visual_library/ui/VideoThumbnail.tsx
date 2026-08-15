@@ -2,6 +2,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import { visualLibraryClient } from "../tauri/client";
+import "./video-thumbnail.css";
 
 interface VideoThumbnailProps {
   path: string;
@@ -12,6 +13,8 @@ interface VideoThumbnailProps {
 }
 
 const MAX_FALLBACK_CANVAS_DIM = 480;
+const MAX_VIDEO_CACHE = 300;
+const videoThumbCache = new Map<string, string>();
 
 /**
  * Loads video thumbnails natively via Rust (Windows Shell API) for fast,
@@ -25,7 +28,9 @@ export function VideoThumbnail({
   eager = false,
   onLoadDimensions,
 }: VideoThumbnailProps) {
-  const [thumbSrc, setThumbSrc] = useState<string | null>(null);
+  const [thumbSrc, setThumbSrc] = useState<string | null>(() => {
+    return path ? videoThumbCache.get(path) ?? null : null;
+  });
   const [failed, setFailed] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
   const onLoadDimsRef = useRef(onLoadDimensions);
@@ -33,7 +38,12 @@ export function VideoThumbnail({
   const startedRef = useRef(false);
 
   useEffect(() => {
-    if (!path || startedRef.current) return;
+    if (!path) return;
+    if (videoThumbCache.has(path)) {
+      setThumbSrc(videoThumbCache.get(path) ?? null);
+      return;
+    }
+    if (startedRef.current) return;
 
     const container = containerRef.current;
 
@@ -46,6 +56,11 @@ export function VideoThumbnail({
         .imagePreview(path)
         .then((nativeDataUrl) => {
           if (nativeDataUrl) {
+            if (videoThumbCache.size >= MAX_VIDEO_CACHE) {
+              const oldest = videoThumbCache.keys().next().value;
+              if (oldest) videoThumbCache.delete(oldest);
+            }
+            videoThumbCache.set(path, nativeDataUrl);
             setThumbSrc(nativeDataUrl);
             return;
           }
@@ -59,16 +74,24 @@ export function VideoThumbnail({
     function fallbackCanvasCapture() {
       const video = document.createElement("video");
       video.muted = true;
-      video.preload = "metadata";
+      video.preload = "auto";
       video.src = convertFileSrc(path);
 
+      let cleaned = false;
       function cleanup() {
+        if (cleaned) return;
+        cleaned = true;
         video.src = "";
-        video.load();
         video.remove();
       }
 
+      const timeout = setTimeout(() => {
+        setFailed(true);
+        cleanup();
+      }, 5000);
+
       video.addEventListener("error", () => {
+        clearTimeout(timeout);
         setFailed(true);
         cleanup();
       });
@@ -80,12 +103,13 @@ export function VideoThumbnail({
         }
         const target =
           isFinite(video.duration) && video.duration > 0
-            ? Math.min(1, video.duration * 0.1)
-            : 0;
+            ? Math.min(1, Math.max(0.1, video.duration * 0.05))
+            : 0.1;
         video.currentTime = target;
       });
 
       video.addEventListener("seeked", () => {
+        clearTimeout(timeout);
         const { videoWidth: w, videoHeight: h } = video;
         if (w === 0 || h === 0) {
           setFailed(true);
@@ -93,7 +117,7 @@ export function VideoThumbnail({
           return;
         }
 
-        // Bound canvas dimension strictly to MAX_FALLBACK_CANVAS_DIM to prevent 4K memory spikes
+        // Bound canvas dimension strictly to MAX_FALLBACK_CANVAS_DIM to prevent memory spikes
         const scale = Math.min(1, MAX_FALLBACK_CANVAS_DIM / Math.max(w, h));
         const canvasW = Math.max(1, Math.round(w * scale));
         const canvasH = Math.max(1, Math.round(h * scale));
@@ -107,19 +131,19 @@ export function VideoThumbnail({
           cleanup();
           return;
         }
-        ctx.drawImage(video, 0, 0, canvasW, canvasH);
         try {
-          setThumbSrc(canvas.toDataURL("image/jpeg", 0.72));
+          ctx.drawImage(video, 0, 0, canvasW, canvasH);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.72);
+          if (dataUrl && dataUrl.length > 50) {
+            videoThumbCache.set(path, dataUrl);
+            setThumbSrc(dataUrl);
+          } else {
+            setFailed(true);
+          }
         } catch {
           setFailed(true);
         }
         cleanup();
-      });
-
-      video.addEventListener("loadeddata", () => {
-        if (video.readyState >= 2 && video.currentTime === 0) {
-          video.currentTime = 0.001;
-        }
       });
 
       document.body.appendChild(video);

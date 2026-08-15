@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { musicLibraryClient } from "./tauri/client";
 
-const MAX_CACHE_ITEMS = 128;
+const MAX_CACHE_ITEMS = 800;
 const MAX_CACHE_BYTES = 32 * 1024 * 1024; // 32 MiB budget
+const MAX_CONCURRENT_REQUESTS = 4;
 
 interface CacheEntry {
   data: string | null;
@@ -11,16 +12,31 @@ interface CacheEntry {
 
 const artworkCache = new Map<string, CacheEntry>();
 const pendingArtwork = new Map<string, Promise<string | null>>();
+
+export function isMusicArtworkCached(path: string | null): boolean {
+  return path ? artworkCache.has(path) : false;
+}
 let totalEstimatedBytes = 0;
+
+let activeWorkers = 0;
+const requestQueue: Array<() => void> = [];
+
+function pumpQueue() {
+  while (activeWorkers < MAX_CONCURRENT_REQUESTS && requestQueue.length > 0) {
+    const nextTask = requestQueue.shift();
+    if (nextTask) {
+      activeWorkers++;
+      nextTask();
+    }
+  }
+}
 
 function estimateBytes(dataUrl: string | null): number {
   return dataUrl ? dataUrl.length * 2 : 64;
 }
 
 /**
- * Hook de carátula de música con transición continua sin parpadeos.
- * Mantiene la carátula previa hasta que la nueva esté completamente lista,
- * evitando destellos o pases a blanco durante cambios de canción.
+ * Hook de carátula de música optimizado con cola de peticiones y caché LRU estricto.
  */
 export function useMusicArtwork(path: string | null, enabled = true) {
   const [artwork, setArtwork] = useState<string | null>(() => {
@@ -52,7 +68,6 @@ export function useMusicArtwork(path: string | null, enabled = true) {
 
     let cancelled = false;
 
-    // Se solicita la carátula sin resetear abruptamente el estado visual anterior
     requestArtwork(path).then((dataUrl) => {
       if (!cancelled && activePathRef.current === path) {
         setArtwork(dataUrl);
@@ -86,32 +101,43 @@ function requestArtwork(path: string): Promise<string | null> {
   const existingRequest = pendingArtwork.get(path);
   if (existingRequest) return existingRequest;
 
-  const request = musicLibraryClient
-    .artwork(path)
-    .catch(() => null)
-    .then((dataUrl) => {
-      const bytes = estimateBytes(dataUrl);
-      const existing = artworkCache.get(path);
-      if (existing) {
-        totalEstimatedBytes -= existing.bytes;
-        artworkCache.delete(path);
-      }
-      artworkCache.set(path, { data: dataUrl, bytes });
-      totalEstimatedBytes += bytes;
+  const request = new Promise<string | null>((resolve) => {
+    const task = () => {
+      musicLibraryClient
+        .artwork(path)
+        .catch(() => null)
+        .then((dataUrl) => {
+          const bytes = estimateBytes(dataUrl);
+          const existing = artworkCache.get(path);
+          if (existing) {
+            totalEstimatedBytes -= existing.bytes;
+            artworkCache.delete(path);
+          }
+          artworkCache.set(path, { data: dataUrl, bytes });
+          totalEstimatedBytes += bytes;
 
-      while (
-        artworkCache.size > MAX_CACHE_ITEMS ||
-        totalEstimatedBytes > MAX_CACHE_BYTES
-      ) {
-        const oldestKey = artworkCache.keys().next().value;
-        if (!oldestKey) break;
-        const entry = artworkCache.get(oldestKey);
-        if (entry) totalEstimatedBytes -= entry.bytes;
-        artworkCache.delete(oldestKey);
-      }
-      return dataUrl;
-    })
-    .finally(() => pendingArtwork.delete(path));
+          while (
+            artworkCache.size > MAX_CACHE_ITEMS ||
+            totalEstimatedBytes > MAX_CACHE_BYTES
+          ) {
+            const oldestKey = artworkCache.keys().next().value;
+            if (!oldestKey) break;
+            const entry = artworkCache.get(oldestKey);
+            if (entry) totalEstimatedBytes -= entry.bytes;
+            artworkCache.delete(oldestKey);
+          }
+          resolve(dataUrl);
+        })
+        .finally(() => {
+          activeWorkers--;
+          pendingArtwork.delete(path);
+          pumpQueue();
+        });
+    };
+
+    requestQueue.push(task);
+    pumpQueue();
+  });
 
   pendingArtwork.set(path, request);
   return request;

@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { useMusicArtwork } from "../useMusicArtwork";
+import { isMusicArtworkCached, useMusicArtwork } from "../useMusicArtwork";
 
 interface MusicArtworkProps {
   path: string;
   alt: string;
-  className: string;
+  className?: string;
 }
 
-export function MusicArtwork({ path, alt, className }: MusicArtworkProps) {
+export function MusicArtwork({ path, alt, className = "" }: MusicArtworkProps) {
+
   const containerRef = useRef<HTMLSpanElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(() => isMusicArtworkCached(path));
   const artwork = useMusicArtwork(path, visible);
 
   useEffect(() => {
@@ -26,15 +27,23 @@ export function MusicArtwork({ path, alt, className }: MusicArtworkProps) {
           observer.disconnect();
         }
       },
-      { rootMargin: "240px" },
+      { rootMargin: "120px" },
     );
     observer.observe(target);
     return () => observer.disconnect();
   }, []);
 
   return (
-    <span className={className} ref={containerRef}>
-      {artwork ? <img alt={alt} decoding="async" loading="lazy" src={artwork} /> : null}
+    <span className={`music-artwork-wrapper ${className}`} ref={containerRef}>
+      {artwork ? (
+        <img
+          alt={alt}
+          className="music-artwork-img"
+          decoding="async"
+          loading="lazy"
+          src={artwork}
+        />
+      ) : null}
     </span>
   );
 }

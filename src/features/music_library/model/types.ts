@@ -12,4 +12,5 @@ export interface MusicLibraryItem {
   relativeFolder: string;
   modifiedAtMillis?: number;
   sizeBytes?: number;
+  isExcluded?: boolean;
 }

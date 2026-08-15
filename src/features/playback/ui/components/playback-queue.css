@@ -1,16 +1,20 @@
 .playback-queue-panel {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  max-height: 480px;
-  background: var(--surface-container, rgba(24, 24, 27, 0.75));
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.08));
-  border-radius: 18px;
-  padding: 1rem;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+  width: 100%;
+  max-width: 580px;
+  aspect-ratio: 1;
+  justify-self: start;
+  background: var(--surface-container);
+  backdrop-filter: blur(28px);
+  border: 1px solid var(--outline-variant);
+  border-radius: clamp(24px, 3.5cqi, 44px);
+  padding: 1.25rem 1.4rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
   animation: fadeInQueue 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  gap: 0.6rem;
+  box-sizing: border-box;
 }
 
 @keyframes fadeInQueue {
@@ -24,152 +28,327 @@
   }
 }
 
-.queue-header {
+/* ── 1. Barra de Pestañas de Colas ── */
+.queue-tabs-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.08));
-  margin-bottom: 0.5rem;
+  gap: 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--outline-variant);
+  flex-shrink: 0;
+}
+
+.queue-tabs-scroll {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow-x: auto;
+  flex: 1;
+  scrollbar-width: none;
+}
+
+.queue-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.queue-tab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  background: var(--surface-container-high);
+  border: 1px solid transparent;
+  color: var(--on-surface-variant);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 160ms ease;
+  flex-shrink: 0;
+  max-width: 170px;
+}
+
+.queue-tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 110px;
+}
+
+.queue-tab-chip:hover {
+  background: var(--active-pressed);
+  color: var(--on-surface);
+}
+
+.queue-tab-chip.is-active {
+  background: var(--primary);
+  color: var(--on-primary);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+.queue-tab-badge {
+  font-size: 0.65rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--on-surface) 12%, transparent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.queue-manage-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 160ms ease;
+  flex-shrink: 0;
+}
+
+.queue-manage-toggle-btn:hover,
+.queue-manage-toggle-btn.is-active {
+  background: var(--active-pressed);
+  border-color: var(--outline);
+}
+
+.queue-manage-toggle-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ── 2. Encabezado de la Cola Activa ── */
+.queue-header {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--outline-variant);
 }
 
 .queue-title-group {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
 .queue-title-group h3 {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--on-surface, #f4f4f5);
   margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
 }
 
 .queue-meta {
-  font-size: 0.75rem;
-  color: var(--on-surface-variant, #a1a1aa);
+  font-size: 0.7rem;
+  color: var(--on-surface-variant);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .queue-header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0.3rem;
+  flex-wrap: wrap;
 }
 
 .queue-action-btn {
-  background: transparent;
-  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.1));
-  color: var(--on-surface-variant, #a1a1aa);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
   border-radius: 8px;
-  padding: 4px 8px;
-  font-size: 0.75rem;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease;
+  transition: all 140ms ease;
 }
 
 .queue-action-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--active-pressed);
+  border-color: var(--outline);
 }
 
-.queue-list {
-  flex: 1;
-  overflow-y: auto;
+.queue-action-btn.is-active {
+  background: var(--primary-container);
+  border-color: var(--primary);
+  color: var(--on-primary-container);
+}
+
+.queue-action-btn.is-clear {
+  color: var(--error);
+}
+
+.queue-action-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Guardar activa form */
+.queue-save-active-bar {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-right: 4px;
-}
-
-.queue-list::-webkit-scrollbar {
-  width: 5px;
-}
-.queue-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-}
-
-.queue-empty-state {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--on-surface-variant, #a1a1aa);
-  gap: 8px;
-  font-size: 0.85rem;
-  text-align: center;
-  padding: 2rem 1rem;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  background: var(--surface-container-high);
+  border-radius: 12px;
+  border: 1px solid var(--outline-variant);
+}
+
+.queue-save-active-bar input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--outline-variant);
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  color: var(--on-surface);
+  font-size: 0.75rem;
+  outline: none;
+}
+
+.queue-cancel-btn {
+  background: transparent;
+  border: 0;
+  color: var(--on-surface-variant);
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0.35rem 0.5rem;
+}
+
+/* ── 3. Lista de Canciones ── */
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  padding-right: 0.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--outline-variant) transparent;
 }
 
 .queue-item-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px;
-  border-radius: 10px;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 12px;
   background: transparent;
-  transition: background 0.15s ease;
-  user-select: none;
+  border: 1px solid transparent;
   cursor: pointer;
+  user-select: none;
+  transition: all 140ms ease;
 }
 
 .queue-item-row:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-container-high);
 }
 
 .queue-item-row.is-active {
-  background: var(--album-accent-soft, rgba(59, 130, 246, 0.18));
-  border-left: 3px solid var(--album-accent, #3b82f6);
+  background: var(--primary-container);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
 }
 
 .queue-item-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex: 1;
+  gap: 0.65rem;
   min-width: 0;
+  flex: 1;
 }
 
 .queue-item-index {
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  color: var(--on-surface-variant);
   width: 20px;
   text-align: center;
-  color: var(--on-surface-variant, #71717a);
+  flex-shrink: 0;
 }
 
-.queue-item-row.is-active .queue-item-index {
-  color: var(--album-accent, #3b82f6);
+.queue-playing-indicator {
+  color: var(--primary);
+  font-size: 0.75rem;
+}
+
+.queue-item-artwork {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-container-high);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.queue-thumb-img,
+.music-artwork-wrapper {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.music-artwork-img,
+.queue-thumb-img img,
+.queue-item-artwork img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
 }
 
 .queue-item-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
 }
 
 .queue-item-title {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: var(--on-surface, #f4f4f5);
+  color: var(--on-surface);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .queue-item-row.is-active .queue-item-title {
-  color: var(--album-accent, #60a5fa);
+  color: var(--on-primary-container);
+  font-weight: 750;
 }
 
 .queue-item-sub {
-  font-size: 0.72rem;
-  color: var(--on-surface-variant, #a1a1aa);
+  font-size: 0.68rem;
+  color: var(--on-surface-variant);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -178,9 +357,10 @@
 .queue-item-controls {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 0.2rem;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity 140ms ease;
+  flex-shrink: 0;
 }
 
 .queue-item-row:hover .queue-item-controls {
@@ -188,56 +368,286 @@
 }
 
 .queue-icon-btn {
-  background: transparent;
-  border: none;
-  color: var(--on-surface-variant, #a1a1aa);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  font-size: 0.65rem;
+  display: grid;
+  place-items: center;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: background 120ms ease;
 }
 
 .queue-icon-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--active-pressed);
 }
 
 .queue-icon-btn.is-delete:hover {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--error);
+  color: #ffffff;
+  border-color: var(--error);
 }
 
-.preview-modes button.is-active {
-  background: var(--album-accent, #3b82f6);
-  color: #fff;
+/* ── 4. Estado Gestión de Colas ── */
+.queue-management-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+  overflow: hidden;
 }
 
-.preview-modes button .badge {
-  font-size: 0.65rem;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 1px 4px;
+.queue-manage-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: var(--on-surface);
+}
+
+.queue-manage-header p {
+  margin: 2px 0 0;
+  font-size: 0.7rem;
+  color: var(--on-surface-variant);
+}
+
+.queue-new-form {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.queue-new-form input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--outline-variant);
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  color: var(--on-surface);
+  font-size: 0.75rem;
+  outline: none;
+}
+
+.queue-create-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+  border: 0;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 140ms ease;
+}
+
+.queue-create-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.queue-manage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 0.2rem;
+}
+
+.queue-manage-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 12px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+}
+
+.queue-manage-item.is-active {
+  background: var(--primary-container);
+  border-color: var(--primary);
+}
+
+.queue-manage-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.queue-manage-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.queue-manage-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-edit-name-btn {
+  background: transparent;
+  border: 0;
+  color: var(--on-surface-variant);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+}
+
+.queue-edit-name-btn:hover {
+  color: var(--on-surface);
+}
+
+.queue-inline-edit {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.queue-inline-edit input {
+  background: var(--surface);
+  border: 1px solid var(--primary);
   border-radius: 6px;
-  margin-left: 4px;
+  padding: 0.2rem 0.4rem;
+  color: var(--on-surface);
+  font-size: 0.75rem;
 }
 
-.preview-actions button.is-active {
-  color: var(--album-accent, #60a5fa);
-  background: var(--album-accent-soft, rgba(59, 130, 246, 0.15));
-  border-color: var(--album-accent, #3b82f6);
+.queue-save-name-btn {
+  background: var(--primary);
+  border: 0;
+  border-radius: 6px;
+  color: var(--on-primary);
+  font-size: 0.68rem;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
 }
 
-.preview-actions button .repeat-indicator {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 0.6rem;
-  font-weight: 800;
-  line-height: 1;
-  background: var(--album-accent, #3b82f6);
-  color: #fff;
-  border-radius: 4px;
-  padding: 1px 2px;
+.queue-manage-count {
+  font-size: 0.68rem;
+  color: var(--on-surface-variant);
+}
+
+.queue-manage-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.queue-reorder-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.queue-reorder-controls .queue-icon-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.queue-manage-play-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 8px;
+  border: 0;
+  background: var(--surface-container);
+  color: var(--on-surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.queue-manage-play-btn:hover {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.queue-manage-play-btn svg {
+  width: 10px;
+  height: 10px;
+}
+
+.queue-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  text-align: center;
+  gap: 0.4rem;
+  color: var(--on-surface-variant);
+}
+
+.queue-empty-state svg {
+  width: 32px;
+  height: 32px;
+  opacity: 0.5;
+}
+
+.queue-empty-state p {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.queue-empty-state span {
+  font-size: 0.7rem;
+  max-width: 240px;
+}
+
+.queue-action-btn.is-delete-queue {
+  color: var(--error);
+  border-color: rgba(220, 53, 69, 0.3);
+}
+
+.queue-action-btn.is-delete-queue:hover {
+  background: rgba(220, 53, 69, 0.12);
+  border-color: var(--error);
+}
+
+.queue-manage-footer {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--outline-variant);
+  display: flex;
+  justify-content: center;
+}
+
+.queue-clear-all-btn {
+  background: transparent;
+  border: 1px dashed var(--outline);
+  color: var(--on-surface-variant);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.35rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.queue-clear-all-btn:hover {
+  background: rgba(220, 53, 69, 0.08);
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.queue-window-notice {
+  text-align: center;
+  padding: 0.35rem 0;
+  font-size: 0.68rem;
+  color: var(--on-surface-variant);
+  opacity: 0.7;
+  font-weight: 600;
 }

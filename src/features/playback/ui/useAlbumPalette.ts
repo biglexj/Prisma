@@ -46,10 +46,12 @@ export function useAlbumPalette(artwork: string | null) {
       if (cancelled) return;
       const next = extractPalette(image);
       paletteCache.delete(key);
-      paletteCache.set(key, next);
-      if (paletteCache.size > MAX_PALETTE_ENTRIES) {
-        const oldest = paletteCache.keys().next().value;
-        if (oldest) paletteCache.delete(oldest);
+      if (next) {
+        paletteCache.set(key, next);
+        if (paletteCache.size > MAX_PALETTE_ENTRIES) {
+          const oldest = paletteCache.keys().next().value;
+          if (oldest) paletteCache.delete(oldest);
+        }
       }
       setPalette(next);
       image.onload = null;
@@ -73,12 +75,12 @@ export function useAlbumPalette(artwork: string | null) {
   return palette;
 }
 
-function extractPalette(image: HTMLImageElement): AlbumPalette {
+function extractPalette(image: HTMLImageElement): AlbumPalette | null {
   const canvas = document.createElement("canvas");
   canvas.width = 24;
   canvas.height = 24;
   const context = canvas.getContext("2d", { willReadFrequently: true });
-  if (!context) return fallbackPalette();
+  if (!context) return null;
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
   let red = 0;
@@ -103,7 +105,7 @@ function extractPalette(image: HTMLImageElement): AlbumPalette {
     totalWeight += weight;
   }
 
-  if (totalWeight === 0) return fallbackPalette();
+  if (totalWeight === 0) return null;
   const rgb: [number, number, number] = [
     Math.round(red / totalWeight),
     Math.round(green / totalWeight),
@@ -112,14 +114,10 @@ function extractPalette(image: HTMLImageElement): AlbumPalette {
   const accent = mix(rgb, luminance(rgb) < 0.22 ? [255, 255, 255] : [0, 0, 0], 0.12);
   return {
     accent: toRgb(accent),
-    accentSoft: toRgb(mix(accent, [255, 248, 247], 0.78)),
-    accentDeep: toRgb(mix(accent, [24, 14, 18], 0.55)),
+    accentSoft: `color-mix(in srgb, ${toRgb(accent)} 20%, var(--surface-container))`,
+    accentDeep: `color-mix(in srgb, ${toRgb(accent)} 80%, var(--on-surface))`,
     onAccent: luminance(accent) > 0.42 ? "rgb(25 15 18)" : "rgb(255 255 255)",
   };
-}
-
-function fallbackPalette(): AlbumPalette {
-  return { accent: "rgb(201 0 69)", accentSoft: "rgb(255 217 223)", accentDeep: "rgb(85 20 47)", onAccent: "rgb(255 255 255)" };
 }
 
 function mix(left: [number, number, number], right: [number, number, number], amount: number): [number, number, number] {

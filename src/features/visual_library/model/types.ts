@@ -16,4 +16,5 @@ export interface VisualLibraryItem {
   kind: VisualMediaKind;
   modifiedAtMillis: number;
   sizeBytes: number;
+  isExcluded?: boolean;
 }

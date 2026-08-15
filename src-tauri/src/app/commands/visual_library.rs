@@ -111,6 +111,11 @@ pub async fn visual_library_list_items(
 
 #[tauri::command]
 pub async fn visual_library_image_preview(path: String) -> Result<Option<String>, String> {
+    let _permit = crate::infrastructure::media_preview::VISUAL_PREVIEW_SEMAPHORE
+        .acquire()
+        .await
+        .map_err(|error| format!("Error en semáforo de previsualizaciones: {error}"))?;
+
     tauri::async_runtime::spawn_blocking(move || {
         let canonical_path = Path::new(&path)
             .canonicalize()
@@ -168,4 +173,106 @@ pub async fn show_in_file_manager(path: String) -> Result<(), String> {
     .await
     .map_err(|e| format!("Error al abrir explorador de archivos: {e}"))?
 }
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SubtitleTrackMeta {
+    pub label: String,
+    pub path: String,
+    pub format: String,
+    pub language: Option<String>,
+}
+
+/// Busca archivos de subtítulos externos (.srt, .vtt, .ass, .ssa) en la misma carpeta del vídeo.
+#[tauri::command]
+pub fn video_get_subtitles(video_path: String) -> Result<Vec<SubtitleTrackMeta>, String> {
+    let clean = video_path.trim_start_matches(r"\\?\");
+    let video_p = Path::new(clean);
+    let parent = match video_p.parent() {
+        Some(p) => p,
+        None => return Ok(Vec::new()),
+    };
+
+    let stem = match video_p.file_stem().and_then(|s| s.to_str()) {
+        Some(s) => s.to_lowercase(),
+        None => return Ok(Vec::new()),
+    };
+
+    let mut tracks = Vec::new();
+    let sub_exts = ["srt", "vtt", "ass", "ssa", "sub"];
+
+    if let Ok(entries) = std::fs::read_dir(parent) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if !p.is_file() {
+                continue;
+            }
+            if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
+                let ext_lower = ext.to_lowercase();
+                if sub_exts.contains(&ext_lower.as_str()) {
+                    if let Some(file_name) = p.file_name().and_then(|f| f.to_str()) {
+                        let name_lower = file_name.to_lowercase();
+                        if name_lower.starts_with(&stem) {
+                            let label = p
+                                .file_stem()
+                                .and_then(|s| s.to_str())
+                                .unwrap_or("Subtítulo")
+                                .to_string();
+
+                            let lang = if name_lower.contains(".es.")
+                                || name_lower.contains("spanish")
+                                || name_lower.contains("español")
+                            {
+                                Some("Español".to_string())
+                            } else if name_lower.contains(".en.")
+                                || name_lower.contains("english")
+                                || name_lower.contains("inglés")
+                            {
+                                Some("Inglés".to_string())
+                            } else {
+                                None
+                            };
+
+                            tracks.push(SubtitleTrackMeta {
+                                label: lang.clone().unwrap_or(label),
+                                path: p.to_string_lossy().into_owned(),
+                                format: ext_lower,
+                                language: lang,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(tracks)
+}
+
+/// Lee un archivo SRT/VTT externo y lo devuelve como contenido WebVTT compatible con <track>.
+#[tauri::command]
+pub fn video_read_subtitle_vtt(subtitle_path: String) -> Result<String, String> {
+    let clean = subtitle_path.trim_start_matches(r"\\?\");
+    let bytes = std::fs::read(clean)
+        .map_err(|e| format!("No se pudo leer el archivo de subtítulos: {e}"))?;
+
+    let text = String::from_utf8_lossy(&bytes);
+
+    if text.trim_start().starts_with("WEBVTT") {
+        return Ok(text.into_owned());
+    }
+
+    let mut vtt = String::from("WEBVTT\n\n");
+    for line in text.lines() {
+        if line.contains("-->") {
+            let converted = line.replace(',', ".");
+            vtt.push_str(&converted);
+        } else {
+            vtt.push_str(line);
+        }
+        vtt.push('\n');
+    }
+
+    Ok(vtt)
+}
+
 

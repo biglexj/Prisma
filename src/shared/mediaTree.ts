@@ -21,8 +21,13 @@ export interface TreeNavigationLevel<T> {
   allRecursiveItems: T[];
 }
 
+export function cleanPath(path: string | null | undefined): string {
+  if (!path) return "";
+  return path.replace(/^\\\\\?\\UNC\\/i, "\\\\").replace(/^\\\\\?\\/i, "");
+}
+
 export function normalizePathSeparators(path: string): string {
-  return path.replace(/\\/g, "/").replace(/\/$/, "");
+  return cleanPath(path).replace(/\\/g, "/").replace(/\/$/, "");
 }
 
 export function getCleanRelativeFolder(relativeFolder: string | null | undefined): string {

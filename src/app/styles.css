@@ -158,6 +158,10 @@ button:disabled {
     var(--surface);
 }
 
+.studio-shell.is-cinema-mode {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .music-sidebar {
   display: flex;
   min-height: 0;
@@ -497,26 +501,29 @@ button:disabled {
 
 .preview-player {
   display: grid;
-  grid-template-columns: minmax(235px, 0.8fr) minmax(345px, 1.3fr);
+  grid-template-columns: minmax(440px, 580px) minmax(360px, 1fr);
   flex: 1;
   align-items: center;
-  gap: clamp(24px, 4cqi, 62px);
+  gap: clamp(32px, 4.5vw, 64px);
+  width: 100%;
 }
 
 .preview-artwork {
   position: relative;
-  width: min(100%, 520px);
+  width: 100%;
+  max-width: 580px;
   aspect-ratio: 1;
-  justify-self: center;
+  justify-self: start;
   overflow: hidden;
-  border-radius: clamp(26px, 4cqi, 54px);
+  border-radius: clamp(24px, 3.5cqi, 44px);
   color: #ffffff;
   background:
     linear-gradient(145deg, rgb(0 17 56 / 6%), rgb(255 255 255 / 4%)),
     linear-gradient(145deg, #0c2a79 0%, #49329c 52%, #d01c69 100%);
   box-shadow:
-    0 28px 70px rgb(77 29 73 / 22%),
+    0 28px 70px rgb(77 29 73 / 24%),
     inset 0 1px rgb(255 255 255 / 24%);
+  box-sizing: border-box;
 }
 
 .preview-artwork.is-video-surface {

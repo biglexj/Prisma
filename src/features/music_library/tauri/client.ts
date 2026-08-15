@@ -19,4 +19,6 @@ export const musicLibraryClient = {
   listItems: () => invoke<MusicLibraryItem[]>("music_library_list_items"),
   artwork: (path: string) =>
     invoke<string | null>("music_library_artwork", { path }),
+  lyrics: (path: string) =>
+    invoke<string | null>("music_library_lyrics", { path }),
 };

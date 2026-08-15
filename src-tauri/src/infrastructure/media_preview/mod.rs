@@ -1,7 +1,10 @@
-use std::{fs, io::Cursor, path::Path};
+use std::{fs, io::Cursor, path::Path, sync::LazyLock};
+use tokio::sync::Semaphore;
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use image::{ImageFormat, ImageReader};
+
+pub static VISUAL_PREVIEW_SEMAPHORE: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(4));
 
 const MAX_PREVIEW_FILE_BYTES: u64 = 120 * 1024 * 1024;
 const THUMBNAIL_MAX_DIM: u32 = 480;
@@ -42,8 +45,14 @@ pub fn load_image_data_url(path: &Path) -> Option<String> {
 
 #[cfg(target_os = "windows")]
 pub fn load_video_thumbnail_data_url(path: &Path) -> Option<String> {
-    use std::os::windows::ffi::OsStrExt;
-    use std::ptr::null_mut;
+    use windows::core::HSTRING;
+    use windows::Win32::Foundation::SIZE;
+    use windows::Win32::Graphics::Gdi::DeleteObject;
+    use windows::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED};
+    use windows::Win32::UI::Shell::{
+        SHCreateItemFromParsingName, IShellItemImageFactory, SIIGBF_BIGGERSIZEOK,
+        SIIGBF_RESIZETOFIT, SIIGBF_THUMBNAILONLY,
+    };
 
     let path_str = path.to_string_lossy();
     let clean_str = if path_str.starts_with(r"\\?\") {
@@ -52,66 +61,42 @@ pub fn load_video_thumbnail_data_url(path: &Path) -> Option<String> {
         &path_str
     };
 
-    let wide_path: Vec<u16> = std::ffi::OsStr::new(clean_str)
-        .encode_wide()
-        .chain(std::iter::once(0))
-        .collect();
-
-    unsafe extern "system" {
-        fn SHCreateItemFromParsingName(
-            pszPath: *const u16,
-            pbc: *mut std::ffi::c_void,
-            riid: *const u8,
-            ppv: *mut *mut std::ffi::c_void,
-        ) -> i32;
-    }
-
-    type GetImageFn = unsafe extern "system" fn(
-        this: *mut std::ffi::c_void,
-        size: u64,
-        flags: u32,
-        phbm: *mut *mut std::ffi::c_void,
-    ) -> i32;
-
-    type ReleaseFn = unsafe extern "system" fn(this: *mut std::ffi::c_void) -> u32;
-
-    let iid_image_factory: [u8; 16] = [
-        0x79, 0x8b, 0xc1, 0xbc, 0x80, 0x55, 0x25, 0x4c, 0x81, 0x9e, 0x05, 0x64, 0x12, 0x4f, 0x28, 0x68,
-    ];
-
     unsafe {
-        let mut factory_ptr: *mut std::ffi::c_void = null_mut();
-        let hr = SHCreateItemFromParsingName(
-            wide_path.as_ptr(),
-            null_mut(),
-            iid_image_factory.as_ptr(),
-            &mut factory_ptr,
-        );
-        if hr != 0 || factory_ptr.is_null() {
-            return None;
+        let com_init = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+        let should_uninit = com_init.is_ok();
+
+        let hstring_path = HSTRING::from(clean_str);
+        let factory_result: windows::core::Result<IShellItemImageFactory> =
+            SHCreateItemFromParsingName(&hstring_path, None);
+
+        let factory = match factory_result {
+            Ok(f) => f,
+            Err(_) => {
+                if should_uninit {
+                    CoUninitialize();
+                }
+                return None;
+            }
+        };
+
+        let size = SIZE { cx: 360, cy: 240 };
+        let hbitmap_result = factory
+            .GetImage(size, SIIGBF_BIGGERSIZEOK)
+            .or_else(|_| factory.GetImage(size, SIIGBF_RESIZETOFIT))
+            .or_else(|_| factory.GetImage(size, SIIGBF_THUMBNAILONLY));
+
+        let result = match hbitmap_result {
+            Ok(hbitmap) => {
+                let res = convert_hbitmap_to_jpeg_data_url(hbitmap.0 as _);
+                let _ = DeleteObject(hbitmap);
+                res
+            }
+            Err(_) => None,
+        };
+
+        if should_uninit {
+            CoUninitialize();
         }
-
-        let vtable = *(factory_ptr as *const *const *const std::ffi::c_void);
-        let get_image: GetImageFn = std::mem::transmute(*vtable.add(3));
-        let release: ReleaseFn = std::mem::transmute(*vtable.add(2));
-
-        let size: u64 = (200u64 << 32) | 320u64;
-        let flags: u32 = 0;
-        let mut hbitmap: *mut std::ffi::c_void = null_mut();
-
-        let hr_img = get_image(factory_ptr, size, flags, &mut hbitmap);
-        release(factory_ptr);
-
-        if hr_img != 0 || hbitmap.is_null() {
-            return None;
-        }
-
-        let result = convert_hbitmap_to_jpeg_data_url(hbitmap);
-
-        unsafe extern "system" {
-            fn DeleteObject(hover: *mut std::ffi::c_void) -> i32;
-        }
-        DeleteObject(hbitmap);
 
         result
     }
@@ -228,5 +213,18 @@ mod tests {
         assert!(data_url.starts_with("data:image/jpeg;base64,") || data_url.starts_with("data:image/webp;base64,"));
 
         let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    #[cfg(target_os = "windows")]
+    fn test_load_video_thumbnail() {
+        use super::load_video_thumbnail_data_url;
+        use std::path::Path;
+
+        let test_path = Path::new(r"\\?\D:\Vídeos\Un_universo_en_un_repositorio.mp4");
+        assert!(test_path.exists(), "Test video file exists");
+        let res = load_video_thumbnail_data_url(test_path);
+        println!("Video thumbnail result length: {:?}", res.as_ref().map(|s| s.len()));
+        assert!(res.is_some(), "Video thumbnail was successfully generated");
     }
 }

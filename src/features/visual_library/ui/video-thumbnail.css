@@ -1,0 +1,52 @@
+.video-thumbnail-container {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--surface-container-high, rgba(255, 255, 255, 0.05));
+}
+
+.video-thumbnail-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+}
+
+.video-thumbnail-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  color: var(--on-surface-variant);
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.06), transparent 70%);
+  opacity: 0.6;
+}
+
+.video-thumbnail-fallback svg {
+  width: 36px;
+  height: 36px;
+  opacity: 0.6;
+}
+
+.video-thumbnail-loading {
+  animation: video-thumb-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes video-thumb-pulse {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}

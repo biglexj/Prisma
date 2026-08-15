@@ -9,15 +9,11 @@ import { useFavorites } from "../../../../shared/useFavorites";
 import { useAlbumPalette } from "../useAlbumPalette";
 import { LyricsPreview } from "./LyricsPreview";
 import { PlaybackQueuePanel } from "./PlaybackQueuePanel";
+import { parseTrackInfo } from "../../../music_library/model/trackInfo";
+import { useScrollRestoration } from "../../../../shared/useScrollRestoration";
 import "./album-adaptive.css";
 import "./playback-queue.css";
-import {
-  familyLabel,
-  folderName,
-  formatSession,
-  formatTime,
-  mediaTitle,
-} from "../formatters";
+import { cleanPath, formatSession, formatTime, mediaTitle } from "../formatters";
 
 const WAVE_BARS = Array.from({ length: 18 }, (_, index) => <i key={index} />);
 
@@ -34,6 +30,7 @@ interface PlaybackPreviewProps {
   onSeek: (seconds: number) => void;
   onVolume: (volume: number) => void;
   onSelectQueueIndex?: (index: number) => void;
+  onSwitchQueue?: (queueId: string) => void;
 }
 
 export function PlaybackPreview({
@@ -49,13 +46,20 @@ export function PlaybackPreview({
   onSeek,
   onVolume,
   onSelectQueueIndex,
+  onSwitchQueue,
 }: PlaybackPreviewProps) {
   const [viewMode, setViewMode] = useState<"cover" | "lyrics" | "queue">("cover");
+  useScrollRestoration(`view:player:${viewMode}`);
   const hasMedia = Boolean(snapshot.path);
   const duration = snapshot.durationSeconds ?? 0;
   const position = Math.min(snapshot.positionSeconds ?? 0, Math.max(duration, 1));
-  const title = mediaTitle(snapshot.path);
-  const family = familyLabel(snapshot.session?.family);
+  const rawTitle = mediaTitle(snapshot.path);
+  const parsed = parseTrackInfo(rawTitle);
+  const currentQueueItem = queueState?.queue.items[queueState.queue.currentIndex];
+  const tagTitle = snapshot.trackTitle?.trim();
+  const tagArtist = snapshot.trackArtist?.trim();
+  const trackTitle = tagTitle || currentQueueItem?.title || parsed.title || (hasMedia ? rawTitle : "Nada reproduciéndose");
+  const trackArtist = tagArtist || currentQueueItem?.artist || parsed.artist || "";
   const isAudio = snapshot.session?.family === "audio" || (!snapshot.session && hasMedia);
   const isImage = snapshot.session?.family === "image";
   const isVideo = snapshot.session?.family === "video";
@@ -128,13 +132,16 @@ export function PlaybackPreview({
             onSelectTrack={(idx) => {
               if (onSelectQueueIndex) onSelectQueueIndex(idx);
             }}
+            onSwitchQueue={onSwitchQueue}
           />
         ) : viewMode === "lyrics" ? (
           <LyricsPreview
-            title={title}
+            path={snapshot.path}
+            title={trackTitle}
             positionSeconds={position}
             durationSeconds={duration}
             onSeek={onSeek}
+            onBackToCover={() => setViewMode("cover")}
           />
         ) : (
           <div
@@ -144,16 +151,12 @@ export function PlaybackPreview({
             role={isAudio && hasMedia ? "button" : undefined}
             tabIndex={isAudio && hasMedia ? 0 : undefined}
           >
-            {artwork ? <span className="preview-cover-artwork"><img alt={`Carátula de ${title}`} src={artwork} /></span> : null}
-            {isImage && snapshot.path ? <VisualThumbnail key={snapshot.path} className="preview-cover-artwork" path={snapshot.path} alt={title} eager fit="contain" /> : null}
-            {isVideo && snapshot.path ? <VideoThumbnail key={snapshot.path} className="preview-cover-artwork" path={snapshot.path} title={title} /> : null}
+            {artwork ? <span className="preview-cover-artwork"><img alt={`Carátula de ${trackTitle}`} src={artwork} /></span> : null}
+            {isImage && snapshot.path ? <VisualThumbnail key={snapshot.path} className="preview-cover-artwork" path={snapshot.path} alt={trackTitle} eager fit="contain" /> : null}
+            {isVideo && snapshot.path ? <VideoThumbnail key={snapshot.path} className="preview-cover-artwork" path={snapshot.path} title={trackTitle} /> : null}
             {isAudio ? <div className="artwork-record" aria-hidden="true"><i /></div> : null}
             {isAudio ? <div className="artwork-wave" aria-hidden="true">{WAVE_BARS}</div> : null}
-            {!isVideo && !artwork && !isImage ? <span className="artwork-monogram">{hasMedia ? title.slice(0, 1).toUpperCase() : "P"}</span> : null}
-            <div className="artwork-caption">
-              <span>PRISMA</span>
-              <strong>{hasMedia ? family : "TU BIBLIOTECA LOCAL"}</strong>
-            </div>
+            {!isVideo && !artwork && !isImage ? <span className="artwork-monogram">{hasMedia ? trackTitle.slice(0, 1).toUpperCase() : "P"}</span> : null}
 
             {isAudio && hasMedia ? (
               <span className="preview-artwork-lyrics-hint" aria-hidden="true">
@@ -167,16 +170,25 @@ export function PlaybackPreview({
         <div className="preview-controls">
           <div className="preview-track-title">
             <div>
-              <span>{hasMedia ? "REPRODUCIENDO DESDE TU EQUIPO" : "LISTO PARA REPRODUCIR"}</span>
-              <h2>{title}</h2>
-              <p>{snapshot.path ? folderName(snapshot.path) : "Selecciona un archivo compatible para comenzar"}</p>
+              <span>{hasMedia ? "REPRODUCIENDO" : "LISTO PARA REPRODUCIR"}</span>
+              <h2>{trackTitle}</h2>
+              {trackArtist ? (
+                <p className="preview-track-artist">{trackArtist}</p>
+              ) : !hasMedia ? (
+                <p>Selecciona un archivo compatible para comenzar</p>
+              ) : null}
             </div>
             <div className="preview-title-actions">
               <button
                 aria-label={isFav ? "Quitar de favoritos" : "Marcar como favorito"}
                 className={`preview-fav-btn ${isFav ? "is-favorite" : ""}`}
                 disabled={!hasMedia}
-                onClick={() => favorites.toggleFavorite(snapshot.path)}
+                onClick={() =>
+                  favorites.toggleFavorite(
+                    snapshot.path,
+                    isVideo ? "video" : isImage ? "image" : "music"
+                  )
+                }
                 title={isFav ? "Quitar de favoritos" : "Añadir a favoritos"}
               >
                 <Icon name="heart" />
@@ -271,7 +283,7 @@ export function PlaybackPreview({
             <span>{capabilities?.videoOutput ? "Salida de vídeo disponible" : "Salida de vídeo pendiente"}</span>
           </div>
 
-          {snapshot.path ? <p className="preview-path" title={snapshot.path}>{snapshot.path}</p> : null}
+          {snapshot.path ? <p className="preview-path" title={cleanPath(snapshot.path)}>{cleanPath(snapshot.path)}</p> : null}
         </div>
       </div>
     </section>

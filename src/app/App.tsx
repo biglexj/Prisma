@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { useTheme } from "./useTheme";
+
 import { HomeDashboard } from "../features/home/ui/HomeDashboard";
 import { useMusicLibrary } from "../features/music_library/useMusicLibrary";
 import { usePlaybackController } from "../features/playback/usePlaybackController";
@@ -13,6 +15,10 @@ import type { VisualLibraryItem } from "../features/visual_library/model/types";
 import { AppSettings } from "./ui/AppSettings";
 import { AppSidebar, type AppView } from "./ui/AppSidebar";
 import { LibrarySources } from "./ui/LibrarySources";
+import { parseTrackInfo } from "../features/music_library/model/trackInfo";
+import { FavoritesView } from "../features/collections/ui/FavoritesView";
+import { PlaylistsView } from "../features/collections/ui/PlaylistsView";
+import { HistoryView } from "../features/collections/ui/HistoryView";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
 import "../features/visual_library/ui/video-player.css";
@@ -26,31 +32,41 @@ const VIEW_TITLES: Record<AppView, string> = {
   images: "Imágenes",
   videos: "Vídeos",
   settings: "Configuración",
+  favorites: "Favoritos",
+  playlists: "Listas de reproducción",
+  history: "Historial",
 };
 
 export function App() {
   const [activeView, setActiveView] = useState<AppView>("home");
   const [activeVideoPath, setActiveVideoPath] = useState<string | null>(null);
   const [activeVideoSessionItems, setActiveVideoSessionItems] = useState<VisualLibraryItem[]>([]);
+  const [videoReturnView, setVideoReturnView] = useState<AppView>("videos");
+  const [activeInitialImagePath, setActiveInitialImagePath] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
   const playback = usePlaybackController();
   const library = useMusicLibrary();
   const imageLibrary = useVisualLibrary("image");
   const videoLibrary = useVisualLibrary("video");
 
-  const playMusicItem = (path: string) => {
-    setActiveView("player");
+  const playMusicItem = (path: string, navigate = true) => {
+    if (navigate) {
+      setActiveView("player");
+    }
     const foundIdx = library.items.findIndex((it) => it.path === path);
     if (foundIdx >= 0) {
-      const queueItems = library.items.map((it) => ({
-        id: it.path,
-        path: it.path,
-        title: it.title,
-        artist: it.relativeFolder,
-        folder: it.relativeFolder,
-        sizeBytes: it.sizeBytes,
-      }));
-      playback.playQueue(queueItems, foundIdx, "Música");
+      const queueItems = library.items.map((it) => {
+        const { title, artist } = parseTrackInfo(it.title);
+        return {
+          id: it.path,
+          path: it.path,
+          title,
+          artist: artist || null,
+          folder: it.relativeFolder,
+          sizeBytes: it.sizeBytes,
+        };
+      });
+      playback.playQueue(queueItems, foundIdx, "Árbol de Música");
     } else {
       void playback.loadPath(path);
     }
@@ -60,37 +76,54 @@ export function App() {
     if (!playback.snapshot.paused) {
       void playback.toggle();
     }
+    setVideoReturnView(activeView);
     setActiveVideoPath(path);
     setActiveVideoSessionItems(sessionItems && sessionItems.length > 0 ? sessionItems : videoLibrary.items);
     setActiveView("video_player");
   };
 
   useEffect(() => {
+    const handleOpenFile = (filePath: string) => {
+      const lower = filePath.toLowerCase();
+      const isAudio = /\.(mp3|flac|wav|aac|m4a|ogg|opus|wma|m3u|m3u8)$/.test(lower);
+      const isVideo = /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v)$/.test(lower);
+      if (isAudio) {
+        playMusicItem(filePath);
+      } else if (isVideo) {
+        playVideoItem(filePath);
+      } else {
+        setActiveInitialImagePath(filePath);
+        setActiveView("images");
+      }
+    };
+
     invoke<string | null>("get_initial_file")
       .then((filePath) => {
-        if (!filePath) return;
-        const lower = filePath.toLowerCase();
-        const isAudio = /\.(mp3|flac|wav|aac|m4a|ogg|opus|wma|m3u|m3u8)$/.test(lower);
-        const isVideo = /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v)$/.test(lower);
-        if (isAudio) {
-          playMusicItem(filePath);
-        } else if (isVideo) {
-          playVideoItem(filePath);
-        } else {
-          setActiveView("images");
-        }
+        if (filePath) handleOpenFile(filePath);
       })
       .catch(() => {});
+
+    const unlistenPromise = listen<string>("prisma://open-media", (event) => {
+      if (event.payload) {
+        handleOpenFile(event.payload);
+      }
+    });
+
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
   }, []);
 
   return (
-    <div className="studio-shell">
-      <AppSidebar
-        activeView={activeView}
-        backend={playback.capabilities?.backend ?? "Conectando…"}
-        enabled={playback.enabled}
-        onNavigate={setActiveView}
-      />
+    <div className={`studio-shell ${activeView === "video_player" ? "is-cinema-mode" : ""}`}>
+      {activeView !== "video_player" ? (
+        <AppSidebar
+          activeView={activeView}
+          backend={playback.capabilities?.backend ?? "Conectando…"}
+          enabled={playback.enabled}
+          onNavigate={setActiveView}
+        />
+      ) : null}
 
       <div className="studio-workspace">
         {activeView !== "video_player" ? (
@@ -114,7 +147,7 @@ export function App() {
               onOpenFolders={() => setActiveView("folders")}
               onOpenImages={() => setActiveView("images")}
               onOpenVideos={() => setActiveView("videos")}
-              onPlayMusic={playMusicItem}
+              onPlayMusic={(path) => playMusicItem(path, false)}
               onPlayVideo={playVideoItem}
               videoFolders={videoLibrary.folders}
               videos={videoLibrary.items}
@@ -136,6 +169,8 @@ export function App() {
               folders={library.folders}
               items={library.items}
               loading={library.loading}
+              currentPlayingPath={playback.snapshot.path}
+              isPlaying={!playback.snapshot.paused}
               onAdd={library.addFolder}
               onAddToQueue={(items) => playback.queue.addToQueue(items)}
               onOpenFolders={() => setActiveView("folders")}
@@ -144,6 +179,10 @@ export function App() {
                 setActiveView("player");
                 playback.playQueue(items, idx, name);
               }}
+              onPlayFolder={(folderName, items, idx) => {
+                setActiveView("player");
+                playback.playFolder(folderName, items, idx);
+              }}
             />
           ) : null}
 
@@ -151,10 +190,12 @@ export function App() {
             <VisualLibrary
               error={imageLibrary.error}
               folders={imageLibrary.folders}
+              initialSelectedImagePath={activeInitialImagePath}
               items={imageLibrary.items}
               kind="image"
               loading={imageLibrary.loading}
               onAdd={imageLibrary.addFolder}
+              onClearInitialSelectedImage={() => setActiveInitialImagePath(null)}
               onOpenFolders={() => setActiveView("folders")}
               onOpenVideo={playVideoItem}
             />
@@ -194,6 +235,7 @@ export function App() {
                 onPrevious={() => void playback.previous()}
                 onSeek={(seconds) => void playback.seek(seconds)}
                 onSelectQueueIndex={playback.playQueueAt}
+                onSwitchQueue={playback.switchQueueAndPlay}
                 onToggle={() => void playback.toggle()}
                 onVolume={(volume) => void playback.setVolume(volume)}
                 queueState={playback.queue}
@@ -204,7 +246,7 @@ export function App() {
 
           {activeView === "video_player" ? (
             <VideoPlayer
-              onBack={() => setActiveView("videos")}
+              onBack={() => setActiveView(videoReturnView)}
               onSelectVideo={(path) => setActiveVideoPath(path)}
               path={activeVideoPath}
               videoItems={activeVideoSessionItems.length > 0 ? activeVideoSessionItems : videoLibrary.items}
@@ -221,8 +263,34 @@ export function App() {
               videos={videoLibrary}
             />
           ) : null}
+
+          {activeView === "favorites" ? (
+            <FavoritesView
+              images={imageLibrary.items}
+              musicItems={library.items}
+              onOpenImage={(path) => {
+                setActiveInitialImagePath(path);
+                setActiveView("images");
+              }}
+              onPlayMusic={playMusicItem}
+              onPlayVideo={playVideoItem}
+              videos={videoLibrary.items}
+            />
+          ) : null}
+          {activeView === "playlists" ? (
+            <PlaylistsView
+              onPlayMusic={playMusicItem}
+              onPlayQueue={(items, idx, name) => {
+                setActiveView("player");
+                playback.playQueue(items, idx, name);
+              }}
+              onPlayVideo={playVideoItem}
+            />
+          ) : null}
+          {activeView === "history" ? <HistoryView /> : null}
         </main>
       </div>
     </div>
   );
 }
+

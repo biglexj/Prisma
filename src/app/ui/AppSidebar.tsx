@@ -2,7 +2,18 @@ import { Icon, type IconName } from "../../shared/ui/Icon";
 import appIcon from "../../../icon/icon.png";
 import "./app-sidebar.css";
 
-export type AppView = "home" | "player" | "music" | "video_player" | "folders" | "images" | "videos" | "settings";
+export type AppView =
+  | "home"
+  | "player"
+  | "music"
+  | "video_player"
+  | "folders"
+  | "images"
+  | "videos"
+  | "settings"
+  | "favorites"
+  | "playlists"
+  | "history";
 
 interface AppSidebarProps {
   activeView: AppView;
@@ -25,9 +36,14 @@ const principalItems: SidebarItem[] = [
 
 const libraryItems: SidebarItem[] = [
   { icon: "music", label: "Música", view: "music" },
-  { icon: "image", label: "Imágenes", view: "images" },
   { icon: "video", label: "Vídeos", view: "videos" },
-  { icon: "heart", label: "Favoritos", soon: true },
+  { icon: "image", label: "Imágenes", view: "images" },
+];
+
+const collectionItems: SidebarItem[] = [
+  { icon: "heart", label: "Favoritos", view: "favorites" },
+  { icon: "list-music", label: "Listas de reproducción", view: "playlists" },
+  { icon: "history", label: "Historial", view: "history" },
 ];
 
 export function AppSidebar({ activeView, backend, enabled, onNavigate }: AppSidebarProps) {
@@ -51,6 +67,7 @@ export function AppSidebar({ activeView, backend, enabled, onNavigate }: AppSide
       <nav className="sidebar-navigation" aria-label="Navegación multimedia">
         <SidebarSection title="PRINCIPAL" items={principalItems} activeView={activeView} onNavigate={onNavigate} />
         <SidebarSection title="BIBLIOTECA" items={libraryItems} activeView={activeView} onNavigate={onNavigate} />
+        <SidebarSection title="COLECCIONES" items={collectionItems} activeView={activeView} onNavigate={onNavigate} />
       </nav>
 
       <footer className="sidebar-footer">

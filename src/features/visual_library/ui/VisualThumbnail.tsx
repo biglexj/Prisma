@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { visualLibraryClient } from "../tauri/client";
 
-const MAX_CACHE_ITEMS = 16;
+const MAX_CACHE_ITEMS = 400;
 const previewCache = new Map<string, string | null>();
 const pendingPreviews = new Map<string, Promise<string | null>>();
 
@@ -23,7 +23,8 @@ export function VisualThumbnail({
   onLoadDimensions,
 }: VisualThumbnailProps) {
   const containerRef = useRef<HTMLSpanElement>(null);
-  const [visible, setVisible] = useState(eager);
+  const isCached = path ? previewCache.has(path) : false;
+  const [visible, setVisible] = useState(eager || isCached);
   const preview = useImagePreview(path, visible);
 
   useEffect(() => {

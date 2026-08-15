@@ -1,8 +1,10 @@
 use std::sync::Mutex;
 
+mod favorites;
 mod music_library;
 mod visual_library;
 
+pub use favorites::FavoritesState;
 pub use music_library::MusicLibraryState;
 pub use visual_library::VisualLibraryState;
 

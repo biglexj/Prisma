@@ -1,6 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import type { MusicFolderSource, MusicLibraryItem } from "../model/types";
 import { Icon } from "../../../shared/ui/Icon";
+import { cleanPath } from "../../../shared/mediaTree";
 import { MusicArtwork } from "./MusicArtwork";
 
 const VISIBLE_TRACK_LIMIT = 160;
@@ -37,7 +38,7 @@ export function FolderManager({
       multiple: false,
       directory: true,
       title: excluded
-        ? "Seleccionar carpeta de música a excluir"
+        ? "Seleccionar carpeta de música a ocultar en la línea de tiempo"
         : "Añadir carpeta de música a Prisma",
     });
     if (typeof selection === "string") {
@@ -53,27 +54,27 @@ export function FolderManager({
           <div>
             <Icon name="music" />
             <span>
-              <strong>{excluded ? "Música (Exclusiones)" : "Música"}</strong>
-              <small>{totalTracks} {excluded ? "ignorados" : "canciones"}</small>
+              <strong>{excluded ? "Música (Ocultas)" : "Música"}</strong>
+              <small>{totalTracks} {excluded ? "ocultos" : "canciones"}</small>
             </span>
           </div>
           <button className="tonal-button" disabled={busyPath !== null} onClick={() => void chooseFolder()}>
-            <Icon name="plus" /> {excluded ? "Excluir" : "Añadir"}
+            <Icon name="plus" /> {excluded ? "Ocultar" : "Añadir"}
           </button>
         </header>
         <div className="visual-source-list" aria-busy={loading}>
           {folders.length === 0 ? (
-            <p>{excluded ? "No hay carpetas excluidas." : "No hay carpetas registradas."}</p>
+            <p>{excluded ? "No hay carpetas ocultas." : "No hay carpetas registradas."}</p>
           ) : (
             folders.map((folder) => {
               const isBusy = busyPath === folder.path;
               return (
                 <article key={folder.path}>
                   <span className={excluded ? "source-status is-excluded" : folder.available ? "source-status is-ready" : "source-status"}>
-                    <i /> {excluded ? "Excluida" : folder.available ? "Disponible" : "No disponible"}
+                    <i /> {excluded ? "Oculta del tiempo" : folder.available ? "Disponible" : "No disponible"}
                   </span>
                   <strong>{folder.name}</strong>
-                  <small title={folder.path}>{folder.path}</small>
+                  <small title={cleanPath(folder.path)}>{cleanPath(folder.path)}</small>
                   <b>{folder.trackCount}</b>
                   <div>
                     {!excluded && onRescan ? (
@@ -88,11 +89,11 @@ export function FolderManager({
                       </button>
                     ) : null}
                     <button
-                      aria-label={excluded ? `Quitar exclusión de ${folder.name}` : `Quitar ${folder.name} de Prisma`}
+                      aria-label={excluded ? `Mostrar ${folder.name} en la línea de tiempo` : `Quitar ${folder.name} de Prisma`}
                       className="icon-button danger"
                       disabled={isBusy}
                       onClick={() => void onRemove(folder.path)}
-                      title={excluded ? "Quitar exclusión" : "Quitar de Prisma"}
+                      title={excluded ? "Mostrar en línea de tiempo" : "Quitar de Prisma"}
                     >
                       <Icon name="trash" />
                     </button>
@@ -156,7 +157,7 @@ export function FolderManager({
                     <i /> {folder.available ? "Disponible" : "No disponible"}
                   </span>
                   <h2>{folder.name}</h2>
-                  <p title={folder.path}>{folder.path}</p>
+                  <p title={cleanPath(folder.path)}>{cleanPath(folder.path)}</p>
                 </div>
                 <strong className="folder-track-count">
                   {folder.trackCount}
@@ -206,7 +207,7 @@ export function FolderManager({
                 </span>
                 <span>
                   <strong>{item.title}</strong>
-                  <small>{item.relativeFolder}</small>
+                  <small>{cleanPath(item.relativeFolder)}</small>
                 </span>
               </button>
             ))}

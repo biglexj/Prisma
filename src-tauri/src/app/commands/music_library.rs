@@ -102,6 +102,11 @@ pub async fn music_library_list_items(
 
 #[tauri::command]
 pub async fn music_library_artwork(path: String) -> Result<Option<String>, String> {
+    let _permit = crate::infrastructure::artwork::ARTWORK_SEMAPHORE
+        .acquire()
+        .await
+        .map_err(|error| format!("Error en semáforo de carátulas: {error}"))?;
+
     tauri::async_runtime::spawn_blocking(move || {
         let canonical_path = Path::new(&path)
             .canonicalize()
@@ -113,6 +118,21 @@ pub async fn music_library_artwork(path: String) -> Result<Option<String>, Strin
     })
     .await
     .map_err(|error| format!("No se pudo leer la carátula: {error}"))?
+}
+
+#[tauri::command]
+pub async fn music_library_lyrics(path: String) -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let canonical_path = Path::new(&path)
+            .canonicalize()
+            .map_err(|error| format!("No se pudo abrir el archivo de audio: {error}"))?;
+        if !canonical_path.is_file() || classify_path(&canonical_path) != Some(MediaFamily::Audio) {
+            return Err("La ruta indicada no corresponde a un audio compatible.".to_owned());
+        }
+        Ok(crate::infrastructure::lyrics::load_track_lyrics(&canonical_path))
+    })
+    .await
+    .map_err(|error| format!("No se pudieron leer las letras: {error}"))?
 }
 
 async fn scan_in_background(

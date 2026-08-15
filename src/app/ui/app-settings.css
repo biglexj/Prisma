@@ -158,6 +158,80 @@
   font-size: 0.72rem;
 }
 
+/* ── Tabla de Atajos de Teclado ── */
+.shortcuts-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 16px;
+}
+
+.shortcuts-category-card {
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  border-radius: 18px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.shortcuts-category-card h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.shortcut-row:last-child {
+  border-bottom: none;
+}
+
+.shortcut-row-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.shortcut-row-keys {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.shortcut-kbd-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--surface-container-highest);
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface);
+  font-size: 0.74rem;
+  font-weight: 800;
+  box-shadow: 0 2px 0 var(--outline-variant);
+}
+
 .about-hero-card {
   display: flex;
   align-items: center;
@@ -244,3 +318,154 @@
   background: #24292e;
   box-shadow: 0 6px 18px rgb(36 41 46 / 30%);
 }
+
+/* ── Quick Look & System Toggles ── */
+.settings-card-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.settings-subheading {
+  margin: 18px 0 10px;
+  color: var(--on-surface);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.shortcut-options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.shortcut-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  border: 2px solid var(--outline-variant);
+  border-radius: 16px;
+  padding: 14px;
+  color: var(--on-surface);
+  background: var(--surface-container);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.shortcut-card:hover {
+  border-color: var(--outline);
+  background: var(--surface-container-high);
+}
+
+.shortcut-card.is-selected {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-container));
+}
+
+.shortcut-kbd {
+  display: inline-block;
+  border: 1px solid var(--outline-variant);
+  border-radius: 8px;
+  padding: 3px 8px;
+  color: var(--primary);
+  background: var(--surface-bright);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.shortcut-card.is-selected .shortcut-kbd {
+  border-color: var(--primary);
+  color: var(--on-primary);
+  background: var(--primary);
+}
+
+.shortcut-card strong {
+  font-size: 0.84rem;
+}
+
+.shortcut-card small {
+  color: var(--on-surface-variant);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.system-toggles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.system-toggle-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-radius: 16px;
+  padding: 12px 16px;
+  background: var(--surface-container);
+}
+
+.system-toggle-info strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.84rem;
+}
+
+.system-toggle-info p {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+/* ── Material 3 Expressive Toggle Switch ── */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 48px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  background: var(--outline-variant);
+  transition: background-color 200ms ease;
+}
+
+.toggle-slider::before {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-bright);
+  content: "";
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), background-color 200ms ease;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: var(--primary);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+  background: var(--on-primary);
+}
+

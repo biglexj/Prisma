@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Icon } from "./Icon";
-import { FAVORITES_FOLDER_ID, ALL_MEDIA_FOLDER_ID } from "../mediaTree";
+import { FAVORITES_FOLDER_ID, ALL_MEDIA_FOLDER_ID, cleanPath } from "../mediaTree";
 import "./folder-breadcrumb.css";
 
 interface FolderBreadcrumbHeaderProps {
@@ -39,7 +39,8 @@ export function FolderBreadcrumbHeader({
       return [{ name: "Todos los archivos", path: ALL_MEDIA_FOLDER_ID, isVirtual: true }];
     }
 
-    const normalized = currentPath.replace(/\\/g, "/").replace(/\/$/, "");
+    const cleanCurrent = cleanPath(currentPath);
+    const normalized = cleanCurrent.replace(/\\/g, "/").replace(/\/$/, "");
     const parts = normalized.split("/").filter(Boolean);
 
     // Build cumulative path segments

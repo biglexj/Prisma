@@ -13,11 +13,12 @@ const EMPTY_SNAPSHOT: PlaybackSnapshot = {
   volume: 70,
   speed: 1.0,
   session: null,
+  eofReached: false,
 };
 
 export function usePlaybackController() {
   const [capabilities, setCapabilities] = useState<PlaybackCapabilities | null>(null);
-  const [snapshot, setSnapshot] = useState(EMPTY_SNAPSHOT);
+  const [snapshot, setSnapshot] = useState<PlaybackSnapshot>(EMPTY_SNAPSHOT);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const queue = usePlaybackQueue();
@@ -39,9 +40,12 @@ export function usePlaybackController() {
   }, []);
 
   useEffect(() => {
-    playbackClient.capabilities().then(setCapabilities).catch((reason) => {
-      setError(String(reason));
-    });
+    playbackClient
+      .capabilities()
+      .then(setCapabilities)
+      .catch((reason) => {
+        setError(String(reason));
+      });
   }, []);
 
   const loadPath = useCallback(
@@ -53,8 +57,18 @@ export function usePlaybackController() {
   );
 
   const playQueue = useCallback(
-    (items: MusicQueueItem[], startIndex = 0, name?: string) => {
-      const target = queue.playQueue(items, startIndex, name);
+    (items: MusicQueueItem[], startIndex = 0, name?: string, queueId?: string) => {
+      const target = queue.playQueue(items, startIndex, name, queueId);
+      if (target) {
+        void loadPath(target.path);
+      }
+    },
+    [queue, loadPath],
+  );
+
+  const playFolder = useCallback(
+    (folderName: string, folderItems: MusicQueueItem[], startIndex = 0) => {
+      const target = queue.playFolder(folderName, folderItems, startIndex);
       if (target) {
         void loadPath(target.path);
       }
@@ -72,8 +86,18 @@ export function usePlaybackController() {
     [queue, loadPath],
   );
 
+  const switchQueueAndPlay = useCallback(
+    (queueId: string, startIndex = 0) => {
+      const target = queue.switchQueue(queueId, startIndex);
+      if (target) {
+        void loadPath(target.path);
+      }
+    },
+    [queue, loadPath],
+  );
+
   const next = useCallback(() => {
-    if (queue.queue.items.length > 0) {
+    if (queue.activeQueue.items.length > 0) {
       const res = queue.advanceNext();
       if (res) {
         if (res.replay) {
@@ -88,7 +112,7 @@ export function usePlaybackController() {
   }, [queue, run, loadPath]);
 
   const previous = useCallback(() => {
-    if (queue.queue.items.length > 0) {
+    if (queue.activeQueue.items.length > 0) {
       const res = queue.advancePrevious(snapshot.positionSeconds ?? 0);
       if (res) {
         if (res.replay) {
@@ -102,23 +126,24 @@ export function usePlaybackController() {
     void run(playbackClient.previous);
   }, [queue, snapshot.positionSeconds, run, loadPath]);
 
-  // Polling with auto-advance on track completion
+  // Polling con detección precisa de fin de pista y auto-avance
   useEffect(() => {
     if (!capabilities?.available || !snapshot.path) return;
 
-    const interval = snapshot.paused ? 1500 : 500;
+    const interval = snapshot.paused ? 1200 : 400;
     const timer = window.setInterval(() => {
       playbackClient
         .snapshot()
         .then((snap) => {
           setSnapshot(snap);
 
-          // Auto-advance when track finishes
           const duration = snap.durationSeconds ?? 0;
           const pos = snap.positionSeconds ?? 0;
+          const isEof = snap.eofReached === true;
+          const isNearEnd = duration > 1 && pos >= duration - 0.35;
+
           if (
-            duration > 1 &&
-            pos >= duration - 0.4 &&
+            (isEof || isNearEnd) &&
             snap.path &&
             lastCompletedPathRef.current !== snap.path
           ) {
@@ -154,7 +179,9 @@ export function usePlaybackController() {
     chooseFile,
     loadPath,
     playQueue,
+    playFolder,
     playQueueAt,
+    switchQueueAndPlay,
     previous,
     toggle: () => run(playbackClient.togglePause),
     next,
