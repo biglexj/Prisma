@@ -64,17 +64,23 @@ pub fn parse_playlist(playlist_path: &Path) -> Result<Vec<PlaylistItem>, String>
         .map(|e| e.to_lowercase())
         .unwrap_or_default();
 
-    // 1. Formato XSPF de VLC (XML)
-    if ext == "xspf" || content.trim_start().starts_with("<?xml") || content.contains("<playlist") {
-        return Ok(parse_xspf(&content, &base_dir));
+    // 1. Formato XSPF de VLC (XML) — solo si realmente contiene etiquetas XML
+    if content.contains("<track>") || content.contains("<playlist") || (ext == "xspf" && content.trim_start().starts_with("<?xml")) {
+        let items = parse_xspf(&content, &base_dir);
+        if !items.is_empty() {
+            return Ok(items);
+        }
     }
 
-    // 2. Formato PLS (INI)
-    if ext == "pls" || content.trim_start().starts_with("[playlist]") {
-        return Ok(parse_pls(&content, &base_dir));
+    // 2. Formato PLS (INI) — solo si contiene cabecera INI
+    if content.contains("[playlist]") {
+        let items = parse_pls(&content, &base_dir);
+        if !items.is_empty() {
+            return Ok(items);
+        }
     }
 
-    // 3. Formato estándar M3U / M3U8
+    // 3. Formato estándar M3U / M3U8 (o fallback para archivos .xspf/.pls con formato M3U)
     Ok(parse_m3u_text(&content, &base_dir))
 }
 
@@ -842,4 +848,50 @@ fn make_relative(target: &Path, base: &Path) -> String {
     }
 
     target.to_string_lossy().into_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_m3u_content_in_xspf_file() {
+        let temp_dir = std::env::temp_dir();
+        let test_file = temp_dir.join("test_playlist.xspf");
+        let content = "#EXTM3U\n#EXTINF:210,Test Video\nCumbia/sample.mp4\n#EXTINF:180,Test Song\nMusic/song.mp3\n";
+        std::fs::write(&test_file, content).unwrap();
+
+        let items = parse_playlist(&test_file).unwrap();
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].title, "Test Video");
+        assert_eq!(items[0].duration_secs, 210);
+        assert_eq!(items[1].title, "Test Song");
+        assert_eq!(items[1].duration_secs, 180);
+
+        let _ = std::fs::remove_file(&test_file);
+    }
+
+    #[test]
+    fn test_parse_real_xml_xspf() {
+        let temp_dir = std::env::temp_dir();
+        let test_file = temp_dir.join("test_real.xspf");
+        let content = r#"<?xml version="1.0" encoding="UTF-8"?>
+<playlist version="1" xmlns="http://xspf.org/ns/0/">
+  <trackList>
+    <track>
+      <location>file:///D:/Videos/sample.mp4</location>
+      <title>Sample Video</title>
+      <duration>120000</duration>
+    </track>
+  </trackList>
+</playlist>"#;
+        std::fs::write(&test_file, content).unwrap();
+
+        let items = parse_playlist(&test_file).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].title, "Sample Video");
+        assert_eq!(items[0].duration_secs, 120);
+
+        let _ = std::fs::remove_file(&test_file);
+    }
 }

@@ -3,6 +3,7 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import { cleanPath } from "../../../shared/mediaTree";
 import { useFavorites } from "../../../shared/useFavorites";
+import { addToHistory } from "../../../shared/useHistory";
 import type { VisualLibraryItem } from "../model/types";
 import "./visual-library.css";
 import "./image-viewer.css";
@@ -64,6 +65,7 @@ export function ImageViewer({
   useEffect(() => {
     setCurrentItem(item);
     resetImageTransform();
+    addToHistory(item.path, "image");
   }, [item]);
 
   const handleUserActivity = () => {

@@ -81,11 +81,6 @@ export function VideoPlayer({
   const audioMenuRef = useRef<HTMLDivElement | null>(null);
   const subMenuRef = useRef<HTMLDivElement | null>(null);
 
-  // Web Audio Nodes (para conmutación de pistas multicanal y Mono)
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const matrixRef = useRef<{ gainsL: GainNode[]; gainsR: GainNode[] } | null>(null);
-
   const hasMedia = Boolean(path);
   const title = path ? mediaTitle(path) : "Sin vídeo seleccionado";
   const videoSrc = path ? convertFileSrc(toPlatformPath(path)) : "";
@@ -100,73 +95,6 @@ export function VideoPlayer({
   const hasNext = currentIndex >= 0 && currentIndex < localVideoItems.length - 1;
   const hasPrevious = currentIndex > 0;
 
-  // ── Inicializar Matriz de Audio Multicanal ──
-  const setupWebAudioMatrix = (trackIdx: number, mode: AudioChannelMode) => {
-    if (!audioCtxRef.current && videoRef.current) {
-      try {
-        const AudioCtx =
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        const ctx = new AudioCtx();
-        audioCtxRef.current = ctx;
-        const source = ctx.createMediaElementSource(videoRef.current);
-        sourceNodeRef.current = source;
-
-        const splitter = ctx.createChannelSplitter(6);
-        const merger = ctx.createChannelMerger(2);
-
-        const gainsL: GainNode[] = [];
-        const gainsR: GainNode[] = [];
-        for (let i = 0; i < 6; i++) {
-          const gL = ctx.createGain();
-          const gR = ctx.createGain();
-          splitter.connect(gL, i);
-          splitter.connect(gR, i);
-          gL.connect(merger, 0, 0);
-          gL.connect(merger, 0, 1);
-          gainsL.push(gL);
-          gainsR.push(gR);
-        }
-
-        merger.connect(ctx.destination);
-        matrixRef.current = { gainsL, gainsR };
-      } catch (e) {
-        console.warn("WebAudio matrix init error:", e);
-      }
-    }
-
-    if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
-      void audioCtxRef.current.resume();
-    }
-
-    if (matrixRef.current) {
-      const { gainsL, gainsR } = matrixRef.current;
-      for (let i = 0; i < 6; i++) {
-        gainsL[i].gain.value = 0;
-        gainsR[i].gain.value = 0;
-      }
-
-      const chA = trackIdx * 2;
-      const chB = trackIdx * 2 + 1;
-
-      if (mode === "stereo") {
-        if (gainsL[chA]) gainsL[chA].gain.value = 1.0;
-        if (gainsR[chB]) gainsR[chB].gain.value = 1.0;
-        // Si es pista 2 en estéreo L/R normal
-        if (trackIdx === 1) {
-          if (gainsL[1]) gainsL[1].gain.value = 1.0;
-          if (gainsR[1]) gainsR[1].gain.value = 1.0;
-        }
-      } else {
-        // Mono
-        if (gainsL[chA]) gainsL[chA].gain.value = 0.5;
-        if (gainsR[chA]) gainsR[chA].gain.value = 0.5;
-        if (gainsL[chB]) gainsL[chB].gain.value = 0.5;
-        if (gainsR[chB]) gainsR[chB].gain.value = 0.5;
-      }
-    }
-  };
-
   // ── Selección de Pistas de Audio ──
   const selectAudioTrack = (trackIndex: number) => {
     setSelectedTrackIdx(trackIndex);
@@ -176,13 +104,16 @@ export function VideoPlayer({
         video.audioTracks[i].enabled = i === trackIndex;
       }
     }
-    setupWebAudioMatrix(trackIndex, channelMode);
   };
 
   // ── Alternar Pista de Audio con tecla B ──
   const cycleAudioTrack = () => {
-    const totalTracks = Math.max(audioTracksList.length, 2);
-    const nextIdx = (selectedTrackIdx + 1) % totalTracks;
+    if (audioTracksList.length <= 1) {
+      setShuffleToastText("🔊 Sin pistas adicionales");
+      setTimeout(() => setShuffleToastText(null), 1800);
+      return;
+    }
+    const nextIdx = (selectedTrackIdx + 1) % audioTracksList.length;
     selectAudioTrack(nextIdx);
     setShuffleToastText(`🔊 Pista ${nextIdx + 1}`);
     setTimeout(() => setShuffleToastText(null), 1800);
@@ -191,7 +122,6 @@ export function VideoPlayer({
   // ── Conmutar Canales (Estéreo / Mono) ──
   const applyChannelMode = (mode: AudioChannelMode) => {
     setChannelMode(mode);
-    setupWebAudioMatrix(selectedTrackIdx, mode);
   };
 
   // ── Cargar Subtítulos Disponibles ──
@@ -387,9 +317,6 @@ export function VideoPlayer({
 
   const togglePlay = () => {
     if (!videoRef.current) return;
-    if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
-      void audioCtxRef.current.resume();
-    }
     if (videoRef.current.paused) {
       void videoRef.current.play();
     } else {
@@ -700,7 +627,7 @@ export function VideoPlayer({
                 setDuration(video.duration || 0);
                 setPaused(video.paused);
 
-                // Detectar pistas de audio nativas
+                // Detectar pistas de audio nativas reales del elemento
                 const tracks = (video as unknown as { audioTracks?: AudioTrackInfo[] }).audioTracks;
                 if (tracks && tracks.length > 0) {
                   const list: AudioTrackInfo[] = [];
@@ -717,19 +644,12 @@ export function VideoPlayer({
                   const active = list.findIndex((t) => t.enabled);
                   if (active >= 0) setSelectedTrackIdx(active);
                 } else {
-                  setAudioTracksList([
-                    { index: 0, id: "0", label: "Pista 1", language: "", enabled: true },
-                    { index: 1, id: "1", label: "Pista 2", language: "", enabled: false },
-                  ]);
+                  // Si no hay múltiples pistas reales detectadas, la lista queda vacía (o solo con la pista única)
+                  setAudioTracksList([]);
                 }
               }}
               onPause={() => setPaused(true)}
-              onPlay={() => {
-                setPaused(false);
-                if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
-                  void audioCtxRef.current.resume();
-                }
-              }}
+              onPlay={() => setPaused(false)}
               onTimeUpdate={(e) => {
                 setPosition(e.currentTarget.currentTime || 0);
               }}

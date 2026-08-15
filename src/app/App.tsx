@@ -17,7 +17,9 @@ import { AppSidebar, type AppView } from "./ui/AppSidebar";
 import { LibrarySources } from "./ui/LibrarySources";
 import { parseTrackInfo } from "../features/music_library/model/trackInfo";
 import { FavoritesView } from "../features/collections/ui/FavoritesView";
+import { HistoryView } from "../features/collections/ui/HistoryView";
 import { PlaylistsView } from "../features/collections/ui/PlaylistsView";
+import { addToHistory } from "../shared/useHistory";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
 import "../features/visual_library/ui/video-player.css";
@@ -32,6 +34,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   videos: "Vídeos",
   settings: "Configuración",
   favorites: "Favoritos",
+  history: "Historial",
   playlists: "Listas de reproducción",
 };
 
@@ -48,6 +51,7 @@ export function App() {
   const videoLibrary = useVisualLibrary("video");
 
   const playMusicItem = (path: string, navigate = true) => {
+    addToHistory(path, "music");
     if (navigate) {
       setActiveView("player");
     }
@@ -71,6 +75,7 @@ export function App() {
   };
 
   const playVideoItem = (path: string, sessionItems?: VisualLibraryItem[]) => {
+    addToHistory(path, "video");
     if (!playback.snapshot.paused) {
       void playback.toggle();
     }
@@ -264,6 +269,20 @@ export function App() {
 
           {activeView === "favorites" ? (
             <FavoritesView
+              images={imageLibrary.items}
+              musicItems={library.items}
+              onOpenImage={(path) => {
+                setActiveInitialImagePath(path);
+                setActiveView("images");
+              }}
+              onPlayMusic={playMusicItem}
+              onPlayVideo={playVideoItem}
+              videos={videoLibrary.items}
+            />
+          ) : null}
+
+          {activeView === "history" ? (
+            <HistoryView
               images={imageLibrary.items}
               musicItems={library.items}
               onOpenImage={(path) => {
