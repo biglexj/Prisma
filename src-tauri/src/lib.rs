@@ -13,9 +13,11 @@ use app::commands::playback::{
     playback_toggle_pause,
 };
 use app::commands::visual_library::{
-    visual_library_add_excluded_folder, visual_library_add_folder, visual_library_image_preview,
-    visual_library_list_excluded_folders, visual_library_list_folders, visual_library_list_items,
-    visual_library_remove_excluded_folder, visual_library_remove_folder, visual_library_rescan_folder,
+    show_in_file_manager, visual_library_add_excluded_folder, visual_library_add_folder,
+    visual_library_image_preview, visual_library_list_excluded_folders,
+    visual_library_list_folders, visual_library_list_items,
+    visual_library_remove_excluded_folder, visual_library_remove_folder,
+    visual_library_rescan_folder,
 };
 use app::state::{InitialFileState, MusicLibraryState, PlaybackProbeState, VisualLibraryState};
 use tauri::{Manager, WindowEvent};
@@ -95,6 +97,7 @@ pub fn run() {
             visual_library_remove_excluded_folder,
             visual_library_list_items,
             visual_library_image_preview,
+            show_in_file_manager,
             playback_capabilities,
             playback_load,
             playback_next,

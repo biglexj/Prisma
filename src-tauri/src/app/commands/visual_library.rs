@@ -140,3 +140,32 @@ async fn scan_in_background(
         .await
         .map_err(|error| format!("No se pudo completar el escaneo visual: {error}"))?
 }
+
+#[tauri::command]
+pub async fn show_in_file_manager(path: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean_path = path.trim_start_matches(r"\\?\").to_string();
+        let target = Path::new(&clean_path);
+        #[cfg(target_os = "windows")]
+        {
+            use std::process::Command;
+            if target.exists() {
+                let _ = Command::new("explorer")
+                    .args(["/select,", &clean_path])
+                    .spawn();
+            } else if let Some(parent) = target.parent() {
+                let _ = Command::new("explorer")
+                    .arg(parent)
+                    .spawn();
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = target;
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Error al abrir explorador de archivos: {e}"))?
+}
+

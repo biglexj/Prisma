@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { formatTime, mediaTitle } from "../../playback/ui/formatters";
 import { Icon } from "../../../shared/ui/Icon";
 import type { VisualLibraryItem } from "../model/types";
@@ -28,118 +28,44 @@ export function VideoPlayer({
   const [volume, setVolume] = useState(100);
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [repeatMode, setRepeatMode] = useState<"off" | "all" | "one">("off");
-  const [shuffleMode, setShuffleMode] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [showControls, setShowControls] = useState(true);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const controlsTimeoutRef = useRef<number | null>(null);
+  const fastForwardIntervalRef = useRef<number | null>(null);
 
   const hasMedia = Boolean(path);
-  const title = mediaTitle(path);
+  const title = path ? mediaTitle(path) : "Sin vídeo seleccionado";
   const videoSrc = path ? convertFileSrc(path) : "";
 
-  // Reset state when path changes
-  useEffect(() => {
-    setVideoError(false);
-    setPaused(false);
-    setPosition(0);
-    setDuration(0);
-  }, [path]);
-
-  // Current index in active video items
+  // Auto-detect current index in video list
   const currentIndex = videoItems.findIndex((item) => item.path === path);
-  const canGoPrevious = currentIndex > 0 || (repeatMode === "all" && videoItems.length > 1);
-  const canGoNext =
-    (currentIndex >= 0 && currentIndex < videoItems.length - 1) ||
-    (repeatMode === "all" && videoItems.length > 1);
-
-  const handlePrevious = () => {
-    if (!onSelectVideo || videoItems.length === 0) return;
-    if (position > 3) {
-      if (videoRef.current) videoRef.current.currentTime = 0;
-      setPosition(0);
-      return;
-    }
-    if (currentIndex > 0) {
-      onSelectVideo(videoItems[currentIndex - 1].path);
-    } else if (repeatMode === "all" && videoItems.length > 1) {
-      onSelectVideo(videoItems[videoItems.length - 1].path);
-    }
-  };
+  const hasNext = currentIndex >= 0 && currentIndex < videoItems.length - 1;
+  const hasPrevious = currentIndex > 0;
 
   const handleNext = () => {
-    if (!onSelectVideo || videoItems.length === 0) return;
-    if (repeatMode === "one") {
-      if (videoRef.current) {
-        videoRef.current.currentTime = 0;
-        void videoRef.current.play();
-      }
+    if (repeatMode === "one" && videoRef.current) {
+      videoRef.current.currentTime = 0;
+      void videoRef.current.play();
       return;
     }
-    if (shuffleMode && videoItems.length > 1) {
-      const remaining = videoItems.filter((_, idx) => idx !== currentIndex);
-      const randomItem = remaining[Math.floor(Math.random() * remaining.length)];
-      if (randomItem) onSelectVideo(randomItem.path);
-      return;
-    }
-    if (currentIndex >= 0 && currentIndex < videoItems.length - 1) {
+    if (hasNext && onSelectVideo) {
       onSelectVideo(videoItems[currentIndex + 1].path);
-    } else if (repeatMode === "all" && videoItems.length > 0) {
+    } else if (repeatMode === "all" && videoItems.length > 0 && onSelectVideo) {
       onSelectVideo(videoItems[0].path);
     }
   };
 
-  const togglePlay = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.paused) {
-      void video.play().then(() => setPaused(false)).catch(() => setPaused(true));
-    } else {
-      video.pause();
-      setPaused(true);
+  const handlePrevious = () => {
+    if (position > 3 && videoRef.current) {
+      videoRef.current.currentTime = 0;
+      return;
     }
-  };
-
-  const handleSeek = (seconds: number) => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.currentTime = seconds;
-    setPosition(seconds);
-  };
-
-  const handleVolumeChange = (vol: number) => {
-    setVolume(vol);
-    if (videoRef.current) {
-      videoRef.current.volume = Math.max(0, Math.min(1, vol / 100));
-    }
-  };
-
-  const handleSkip = (secondsOffset: number) => {
-    const video = videoRef.current;
-    if (!video) return;
-    const target = Math.max(0, Math.min(duration, video.currentTime + secondsOffset));
-    video.currentTime = target;
-    setPosition(target);
-  };
-
-  const startFastForward = () => {
-    if (!hasMedia || isFastForwarding) return;
-    setIsFastForwarding(true);
-    if (videoRef.current) videoRef.current.playbackRate = 2.0;
-  };
-
-  const stopFastForward = () => {
-    if (!isFastForwarding) return;
-    setIsFastForwarding(false);
-    if (videoRef.current) videoRef.current.playbackRate = 1.0;
-  };
-
-  const toggleFullscreen = () => {
-    const stage = document.getElementById("video-cinema-container");
-    if (!stage) return;
-
-    if (!document.fullscreenElement) {
-      void stage.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
-    } else {
-      void document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+    if (hasPrevious && onSelectVideo) {
+      onSelectVideo(videoItems[currentIndex - 1].path);
+    } else if (repeatMode === "all" && videoItems.length > 0 && onSelectVideo) {
+      onSelectVideo(videoItems[videoItems.length - 1].path);
     }
   };
 
@@ -147,11 +73,93 @@ export function VideoPlayer({
     setRepeatMode((prev) => (prev === "off" ? "all" : prev === "all" ? "one" : "off"));
   };
 
-  // Global keyboard shortcuts for video player
+  const togglePlay = () => {
+    if (!videoRef.current) return;
+    if (videoRef.current.paused) {
+      void videoRef.current.play();
+      setPaused(false);
+    } else {
+      videoRef.current.pause();
+      setPaused(true);
+    }
+  };
+
+  const handleSeek = (newTime: number) => {
+    if (!videoRef.current) return;
+    videoRef.current.currentTime = newTime;
+    setPosition(newTime);
+  };
+
+  const handleVolumeChange = (newVolume: number) => {
+    setVolume(newVolume);
+    if (videoRef.current) {
+      videoRef.current.volume = newVolume / 100;
+    }
+  };
+
+  const cyclePlaybackSpeed = () => {
+    const speeds = [1, 1.25, 1.5, 1.75, 2, 0.5, 0.75];
+    const nextIdx = (speeds.indexOf(playbackSpeed) + 1) % speeds.length;
+    const nextSpeed = speeds[nextIdx];
+    setPlaybackSpeed(nextSpeed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = nextSpeed;
+    }
+  };
+
+  const toggleFullscreen = () => {
+    const container = document.getElementById("video-cinema-container");
+    if (!container) return;
+
+    if (!document.fullscreenElement) {
+      void container.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      void document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
+
+  const startFastForward = () => {
+    if (!videoRef.current) return;
+    setIsFastForwarding(true);
+    videoRef.current.playbackRate = 3.0;
+  };
+
+  const stopFastForward = () => {
+    if (!videoRef.current) return;
+    setIsFastForwarding(false);
+    videoRef.current.playbackRate = playbackSpeed;
+  };
+
+  const handleUserActivity = () => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) {
+      window.clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsTimeoutRef.current = window.setTimeout(() => {
+      if (!paused) {
+        setShowControls(false);
+      }
+    }, 3500);
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+      if (fastForwardIntervalRef.current) window.clearInterval(fastForwardIntervalRef.current);
+    };
+  }, []);
+
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       switch (e.key.toLowerCase()) {
         case " ":
@@ -159,15 +167,23 @@ export function VideoPlayer({
           e.preventDefault();
           togglePlay();
           break;
-        case "j":
         case "arrowleft":
+        case "j":
           e.preventDefault();
-          handleSkip(-10);
+          if (videoRef.current) {
+            const nextPos = Math.max(0, videoRef.current.currentTime - 10);
+            videoRef.current.currentTime = nextPos;
+            setPosition(nextPos);
+          }
           break;
-        case "l":
         case "arrowright":
+        case "l":
           e.preventDefault();
-          handleSkip(10);
+          if (videoRef.current) {
+            const nextPos = Math.min(duration, videoRef.current.currentTime + 10);
+            videoRef.current.currentTime = nextPos;
+            setPosition(nextPos);
+          }
           break;
         case "arrowup":
           e.preventDefault();
@@ -176,6 +192,10 @@ export function VideoPlayer({
         case "arrowdown":
           e.preventDefault();
           handleVolumeChange(Math.max(0, volume - 5));
+          break;
+        case "m":
+          e.preventDefault();
+          handleVolumeChange(volume > 0 ? 0 : 80);
           break;
         case "n":
           e.preventDefault();
@@ -204,19 +224,34 @@ export function VideoPlayer({
 
   return (
     <section
-      className={`video-player-screen ${isFullscreen ? "is-fullscreen-mode" : ""}`}
+      className={`video-player-screen ${isFullscreen ? "is-fullscreen-mode" : ""} ${!showControls && !paused ? "controls-hidden" : ""}`}
       id="video-cinema-container"
+      onMouseMove={handleUserActivity}
     >
       <header className="video-player-header">
         <button className="video-back-button" onClick={onBack} title="Volver a la biblioteca de vídeos">
           <Icon name="chevron-left" />
-          <span>Volver a Vídeos</span>
+          <span>Volver</span>
         </button>
 
         <div className="video-header-info">
-          <span className="video-kicker">
-            CINE LOCAL · {videoItems.length > 0 ? `VÍDEO ${currentIndex + 1} DE ${videoItems.length}` : "REPRODUCTOR DE VÍDEO"}
-          </span>
+          <div className="video-header-meta">
+            <span className="video-kicker">
+              CINE LOCAL · {videoItems.length > 0 ? `VÍDEO ${currentIndex + 1} DE ${videoItems.length}` : "REPRODUCTOR DE VÍDEO"}
+            </span>
+            {path ? (
+              <button
+                className="video-path-explorer-btn"
+                onClick={() => {
+                  invoke("show_in_file_manager", { path }).catch(() => {});
+                }}
+                title="Abrir ubicación en el Explorador de Windows"
+              >
+                <Icon name="folder" />
+                <span>{path}</span>
+              </button>
+            ) : null}
+          </div>
           <h1 title={title}>{title}</h1>
         </div>
 
@@ -268,77 +303,65 @@ export function VideoPlayer({
               ref={videoRef}
               src={videoSrc}
             />
-          ) : hasMedia ? (
-            <VideoThumbnail
-              className="video-stage-surface"
-              eager
-              path={path!}
-              title={title}
-            />
           ) : (
             <div className="video-empty-stage">
               <Icon name="video" />
-              <p>Selecciona un vídeo para reproducir</p>
+              <p>{videoError ? "No se pudo cargar el formato del archivo de vídeo." : "Selecciona un vídeo para iniciar la proyección."}</p>
             </div>
           )}
 
           {isFastForwarding ? (
-            <div aria-label="Reproduciendo a 2x de velocidad" className="video-speed-overlay">
-              <span className="speed-icon-group">
-                <Icon name="play" />
-                <Icon name="play" />
-              </span>
-              <strong>2.0x Velocidad</strong>
+            <div className="video-ffw-indicator">
+              <span>⏩ 3.0x Velocidad Rápida</span>
             </div>
           ) : null}
 
-          <button
-            aria-label={paused ? "Reproducir vídeo" : "Pausar vídeo"}
-            className="video-center-overlay-play"
-            disabled={!hasMedia}
-            onClick={(e) => {
-              e.stopPropagation();
-              togglePlay();
-            }}
-          >
-            <Icon name={paused ? "play" : "pause"} />
-          </button>
+          {/* Central floating play/pause overlay trigger */}
+          {hasMedia ? (
+            <button
+              aria-label={paused ? "Reproducir vídeo" : "Pausar vídeo"}
+              className={`video-center-trigger ${paused ? "is-paused" : ""}`}
+              onClick={togglePlay}
+            >
+              <Icon name={paused ? "play" : "pause"} />
+            </button>
+          ) : null}
         </div>
 
-        {/* Panel lateral de Lista de Vídeos / Cola */}
-        {showPlaylist ? (
+        {/* Playlist Lateral Desplegable */}
+        {showPlaylist && videoItems.length > 0 ? (
           <aside className="video-playlist-sidebar">
-            <header className="video-playlist-header">
-              <div className="video-playlist-title-group">
-                <h3>Cola de Vídeos</h3>
-                <span>{videoItems.length} vídeos</span>
-              </div>
+            <div className="video-playlist-header">
+              <h3>Cola de Proyección ({videoItems.length})</h3>
               <button
-                className="video-playlist-close-btn"
+                aria-label="Cerrar lista"
+                className="video-playlist-close"
                 onClick={() => setShowPlaylist(false)}
-                title="Cerrar lista"
               >
-                ✕
+                <Icon name="close" />
               </button>
-            </header>
-            <div className="video-playlist-list">
+            </div>
+            <div className="video-playlist-items">
               {videoItems.map((item, idx) => {
-                const isPlaying = item.path === path;
+                const isSelected = item.path === path;
                 return (
                   <div
+                    className={`video-playlist-item ${isSelected ? "is-active" : ""}`}
                     key={item.path}
-                    className={`video-playlist-item ${isPlaying ? "is-active" : ""}`}
-                    onClick={() => {
-                      if (onSelectVideo) onSelectVideo(item.path);
-                    }}
+                    onClick={() => onSelectVideo && onSelectVideo(item.path)}
                   >
-                    <span className="video-playlist-thumb">
-                      <VideoThumbnail path={item.path} title={item.title} />
-                      {isPlaying ? <i className="video-playlist-play-icon">▶</i> : null}
-                    </span>
+                    <span className="video-playlist-item-idx">{idx + 1}</span>
+                    <div className="video-playlist-thumb-wrap">
+                      <VideoThumbnail className="video-playlist-thumb" path={item.path} title={item.title} />
+                      {isSelected ? (
+                        <div className="video-playlist-playing-badge">
+                          <Icon name="play" />
+                        </div>
+                      ) : null}
+                    </div>
                     <div className="video-playlist-item-info">
                       <strong title={item.title}>{item.title}</strong>
-                      <small title={item.relativeFolder}>{item.relativeFolder}</small>
+                      <small>{item.relativeFolder}</small>
                     </div>
                   </div>
                 );
@@ -348,128 +371,141 @@ export function VideoPlayer({
         ) : null}
       </div>
 
-      <div className="video-vlc-controls">
-        <label className="video-progress-bar">
+      <footer className="video-player-footer">
+        <label className="video-seek-bar">
           <input
-            aria-label="Posición de reproducción"
-            disabled={!hasMedia || duration <= 0}
             max={Math.max(duration, 1)}
             min={0}
-            onChange={(event) => handleSeek(Number(event.target.value))}
+            onChange={(e) => handleSeek(Number(e.target.value))}
             step={0.1}
             type="range"
             value={position}
           />
-          <div className="video-time-labels">
+          <div className="video-time-row">
             <span>{formatTime(position)}</span>
             <span>{formatTime(duration)}</span>
           </div>
         </label>
 
-        <div className="video-controls-toolbar">
-          <div className="video-toolbar-left">
+        <div className="video-controls-row">
+          <div className="video-controls-left">
             <button
-              aria-label="Vídeo anterior"
-              disabled={!canGoPrevious}
+              aria-label="Anterior"
+              className="video-icon-btn"
+              disabled={!hasPrevious && repeatMode !== "all"}
               onClick={handlePrevious}
-              title="Anterior (P)"
+              title="Vídeo anterior (P)"
             >
               <Icon name="chevron-left" />
             </button>
             <button
-              aria-label="Retroceder 10 segundos"
-              disabled={!hasMedia}
-              onClick={() => handleSkip(-10)}
-              title="-10s (J)"
+              aria-label="Retroceder 10s"
+              className="video-icon-btn"
+              onClick={() => {
+                if (videoRef.current) {
+                  const nextPos = Math.max(0, videoRef.current.currentTime - 10);
+                  videoRef.current.currentTime = nextPos;
+                  setPosition(nextPos);
+                }
+              }}
+              title="Retroceder 10 segundos (←)"
             >
-              <small>-10s</small>
+              <span className="btn-label-icon">-10s</span>
             </button>
             <button
-              className={`video-control-toggle ${shuffleMode ? "is-active" : ""}`}
-              onClick={() => setShuffleMode(!shuffleMode)}
-              title={shuffleMode ? "Desactivar aleatorio" : "Activar aleatorio"}
-            >
-              <Icon name="shuffle" />
-            </button>
-          </div>
-
-          <div className="video-toolbar-center">
-            <button
-              aria-label={paused ? "Reproducir" : "Pausar"}
-              className="video-main-play-btn"
-              disabled={!hasMedia}
-              onClick={togglePlay}
-            >
-              <Icon name={paused ? "play" : "pause"} />
-              <span>{paused ? "Reproducir" : "Pausar"}</span>
-            </button>
-
-            <button
-              aria-label="Mantener presionado para 2x velocidad"
-              className={`video-speed-btn ${isFastForwarding ? "is-active" : ""}`}
-              disabled={!hasMedia}
-              onMouseDown={startFastForward}
-              onMouseLeave={stopFastForward}
-              onMouseUp={stopFastForward}
-              onTouchEnd={stopFastForward}
-              onTouchStart={startFastForward}
-              title="Mantén presionado para velocidad 2.0x"
-            >
-              <strong>2x</strong>
-            </button>
-          </div>
-
-          <div className="video-toolbar-right">
-            <button
-              className={`video-control-toggle ${repeatMode !== "off" ? "is-active" : ""}`}
-              onClick={toggleRepeat}
-              title={`Repetición: ${repeatMode}`}
-            >
-              <Icon name="repeat" />
-              {repeatMode === "one" ? <span className="repeat-indicator">1</span> : null}
-            </button>
-            <button
-              aria-label="Adelantar 10 segundos"
-              disabled={!hasMedia}
-              onClick={() => handleSkip(10)}
-              title="+10s (L)"
-            >
-              <small>+10s</small>
-            </button>
-            <button
-              aria-label="Siguiente vídeo"
-              disabled={!canGoNext}
-              onClick={handleNext}
-              title="Siguiente (N)"
-            >
-              <Icon name="chevron-right" />
-            </button>
-
-            <div className="video-volume-group">
-              <Icon name="volume" />
-              <input
-                aria-label="Volumen"
-                disabled={!hasMedia}
-                max={100}
-                min={0}
-                onChange={(event) => handleVolumeChange(Number(event.target.value))}
-                type="range"
-                value={volume}
-              />
-              <span>{Math.round(volume)}%</span>
-            </div>
-
-            <button
-              aria-label="Pantalla completa"
-              className="video-fullscreen-btn"
+              aria-label="Alternar pantalla completa"
+              className="video-icon-btn"
               onClick={toggleFullscreen}
               title="Pantalla completa (F)"
             >
               <Icon name="layout" />
             </button>
           </div>
+
+          <div className="video-controls-center">
+            <button
+              className="video-play-btn"
+              disabled={!hasMedia}
+              onClick={togglePlay}
+            >
+              <Icon name={paused ? "play" : "pause"} />
+              <span>{paused ? "Reproducir" : "Pausar"}</span>
+            </button>
+            <button
+              className="video-speed-pill"
+              onClick={cyclePlaybackSpeed}
+              title="Velocidad de reproducción"
+            >
+              <span>{playbackSpeed}x</span>
+            </button>
+          </div>
+
+          <div className="video-controls-right">
+            <button
+              className={`video-icon-btn ${repeatMode !== "off" ? "is-active" : ""}`}
+              onClick={toggleRepeat}
+              title={`Repetición: ${repeatMode === "off" ? "Desactivada" : repeatMode === "all" ? "Toda la lista" : "Este vídeo"}`}
+            >
+              <Icon name="repeat" />
+              {repeatMode === "one" ? <span className="repeat-badge">1</span> : null}
+            </button>
+
+            <button
+              aria-label="Avanzar 10s"
+              className="video-icon-btn"
+              onClick={() => {
+                if (videoRef.current) {
+                  const nextPos = Math.min(duration, videoRef.current.currentTime + 10);
+                  videoRef.current.currentTime = nextPos;
+                  setPosition(nextPos);
+                }
+              }}
+              title="Avanzar 10 segundos (→)"
+            >
+              <span className="btn-label-icon">+10s</span>
+            </button>
+
+            <button
+              aria-label="Siguiente"
+              className="video-icon-btn"
+              disabled={!hasNext && repeatMode !== "all"}
+              onClick={handleNext}
+              title="Vídeo siguiente (N)"
+            >
+              <Icon name="chevron-right" />
+            </button>
+
+            <div className="video-volume-group">
+              <button
+                aria-label="Silenciar"
+                className="video-icon-btn"
+                onClick={() => handleVolumeChange(volume > 0 ? 0 : 80)}
+              >
+                <Icon name="volume" />
+              </button>
+              <input
+                className="video-volume-slider"
+                max={100}
+                min={0}
+                onChange={(e) => handleVolumeChange(Number(e.target.value))}
+                type="range"
+                value={volume}
+              />
+              <span className="video-volume-value">{volume}%</span>
+            </div>
+
+            {videoItems.length > 0 ? (
+              <button
+                className={`video-icon-btn ${showPlaylist ? "is-active" : ""}`}
+                onClick={() => setShowPlaylist(!showPlaylist)}
+                title="Lista de reproducción"
+              >
+                <Icon name="queue" />
+              </button>
+            ) : null}
+          </div>
         </div>
-      </div>
+      </footer>
     </section>
   );
 }

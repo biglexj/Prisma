@@ -23,33 +23,51 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 24px;
-  background: linear-gradient(180deg, rgb(15 9 12 / 92%), transparent);
+  padding: 12px 22px;
+  background: linear-gradient(180deg, rgba(15, 9, 12, 0.94), transparent);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .video-back-button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid rgb(255 255 255 / 15%);
-  border-radius: 20px;
-  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  padding: 6px 14px;
   color: #ffffff;
-  background: rgb(255 255 255 / 8%);
-  font-size: 0.72rem;
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.74rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 160ms ease, border-color 160ms ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 160ms ease;
 }
 
 .video-back-button:hover {
-  border-color: rgb(255 255 255 / 30%);
-  background: rgb(255 255 255 / 16%);
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.18);
+  transform: translateX(-2px);
+}
+
+.video-back-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 .video-header-info {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  margin: 0 8px;
+}
+
+.video-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -58,12 +76,50 @@
   font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.12em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.video-path-explorer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--on-surface-variant, rgba(255, 255, 255, 0.65));
+  font-size: 0.64rem;
+  font-family: inherit;
+  cursor: pointer;
+  max-width: min(550px, 50vw);
+  overflow: hidden;
+  transition: all 160ms ease;
+}
+
+.video-path-explorer-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.video-path-explorer-btn svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: var(--primary, #e05273);
+}
+
+.video-path-explorer-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .video-header-info h1 {
   margin: 2px 0 0;
   overflow: hidden;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
