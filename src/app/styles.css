@@ -1149,19 +1149,40 @@ input[type="range"] {
 }
 
 .video-controls-row {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
   width: 100%;
+  min-height: 48px;
 }
 
-.video-controls-left,
-.video-controls-center,
+.video-controls-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 2;
+}
+
+.video-controls-center {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  z-index: 3 !important;
+  pointer-events: auto !important;
+}
+
 .video-controls-right {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-left: auto;
+  z-index: 2;
 }
 
 .video-icon-btn {

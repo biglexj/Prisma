@@ -462,34 +462,42 @@
   margin-top: 0 !important;
 }
 
-/* Fila de Botones de Control: Cuadrícula simétrica 3 columnas */
+/* Fila de Botones de Control: Centro absoluto al 50% */
 .video-controls-row {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  position: relative;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   width: 100%;
-  gap: 16px;
+  min-height: 48px;
 }
 
 .video-controls-left {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
   gap: 10px;
+  z-index: 2;
 }
 
 .video-controls-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  z-index: 3 !important;
+  pointer-events: auto !important;
 }
 
 .video-controls-right {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 10px;
+  margin-left: auto;
+  z-index: 2;
 }
 
 /* Botones con iconos circulares flotantes de cristal */
