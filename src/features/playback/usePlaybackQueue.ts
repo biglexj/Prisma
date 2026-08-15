@@ -232,14 +232,13 @@ export function usePlaybackQueue(): PlaybackQueueState {
       folderItems: MusicQueueItem[],
       startIndex = 0,
     ): MusicQueueItem | null => {
-      return playQueue(
-        folderItems,
-        startIndex,
-        `Árbol de Música · ${folderName}`,
-        DEFAULT_QUEUE_ID,
-      );
+      // La cola lleva directamente el nombre del álbum/carpeta, sin prefijos extra.
+      // Si ya existe una cola con el mismo nombre (re-click del mismo álbum), se reutiliza para no duplicar.
+      const existing = queues.find((q) => q.name === folderName);
+      const targetQueueId = existing?.id ?? `queue_${Date.now()}`;
+      return playQueue(folderItems, startIndex, folderName, targetQueueId);
     },
-    [playQueue],
+    [playQueue, queues],
   );
 
   const playQueueAt = useCallback(
@@ -363,22 +362,18 @@ export function usePlaybackQueue(): PlaybackQueueState {
 
   const removeQueue = useCallback(
     (queueId: string) => {
-      if (queueId === DEFAULT_QUEUE_ID) {
-        // La cola predeterminada solo se vacía, no se destruye
-        setQueues((prev) =>
-          prev.map((q) => (q.id === DEFAULT_QUEUE_ID ? { ...q, items: [], currentIndex: 0 } : q)),
-        );
-        return;
-      }
       setQueues((prev) => {
         const remaining = prev.filter((q) => q.id !== queueId);
+        // Si no quedan colas, mantener la cola por defecto vacía para que la interfaz nunca quede sin colas
         return remaining.length > 0 ? remaining : [INITIAL_DEFAULT_QUEUE];
       });
       if (activeQueueId === queueId) {
-        setActiveQueueId(DEFAULT_QUEUE_ID);
+        const remaining = queues.filter((q) => q.id !== queueId);
+        const fallbackId = remaining.length > 0 ? remaining[0].id : DEFAULT_QUEUE_ID;
+        setActiveQueueId(fallbackId);
       }
     },
-    [activeQueueId],
+    [activeQueueId, queues],
   );
 
   const renameQueue = useCallback((queueId: string, newName: string) => {

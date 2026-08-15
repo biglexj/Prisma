@@ -2,12 +2,12 @@
 .media-context-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 100001;
 }
 
 .media-context-menu {
   position: fixed;
-  z-index: 1001;
+  z-index: 100002;
   min-width: 200px;
   border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.08));
   border-radius: 14px;
@@ -16,6 +16,9 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
+}
+[data-theme="dark"] .media-context-menu {
+  background: var(--surface-container-high, #21191b);
 }
 
 .media-context-item {
@@ -70,7 +73,7 @@
 .media-dialog-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: 100005;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -194,4 +197,59 @@
 
 .media-dialog-confirm.is-danger:hover {
   filter: brightness(1.08);
+}
+
+/* ── Diálogo de renombrado ── */
+.media-rename-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.media-rename-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 1.5px solid var(--outline, rgba(255, 255, 255, 0.15));
+  border-radius: 12px;
+  background: var(--surface-container-lowest, #140d0e);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.media-rename-input-wrap:focus-within {
+  border-color: var(--primary, #ffb2b9);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary, #ffb2b9) 20%, transparent);
+}
+
+.media-rename-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 12px 14px;
+  color: var(--on-surface, #ffffff);
+  font-size: 0.92rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.media-rename-ext-badge {
+  padding: 4px 10px;
+  margin-right: 8px;
+  border-radius: 8px;
+  background: var(--surface-container-high, #2b1f22);
+  color: var(--on-surface-variant, #b59b9e);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+
+.media-rename-error {
+  margin-top: -6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--error, #ff898b);
+  text-align: left;
+  padding-left: 4px;
 }

@@ -154,25 +154,25 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
               </div>
             </div>
 
-            {/* ── Eliminación de archivos ── */}
+            {/* ── Mover archivos a la papelera ── */}
             <div className="settings-card">
-              <h3>Eliminar archivos</h3>
+              <h3>Papelera de reciclaje</h3>
               <p>
-                Controla si Prisma pide confirmación antes de enviar una canción, imagen o vídeo a la papelera de reciclaje.
+                Controla si Prisma solicita confirmación antes de enviar una pista musical, imagen o vídeo a la papelera de reciclaje del sistema.
               </p>
 
               <div className="system-toggles-list">
                 <div className="system-toggle-item">
                   <div className="system-toggle-info">
-                    <strong>Pedir confirmación al eliminar</strong>
-                    <p>Con la confirmación activada, la tecla Supr o la opción Eliminar piden confirmación antes de borrar. Desactívala para eliminar directamente a la papelera sin preguntar.</p>
+                    <strong>Pedir confirmación antes de mover a la papelera</strong>
+                    <p>Con la confirmación activada, la tecla Supr o la opción «Mover a la papelera» muestran un diálogo de confirmación. Al desactivarla, los archivos se envían directamente a la papelera del sistema sin preguntar.</p>
                   </div>
                   <label className="toggle-switch">
                     <input
                       type="checkbox"
                       checked={confirmDeletion}
                       onChange={(e) => setConfirmDeletion(e.target.checked)}
-                      aria-label="Pedir confirmación al eliminar"
+                      aria-label="Pedir confirmación antes de mover a la papelera"
                     />
                     <span className="toggle-slider" />
                   </label>

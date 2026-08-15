@@ -1,16 +1,16 @@
 .section-heading h1 {
-  margin:5px 0 10px;
-  font-size:clamp(2.2rem,5cqi,4rem);
-  line-height:1;
-  letter-spacing:-.055em
+  margin:2px 0 4px;
+  font-size:clamp(1.7rem,3.6cqi,2.7rem);
+  line-height:1.05;
+  letter-spacing:-.05em
 }
 
 .section-heading p {
   max-width:680px;
-  margin:0;
+  margin:0 0 4px;
   color:var(--on-surface-variant);
-  font-size:.9rem;
-  line-height:1.55
+  font-size:.82rem;
+  line-height:1.5
 }
 
 .filled-button,.tonal-button,.icon-button {
@@ -623,19 +623,13 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
+  padding-top: clamp(14px, 2vw, 24px);
+  margin-bottom: 18px;
 }
 
 .music-heading-actions {
   display: flex;
   gap: 9px;
-}
-
-.music-controls-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin: clamp(24px, 4cqi, 42px) 0 18px;
 }
 
 .music-summary {
@@ -659,19 +653,31 @@
 
 .music-controls-bar {
   position: sticky;
-  top: -18px;
-  z-index: 10;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: clamp(12px, 2cqi, 20px) -8px 18px;
-  padding: 10px 8px;
+  margin-top: clamp(8px, 1.2cqi, 14px);
+  margin-bottom: 14px;
+  margin-inline: calc(-1 * clamp(18px, 3vw, 38px));
+  padding: 10px clamp(18px, 3vw, 38px);
   background: color-mix(in srgb, var(--surface, #120c0e) 85%, transparent);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.06));
-  border-radius: 0 0 16px 16px;
+}
+
+@media (max-width: 900px) {
+  .music-library-heading {
+    padding-top: 15px;
+  }
+
+  .music-controls-bar {
+    margin-inline: -15px;
+    padding-inline: 15px;
+  }
 }
 
 .music-controls-bar .music-summary {
@@ -1370,8 +1376,7 @@
   transition: all 0.18s ease;
 }
 
-.music-media-card-wrapper:hover .music-card-fav-btn,
-.music-card-fav-btn.is-favorite {
+.music-media-card-wrapper:hover .music-card-fav-btn {
   opacity: 1;
   transform: scale(1);
 }

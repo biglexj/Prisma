@@ -1,3 +1,14 @@
+.library-sources {
+  min-height: 100%;
+  padding-top: clamp(14px, 2vw, 24px);
+}
+
+@media (max-width: 900px) {
+  .library-sources {
+    padding-top: 15px;
+  }
+}
+
 .library-sources .section-heading {
   margin-bottom: 24px;
 }

@@ -15,6 +15,8 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
+  padding-top: clamp(14px, 2vw, 24px);
+  margin-bottom: 18px;
 }
 
 .visual-heading-actions {
@@ -24,19 +26,20 @@
 
 .visual-controls-bar {
   position: sticky;
-  top: -18px;
-  z-index: 10;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: clamp(12px, 2cqi, 20px) -8px 18px;
-  padding: 10px 8px;
+  margin-top: clamp(8px, 1.2cqi, 14px);
+  margin-bottom: 14px;
+  margin-inline: calc(-1 * clamp(18px, 3vw, 38px));
+  padding: 10px clamp(18px, 3vw, 38px);
   background: color-mix(in srgb, var(--surface, #120c0e) 85%, transparent);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.06));
-  border-radius: 0 0 16px 16px;
 }
 
 .visual-controls-bar .visual-summary {
@@ -733,6 +736,17 @@
   gap: 6px;
 }
 
+@media (max-width: 900px) {
+  .visual-library-heading {
+    padding-top: 15px;
+  }
+
+  .visual-controls-bar {
+    margin-inline: -15px;
+    padding-inline: 15px;
+  }
+}
+
 @container preview-content (max-width: 620px) {
   .visual-library-heading {
     align-items: stretch;
@@ -1075,8 +1089,7 @@
   transition: all 0.18s ease;
 }
 
-.visual-media-card-wrapper:hover .visual-card-fav-btn,
-.visual-card-fav-btn.is-favorite {
+.visual-media-card-wrapper:hover .visual-card-fav-btn {
   opacity: 1;
   transform: scale(1);
 }

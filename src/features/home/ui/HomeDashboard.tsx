@@ -29,6 +29,8 @@ interface HomeDashboardProps {
   onOpenImage?: (path: string) => void;
   onPlayMusic: (path: string) => void;
   onPlayVideo: (path: string, sessionItems?: VisualLibraryItem[]) => void;
+  confirmDeletion: boolean;
+  onRefreshImages: () => void | Promise<void>;
 }
 
 export function HomeDashboard({
@@ -46,6 +48,8 @@ export function HomeDashboard({
   onOpenImage,
   onPlayMusic,
   onPlayVideo,
+  confirmDeletion,
+  onRefreshImages,
 }: HomeDashboardProps) {
   useScrollRestoration("view:home", !loading);
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
@@ -208,9 +212,11 @@ export function HomeDashboard({
 
       {selectedImage ? (
         <ImageViewer
+          confirmDeletion={confirmDeletion}
           item={selectedImage}
           itemsList={nonExcludedImages}
           onClose={() => setSelectedImage(null)}
+          onRefresh={onRefreshImages}
           onSelectImage={setSelectedImage}
         />
       ) : null}

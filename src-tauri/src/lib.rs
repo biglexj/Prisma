@@ -22,7 +22,7 @@ use app::commands::playlists::{
     playlists_relink_item, playlists_remove_item, playlists_save_from_items,
     playlists_toggle_hidden,
 };
-use app::commands::media::media_delete_items;
+use app::commands::media::{media_delete_items, media_rename_item, media_save_image};
 use app::commands::quick_look::{
     autostart_get_status, autostart_set, get_minimize_to_tray, is_minimize_to_tray_enabled,
     quick_look_get_current, quick_look_get_shortcut, quick_look_hide, quick_look_open_in_main,
@@ -203,6 +203,8 @@ pub fn run() {
             visual_library_list_items,
             visual_library_image_preview,
             media_delete_items,
+            media_rename_item,
+            media_save_image,
             show_in_file_manager,
             video_get_subtitles,
             video_read_subtitle_vtt,

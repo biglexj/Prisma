@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
+import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
+import { ContextMenu } from "../../../shared/ui/ContextMenu";
 import { cleanPath } from "../../../shared/mediaTree";
 import { useFavorites } from "../../../shared/useFavorites";
+import { useMediaDelete } from "../../../shared/useMediaDelete";
+import { useMediaRename } from "../../../shared/useMediaRename";
+import { RenameMediaDialog } from "../../../shared/ui/RenameMediaDialog";
 import { addToHistory } from "../../../shared/useHistory";
 import type { VisualLibraryItem } from "../model/types";
+import { ImageEditor } from "./editor/ImageEditor";
 import "./visual-library.css";
 import "./image-viewer.css";
 
@@ -13,13 +19,19 @@ export interface ImageViewerProps {
   itemsList?: VisualLibraryItem[];
   onClose: () => void;
   onSelectImage?: (item: VisualLibraryItem) => void;
+  confirmDeletion: boolean;
+  onRefresh: () => void | Promise<void>;
 }
+
+const IMAGE_CROSSFADE_MS = 480;
 
 export function ImageViewer({
   item,
   itemsList = [],
   onClose,
   onSelectImage,
+  confirmDeletion,
+  onRefresh,
 }: ImageViewerProps) {
   const [currentItem, setCurrentItem] = useState<VisualLibraryItem>(item);
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
@@ -35,12 +47,78 @@ export function ImageViewer({
   const isAutoFitRef = useRef(false); // Ref para evitar stale closure en onLoad
   const [zoomToast, setZoomToast] = useState<string | null>(null);
   const zoomToastTimerRef = useRef<number | null>(null);
+  const [isEntering, setIsEntering] = useState(false);
+  const [previousLayer, setPreviousLayer] = useState<{
+    item: VisualLibraryItem;
+    scale: number;
+    pan: { x: number; y: number };
+  } | null>(null);
+  const clearPrevTimerRef = useRef<number | null>(null);
+  const suppressTransformTransitionRef = useRef(true);
+  const controlsSuppressUntilRef = useRef(0);
 
   const imgRef = useRef<HTMLImageElement | null>(null);
   const favorites = useFavorites();
 
   const activeList = itemsList.length > 0 ? itemsList : [currentItem];
   const currentIndex = activeList.findIndex((it) => it.path === currentItem.path);
+
+  const mediaDelete = useMediaDelete({
+    confirmDeletion,
+    onRefresh,
+    onDeleted: () => {
+      if (activeList.length > 1) {
+        // Navegar a la siguiente sin fundido cruzado (el archivo eliminado ya no puede recargarse)
+        const next = activeList[(currentIndex + 1) % activeList.length];
+        if (next && next.path !== currentItem.path) {
+          setPreviousLayer(null);
+          setCurrentItem(next);
+          setIsEntering(false);
+          addToHistory(next.path, "image");
+          onSelectImage?.(next);
+        } else {
+          closeViewer();
+        }
+      } else {
+        closeViewer();
+      }
+    },
+  });
+
+  const [isEditing, setIsEditing] = useState(false);
+
+  const mediaRename = useMediaRename({
+    onRefresh,
+    onRenamed: (result) => {
+      setCurrentItem((prev) => ({
+        ...prev,
+        path: result.newPath,
+        title: result.newName,
+      }));
+      onSelectImage?.({
+        ...currentItem,
+        path: result.newPath,
+        title: result.newName,
+      });
+    },
+  });
+
+  const handleSaveSuccess = async (savedPath: string, isOverwrite: boolean) => {
+    await onRefresh();
+    setIsEditing(false);
+    if (!isOverwrite) {
+      const fileName = savedPath.replace(/\\/g, "/").split("/").pop() || "imagen.png";
+      const newItem: VisualLibraryItem = {
+        ...currentItem,
+        path: savedPath,
+        title: fileName,
+      };
+      setCurrentItem(newItem);
+      onSelectImage?.(newItem);
+    } else {
+      setCurrentItem({ ...currentItem });
+    }
+  };
 
   const showZoomToast = (scale: number) => {
     if (zoomToastTimerRef.current) window.clearTimeout(zoomToastTimerRef.current);
@@ -63,12 +141,22 @@ export function ImageViewer({
   };
 
   useEffect(() => {
+    if (item.path === currentItem.path) return;
     setCurrentItem(item);
     resetImageTransform();
+    setPreviousLayer(null);
+    setIsEntering(false);
     addToHistory(item.path, "image");
   }, [item]);
 
+  // Historial del primer elemento al abrir el visor
+  useEffect(() => {
+    addToHistory(item.path, "image");
+    // Solo al montar
+  }, []);
+
   const handleUserActivity = () => {
+    if (Date.now() < controlsSuppressUntilRef.current) return;
     setShowControls(true);
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
@@ -98,6 +186,12 @@ export function ImageViewer({
       void document.exitFullscreen().catch(() => {});
       setIsFullscreen(false);
     }
+    // Al expandir o minimizar con atajo, no mostrar los controles: solo el cambio de pantalla.
+    setShowControls(false);
+    if (controlsTimeoutRef.current) {
+      window.clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsSuppressUntilRef.current = Date.now() + 2500;
   };
 
   const applyAutoFitToImage = (img: HTMLImageElement) => {
@@ -112,26 +206,28 @@ export function ImageViewer({
     setIsDragging(false);
   };
 
+  const transitionToImage = (nextItem: VisualLibraryItem) => {
+    if (!nextItem || nextItem.path === currentItem.path) return;
+    setPreviousLayer({ item: currentItem, scale: zoomScale, pan: panOffset });
+    setCurrentItem(nextItem);
+    setIsEntering(false);
+    suppressTransformTransitionRef.current = true;
+    if (clearPrevTimerRef.current) window.clearTimeout(clearPrevTimerRef.current);
+    clearPrevTimerRef.current = window.setTimeout(() => setPreviousLayer(null), IMAGE_CROSSFADE_MS);
+    addToHistory(nextItem.path, "image");
+    onSelectImage?.(nextItem);
+  };
+
   const handlePreviousImage = () => {
     if (activeList.length === 0 || currentIndex < 0) return;
     const prevIndex = (currentIndex - 1 + activeList.length) % activeList.length;
-    const nextItem = activeList[prevIndex];
-    setPanOffset({ x: 0, y: 0 });
-    setIsDragging(false);
-    // onLoad recalculará fitScale para la nueva imagen en ambos modos
-    setCurrentItem(nextItem);
-    onSelectImage?.(nextItem);
+    transitionToImage(activeList[prevIndex]);
   };
 
   const handleNextImage = () => {
     if (activeList.length === 0 || currentIndex < 0) return;
     const nextIndex = (currentIndex + 1) % activeList.length;
-    const nextItem = activeList[nextIndex];
-    setPanOffset({ x: 0, y: 0 });
-    setIsDragging(false);
-    // onLoad recalculará fitScale para la nueva imagen en ambos modos
-    setCurrentItem(nextItem);
-    onSelectImage?.(nextItem);
+    transitionToImage(activeList[nextIndex]);
   };
 
   const handleZoomIn = () => {
@@ -264,11 +360,68 @@ export function ImageViewer({
     };
   }, []);
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    mediaDelete.openMenu(e, {
+      path: currentItem.path,
+      title: currentItem.title,
+      kind: "image",
+    });
+  };
+
+  const buildContextMenuItems = () => {
+    const target = mediaDelete.menu;
+    if (!target) return [];
+    const isFav = favorites.isFavorite(target.item.path);
+    return [
+      {
+        id: "edit",
+        label: "Editar imagen",
+        icon: "crop" as const,
+        onSelect: () => setIsEditing(true),
+      },
+      {
+        id: "rename",
+        label: "Renombrar",
+        icon: "edit" as const,
+        onSelect: () =>
+          mediaRename.requestRename({
+            path: target.item.path,
+            title: target.item.title,
+            kind: "image",
+          }),
+      },
+      {
+        id: "favorite",
+        label: isFav ? "Quitar de favoritos" : "Añadir a favoritos",
+        icon: "heart" as const,
+        onSelect: () => favorites.toggleFavorite(target.item.path, "image"),
+      },
+      {
+        id: "show",
+        label: "Mostrar en carpeta",
+        icon: "folder-open" as const,
+        onSelect: () => {
+          void invoke("show_in_file_manager", { path: target.item.path }).catch(() => {});
+        },
+      },
+      {
+        id: "delete",
+        label: "Mover a la papelera",
+        icon: "trash" as const,
+        danger: true,
+        onSelect: () => mediaDelete.requestDelete(target.item),
+      },
+    ];
+  };
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (mediaDelete.pendingDelete || mediaRename.pendingRename || isEditing) return;
       if (event.key === "Escape") {
-        if (zoomScale > 1) {
+        if (mediaDelete.menu) {
+          mediaDelete.closeMenu();
+        } else if (zoomScale > 1) {
           handleResetZoom();
         } else if (document.fullscreenElement) {
           void document.exitFullscreen().catch(() => {});
@@ -276,6 +429,16 @@ export function ImageViewer({
         } else {
           closeViewer();
         }
+      } else if (event.key.toLowerCase() === "e") {
+        event.preventDefault();
+        setIsEditing(true);
+      } else if (event.key === "F2") {
+        event.preventDefault();
+        mediaRename.requestRename({
+          path: currentItem.path,
+          title: currentItem.title,
+          kind: "image",
+        });
       } else if (event.key.toLowerCase() === "f") {
         event.preventDefault();
         toggleFullscreen();
@@ -292,6 +455,18 @@ export function ImageViewer({
         handlePreviousImage();
       } else if (event.key === "ArrowRight") {
         handleNextImage();
+      } else if (
+        event.key === "Delete" ||
+        event.key === "Del" ||
+        event.key === "Supr" ||
+        event.code === "Delete"
+      ) {
+        event.preventDefault();
+        mediaDelete.requestDelete({
+          path: currentItem.path,
+          title: currentItem.title,
+          kind: "image",
+        });
       } else if (event.key === " " && !isDragging) {
         event.preventDefault();
         setIsSlideshowActive((prev) => !prev);
@@ -300,7 +475,20 @@ export function ImageViewer({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [currentIndex, activeList, zoomScale, isDragging]);
+  }, [
+    currentIndex,
+    activeList,
+    currentItem,
+    zoomScale,
+    isDragging,
+    isEditing,
+    mediaDelete.pendingDelete,
+    mediaDelete.menu,
+    mediaDelete.requestDelete,
+    mediaDelete.closeMenu,
+    mediaRename.pendingRename,
+    mediaRename.requestRename,
+  ]);
 
   // Slideshow timer
   useEffect(() => {
@@ -311,6 +499,27 @@ export function ImageViewer({
     return () => window.clearInterval(interval);
   }, [isSlideshowActive, currentIndex, activeList]);
 
+  // Limpieza del temporizador de transición entre imágenes
+  useEffect(() => {
+    return () => {
+      if (clearPrevTimerRef.current) window.clearTimeout(clearPrevTimerRef.current);
+    };
+  }, []);
+
+  // Al maximizar/minimizar la ventana (con atajos), ocultar los controles de inmediato
+  useEffect(() => {
+    const onResize = () => {
+      setShowControls(false);
+      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+      controlsSuppressUntilRef.current = Math.max(
+        controlsSuppressUntilRef.current,
+        Date.now() + 1500,
+      );
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   return (
     <div
       id="image-cinema-container"
@@ -318,7 +527,7 @@ export function ImageViewer({
       aria-label={currentItem.title}
       aria-modal="true"
       className={`image-viewer ${isFullscreen ? "is-fullscreen-mode" : ""} ${!showControls ? "controls-hidden" : ""}`}
-      onClick={closeViewer}
+      onContextMenu={handleContextMenu}
       onMouseMove={handleUserActivity}
     >
       <div className="image-viewer-top-bar" onClick={(event) => event.stopPropagation()}>
@@ -337,6 +546,14 @@ export function ImageViewer({
           ) : null}
           <button
             className="image-viewer-top-btn image-viewer-edit-btn"
+            onClick={() => setIsEditing(true)}
+            title="Editar imagen (E)"
+          >
+            <Icon name="crop" />
+            <span>Editar</span>
+          </button>
+          <button
+            className="image-viewer-top-btn"
             onClick={() => {
               invoke("show_in_file_manager", { path: currentItem.path }).catch(() => {});
             }}
@@ -361,6 +578,20 @@ export function ImageViewer({
             title={favorites.isFavorite(currentItem.path) ? "Quitar de favoritos" : "Añadir a favoritos"}
           >
             <Icon name="heart" />
+          </button>
+          <button
+            aria-label="Mover a la papelera (Supr)"
+            className="image-viewer-top-btn is-icon-only image-viewer-delete-btn"
+            onClick={() =>
+              mediaDelete.requestDelete({
+                path: currentItem.path,
+                title: currentItem.title,
+                kind: "image",
+              })
+            }
+            title="Mover a la papelera (Supr)"
+          >
+            <Icon name="trash" />
           </button>
           <button
             className={`image-viewer-top-btn image-viewer-slideshow-btn ${isSlideshowActive ? "is-active" : ""}`}
@@ -426,34 +657,62 @@ export function ImageViewer({
           cursor: zoomScale > 1 ? (isDragging ? "grabbing" : "grab") : "default",
         }}
       >
-        <div
-          className="image-viewer-media-container"
-          style={{
-            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale})`,
-            transition: isDragging ? "none" : "transform 0.16s ease-out",
-          }}
-        >
-          <img
-            alt={currentItem.title}
-            className="image-viewer-media"
-            draggable={false}
-            ref={imgRef}
-            src={convertFileSrc(cleanPath(currentItem.path))}
-            onLoad={(e) => {
-              const img = e.currentTarget;
-              const naturalW = img.naturalWidth || img.width;
-              const naturalH = img.naturalHeight || img.height;
-              if (!naturalW || !naturalH) return;
-
-              const scaleX = window.innerWidth / naturalW;
-              const scaleY = window.innerHeight / naturalH;
-              const fitScale = Math.round(Math.min(scaleX, scaleY) * 10000) / 10000;
-
-              // Siempre ajustar a pantalla al cargar (el % refleja la proporción real vs original)
-              setZoomScale(fitScale);
-              setPanOffset({ x: 0, y: 0 });
+        <div className="image-viewer-media-container">
+          {previousLayer ? (
+            <div
+              className="image-viewer-media-layer is-leaving"
+              key={previousLayer.item.path}
+              style={{
+                transform: `translate(${previousLayer.pan.x}px, ${previousLayer.pan.y}px) scale(${previousLayer.scale})`,
+              }}
+            >
+              <img
+                alt={previousLayer.item.title}
+                className="image-viewer-media"
+                draggable={false}
+                src={convertFileSrc(cleanPath(previousLayer.item.path))}
+              />
+            </div>
+          ) : null}
+          <div
+            className={`image-viewer-media-layer is-current${isEntering ? " is-entering" : ""}`}
+            style={{
+              transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale})`,
+              transition: isDragging
+                ? "none"
+                : suppressTransformTransitionRef.current
+                  ? "none"
+                  : "transform 0.16s ease-out",
             }}
-          />
+          >
+            <img
+              alt={currentItem.title}
+              className="image-viewer-media"
+              draggable={false}
+              ref={imgRef}
+              src={convertFileSrc(cleanPath(currentItem.path))}
+              onError={() => setIsEntering(true)}
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                const naturalW = img.naturalWidth || img.width;
+                const naturalH = img.naturalHeight || img.height;
+                if (!naturalW || !naturalH) return;
+
+                const scaleX = window.innerWidth / naturalW;
+                const scaleY = window.innerHeight / naturalH;
+                const fitScale = Math.round(Math.min(scaleX, scaleY) * 10000) / 10000;
+
+                // Ajustar a pantalla al cargar sin animar la escala durante el fundido cruzado
+                suppressTransformTransitionRef.current = true;
+                setZoomScale(fitScale);
+                setPanOffset({ x: 0, y: 0 });
+                setIsEntering(true);
+                requestAnimationFrame(() => {
+                  suppressTransformTransitionRef.current = false;
+                });
+              }}
+            />
+          </div>
         </div>
       </figure>
 
@@ -483,6 +742,55 @@ export function ImageViewer({
           <Icon name="fit-screen" />
         </button>
       </div>
+
+      {mediaDelete.deleteError ? (
+        <div className="image-viewer-delete-error" role="alert">
+          No se pudo eliminar: {mediaDelete.deleteError}
+        </div>
+      ) : null}
+
+      {mediaDelete.menu ? (
+        <ContextMenu
+          items={buildContextMenuItems()}
+          onClose={mediaDelete.closeMenu}
+          x={mediaDelete.menu.x}
+          y={mediaDelete.menu.y}
+        />
+      ) : null}
+
+      {mediaDelete.pendingDelete ? (
+        <ConfirmDialog
+          cancelLabel="Cancelar"
+          confirmLabel="Mover a la papelera"
+          danger
+          message={
+            <span>
+              Se enviará <strong>{mediaDelete.pendingDelete.title}</strong> a la papelera de
+              reciclaje del sistema.
+            </span>
+          }
+          onCancel={mediaDelete.cancelDelete}
+          onConfirm={mediaDelete.confirmDelete}
+          title="Mover imagen a la papelera"
+        />
+      ) : null}
+
+      {isEditing && (
+        <ImageEditor
+          item={currentItem}
+          onClose={() => setIsEditing(false)}
+          onSaveSuccess={handleSaveSuccess}
+        />
+      )}
+
+      {mediaRename.pendingRename && (
+        <RenameMediaDialog
+          currentPath={mediaRename.pendingRename.path}
+          currentTitle={mediaRename.pendingRename.title}
+          onConfirm={mediaRename.confirmRename}
+          onCancel={mediaRename.cancelRename}
+        />
+      )}
     </div>
   );
 }

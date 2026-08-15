@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import type { PlaybackCapabilities, PlaybackSnapshot } from "../../model/types";
 import type { PlaybackQueueState } from "../../usePlaybackQueue";
+import { invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../../../shared/ui/Icon";
 import { useMusicArtwork, prefetchArtwork } from "../../../music_library/useMusicArtwork";
 import { VisualThumbnail } from "../../../visual_library/ui/VisualThumbnail";
@@ -267,7 +268,16 @@ export function PlaybackPreview({
               <Icon name="repeat" />
               {queueState?.repeatMode === "one" ? <span className="repeat-indicator">1</span> : null}
             </button>
-            <button onClick={onOpen} title="Abrir otro archivo" aria-label="Abrir otro archivo"><Icon name="folder" /></button>
+            <button
+              disabled={!hasMedia}
+              onClick={() => {
+                if (snapshot.path) {
+                  void invoke("show_in_file_manager", { path: snapshot.path }).catch(() => {});
+                }
+              }}
+              title="Abrir ubicación de la canción en el explorador"
+              aria-label="Abrir ubicación en el explorador"
+            ><Icon name="folder-open" /></button>
             <button
               className={viewMode === "queue" ? "is-active" : ""}
               onClick={() => setViewMode(viewMode === "queue" ? "cover" : "queue")}

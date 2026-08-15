@@ -85,25 +85,34 @@ export function App() {
     setVideoReturnView(activeView);
     setActiveVideoPath(path);
     setActiveVideoSessionItems(sessionItems && sessionItems.length > 0 ? sessionItems : videoLibrary.items);
-    setIsPip(false);
-    setActiveView("video_player");
+    
+    // Si ya estamos en PiP, mantenerse en la vista actual (ej. galería) y reemplazar el vídeo en la ventana flotante.
+    // Si no estamos en PiP, navegar a la pantalla completa del reproductor.
+    if (!isPip) {
+      setActiveView("video_player");
+    }
   };
 
   /**
    * Gestiona el ciclo de vida de Picture-in-Picture desde App:
-   * - Al activar PiP: limpia el fondo y muestra la galería/vista de origen.
-   * - Al desactivar PiP por el botón ✕ nativo: limpia el vídeo activo y se queda
-   *   en la vista actual (galería). NO vuelve al reproductor a pantalla completa.
+   * - Al activar PiP: muestra la vista de origen (ej. galería) para que el usuario explore la biblioteca.
+   * - Al salir de PiP por 'Volver a la pestaña' o botón PiP: retorna a pantalla completa ("video_player").
+   * - Al salir de PiP por la '✕' (Cerrar): limpia la sesión activa y se queda en la galería ("muere ahí").
    */
-  const handlePipChange = (active: boolean) => {
+  const handlePipChange = (active: boolean, reason?: "restore" | "close") => {
     setIsPip(active);
     if (active) {
-      // Limpiar el fondo: mostrar la galería donde estaba el usuario
+      // Entró a PiP: llevar a la vista donde estaba el usuario (ej. galería)
       setActiveView(videoReturnView);
     } else {
-      // Cerraron la ventana flotante (botón ✕) → limpiar sesión, quedarse en galería
-      setActiveVideoPath(null);
-      setActiveVideoSessionItems([]);
+      if (reason === "close") {
+        // El usuario pulsó la '✕': cerrar el PiP y morir ahí (quedarse en la galería sin abrir la pantalla completa)
+        setActiveVideoPath(null);
+        setActiveVideoSessionItems([]);
+      } else {
+        // El usuario pulsó 'Volver a la pestaña' o toggle PiP: restaurar el reproductor a pantalla completa
+        setActiveView("video_player");
+      }
     }
   };
 
@@ -176,6 +185,8 @@ export function App() {
               onPlayVideo={playVideoItem}
               videoFolders={videoLibrary.folders}
               videos={videoLibrary.items}
+              confirmDeletion={confirmDeletion}
+              onRefreshImages={() => imageLibrary.refresh()}
             />
           ) : null}
 
@@ -276,28 +287,38 @@ export function App() {
           ) : null}
 
           {/*
-            VideoPlayer se monta mientras haya un vídeo activo (incluido modo PiP).
-            En modo PiP se mantiene oculto con CSS (display:none) para que el elemento
-            <video> HTML siga siendo el propietario de la sesión PiP del navegador.
-            Al salir de PiP se vuelve a mostrar sin perder el estado de reproducción.
+            VideoPlayer se mantiene montado mientras haya un vídeo activo (incluido modo PiP).
+            En modo PiP se mantiene fuera del flujo visual (con position fixed / off-screen)
+            para que el elemento <video> siga vivo en el compositor de Chromium sin interrupciones.
           */}
           {activeVideoPath ? (
             <div
-              style={{
-                display: activeView === "video_player" ? "contents" : "none",
-                position: activeView !== "video_player" ? "absolute" : undefined,
-                visibility: activeView !== "video_player" ? "hidden" : undefined,
-              }}
+              style={
+                activeView === "video_player"
+                  ? { display: "contents" }
+                  : {
+                      position: "fixed",
+                      top: "-9999px",
+                      left: "-9999px",
+                      width: "1px",
+                      height: "1px",
+                      opacity: 0,
+                      pointerEvents: "none",
+                      zIndex: -1,
+                    }
+              }
             >
               <VideoPlayer
+                confirmDeletion={confirmDeletion}
                 onBack={() => {
-                  // Limpiar sesión completamente al volver: desmonta el <video> y detiene el audio
+                  // Limpiar sesión completamente al volver (Esc): desmonta el <video> y detiene el audio
                   setIsPip(false);
                   setActiveVideoPath(null);
                   setActiveVideoSessionItems([]);
                   setActiveView(videoReturnView);
                 }}
                 onPipChange={handlePipChange}
+                onRefresh={() => videoLibrary.refresh()}
                 onSelectVideo={(path) => setActiveVideoPath(path)}
                 path={activeVideoPath}
                 videoItems={activeVideoSessionItems.length > 0 ? activeVideoSessionItems : videoLibrary.items}

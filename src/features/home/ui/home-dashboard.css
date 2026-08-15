@@ -1,5 +1,12 @@
 .home-dashboard {
   min-height: 100%;
+  padding-top: clamp(14px, 2vw, 24px);
+}
+
+@media (max-width: 900px) {
+  .home-dashboard {
+    padding-top: 15px;
+  }
 }
 
 .home-welcome {

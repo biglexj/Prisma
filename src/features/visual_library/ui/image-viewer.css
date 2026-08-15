@@ -20,6 +20,17 @@
   color: #ffffff;
   overflow: hidden;
   user-select: none;
+  /* Apertura en fundido suave (sin zoom) */
+  animation: image-viewer-enter 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes image-viewer-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .image-viewer-stage {
@@ -39,6 +50,7 @@
 }
 
 .image-viewer-media-container {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -49,7 +61,39 @@
   background: transparent;
   border: none;
   box-shadow: none;
-  will-change: transform;
+  overflow: hidden;
+}
+
+/* Fundido cruzado: la imagen anterior se desvanece mientras la nueva aparece */
+.image-viewer-media-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: opacity, transform;
+}
+
+.image-viewer-media-layer.is-current {
+  opacity: 0;
+}
+
+.image-viewer-media-layer.is-current.is-entering {
+  animation: image-viewer-enter 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.image-viewer-media-layer.is-leaving {
+  animation: image-viewer-leave 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes image-viewer-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes image-viewer-leave {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 .image-viewer-media {
@@ -167,6 +211,24 @@
   pointer-events: none;
   z-index: 60;
   animation: zoomToastPop 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Error de eliminación dentro del visor */
+.image-viewer-delete-error {
+  position: absolute;
+  top: 74px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 80vw;
+  padding: 10px 18px;
+  border-radius: 12px;
+  color: #fff;
+  background: rgba(160, 16, 46, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 0.78rem;
+  font-weight: 600;
+  z-index: 70;
+  pointer-events: none;
 }
 
 @keyframes zoomToastPop {

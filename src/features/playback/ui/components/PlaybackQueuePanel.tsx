@@ -285,15 +285,13 @@ export function PlaybackQueuePanel({
                       ⎘
                     </button>
 
-                    {!isDefault ? (
-                      <button
-                        className="queue-icon-btn is-delete"
-                        onClick={() => removeQueue(q.id)}
-                        title="Eliminar esta cola"
-                      >
-                        ✕
-                      </button>
-                    ) : null}
+                    <button
+                      className="queue-icon-btn is-delete"
+                      onClick={() => removeQueue(q.id)}
+                      title="Eliminar esta cola"
+                    >
+                      ✕
+                    </button>
                   </div>
                 </div>
               );

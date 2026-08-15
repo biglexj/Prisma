@@ -333,7 +333,13 @@ export function MediaTreeView<T extends MediaTreeItem>({
         onClick={() => onPlayItem(file, contextList)}
         onContextMenu={onOpenItemMenu ? (event) => onOpenItemMenu(event, file) : undefined}
         onKeyDown={(event) => {
-          if (onDeleteRequest && (event.key === "Delete" || event.key === "Supr")) {
+          if (
+            onDeleteRequest &&
+            (event.key === "Delete" ||
+              event.key === "Del" ||
+              event.key === "Supr" ||
+              event.code === "Delete")
+          ) {
             event.preventDefault();
             event.stopPropagation();
             onDeleteRequest(file);

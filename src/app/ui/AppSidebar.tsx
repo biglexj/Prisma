@@ -47,6 +47,24 @@ const collectionItems: SidebarItem[] = [
 ];
 
 export function AppSidebar({ activeView, backend, enabled, onNavigate }: AppSidebarProps) {
+  const searchPlaceholder =
+    activeView === "images"
+      ? "Buscar en tus imágenes…"
+      : activeView === "videos"
+      ? "Buscar en tus vídeos…"
+      : activeView === "music"
+      ? "Buscar en tu música…"
+      : "Buscar en Prisma…";
+
+  const searchIcon: IconName =
+    activeView === "images"
+      ? "image"
+      : activeView === "videos"
+      ? "video"
+      : activeView === "music"
+      ? "music"
+      : "search";
+
   return (
     <aside className="music-sidebar">
       <div className="brand-lockup">
@@ -60,8 +78,8 @@ export function AppSidebar({ activeView, backend, enabled, onNavigate }: AppSide
       </div>
 
       <div className="sidebar-search sidebar-copy">
-        <Icon name="music" />
-        <input aria-label="Buscar" disabled placeholder="Buscar en tu música…" />
+        <Icon name={searchIcon} />
+        <input aria-label="Buscar" disabled placeholder={searchPlaceholder} />
       </div>
 
       <nav className="sidebar-navigation" aria-label="Navegación multimedia">

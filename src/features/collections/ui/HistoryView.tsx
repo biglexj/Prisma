@@ -79,20 +79,36 @@ export function HistoryView({
 
   useScrollRestoration(`view:history:${fullViewType ?? "summary"}`);
 
-  // Mapear rutas de historial con los objetos reales de la biblioteca o sintetizar respaldo
+  // Mapear rutas de historial con los objetos reales de la biblioteca o sintetizar respaldo.
+  // Se excluyen los elementos de carpetas ocultas (isExcluded) para no mostrarlos en el historial.
   const historyMusicItems = useMemo(() => {
     const musicMap = new Map(musicItems.map((it) => [normalizePath(it.path), it]));
-    return store.music.map((item) => musicMap.get(normalizePath(item.path)) || synthesizeMusicItem(item.path));
+    return store.music
+      .map((item) => musicMap.get(normalizePath(item.path)) || synthesizeMusicItem(item.path))
+      .filter((it) => {
+        const real = musicMap.get(normalizePath(it.path));
+        return real ? !real.isExcluded : true;
+      });
   }, [store.music, musicItems]);
 
   const historyImageItems = useMemo(() => {
     const imgMap = new Map(images.map((it) => [normalizePath(it.path), it]));
-    return store.images.map((item) => imgMap.get(normalizePath(item.path)) || synthesizeVisualItem(item.path));
+    return store.images
+      .map((item) => imgMap.get(normalizePath(item.path)) || synthesizeVisualItem(item.path))
+      .filter((it) => {
+        const real = imgMap.get(normalizePath(it.path));
+        return real ? !real.isExcluded : true;
+      });
   }, [store.images, images]);
 
   const historyVideoItems = useMemo(() => {
     const vidMap = new Map(videos.map((it) => [normalizePath(it.path), it]));
-    return store.videos.map((item) => vidMap.get(normalizePath(item.path)) || synthesizeVisualItem(item.path));
+    return store.videos
+      .map((item) => vidMap.get(normalizePath(item.path)) || synthesizeVisualItem(item.path))
+      .filter((it) => {
+        const real = vidMap.get(normalizePath(it.path));
+        return real ? !real.isExcluded : true;
+      });
   }, [store.videos, videos]);
 
   const totalHistory =

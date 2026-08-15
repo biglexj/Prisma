@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { formatTime, mediaTitle } from "../../playback/ui/formatters";
 import { Icon } from "../../../shared/ui/Icon";
+import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
+import { ContextMenu } from "../../../shared/ui/ContextMenu";
 import { cleanPath, toPlatformPath } from "../../../shared/mediaTree";
 import type { VisualLibraryItem } from "../model/types";
 import { VideoThumbnail } from "./VideoThumbnail";
 import { useFavorites } from "../../../shared/useFavorites";
+import { useMediaDelete } from "../../../shared/useMediaDelete";
 import "./video-player.css";
 
 interface VideoPlayerProps {
@@ -14,7 +17,9 @@ interface VideoPlayerProps {
   onBack: () => void;
   onSelectVideo?: (path: string) => void;
   /** Notifica a App.tsx cuándo entra/sale del modo Picture-in-Picture */
-  onPipChange?: (active: boolean) => void;
+  onPipChange?: (active: boolean, reason?: "restore" | "close") => void;
+  confirmDeletion?: boolean;
+  onRefresh?: () => void | Promise<void>;
 }
 
 type AudioChannelMode = "stereo" | "mono";
@@ -42,6 +47,8 @@ export function VideoPlayer({
   onBack,
   onSelectVideo,
   onPipChange,
+  confirmDeletion = true,
+  onRefresh,
 }: VideoPlayerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isFastForwarding, setIsFastForwarding] = useState(false);
@@ -76,6 +83,9 @@ export function VideoPlayer({
 
   // Picture-in-Picture State
   const [isPipActive, setIsPipActive] = useState(false);
+  const isPipActiveRef = useRef(false);
+  isPipActiveRef.current = isPipActive;
+  const explicitAppToggleRef = useRef(false);
 
   const favorites = useFavorites();
   const isFav = path ? favorites.isFavorite(path) : false;
@@ -99,6 +109,66 @@ export function VideoPlayer({
   const currentIndex = localVideoItems.findIndex((item) => item.path === path);
   const hasNext = currentIndex >= 0 && currentIndex < localVideoItems.length - 1;
   const hasPrevious = currentIndex > 0;
+
+  const mediaDelete = useMediaDelete({
+    confirmDeletion,
+    onRefresh,
+    onDeleted: () => {
+      if (localVideoItems.length > 1) {
+        const nextIdx = (currentIndex + 1) % localVideoItems.length;
+        const nextVideo = localVideoItems[nextIdx];
+        if (nextVideo && nextVideo.path !== path) {
+          onSelectVideo?.(nextVideo.path);
+        } else {
+          onBack();
+        }
+      } else {
+        onBack();
+      }
+    },
+  });
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (!path) return;
+    mediaDelete.openMenu(e, {
+      path,
+      title,
+      kind: "video",
+    });
+  };
+
+  const buildContextMenuItems = () => {
+    const target = mediaDelete.menu;
+    if (!target) return [];
+    const isFavoriteItem = favorites.isFavorite(target.item.path);
+    return [
+      {
+        id: "favorite",
+        label: isFavoriteItem ? "Quitar de favoritos" : "Añadir a favoritos",
+        icon: "heart" as const,
+        onSelect: () => {
+          const nextFav = favorites.toggleFavorite(target.item.path, "video");
+          setShuffleToastText(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
+          setTimeout(() => setShuffleToastText(null), 1800);
+        },
+      },
+      {
+        id: "show",
+        label: "Mostrar en carpeta",
+        icon: "folder-open" as const,
+        onSelect: () => {
+          void invoke("show_in_file_manager", { path: target.item.path }).catch(() => {});
+        },
+      },
+      {
+        id: "delete",
+        label: "Mover a la papelera",
+        icon: "trash" as const,
+        danger: true,
+        onSelect: () => mediaDelete.requestDelete(target.item),
+      },
+    ];
+  };
 
   // Audio secundario sincronizado para pistas múltiples
   const secondaryAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -333,30 +403,49 @@ export function VideoPlayer({
   };
 
   // ── Picture-in-Picture ──
+  const requestPiPWithBoundedDimensions = async (video: HTMLVideoElement) => {
+    const vw = video.videoWidth || 16;
+    const vh = video.videoHeight || 9;
+    const hadWidth = video.style.width;
+    const hadHeight = video.style.height;
+
+    // Calcular tamaño objetivo con base acotada (~440px máximo para la dimensión mayor)
+    // para evitar ventanas desorbitadas en vídeos verticales (9:16) o resoluciones 4K
+    const MAX_PIP_DIMENSION = 440;
+    let targetWidth: number;
+    let targetHeight: number;
+
+    if (vw >= vh) {
+      // Horizontal (16:9, etc.): ancho máximo 440px, altura proporcional (~248px)
+      targetWidth = MAX_PIP_DIMENSION;
+      targetHeight = Math.max(160, Math.round(MAX_PIP_DIMENSION * (vh / vw)));
+    } else {
+      // Vertical (9:16, Shorts, Reels): altura máxima 440px, ancho proporcional (~248px)
+      targetHeight = MAX_PIP_DIMENSION;
+      targetWidth = Math.max(160, Math.round(MAX_PIP_DIMENSION * (vw / vh)));
+    }
+
+    video.style.width = `${targetWidth}px`;
+    video.style.height = `${targetHeight}px`;
+
+    try {
+      await video.requestPictureInPicture();
+    } finally {
+      // Restaurar estilos para que el reproductor vuelva a su layout fluido
+      video.style.width = hadWidth;
+      video.style.height = hadHeight;
+    }
+  };
+
   const togglePiP = async () => {
     const video = videoRef.current;
     if (!video) return;
     try {
       if (document.pictureInPictureElement) {
+        explicitAppToggleRef.current = true;
         await document.exitPictureInPicture();
       } else if (document.pictureInPictureEnabled) {
-        // Aplicar dimensiones naturales del vídeo al elemento antes de pedir PiP.
-        // Chrome determina el tamaño de la ventana flotante a partir de las dimensiones
-        // CSS del <video>, no de las intrínsecas. Si no lo hacemos, siempre sale 16:9.
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
-        const hadStyle = { w: video.style.width, h: video.style.height };
-        if (vw > 0 && vh > 0) {
-          video.style.width  = `${vw}px`;
-          video.style.height = `${vh}px`;
-        }
-        try {
-          await video.requestPictureInPicture();
-        } finally {
-          // Restaurar estilos para que el reproductor vuelva a ocupar todo el escenario
-          video.style.width  = hadStyle.w;
-          video.style.height = hadStyle.h;
-        }
+        await requestPiPWithBoundedDimensions(video);
       }
     } catch (err) {
       console.error("Error activando Picture-in-Picture:", err);
@@ -370,6 +459,7 @@ export function VideoPlayer({
       videoRef.current.pause();
     }
     if (document.pictureInPictureElement) {
+      explicitAppToggleRef.current = true;
       void document.exitPictureInPicture().catch(() => {});
     }
     onBack();
@@ -381,14 +471,35 @@ export function VideoPlayer({
 
     const onEnter = () => {
       setIsPipActive(true);
-      // Notificar a App.tsx para que limpie la vista de fondo
+      // Notificar a App.tsx para que muestre la vista de origen (galería)
       onPipChange?.(true);
     };
 
     const onLeave = () => {
       setIsPipActive(false);
-      // Notificar a App.tsx para que restaure el reproductor
-      onPipChange?.(false);
+
+      if (explicitAppToggleRef.current) {
+        explicitAppToggleRef.current = false;
+        onPipChange?.(false, "restore");
+        return;
+      }
+
+      const wasPlaying = !video.paused;
+
+      // Dejamos un breve intervalo para que Chromium aplique el estado de pausa automático si fue la '✕'
+      window.setTimeout(() => {
+        const isPausedNow = video.paused;
+        if (wasPlaying && isPausedNow) {
+          // El navegador pausó el vídeo: el usuario pulsó la '✕' (Cerrar PiP y morir ahí)
+          onPipChange?.(false, "close");
+        } else if (!isPausedNow) {
+          // El vídeo sigue reproduciéndose: el usuario pulsó 'Volver a la pestaña'
+          onPipChange?.(false, "restore");
+        } else {
+          // Estaba previamente en pausa: se asume cierre
+          onPipChange?.(false, "close");
+        }
+      }, 50);
     };
 
     video.addEventListener("enterpictureinpicture", onEnter);
@@ -505,9 +616,17 @@ export function VideoPlayer({
     }
   };
 
+  const ignoreNextActivityRef = useRef<boolean>(false);
+
   const toggleFullscreen = () => {
     const container = document.getElementById("video-cinema-container");
     if (!container) return;
+
+    if (controlsTimeoutRef.current) {
+      window.clearTimeout(controlsTimeoutRef.current);
+    }
+    ignoreNextActivityRef.current = true;
+    setShowControls(false);
 
     if (!document.fullscreenElement) {
       void container.requestFullscreen().catch(() => {});
@@ -531,6 +650,11 @@ export function VideoPlayer({
   };
 
   const handleUserActivity = () => {
+    if (ignoreNextActivityRef.current) {
+      ignoreNextActivityRef.current = false;
+      return;
+    }
+
     setShowControls(true);
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
@@ -538,7 +662,7 @@ export function VideoPlayer({
     if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist) {
       controlsTimeoutRef.current = window.setTimeout(() => {
         setShowControls(false);
-      }, 3500);
+      }, 2000);
     }
   };
 
@@ -547,9 +671,7 @@ export function VideoPlayer({
       if (controlsTimeoutRef.current) {
         window.clearTimeout(controlsTimeoutRef.current);
       }
-      controlsTimeoutRef.current = window.setTimeout(() => {
-        setShowControls(false);
-      }, 1000);
+      setShowControls(false);
     }
   };
 
@@ -561,13 +683,17 @@ export function VideoPlayer({
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
       controlsTimeoutRef.current = window.setTimeout(() => {
         setShowControls(false);
-      }, 3500);
+      }, 2000);
     }
   }, [showAudioMenu, showSubMenu, showPlaylist, paused]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
+      const isNowFullscreen = Boolean(document.fullscreenElement);
+      setIsFullscreen(isNowFullscreen);
+      ignoreNextActivityRef.current = true;
+      setShowControls(false);
+      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
     };
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
@@ -581,6 +707,24 @@ export function VideoPlayer({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (mediaDelete.pendingDelete) return;
+
+      if (
+        e.key === "Delete" ||
+        e.key === "Del" ||
+        e.key === "Supr" ||
+        e.code === "Delete"
+      ) {
+        if (path) {
+          e.preventDefault();
+          mediaDelete.requestDelete({
+            path,
+            title,
+            kind: "video",
+          });
+          return;
+        }
+      }
 
       switch (e.key.toLowerCase()) {
         case " ":
@@ -653,7 +797,9 @@ export function VideoPlayer({
           break;
         case "escape":
           e.preventDefault();
-          if (showPlaylist) {
+          if (mediaDelete.menu) {
+            mediaDelete.closeMenu();
+          } else if (showPlaylist) {
             setShowPlaylist(false);
           } else if (showAudioMenu) {
             setShowAudioMenu(false);
@@ -684,6 +830,12 @@ export function VideoPlayer({
     selectedTrackIdx,
     subtitlesList,
     selectedSubIdx,
+    path,
+    title,
+    mediaDelete.pendingDelete,
+    mediaDelete.menu,
+    mediaDelete.requestDelete,
+    mediaDelete.closeMenu,
     onBack,
     handleNext,
     handlePrevious,
@@ -695,6 +847,7 @@ export function VideoPlayer({
         isFullscreen ? "is-fullscreen-mode" : ""
       }`}
       id="video-cinema-container"
+      onContextMenu={handleContextMenu}
       onMouseMove={handleUserActivity}
       onMouseLeave={handleMouseLeave}
     >
@@ -731,14 +884,42 @@ export function VideoPlayer({
 
         <div className="video-header-right">
           {path ? (
-            <button
-              className="video-top-btn"
-              onClick={() => invoke("open_in_file_manager", { path }).catch(() => {})}
-              title="Abrir ubicación en el explorador"
-            >
-              <Icon name="folder" />
-              <span>Ubicación</span>
-            </button>
+            <>
+              <button
+                aria-label={favorites.isFavorite(path) ? "Quitar de favoritos" : "Añadir a favoritos"}
+                className={`video-top-btn is-icon-only ${favorites.isFavorite(path) ? "is-active" : ""}`}
+                onClick={() => {
+                  const nextFav = favorites.toggleFavorite(path, "video");
+                  setShuffleToastText(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
+                  setTimeout(() => setShuffleToastText(null), 1800);
+                }}
+                title={favorites.isFavorite(path) ? "Quitar de favoritos" : "Añadir a favoritos"}
+              >
+                <Icon name="heart" />
+              </button>
+              <button
+                aria-label="Mover a la papelera (Supr)"
+                className="video-top-btn is-icon-only"
+                onClick={() => {
+                  mediaDelete.requestDelete({
+                    path,
+                    title,
+                    kind: "video",
+                  });
+                }}
+                title="Mover a la papelera (Supr)"
+              >
+                <Icon name="trash" />
+              </button>
+              <button
+                className="video-top-btn"
+                onClick={() => invoke("open_in_file_manager", { path }).catch(() => {})}
+                title="Abrir ubicación en el explorador"
+              >
+                <Icon name="folder" />
+                <span>Ubicación</span>
+              </button>
+            </>
           ) : null}
         </div>
       </header>
@@ -747,7 +928,7 @@ export function VideoPlayer({
       <div className="video-stage-wrapper">
         <div
           className="video-stage"
-          onClick={togglePlay}
+          onContextMenu={handleContextMenu}
           onDoubleClick={toggleFullscreen}
           onMouseDown={(e) => {
             if (e.button === 0 && e.detail === 1) {
@@ -773,6 +954,11 @@ export function VideoPlayer({
                   const video = e.currentTarget;
                   setDuration(video.duration || 0);
                   setPaused(video.paused);
+
+                  // Si PiP estaba activo (ej. reemplazo de vídeo desde la galería), solicitar PiP de inmediato
+                  if (isPipActiveRef.current && document.pictureInPictureEnabled) {
+                    void requestPiPWithBoundedDimensions(video).catch(() => {});
+                  }
 
                   // Si el elemento HTML5 soporta nativamente audioTracks y tiene datos, sincronizarlos
                   const rawTracks = (video as unknown as { audioTracks?: { length: number; [i: number]: AudioTrackInfo } }).audioTracks;
@@ -1172,6 +1358,32 @@ export function VideoPlayer({
           </div>
         </div>
       </footer>
+
+      {mediaDelete.menu ? (
+        <ContextMenu
+          items={buildContextMenuItems()}
+          onClose={mediaDelete.closeMenu}
+          x={mediaDelete.menu.x}
+          y={mediaDelete.menu.y}
+        />
+      ) : null}
+
+      {mediaDelete.pendingDelete ? (
+        <ConfirmDialog
+          cancelLabel="Cancelar"
+          confirmLabel="Mover a la papelera"
+          danger
+          message={
+            <span>
+              Se enviará <strong>{mediaDelete.pendingDelete.title}</strong> a la papelera de
+              reciclaje del sistema.
+            </span>
+          }
+          onCancel={mediaDelete.cancelDelete}
+          onConfirm={mediaDelete.confirmDelete}
+          title="Mover vídeo a la papelera"
+        />
+      ) : null}
     </section>
   );
 }

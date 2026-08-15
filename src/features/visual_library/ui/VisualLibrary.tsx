@@ -13,10 +13,13 @@ import {
 } from "../../../shared/mediaTree";
 import { useFavorites } from "../../../shared/useFavorites";
 import { useMediaDelete } from "../../../shared/useMediaDelete";
+import { useMediaRename } from "../../../shared/useMediaRename";
+import { RenameMediaDialog } from "../../../shared/ui/RenameMediaDialog";
 import type { VisualFolderSource, VisualLibraryItem, VisualMediaKind } from "../model/types";
 import { VisualThumbnail } from "./VisualThumbnail";
 import { VideoThumbnail } from "./VideoThumbnail";
 import { ImageViewer } from "./ImageViewer";
+import { ImageEditor } from "./editor/ImageEditor";
 import { playlistsSaveFromItems } from "../../collections/tauri/client";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
 import "./visual-library.css";
@@ -84,8 +87,10 @@ export function VisualLibrary({
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
+  const [editingImageItem, setEditingImageItem] = useState<VisualLibraryItem | null>(null);
   const [activeImageSessionList, setActiveImageSessionList] = useState<VisualLibraryItem[] | null>(null);
   const favorites = useFavorites();
+  const mediaRename = useMediaRename({ onRefresh });
   const mediaDelete = useMediaDelete({
     confirmDeletion,
     onRefresh,
@@ -93,6 +98,9 @@ export function VisualLibrary({
       if (selectedImage && item.path === selectedImage.path) {
         setSelectedImage(null);
         setActiveImageSessionList(null);
+      }
+      if (editingImageItem && item.path === editingImageItem.path) {
+        setEditingImageItem(null);
       }
     },
   });
@@ -231,7 +239,40 @@ export function VisualLibrary({
     const target = mediaDelete.menu;
     if (!target) return [];
     const isFav = favorites.isFavorite(target.item.path);
-    return [
+    const menuItems = [];
+
+    if (isImage) {
+      menuItems.push({
+        id: "edit",
+        label: "Editar imagen",
+        icon: "crop" as const,
+        onSelect: () => {
+          const found = items.find((it) => it.path === target.item.path) || {
+            path: target.item.path,
+            title: target.item.title,
+            sourcePath: "",
+            relativeFolder: "",
+            kind: "image" as const,
+            modifiedAtMillis: Date.now(),
+            sizeBytes: 0,
+          };
+          setEditingImageItem(found);
+        },
+      });
+    }
+
+    menuItems.push(
+      {
+        id: "rename",
+        label: "Renombrar",
+        icon: "edit" as const,
+        onSelect: () =>
+          mediaRename.requestRename({
+            path: target.item.path,
+            title: target.item.title,
+            kind: isImage ? "image" : "video",
+          }),
+      },
       {
         id: "favorite",
         label: isFav ? "Quitar de favoritos" : "Añadir a favoritos",
@@ -248,12 +289,14 @@ export function VisualLibrary({
       },
       {
         id: "delete",
-        label: "Eliminar",
+        label: "Mover a la papelera",
         icon: "trash" as const,
         danger: true,
         onSelect: () => mediaDelete.requestDelete(target.item),
-      },
-    ];
+      }
+    );
+
+    return menuItems;
   };
 
   // Abrir imagen seleccionada externamente (por ejemplo, desde Inicio)
@@ -603,9 +646,11 @@ export function VisualLibrary({
       {/* Visor Cinematográfico de Imágenes con Zoom y Pan */}
       {selectedImage ? (
         <ImageViewer
+          confirmDeletion={confirmDeletion}
           item={selectedImage}
           itemsList={currentActiveList}
           onClose={closeImageViewer}
+          onRefresh={onRefresh}
           onSelectImage={(item) => handleSelectImage(item, currentActiveList)}
         />
       ) : null}
@@ -622,18 +667,47 @@ export function VisualLibrary({
       {mediaDelete.pendingDelete ? (
         <ConfirmDialog
           cancelLabel="Cancelar"
-          confirmLabel="Eliminar"
+          confirmLabel="Mover a la papelera"
+          danger
           message={
             <span>
               Se enviará <strong>{mediaDelete.pendingDelete.title}</strong> a la papelera de
-              reciclaje. Esta acción no se puede deshacer.
+              reciclaje del sistema.
             </span>
           }
           onCancel={mediaDelete.cancelDelete}
           onConfirm={mediaDelete.confirmDelete}
-          title={`Eliminar ${isImage ? "imagen" : "vídeo"}`}
+          title={`Mover ${isImage ? "imagen" : "vídeo"} a la papelera`}
         />
       ) : null}
+
+      {editingImageItem && (
+        <ImageEditor
+          item={editingImageItem}
+          onClose={() => setEditingImageItem(null)}
+          onSaveSuccess={async (savedPath, isOverwrite) => {
+            await onRefresh();
+            setEditingImageItem(null);
+            if (!isOverwrite) {
+              const fileName = savedPath.replace(/\\/g, "/").split("/").pop() || "imagen.png";
+              setSelectedImage({
+                ...editingImageItem,
+                path: savedPath,
+                title: fileName,
+              });
+            }
+          }}
+        />
+      )}
+
+      {mediaRename.pendingRename && (
+        <RenameMediaDialog
+          currentPath={mediaRename.pendingRename.path}
+          currentTitle={mediaRename.pendingRename.title}
+          onConfirm={mediaRename.confirmRename}
+          onCancel={mediaRename.cancelRename}
+        />
+      )}
     </section>
   );
 }
@@ -644,31 +718,40 @@ interface VisualCardProps {
   isImage: boolean;
   isFavorite: boolean;
   onClick: () => void;
-  onToggleFavorite?: () => void;
   onContextMenu?: (event: React.MouseEvent) => void;
   onDeleteRequest?: () => void;
+  onToggleFavorite?: () => void;
 }
 
-function VisualCard({ item, index, isImage, isFavorite, onClick, onToggleFavorite, onContextMenu, onDeleteRequest }: VisualCardProps) {
+function VisualCard({
+  item,
+  index,
+  isImage,
+  isFavorite,
+  onClick,
+  onContextMenu,
+  onDeleteRequest,
+  onToggleFavorite,
+}: VisualCardProps) {
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
-  let layoutClass = isImage
-    ? index % 3 === 0
-      ? "bento-card-vertical"
-      : index % 2 === 0
-        ? "bento-card-horizontal"
-        : "bento-card-square"
-    : "video-card-16-9";
-
-  if (isImage && dimensions && dimensions.width > 0 && dimensions.height > 0) {
-    const ratio = dimensions.width / dimensions.height;
-    if (ratio > 1.1) {
-      layoutClass = "bento-card-horizontal";
-    } else if (ratio < 0.9) {
-      layoutClass = "bento-card-vertical";
+  // Bento adaptativo determinista
+  let layoutClass = "";
+  if (isImage) {
+    if (dimensions) {
+      const ratio = dimensions.width / dimensions.height;
+      if (ratio > 1.45) {
+        layoutClass = "bento-card-horizontal";
+      } else if (ratio < 0.72) {
+        layoutClass = "bento-card-vertical";
+      } else {
+        layoutClass = "bento-card-square";
+      }
     } else {
       layoutClass = "bento-card-square";
     }
+  } else {
+    layoutClass = "video-card-16-9";
   }
 
   return (
@@ -678,7 +761,13 @@ function VisualCard({ item, index, isImage, isFavorite, onClick, onToggleFavorit
         onClick={onClick}
         onContextMenu={onContextMenu}
         onKeyDown={(event) => {
-          if (onDeleteRequest && (event.key === "Delete" || event.key === "Supr")) {
+          if (
+            onDeleteRequest &&
+            (event.key === "Delete" ||
+              event.key === "Del" ||
+              event.key === "Supr" ||
+              event.code === "Delete")
+          ) {
             event.preventDefault();
             event.stopPropagation();
             onDeleteRequest();

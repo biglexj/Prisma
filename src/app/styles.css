@@ -411,7 +411,7 @@ button:disabled {
   height: calc(100% - 68px);
   overflow-y: auto;
   container: preview-content / inline-size;
-  padding: clamp(18px, 3vw, 38px);
+  padding: 0 clamp(18px, 3vw, 38px) clamp(18px, 3vw, 38px);
   scrollbar-color: rgb(201 0 69 / 38%) transparent;
   scrollbar-width: thin;
 }
@@ -419,6 +419,7 @@ button:disabled {
 .error-banner {
   display: grid;
   gap: 3px;
+  margin-top: 14px;
   margin-bottom: 16px;
   border: 1px solid rgb(186 26 26 / 24%);
   border-radius: 16px;
@@ -444,6 +445,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  padding-top: clamp(14px, 2vw, 24px);
   margin-bottom: clamp(18px, 3cqi, 34px);
 }
 
@@ -1024,7 +1026,7 @@ input[type="range"] {
 
   .studio-content {
     height: calc(100% - 58px);
-    padding: 15px;
+    padding: 0 15px 15px;
   }
 }
 

@@ -48,7 +48,20 @@ export type IconName =
   | "sort-asc"
   | "sort-desc"
   | "filter"
-  | "check";
+  | "check"
+  | "crop"
+  | "rotate-cw"
+  | "rotate-ccw"
+  | "flip-h"
+  | "flip-v"
+  | "brush"
+  | "sliders"
+  | "undo"
+  | "save"
+  | "aspect-ratio"
+  | "sparkles"
+  | "palette"
+  | "download";
 
 const paths: Record<IconName, ReactNode> = {
   "arrow-left": <path d="M19 12H5m0 0 7 7m-7-7 7-7" />,
@@ -99,6 +112,19 @@ const paths: Record<IconName, ReactNode> = {
   "sort-desc": <><path d="M4 6h7M4 12h5M4 18h3M15 9l3-3 3 3M18 18V6" /></>,
   filter: <><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></>,
   check: <path d="M20 6 9 17l-5-5" />,
+  crop: <><path d="M6 2v14a2 2 0 0 0 2 2h14" /><path d="M18 22V8a2 2 0 0 0-2-2H2" /></>,
+  "rotate-cw": <><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.8 1.03 6.44 2.7L21 8" /><path d="M21 3v5h-5" /></>,
+  "rotate-ccw": <><path d="M3 12a9 9 0 1 0 9-9 8.95 8.95 0 0 0-6.44 2.7L3 8" /><path d="M3 3v5h5" /></>,
+  "flip-h": <><path d="M12 2v20M4 18l5-6-5-6v12ZM20 18l-5-6 5-6v12Z" /></>,
+  "flip-v": <><path d="M2 12h20M18 4l-6 5-6-5h12ZM18 20l-6-5-6 5h12Z" /></>,
+  brush: <><path d="m14 4 6 6-10 10H4v-6L14 4z" /><path d="M18 10l-4-4" /></>,
+  sliders: <><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></>,
+  undo: <><path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" /></>,
+  save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></>,
+  "aspect-ratio": <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M7 9h2v2H7zM15 13h2v2h-2z" /></>,
+  sparkles: <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3z" />,
+  palette: <><circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /><circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /><circle cx="6.5" cy="12.5" r=".5" fill="currentColor" /><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.5-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6h1.9c3.3 0 6-2.7 6-6 0-5.5-4.5-9.6-10.2-9.6Z" /></>,
+  download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>,
 };
 
 export function Icon({ name, ...props }: SVGProps<SVGSVGElement> & { name: IconName }) {
