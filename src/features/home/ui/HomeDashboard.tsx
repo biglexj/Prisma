@@ -6,6 +6,8 @@ import { VideoThumbnail } from "../../visual_library/ui/VideoThumbnail";
 import { Icon } from "../../../shared/ui/Icon";
 import "./home-dashboard.css";
 
+const HOME_ROW_ITEMS_LIMIT = 10;
+
 interface HomeDashboardProps {
   musicFolders: MusicFolderSource[];
   musicItems: MusicLibraryItem[];
@@ -71,7 +73,7 @@ export function HomeDashboard({
       {images.length > 0 ? (
         <MediaShelf title="Imágenes recientes" kicker="IMÁGENES" onOpen={onOpenImages}>
           <div className="home-media-row">
-            {images.slice(0, 8).map((item) => (
+            {images.slice(0, HOME_ROW_ITEMS_LIMIT).map((item) => (
               <button className="home-media-card" key={item.path} onClick={onOpenImages} title={item.title}>
                 <span className="home-media-frame">
                   <VisualThumbnail path={item.path} alt={item.title} className="home-media-thumbnail" />
@@ -87,7 +89,7 @@ export function HomeDashboard({
       {musicItems.length > 0 ? (
         <MediaShelf title="Volver a escuchar" kicker="MÚSICA" onOpen={() => onPlayMusic(musicItems[0].path)}>
           <div className="home-media-row">
-            {musicItems.slice(0, 8).map((item) => (
+            {musicItems.slice(0, HOME_ROW_ITEMS_LIMIT).map((item) => (
               <button className="home-media-card" key={item.path} onClick={() => onPlayMusic(item.path)} title={item.title}>
                 <span className="home-media-frame">
                   <Icon name="music" />
@@ -105,7 +107,7 @@ export function HomeDashboard({
       {videos.length > 0 ? (
         <MediaShelf title="Vídeos recientes" kicker="VÍDEOS" onOpen={onOpenVideos}>
           <div className="home-media-row">
-            {videos.slice(0, 8).map((item) => (
+            {videos.slice(0, HOME_ROW_ITEMS_LIMIT).map((item) => (
               <button className="home-media-card" key={item.path} onClick={() => onPlayVideo(item.path)} title={item.title}>
                 <span className="home-media-frame">
                   <VideoThumbnail path={item.path} title={item.title} className="home-media-thumbnail" />
