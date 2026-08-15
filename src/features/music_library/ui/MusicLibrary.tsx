@@ -2,10 +2,9 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
+import { MediaTreeView } from "../../../shared/ui/MediaTreeView";
 import {
   resolveTreeLevel,
-  FAVORITES_FOLDER_ID,
-  ALL_MEDIA_FOLDER_ID,
   type HierarchicalFolder,
 } from "../../../shared/mediaTree";
 import { useFavorites } from "../../../shared/useFavorites";
@@ -16,7 +15,7 @@ import "./music-library.css";
 
 const VISIBLE_ITEM_LIMIT = 400;
 
-type ViewMode = "timeline" | "folders";
+type ViewMode = "bento" | "folders" | "tree";
 
 interface MusicLibraryProps {
   folders: MusicFolderSource[];
@@ -52,7 +51,7 @@ export function MusicLibrary({
   onAddToQueue,
   onOpenFolders,
 }: MusicLibraryProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>("timeline");
+  const [viewMode, setViewMode] = useState<ViewMode>("bento");
   const [currentFolderPath, setCurrentFolderPath] = useState<string>("");
   const favorites = useFavorites();
 
@@ -69,7 +68,7 @@ export function MusicLibrary({
 
   const visibleItems = items.slice(0, VISIBLE_ITEM_LIMIT);
 
-  // Árbol jerárquico real con soporte para Favoritos y Todas las canciones
+  // Árbol jerárquico y colecciones
   const treeLevel = resolveTreeLevel(items, currentFolderPath, favorites.favorites, {
     allName: "Todas las canciones",
     mediaType: "music",
@@ -123,7 +122,7 @@ export function MusicLibrary({
           <span className="preview-kicker">BIBLIOTECA MUSICAL</span>
           <h1>Música</h1>
           <p>
-            Explora tu colección de canciones locales organizadas en línea de tiempo, árbol jerárquico de carpetas con carátulas y gestión de colas.
+            Explora tu colección de canciones locales en vista Bento Grid, mosaico de carpetas o árbol de directorios interactivo.
           </p>
         </div>
         <div className="music-heading-actions">
@@ -163,20 +162,28 @@ export function MusicLibrary({
 
         <div className="music-view-mode-tabs">
           <button
-            className={viewMode === "timeline" ? "is-active" : ""}
-            onClick={() => handleSwitchMode("timeline")}
-            title="Línea de tiempo"
+            className={viewMode === "bento" ? "is-active" : ""}
+            onClick={() => handleSwitchMode("bento")}
+            title="Cuadrícula Bento"
           >
-            <Icon name="clock" />
-            <span>Línea de tiempo</span>
+            <Icon name="layout" />
+            <span>Bento Grid</span>
           </button>
           <button
             className={viewMode === "folders" ? "is-active" : ""}
             onClick={() => handleSwitchMode("folders")}
-            title="Árbol de carpetas"
+            title="Colecciones de carpetas"
           >
             <Icon name="folder" />
             <span>Carpetas</span>
+          </button>
+          <button
+            className={viewMode === "tree" ? "is-active" : ""}
+            onClick={() => handleSwitchMode("tree")}
+            title="Vista en árbol"
+          >
+            <Icon name="folder-open" />
+            <span>Árbol</span>
           </button>
         </div>
       </div>
@@ -192,7 +199,8 @@ export function MusicLibrary({
             <Icon name="folder" /> Seleccionar carpeta
           </button>
         </div>
-      ) : viewMode === "timeline" ? (
+      ) : viewMode === "bento" ? (
+        /* ── 1. Cuadrícula Bento Unificada ── */
         <div className="music-bento-container" aria-busy={loading}>
           <div className="music-auto-grid">
             {visibleItems.map((item, idx) => (
@@ -207,8 +215,8 @@ export function MusicLibrary({
             ))}
           </div>
         </div>
-      ) : (
-        /* ── Vista Árbol Jerárquico de Carpetas ── */
+      ) : viewMode === "folders" ? (
+        /* ── 2. Vista de Colecciones de Carpetas ── */
         <div className="music-folder-tree-view" aria-busy={loading}>
           {isInsideFolder ? (
             <FolderBreadcrumbHeader
@@ -223,9 +231,6 @@ export function MusicLibrary({
           {/* Subcarpetas / Colecciones en este nivel */}
           {treeLevel.subfolders.length > 0 ? (
             <div className="music-folder-collections-section">
-              {isInsideFolder && treeLevel.directItems.length > 0 ? (
-                <h3 className="music-section-subtitle">Subcarpetas</h3>
-              ) : null}
               <div className="music-folder-collections">
                 {treeLevel.subfolders.map((folder) => (
                   <MusicFolderCard
@@ -242,9 +247,6 @@ export function MusicLibrary({
           {/* Canciones directas o lista de carpeta virtual */}
           {treeLevel.directItems.length > 0 ? (
             <div className="music-direct-items-section">
-              {treeLevel.subfolders.length > 0 ? (
-                <h3 className="music-section-subtitle">Canciones</h3>
-              ) : null}
               <div className="music-auto-grid">
                 {treeLevel.directItems.map((item, idx) => (
                   <MusicCard
@@ -258,16 +260,24 @@ export function MusicLibrary({
                 ))}
               </div>
             </div>
-          ) : treeLevel.subfolders.length === 0 && treeLevel.allRecursiveItems.length === 0 ? (
-            <div className="music-empty-folder-state">
-              <Icon name="folder" />
-              <p>Esta carpeta no contiene archivos de música directos.</p>
-            </div>
           ) : null}
         </div>
+      ) : (
+        /* ── 3. Vista en Árbol Expandible (Lienzo Style) ── */
+        <MediaTreeView
+          items={items}
+          mediaType="music"
+          onAddFolderToQueue={onAddToQueue ? (folderItems) => onAddToQueue(folderItems.map(toQueueItem)) : undefined}
+          onAddToQueue={onAddToQueue ? (item) => onAddToQueue([toQueueItem(item)]) : undefined}
+          onPlayFolder={(folderItems, name) => handlePlayFolder(folderItems, name)}
+          onPlayItem={(item, list) => {
+            const idx = list.findIndex((it) => it.path === item.path);
+            handlePlayItemInList(list, idx >= 0 ? idx : 0, "Árbol de Música");
+          }}
+        />
       )}
 
-      {items.length > VISIBLE_ITEM_LIMIT && viewMode === "timeline" ? (
+      {items.length > VISIBLE_ITEM_LIMIT && viewMode === "bento" ? (
         <p className="music-limit-note">
           Se muestran las {VISIBLE_ITEM_LIMIT} canciones más recientes para mantener la interfaz fluida.
         </p>

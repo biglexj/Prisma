@@ -1,0 +1,226 @@
+.media-tree-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface-container-lowest, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.08));
+  border-radius: 24px;
+  padding: 16px;
+  backdrop-filter: blur(12px);
+}
+
+.media-tree-node-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.media-tree-children {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+}
+
+.media-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.media-tree-row:hover {
+  background: var(--surface-container, rgba(255, 255, 255, 0.06));
+}
+
+.media-tree-row:active {
+  transform: scale(0.995);
+}
+
+.media-tree-row.is-directory {
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.media-tree-row.is-fav-virtual {
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  color: #fbbf24;
+}
+
+.media-tree-row.is-fav-virtual:hover {
+  background: color-mix(in srgb, #f59e0b 22%, transparent);
+}
+
+.media-tree-row.is-all-virtual {
+  background: color-mix(in srgb, var(--primary, #e05273) 12%, transparent);
+  color: var(--primary, #e05273);
+}
+
+.media-tree-row.is-all-virtual:hover {
+  background: color-mix(in srgb, var(--primary, #e05273) 22%, transparent);
+}
+
+.media-tree-chevron {
+  display: grid;
+  place-items: center;
+  color: var(--on-surface-variant);
+  transition: transform 150ms ease;
+}
+
+.media-tree-chevron svg {
+  width: 16px;
+  height: 16px;
+}
+
+.media-tree-icon {
+  display: grid;
+  place-items: center;
+  color: var(--primary, #e05273);
+}
+
+.media-tree-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.media-tree-row.is-fav-virtual .media-tree-icon {
+  color: #fbbf24;
+}
+
+.media-tree-name {
+  flex: 1;
+  font-size: 0.86rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-tree-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high, rgba(255, 255, 255, 0.08));
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.media-tree-play-btn,
+.media-tree-queue-btn {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-container-highest, rgba(255, 255, 255, 0.12));
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: all 0.16s ease;
+}
+
+.media-tree-row:hover .media-tree-play-btn,
+.media-tree-row:hover .media-tree-queue-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.media-tree-play-btn:hover {
+  background: var(--primary, #e05273);
+  transform: scale(1.1);
+}
+
+.media-tree-queue-btn:hover {
+  background: var(--album-accent, #3b82f6);
+  transform: scale(1.1);
+}
+
+.media-tree-play-btn svg,
+.media-tree-queue-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Leaf File Row */
+.media-tree-row.is-file {
+  padding: 6px 14px;
+}
+
+.media-tree-file-thumb {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.media-tree-thumb-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.media-tree-file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.media-tree-file-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-tree-file-sub {
+  font-size: 0.68rem;
+  color: var(--on-surface-variant);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-tree-file-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.media-tree-fav-btn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.media-tree-fav-btn:hover,
+.media-tree-fav-btn.is-favorite {
+  color: #e11d48;
+}
+
+.media-tree-fav-btn.is-favorite {
+  background: rgba(225, 29, 72, 0.15);
+}
+
+.media-tree-fav-btn svg {
+  width: 16px;
+  height: 16px;
+}

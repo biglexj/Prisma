@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
+import { MediaTreeView } from "../../../shared/ui/MediaTreeView";
 import {
   resolveTreeLevel,
   type HierarchicalFolder,
@@ -15,7 +16,7 @@ import "./visual-library.css";
 
 const VISIBLE_ITEM_LIMIT = 400;
 
-type ViewMode = "timeline" | "folders";
+type ViewMode = "bento" | "folders" | "tree";
 
 interface VisualLibraryProps {
   kind: VisualMediaKind;
@@ -28,11 +29,6 @@ interface VisualLibraryProps {
   onOpenFolders: () => void;
 }
 
-interface TimelineSection {
-  title: string;
-  items: VisualLibraryItem[];
-}
-
 export function VisualLibrary({
   kind,
   folders,
@@ -43,7 +39,7 @@ export function VisualLibrary({
   onOpenVideo,
   onOpenFolders,
 }: VisualLibraryProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>("timeline");
+  const [viewMode, setViewMode] = useState<ViewMode>("bento");
   const [currentFolderPath, setCurrentFolderPath] = useState<string>("");
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
@@ -62,9 +58,8 @@ export function VisualLibrary({
   };
 
   const visibleItems = items.slice(0, VISIBLE_ITEM_LIMIT);
-  const timelineSections = groupByTimeline(visibleItems);
 
-  // Árbol jerárquico real con soporte para Favoritos y Todos los archivos
+  // Árbol jerárquico y colecciones
   const treeLevel = resolveTreeLevel(items, currentFolderPath, favorites.favorites, {
     allName: isImage ? "Todas las imágenes" : "Todos los vídeos",
     mediaType: isImage ? "image" : "video",
@@ -147,8 +142,8 @@ export function VisualLibrary({
           <h1>{label}</h1>
           <p>
             {isImage
-              ? "Explora tus fotografías e ilustraciones organizadas en Bento Grid adaptativo, árbol jerárquico de carpetas y visor cinematográfico."
-              : "Organiza y reproduce tus vídeos locales con árbol de carpetas, favoritos, gestión de colas y reproductor de cine."}
+              ? "Explora tus fotografías e ilustraciones en Bento Grid adaptativo, mosaico de carpetas o árbol de directorios."
+              : "Organiza y reproduce tus vídeos locales con Bento Grid, carpetas, favoritos, árbol de directorios y reproductor de cine."}
           </p>
         </div>
         <div className="visual-heading-actions">
@@ -188,20 +183,28 @@ export function VisualLibrary({
 
         <div className="visual-view-mode-tabs">
           <button
-            className={viewMode === "timeline" ? "is-active" : ""}
-            onClick={() => handleSwitchMode("timeline")}
-            title="Línea de tiempo"
+            className={viewMode === "bento" ? "is-active" : ""}
+            onClick={() => handleSwitchMode("bento")}
+            title="Cuadrícula Bento"
           >
-            <Icon name="clock" />
-            <span>Línea de tiempo</span>
+            <Icon name="layout" />
+            <span>Bento Grid</span>
           </button>
           <button
             className={viewMode === "folders" ? "is-active" : ""}
             onClick={() => handleSwitchMode("folders")}
-            title="Árbol de carpetas"
+            title="Colecciones de carpetas"
           >
             <Icon name="folder" />
             <span>Carpetas</span>
+          </button>
+          <button
+            className={viewMode === "tree" ? "is-active" : ""}
+            onClick={() => handleSwitchMode("tree")}
+            title="Vista en árbol"
+          >
+            <Icon name="folder-open" />
+            <span>Árbol</span>
           </button>
         </div>
       </div>
@@ -217,38 +220,29 @@ export function VisualLibrary({
             <Icon name="folder" /> Seleccionar carpeta
           </button>
         </div>
-      ) : viewMode === "timeline" ? (
+      ) : viewMode === "bento" ? (
+        /* ── 1. Cuadrícula Bento Dinámica Adaptativa ── */
         <div className="visual-timeline-container" aria-busy={loading}>
-          {timelineSections.map((section) => (
-            <div className="visual-section" key={section.title}>
-              <header className="visual-section-header">
-                <h3>{section.title}</h3>
-                <span className="visual-section-count">
-                  {section.items.length} {section.items.length === 1 ? "elemento" : "elementos"}
-                </span>
-              </header>
-              <div className="visual-grid bento-grid-layout">
-                {section.items.map((item, idx) => (
-                  <VisualCard
-                    index={idx}
-                    isFavorite={favorites.isFavorite(item.path)}
-                    isImage={isImage}
-                    item={item}
-                    key={item.path}
-                    onClick={() =>
-                      isImage
-                        ? setSelectedImage(item)
-                        : onOpenVideo(item.path, section.items)
-                    }
-                    onToggleFavorite={() => favorites.toggleFavorite(item.path)}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
+          <div className="visual-grid bento-grid-layout">
+            {visibleItems.map((item, idx) => (
+              <VisualCard
+                index={idx}
+                isFavorite={favorites.isFavorite(item.path)}
+                isImage={isImage}
+                item={item}
+                key={item.path}
+                onClick={() =>
+                  isImage
+                    ? setSelectedImage(item)
+                    : onOpenVideo(item.path, visibleItems)
+                }
+                onToggleFavorite={() => favorites.toggleFavorite(item.path)}
+              />
+            ))}
+          </div>
         </div>
-      ) : (
-        /* ── Vista Árbol Jerárquico de Carpetas para Imágenes / Vídeos ── */
+      ) : viewMode === "folders" ? (
+        /* ── 2. Vista de Colecciones de Carpetas ── */
         <div className="visual-folder-tree-view" aria-busy={loading}>
           {isInsideFolder ? (
             <FolderBreadcrumbHeader
@@ -262,9 +256,6 @@ export function VisualLibrary({
           {/* Subcarpetas / Colecciones en este nivel */}
           {treeLevel.subfolders.length > 0 ? (
             <div className="visual-folder-collections-section">
-              {isInsideFolder && treeLevel.directItems.length > 0 ? (
-                <h3 className="visual-section-subtitle">Subcarpetas</h3>
-              ) : null}
               <div className="visual-folder-collections">
                 {treeLevel.subfolders.map((folder) => (
                   <VisualFolderCard
@@ -282,9 +273,6 @@ export function VisualLibrary({
           {/* Archivos directos o lista de carpeta virtual */}
           {treeLevel.directItems.length > 0 ? (
             <div className="visual-direct-items-section">
-              {treeLevel.subfolders.length > 0 ? (
-                <h3 className="visual-section-subtitle">{isImage ? "Imágenes" : "Vídeos"}</h3>
-              ) : null}
               <div className="visual-grid bento-grid-layout">
                 {treeLevel.directItems.map((item, idx) => (
                   <VisualCard
@@ -303,16 +291,25 @@ export function VisualLibrary({
                 ))}
               </div>
             </div>
-          ) : treeLevel.subfolders.length === 0 && treeLevel.allRecursiveItems.length === 0 ? (
-            <div className="visual-empty-folder-state">
-              <Icon name={isImage ? "image" : "video"} />
-              <p>Esta carpeta no contiene {label.toLowerCase()} directos.</p>
-            </div>
           ) : null}
         </div>
+      ) : (
+        /* ── 3. Vista en Árbol Expandible (Lienzo Style) ── */
+        <MediaTreeView
+          items={items}
+          mediaType={isImage ? "image" : "video"}
+          onPlayFolder={!isImage ? (folderItems) => handlePlayFolderVideos(folderItems) : undefined}
+          onPlayItem={(item, list) => {
+            if (isImage) {
+              setSelectedImage(item);
+            } else {
+              onOpenVideo(item.path, list);
+            }
+          }}
+        />
       )}
 
-      {items.length > VISIBLE_ITEM_LIMIT && viewMode === "timeline" ? (
+      {items.length > VISIBLE_ITEM_LIMIT && viewMode === "bento" ? (
         <p className="visual-limit-note">
           Se muestran los {VISIBLE_ITEM_LIMIT} elementos más recientes para mantener la interfaz ligera.
         </p>
@@ -569,41 +566,6 @@ function VisualFolderCard({
       </span>
     </div>
   );
-}
-
-function groupByTimeline(items: VisualLibraryItem[]): TimelineSection[] {
-  const groupsMap = new Map<string, VisualLibraryItem[]>();
-
-  const now = new Date();
-  const todayTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const yesterdayTimestamp = todayTimestamp - 86400000;
-
-  for (const item of items) {
-    const itemDate = new Date(item.modifiedAtMillis);
-    const itemDayTimestamp = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate()).getTime();
-
-    let title: string;
-    if (itemDayTimestamp === todayTimestamp) {
-      title = "Hoy";
-    } else if (itemDayTimestamp === yesterdayTimestamp) {
-      title = "Ayer";
-    } else {
-      title = itemDate.toLocaleDateString("es-ES", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
-    }
-
-    const existing = groupsMap.get(title);
-    if (existing) {
-      existing.push(item);
-    } else {
-      groupsMap.set(title, [item]);
-    }
-  }
-
-  return Array.from(groupsMap.entries()).map(([title, items]) => ({ title, items }));
 }
 
 function formatBytes(bytes: number) {
