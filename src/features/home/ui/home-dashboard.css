@@ -129,11 +129,12 @@
 .home-media-shelf > header { display: flex; align-items: end; justify-content: space-between; margin-bottom: 14px; }
 .home-media-shelf h2 { margin: 5px 0 0; font-size: clamp(1.25rem, 3cqi, 1.8rem); letter-spacing: -0.035em; }
 
-/* Filas de 10 elementos estilo álbum */
+/* Filas de elementos estilo álbum que ocupan el 100% del espacio */
 .home-media-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-  gap: clamp(10px, 1.2cqi, 16px);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: clamp(10px, 1.4cqi, 18px);
+  width: 100%;
 }
 
 .home-media-card {
