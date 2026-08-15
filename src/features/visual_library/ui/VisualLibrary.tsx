@@ -498,7 +498,7 @@ function VisualFolderCard({
 }: VisualFolderCardProps) {
   const isFavorites = folder.isVirtual && folder.virtualType === "favorites";
   const isAll = folder.isVirtual && folder.virtualType === "all";
-  const preview = folder.allRecursiveItems.slice(0, 4);
+  const firstItem = folder.allRecursiveItems[0];
 
   return (
     <div
@@ -506,7 +506,7 @@ function VisualFolderCard({
       onClick={onOpen}
       title={folder.displayName}
     >
-      <span className="folder-collection-mosaic">
+      <div className="folder-collection-cover-frame">
         {isFavorites ? (
           <div className="folder-virtual-card-art is-favorites">
             <Icon name="star" />
@@ -515,30 +515,27 @@ function VisualFolderCard({
           <div className="folder-virtual-card-art is-all">
             <Icon name={isImage ? "image" : "video"} />
           </div>
+        ) : firstItem ? (
+          isImage ? (
+            <VisualThumbnail
+              alt={folder.displayName}
+              className="folder-cover-thumbnail"
+              path={firstItem.path}
+            />
+          ) : (
+            <VideoThumbnail
+              className="folder-cover-thumbnail"
+              path={firstItem.path}
+              title={folder.displayName}
+            />
+          )
         ) : (
-          <>
-            {preview.map((item, i) => (
-              <span className="folder-collection-cell" key={item.path} data-index={i}>
-                {isImage ? (
-                  <VisualThumbnail
-                    alt={item.title}
-                    className="visual-thumbnail"
-                    path={item.path}
-                  />
-                ) : (
-                  <VideoThumbnail className="visual-thumbnail" path={item.path} title={item.title} />
-                )}
-              </span>
-            ))}
-            {preview.length === 0 && (
-              <span className="folder-collection-empty">
-                <Icon name={isImage ? "image" : "video"} />
-              </span>
-            )}
-          </>
+          <span className="folder-collection-empty">
+            <Icon name={isImage ? "image" : "video"} />
+          </span>
         )}
 
-        <span className="folder-collection-overlay">
+        <div className="folder-collection-hover-overlay">
           {onPlayVideo && folder.allRecursiveItems.length > 0 ? (
             <button
               className="folder-play-overlay-btn"
@@ -546,16 +543,14 @@ function VisualFolderCard({
                 e.stopPropagation();
                 onPlayVideo();
               }}
-              title="Reproducir todos los vídeos de la carpeta"
+              title="Reproducir vídeos del álbum"
             >
               <Icon name="play" />
             </button>
-          ) : (
-            <Icon name="folder-open" />
-          )}
-        </span>
-      </span>
-      <span className="folder-collection-info">
+          ) : null}
+        </div>
+      </div>
+      <div className="folder-collection-info">
         <strong className="folder-collection-name">
           {isFavorites ? "⭐ Favoritos" : folder.displayName}
         </strong>
@@ -563,7 +558,7 @@ function VisualFolderCard({
           {folder.allRecursiveItems.length}{" "}
           {folder.allRecursiveItems.length === 1 ? "archivo" : "archivos"}
         </span>
-      </span>
+      </div>
     </div>
   );
 }

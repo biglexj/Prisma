@@ -367,7 +367,7 @@ interface MusicFolderCardProps {
 function MusicFolderCard({ folder, onOpen, onPlay }: MusicFolderCardProps) {
   const isFavorites = folder.isVirtual && folder.virtualType === "favorites";
   const isAll = folder.isVirtual && folder.virtualType === "all";
-  const preview = folder.allRecursiveItems.slice(0, 4);
+  const firstCoverItem = folder.allRecursiveItems[0];
 
   return (
     <div
@@ -375,7 +375,7 @@ function MusicFolderCard({ folder, onOpen, onPlay }: MusicFolderCardProps) {
       onClick={onOpen}
       title={`Carpeta ${folder.displayName}`}
     >
-      <div className="music-folder-mosaic">
+      <div className="music-folder-cover-frame">
         {isFavorites ? (
           <div className="music-virtual-card-art is-favorites">
             <Icon name="star" />
@@ -384,19 +384,12 @@ function MusicFolderCard({ folder, onOpen, onPlay }: MusicFolderCardProps) {
           <div className="music-virtual-card-art is-all">
             <Icon name="disc" />
           </div>
+        ) : firstCoverItem ? (
+          <MusicArtwork alt={folder.displayName} className="music-folder-cover-img" path={firstCoverItem.path} />
         ) : (
-          <>
-            {preview.map((item, idx) => (
-              <span className="music-folder-mosaic-cell" key={item.path} data-index={idx}>
-                <MusicArtwork alt={item.title} className="music-card-artwork" path={item.path} />
-              </span>
-            ))}
-            {preview.length === 0 && (
-              <span className="music-folder-mosaic-empty">
-                <Icon name="folder" />
-              </span>
-            )}
-          </>
+          <span className="music-folder-empty-cover">
+            <Icon name="folder" />
+          </span>
         )}
 
         <div className="music-folder-hover-overlay">
@@ -407,7 +400,7 @@ function MusicFolderCard({ folder, onOpen, onPlay }: MusicFolderCardProps) {
                 e.stopPropagation();
                 onPlay();
               }}
-              title="Reproducir carpeta"
+              title="Reproducir álbum"
             >
               <Icon name="play" />
             </button>
