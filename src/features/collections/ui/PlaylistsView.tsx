@@ -35,6 +35,7 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
     relinkItem,
     relinkFolder,
     removeItem,
+    addFiles,
     refresh,
   } = usePlaylists();
 
@@ -113,7 +114,7 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
 
   const handleDeletePlaylist = async (meta: PlaylistMeta) => {
     const ok = window.confirm(
-      `¿Deseas eliminar permanentemente el archivo de lista "${meta.name}"?\n(Los archivos multimedia en tu disco no se borrarán).`
+      `¿Eliminar permanentemente la lista "${meta.name}"?\n\nSe borrará el archivo .m3u de tu almacenamiento. Tus canciones y vídeos originales NO se tocarán.`
     );
     if (!ok) return;
     try {
@@ -186,6 +187,39 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
     } catch (err) {
       console.error("Error reconectando desde carpeta:", err);
       alert(`Error buscando archivos: ${err}`);
+    }
+  };
+
+  const handleAddFiles = async () => {
+    if (!selectedPlaylist) return;
+    try {
+      const selected = await open({
+        multiple: true,
+        directory: false,
+        filters: [
+          {
+            name: "Audio y Vídeo",
+            extensions: [
+              "mp3", "flac", "wav", "m4a", "aac", "ogg", "opus", "wma", "aiff", "alac",
+              "mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "m4v", "ts",
+            ],
+          },
+          { name: "Todos los archivos", extensions: ["*"] },
+        ],
+        title: `Añadir archivos a "${selectedPlaylist.name}"`,
+      });
+
+      const paths: string[] = Array.isArray(selected)
+        ? selected
+        : typeof selected === "string"
+        ? [selected]
+        : [];
+
+      if (paths.length === 0) return;
+      await addFiles(selectedPlaylist.path, paths);
+    } catch (err) {
+      console.error("Error añadiendo archivos a playlist:", err);
+      alert(`Error añadiendo archivos: ${err}`);
     }
   };
 
@@ -599,6 +633,13 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
                 <Icon name="close" />
               </button>
               <button
+                className="tonal-button"
+                onClick={() => void handleAddFiles()}
+                title="Añadir archivos de audio o vídeo a esta lista"
+              >
+                <Icon name="plus" /> Añadir archivos
+              </button>
+              <button
                 className="icon-button"
                 onClick={() => toggleHidden(selectedPlaylist.path)}
                 title={selectedPlaylist.isHidden ? "Desocultar lista" : "Ocultar lista"}
@@ -650,9 +691,15 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
               <span>Cargando contenido de la lista…</span>
             </div>
           ) : selectedItems.length === 0 ? (
-            <p className="playlist-empty-text">
-              Esta lista está vacía. Añade canciones o vídeos desde el explorador.
-            </p>
+            <div className="playlist-empty-text">
+              <p>Esta lista está vacía.</p>
+              <button
+                className="tonal-button"
+                onClick={() => void handleAddFiles()}
+              >
+                <Icon name="plus" /> Añadir archivos de audio o vídeo
+              </button>
+            </div>
           ) : (
             <div className="playlist-items-table">
               <div className="playlist-table-header">

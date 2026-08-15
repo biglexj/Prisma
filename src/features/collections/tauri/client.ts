@@ -178,6 +178,27 @@ export async function playlistsRemoveItem(
   });
 }
 
+export async function playlistsAddFiles(
+  playlistPath: string,
+  filePaths: string[]
+): Promise<PlaylistItem[]> {
+  const result = await invoke<Array<{
+    path: string;
+    title: string;
+    duration_secs: number;
+    is_available: boolean;
+    is_video: boolean;
+  }>>("playlists_add_files", { playlistPath, filePaths });
+
+  return result.map((item) => ({
+    path: item.path,
+    title: item.title,
+    durationSecs: item.duration_secs,
+    isAvailable: item.is_available,
+    isVideo: item.is_video,
+  }));
+}
+
 export async function playlistsRelinkItem(
   playlistPath: string,
   oldItemPath: string,

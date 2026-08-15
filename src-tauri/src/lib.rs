@@ -17,8 +17,8 @@ use app::commands::playback::{
     playback_toggle_pause,
 };
 use app::commands::playlists::{
-    playlists_add_item, playlists_clean_missing, playlists_create, playlists_delete,
-    playlists_import, playlists_list, playlists_read, playlists_relink_folder,
+    playlists_add_files, playlists_add_item, playlists_clean_missing, playlists_create,
+    playlists_delete, playlists_import, playlists_list, playlists_read, playlists_relink_folder,
     playlists_relink_item, playlists_remove_item, playlists_save_from_items,
     playlists_toggle_hidden,
 };
@@ -224,6 +224,7 @@ pub fn run() {
             playlists_relink_item,
             playlists_relink_folder,
             playlists_add_item,
+            playlists_add_files,
             playlists_remove_item,
             favorites_get_all,
             favorites_toggle,

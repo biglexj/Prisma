@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { PlaylistItem, PlaylistMeta } from "./model/types";
 import {
+  playlistsAddFiles,
   playlistsAddItem,
   playlistsCleanMissing,
   playlistsCreate,
@@ -263,6 +264,36 @@ export function usePlaylists() {
     [refresh, selectPlaylist, selectedPlaylist]
   );
 
+  /** Añade uno o más archivos a la lista y persiste en disco inmediatamente. */
+  const addFiles = useCallback(
+    async (playlistPath: string, filePaths: string[]) => {
+      if (filePaths.length === 0) return;
+      try {
+        const updated = await playlistsAddFiles(playlistPath, filePaths);
+        // Actualizar caché y estado de forma síncrona con lo que devuelve Rust
+        cachedSelectedItems = updated;
+        setSelectedItems(updated);
+        setSelectedPlaylist((prev) => {
+          if (!prev || prev.path !== playlistPath) return prev;
+          const validCount = updated.filter((it) => it.isAvailable !== false).length;
+          const updatedMeta: PlaylistMeta = {
+            ...prev,
+            itemCount: updated.length,
+            validCount,
+          };
+          cachedSelectedPlaylist = updatedMeta;
+          return updatedMeta;
+        });
+        await refresh(false);
+        return updated;
+      } catch (err) {
+        console.error("Error añadiendo archivos a playlist:", err);
+        throw err;
+      }
+    },
+    [refresh]
+  );
+
   return {
     playlists,
     loading,
@@ -282,6 +313,7 @@ export function usePlaylists() {
     relinkItem,
     relinkFolder,
     addItem,
+    addFiles,
     removeItem,
   };
 }

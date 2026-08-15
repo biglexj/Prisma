@@ -30,6 +30,9 @@ export function ImageViewer({
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isAutoFitActive, setIsAutoFitActive] = useState(false);
+  const [zoomToast, setZoomToast] = useState<string | null>(null);
+  const zoomToastTimerRef = useRef<number | null>(null);
 
   const imgRef = useRef<HTMLImageElement | null>(null);
   const favorites = useFavorites();
@@ -37,10 +40,17 @@ export function ImageViewer({
   const activeList = itemsList.length > 0 ? itemsList : [currentItem];
   const currentIndex = activeList.findIndex((it) => it.path === currentItem.path);
 
+  const showZoomToast = (scale: number) => {
+    if (zoomToastTimerRef.current) window.clearTimeout(zoomToastTimerRef.current);
+    setZoomToast(`${Math.round(scale * 100)}%`);
+    zoomToastTimerRef.current = window.setTimeout(() => setZoomToast(null), 1200);
+  };
+
   const resetImageTransform = () => {
     setZoomScale(1);
     setPanOffset({ x: 0, y: 0 });
     setIsDragging(false);
+    setIsAutoFitActive(false);
   };
 
   useEffect(() => {
@@ -80,11 +90,26 @@ export function ImageViewer({
     }
   };
 
+  const applyAutoFitToImage = (img: HTMLImageElement) => {
+    const naturalW = img.naturalWidth || img.width;
+    const naturalH = img.naturalHeight || img.height;
+    if (!naturalW || !naturalH) return;
+    const scaleX = window.innerWidth / naturalW;
+    const scaleY = window.innerHeight / naturalH;
+    const fitScale = Math.round(Math.min(scaleX, scaleY) * 100) / 100;
+    setZoomScale(fitScale);
+    setPanOffset({ x: 0, y: 0 });
+    setIsDragging(false);
+  };
+
   const handlePreviousImage = () => {
     if (activeList.length === 0 || currentIndex < 0) return;
     const prevIndex = (currentIndex - 1 + activeList.length) % activeList.length;
     const nextItem = activeList[prevIndex];
-    resetImageTransform();
+    // Mantener pan/drag, pero resetear pan; autofit se re-aplica en onLoad si está activo
+    setPanOffset({ x: 0, y: 0 });
+    setIsDragging(false);
+    if (!isAutoFitActive) setZoomScale(1);
     setCurrentItem(nextItem);
     onSelectImage?.(nextItem);
   };
@@ -93,25 +118,35 @@ export function ImageViewer({
     if (activeList.length === 0 || currentIndex < 0) return;
     const nextIndex = (currentIndex + 1) % activeList.length;
     const nextItem = activeList[nextIndex];
-    resetImageTransform();
+    setPanOffset({ x: 0, y: 0 });
+    setIsDragging(false);
+    if (!isAutoFitActive) setZoomScale(1);
     setCurrentItem(nextItem);
     onSelectImage?.(nextItem);
   };
 
   const handleZoomIn = () => {
-    setZoomScale((prev) => Math.min(5, Math.round((prev + 0.25) * 100) / 100));
+    setIsAutoFitActive(false);
+    setZoomScale((prev) => {
+      const next = Math.min(5, Math.round((prev + 0.25) * 100) / 100);
+      showZoomToast(next);
+      return next;
+    });
   };
 
   const handleZoomOut = () => {
+    setIsAutoFitActive(false);
     setZoomScale((prev) => {
       const next = Math.max(0.5, Math.round((prev - 0.25) * 100) / 100);
       if (next <= 1) setPanOffset({ x: 0, y: 0 });
+      showZoomToast(next);
       return next;
     });
   };
 
   const handleResetZoom = () => {
     resetImageTransform();
+    showZoomToast(1);
   };
 
   const handleToggleZoom = () => {
@@ -130,16 +165,17 @@ export function ImageViewer({
     const naturalH = img.naturalHeight || img.height;
     if (!naturalW || !naturalH) return;
 
-    const availableW = window.innerWidth * 0.94;
-    const availableH = window.innerHeight * 0.86;
+    // Dimensiones completas de la pantalla al 100% (sin márgenes que dejen pedacitos arriba)
+    const availableW = window.innerWidth;
+    const availableH = window.innerHeight;
 
     const scaleX = availableW / naturalW;
     const scaleY = availableH / naturalH;
 
-    // Escalar para topar perfectamente el alto o ancho de la pantalla
+    // Escalar para topar exactamente el 100% del alto o ancho de la pantalla
     const fitScale = Math.round(Math.min(scaleX, scaleY) * 100) / 100;
 
-    if (Math.abs(zoomScale - fitScale) < 0.04 && fitScale !== 1) {
+    if (Math.abs(zoomScale - fitScale) < 0.02 && fitScale !== 1) {
       resetImageTransform();
     } else {
       setZoomScale(fitScale);
@@ -148,12 +184,18 @@ export function ImageViewer({
   };
 
   const handleWheel = (e: React.WheelEvent) => {
+    setIsAutoFitActive(false);
     if (e.deltaY < 0) {
-      setZoomScale((prev) => Math.min(5, Math.round((prev + 0.15) * 100) / 100));
+      setZoomScale((prev) => {
+        const next = Math.min(5, Math.round((prev + 0.15) * 100) / 100);
+        showZoomToast(next);
+        return next;
+      });
     } else {
       setZoomScale((prev) => {
         const next = Math.max(0.5, Math.round((prev - 0.15) * 100) / 100);
         if (next <= 1) setPanOffset({ x: 0, y: 0 });
+        showZoomToast(next);
         return next;
       });
     }

@@ -332,6 +332,45 @@ pub fn clean_missing_from_m3u(m3u_path: &Path) -> Result<Vec<PlaylistItem>, Stri
     Ok(valid_items)
 }
 
+/// Añade uno o más archivos multimedia a una lista .m3u existente y la guarda en disco de inmediato.
+pub fn add_files_to_m3u(m3u_path: &Path, file_paths: &[String]) -> Result<Vec<PlaylistItem>, String> {
+    if !m3u_path.is_file() {
+        return Err(format!("El archivo de lista no existe: {}", m3u_path.display()));
+    }
+
+    let mut items = parse_playlist(m3u_path)?;
+    for file_path in file_paths {
+        let p = Path::new(file_path);
+        let is_available = p.is_file();
+        let ext = p
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_lowercase())
+            .unwrap_or_default();
+        let is_video = VIDEO_EXTENSIONS.contains(&ext.as_str());
+        let title = p
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Pista".to_owned());
+
+        items.push(PlaylistItem {
+            path: file_path.to_owned(),
+            title,
+            duration_secs: 0,
+            is_available,
+            is_video,
+        });
+    }
+
+    let name = m3u_path
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "Lista".to_owned());
+
+    write_m3u(m3u_path, &name, &items)?;
+    Ok(items)
+}
+
 /// Reconecta una pista específica cambiando su ruta por la nueva ruta válida en el archivo de lista .m3u
 pub fn relink_item_in_m3u(
     m3u_path: &Path,

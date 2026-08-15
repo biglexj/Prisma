@@ -5,8 +5,9 @@ use crate::{
     app::state::{MusicLibraryState, VisualLibraryState},
     features::visual_library::VisualMediaKind,
     infrastructure::playlists::{
-        HiddenPlaylistsStore, PlaylistItem, PlaylistMeta, RelinkResult, clean_missing_from_m3u, delete_m3u,
-        parse_m3u, relink_folder_in_m3u, relink_item_in_m3u, scan_playlists_recursive, write_m3u,
+        HiddenPlaylistsStore, PlaylistItem, PlaylistMeta, RelinkResult, add_files_to_m3u,
+        clean_missing_from_m3u, delete_m3u, parse_m3u, relink_folder_in_m3u, relink_item_in_m3u,
+        scan_playlists_recursive, write_m3u,
     },
 };
 
@@ -294,6 +295,15 @@ pub fn playlists_add_item(
         .unwrap_or_default();
     write_m3u(m3u_path, &name, &items)?;
     Ok(items.len())
+}
+
+/// Añade uno o más archivos multimedia a una lista de reproducción existente y la guarda en disco de inmediato.
+#[tauri::command]
+pub fn playlists_add_files(
+    playlist_path: String,
+    file_paths: Vec<String>,
+) -> Result<Vec<PlaylistItem>, String> {
+    add_files_to_m3u(Path::new(&playlist_path), &file_paths)
 }
 
 /// Elimina un ítem de una playlist por su ruta.

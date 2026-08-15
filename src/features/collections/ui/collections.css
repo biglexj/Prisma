@@ -775,9 +775,17 @@
 }
 
 .playlist-empty-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
   padding: 16px 0;
   color: var(--on-surface-variant);
   font-size: 0.86rem;
+}
+
+.playlist-empty-text p {
+  margin: 0;
 }
 
 .playlist-items-table {
