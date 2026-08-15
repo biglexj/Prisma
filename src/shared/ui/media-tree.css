@@ -64,6 +64,30 @@
   background: color-mix(in srgb, var(--primary, #e05273) 22%, transparent);
 }
 
+.media-tree-row.is-storage-root {
+  background: color-mix(in srgb, #06b6d4 12%, transparent);
+  color: #22d3ee;
+  font-weight: 700;
+}
+
+.media-tree-row.is-storage-root:hover {
+  background: color-mix(in srgb, #06b6d4 22%, transparent);
+}
+
+.media-tree-row.is-storage-root .media-tree-icon {
+  color: #22d3ee;
+}
+
+.media-tree-row.is-storage-root .media-tree-chevron {
+  color: #22d3ee;
+}
+
+.media-tree-row.is-storage-root .media-tree-badge {
+  background: color-mix(in srgb, #06b6d4 20%, transparent);
+  color: #22d3ee;
+  font-weight: 800;
+}
+
 .media-tree-chevron {
   display: grid;
   place-items: center;

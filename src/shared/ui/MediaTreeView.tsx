@@ -35,11 +35,11 @@ interface MediaTreeViewProps<T extends MediaTreeItem> {
   onAddFolderToQueue?: (items: T[]) => void;
 }
 
-// Memoria de sesión para preservar las carpetas expandidas por tipo de medio
+// Memoria de sesión para preservar las carpetas expandidas por tipo de medio (Almacenamiento Local siempre abierto por defecto)
 const sessionTreeExpandedPaths = new Map<string, Set<string>>([
-  ["music", new Set<string>()],
-  ["image", new Set<string>()],
-  ["video", new Set<string>()],
+  ["music", new Set<string>(["storage_root"])],
+  ["image", new Set<string>(["storage_root"])],
+  ["video", new Set<string>(["storage_root"])],
 ]);
 
 const TREE_CHILDREN_DISPLAY_LIMIT = 250;
@@ -54,7 +54,11 @@ export function MediaTreeView<T extends MediaTreeItem>({
 }: MediaTreeViewProps<T>) {
   const favorites = useFavorites();
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => {
-    return new Set(sessionTreeExpandedPaths.get(mediaType) || []);
+    const existing = sessionTreeExpandedPaths.get(mediaType);
+    if (existing && existing.size > 0) {
+      return new Set(existing);
+    }
+    return new Set<string>(["storage_root"]);
   });
 
   const toggleExpand = (path: string) => {
@@ -215,6 +219,7 @@ export function MediaTreeView<T extends MediaTreeItem>({
     if (node.isDirectory) {
       const isFav = node.isVirtual && node.virtualType === "favorites";
       const isAll = node.isVirtual && node.virtualType === "all";
+      const isStorageRoot = node.path === "storage_root";
 
       const visibleChildren = isExpanded
         ? node.children.slice(0, TREE_CHILDREN_DISPLAY_LIMIT)
@@ -224,7 +229,7 @@ export function MediaTreeView<T extends MediaTreeItem>({
       return (
         <div className="media-tree-node-group" key={node.path}>
           <div
-            className={`media-tree-row is-directory ${isFav ? "is-fav-virtual" : ""} ${isAll ? "is-all-virtual" : ""}`}
+            className={`media-tree-row is-directory ${isFav ? "is-fav-virtual" : ""} ${isAll ? "is-all-virtual" : ""} ${isStorageRoot ? "is-storage-root" : ""}`}
             onClick={() => toggleExpand(node.path)}
             style={{ paddingLeft: `${indentPx + 12}px` }}
           >
