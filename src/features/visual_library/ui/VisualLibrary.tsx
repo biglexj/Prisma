@@ -8,7 +8,7 @@ import { VisualThumbnail } from "./VisualThumbnail";
 import { VideoThumbnail } from "./VideoThumbnail";
 import "./visual-library.css";
 
-const VISIBLE_ITEM_LIMIT = 240;
+const VISIBLE_ITEM_LIMIT = 300;
 
 type ViewMode = "timeline" | "folders";
 type FolderNavState = { folderName: string } | null;
@@ -20,7 +20,7 @@ interface VisualLibraryProps {
   loading: boolean;
   error: string | null;
   onAdd: (path: string) => Promise<void>;
-  onOpenVideo: (path: string) => void;
+  onOpenVideo: (path: string, sessionItems?: VisualLibraryItem[]) => void;
   onOpenFolders: () => void;
 }
 
@@ -47,18 +47,10 @@ export function VisualLibrary({
   const [viewMode, setViewMode] = useState<ViewMode>("timeline");
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<FolderNavState>(null);
+  const [isSlideshowActive, setIsSlideshowActive] = useState(false);
 
   const isImage = kind === "image";
   const label = isImage ? "Imágenes" : "Vídeos";
-
-  useEffect(() => {
-    if (!selectedImage) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSelectedImage(null);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [selectedImage]);
 
   const chooseFolder = async () => {
     const selection = await open({
@@ -76,6 +68,66 @@ export function VisualLibrary({
     ? (folderSections.find((s) => s.folderName === selectedFolder.folderName) ?? null)
     : null;
 
+  // Active list for current view (for next/prev in image viewer or video player queue)
+  const currentActiveList = openedFolder ? openedFolder.items : items;
+  const selectedImageIndex = selectedImage
+    ? currentActiveList.findIndex((it) => it.path === selectedImage.path)
+    : -1;
+
+  const handlePreviousImage = () => {
+    if (currentActiveList.length === 0 || selectedImageIndex < 0) return;
+    const prevIdx =
+      selectedImageIndex > 0 ? selectedImageIndex - 1 : currentActiveList.length - 1;
+    setSelectedImage(currentActiveList[prevIdx]);
+  };
+
+  const handleNextImage = () => {
+    if (currentActiveList.length === 0 || selectedImageIndex < 0) return;
+    const nextIdx =
+      selectedImageIndex < currentActiveList.length - 1 ? selectedImageIndex + 1 : 0;
+    setSelectedImage(currentActiveList[nextIdx]);
+  };
+
+  // Keyboard navigation for image lightbox
+  useEffect(() => {
+    if (!selectedImage) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedImage(null);
+        setIsSlideshowActive(false);
+      } else if (event.key === "ArrowLeft") {
+        handlePreviousImage();
+      } else if (event.key === "ArrowRight") {
+        handleNextImage();
+      } else if (event.key.toLowerCase() === " ") {
+        event.preventDefault();
+        setIsSlideshowActive((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedImage, selectedImageIndex, currentActiveList]);
+
+  // Slideshow timer
+  useEffect(() => {
+    if (!isSlideshowActive || !selectedImage) return;
+    const timer = window.setInterval(() => {
+      handleNextImage();
+    }, 3500);
+    return () => window.clearInterval(timer);
+  }, [isSlideshowActive, selectedImage, selectedImageIndex, currentActiveList]);
+
+  const handlePlayAllVideos = () => {
+    if (items.length === 0) return;
+    onOpenVideo(items[0].path, items);
+  };
+
+  const handlePlayFolderVideos = (folderName: string) => {
+    const target = folderSections.find((s) => s.folderName === folderName);
+    if (!target || target.items.length === 0) return;
+    onOpenVideo(target.items[0].path, target.items);
+  };
+
   const handleSwitchMode = (mode: ViewMode) => {
     setViewMode(mode);
     setSelectedFolder(null);
@@ -89,11 +141,16 @@ export function VisualLibrary({
           <h1>{label}</h1>
           <p>
             {isImage
-              ? "Explora tus fotografías e ilustraciones organizadas en Bento Grid (4x4, 4x2, 2x4) según su proporción nativa."
-              : "Organiza y reproduce tus vídeos locales en tu pantalla de cine y reproductor independiente."}
+              ? "Explora tus fotografías e ilustraciones organizadas en Bento Grid adaptativo, árbol de carpetas y visor cinematográfico."
+              : "Organiza y reproduce tus vídeos locales con gestión de colas, salto entre pistas y reproductor de cine."}
           </p>
         </div>
         <div className="visual-heading-actions">
+          {!isImage && items.length > 0 ? (
+            <button className="tonal-button is-primary" onClick={handlePlayAllVideos} title="Reproducir todos los vídeos">
+              <Icon name="play" /> Reproducir todo
+            </button>
+          ) : null}
           <button className="tonal-button" onClick={onOpenFolders}>
             <Icon name="folder" /> Administrar fuentes
           </button>
@@ -171,7 +228,11 @@ export function VisualLibrary({
                     isImage={isImage}
                     item={item}
                     key={item.path}
-                    onClick={() => (isImage ? setSelectedImage(item) : onOpenVideo(item.path))}
+                    onClick={() =>
+                      isImage
+                        ? setSelectedImage(item)
+                        : onOpenVideo(item.path, section.items)
+                    }
                   />
                 ))}
               </div>
@@ -179,12 +240,13 @@ export function VisualLibrary({
           ))}
         </div>
       ) : openedFolder ? (
-        /* ── Vista interna de carpeta ── */
+        /* ── Vista interna de carpeta con Breadcrumb de Lienzo ── */
         <div className="visual-folder-view" aria-busy={loading}>
           <FolderBreadcrumbHeader
             currentPath={openedFolder.folderName}
             itemCount={openedFolder.items.length}
             onNavigate={() => setSelectedFolder(null)}
+            onPlayFolder={!isImage ? () => handlePlayFolderVideos(openedFolder.folderName) : undefined}
           />
           <div className="visual-grid bento-grid-layout">
             {openedFolder.items.map((item, idx) => (
@@ -193,13 +255,17 @@ export function VisualLibrary({
                 isImage={isImage}
                 item={item}
                 key={item.path}
-                onClick={() => (isImage ? setSelectedImage(item) : onOpenVideo(item.path))}
+                onClick={() =>
+                  isImage
+                    ? setSelectedImage(item)
+                    : onOpenVideo(item.path, openedFolder.items)
+                }
               />
             ))}
           </div>
         </div>
       ) : (
-        /* ── Vista de colecciones de carpetas (2×N) ── */
+        /* ── Vista de colecciones de carpetas en mosaico ── */
         <div className="visual-folder-collections" aria-busy={loading}>
           {folderSections.map((section) => (
             <FolderCollectionCard
@@ -207,6 +273,7 @@ export function VisualLibrary({
               key={section.folderName}
               section={section}
               onOpen={() => setSelectedFolder({ folderName: section.folderName })}
+              onPlayVideo={!isImage ? () => handlePlayFolderVideos(section.folderName) : undefined}
             />
           ))}
         </div>
@@ -218,21 +285,67 @@ export function VisualLibrary({
         </p>
       ) : null}
 
+      {/* Visor Cinematográfico de Imágenes */}
       {selectedImage ? (
         <div
           aria-label={selectedImage.title}
           aria-modal="true"
           className="image-viewer"
-          onClick={() => setSelectedImage(null)}
+          onClick={() => {
+            setSelectedImage(null);
+            setIsSlideshowActive(false);
+          }}
           role="dialog"
         >
-          <button
-            aria-label="Cerrar vista previa"
-            className="image-viewer-close"
-            onClick={() => setSelectedImage(null)}
-          >
-            <Icon name="close" />
-          </button>
+          <div className="image-viewer-top-bar" onClick={(e) => e.stopPropagation()}>
+            <span className="image-viewer-counter">
+              Foto {selectedImageIndex >= 0 ? selectedImageIndex + 1 : 1} de {currentActiveList.length}
+            </span>
+            <button
+              className={`image-viewer-slideshow-btn ${isSlideshowActive ? "is-active" : ""}`}
+              onClick={() => setIsSlideshowActive(!isSlideshowActive)}
+              title={isSlideshowActive ? "Detener presentación" : "Iniciar presentación automática"}
+            >
+              <Icon name="play" />
+              <span>{isSlideshowActive ? "Pausar Diapositivas" : "Presentación"}</span>
+            </button>
+            <button
+              aria-label="Cerrar vista previa"
+              className="image-viewer-close"
+              onClick={() => {
+                setSelectedImage(null);
+                setIsSlideshowActive(false);
+              }}
+            >
+              <Icon name="close" />
+            </button>
+          </div>
+
+          {currentActiveList.length > 1 ? (
+            <>
+              <button
+                className="image-viewer-nav-btn is-prev"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePreviousImage();
+                }}
+                title="Imagen anterior (←)"
+              >
+                <Icon name="chevron-left" />
+              </button>
+              <button
+                className="image-viewer-nav-btn is-next"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNextImage();
+                }}
+                title="Imagen siguiente (→)"
+              >
+                <Icon name="chevron-right" />
+              </button>
+            </>
+          ) : null}
+
           <figure onClick={(event) => event.stopPropagation()}>
             <img
               alt={selectedImage.title}
@@ -261,13 +374,14 @@ interface VisualCardProps {
 function VisualCard({ item, index, isImage, onClick }: VisualCardProps) {
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
-  // Videos start neutral (square) until VideoThumbnail reports real dimensions.
-  // Images use an index-based fallback until the real thumbnail loads.
   let bentoClass = isImage
-    ? index % 3 === 0 ? "bento-card-vertical" : index % 2 === 0 ? "bento-card-horizontal" : "bento-card-square"
+    ? index % 3 === 0
+      ? "bento-card-vertical"
+      : index % 2 === 0
+      ? "bento-card-horizontal"
+      : "bento-card-square"
     : "bento-card-square";
 
-  // Override with real aspect ratio once dimensions are known (10% tolerance)
   if (dimensions && dimensions.width > 0 && dimensions.height > 0) {
     const ratio = dimensions.width / dimensions.height;
     if (ratio > 1.1) {
@@ -374,14 +488,19 @@ interface FolderCollectionCardProps {
   section: FolderSection;
   isImage: boolean;
   onOpen: () => void;
+  onPlayVideo?: () => void;
 }
 
-function FolderCollectionCard({ section, isImage, onOpen }: FolderCollectionCardProps) {
-  // Use first 4 items for the mosaic preview
+function FolderCollectionCard({
+  section,
+  isImage,
+  onOpen,
+  onPlayVideo,
+}: FolderCollectionCardProps) {
   const preview = section.items.slice(0, 4);
 
   return (
-    <button className="folder-collection-card" onClick={onOpen} title={section.folderName}>
+    <div className="folder-collection-card" onClick={onOpen} title={section.folderName}>
       <span className="folder-collection-mosaic">
         {preview.map((item, i) => (
           <span className="folder-collection-cell" key={item.path} data-index={i}>
@@ -402,7 +521,20 @@ function FolderCollectionCard({ section, isImage, onOpen }: FolderCollectionCard
           </span>
         )}
         <span className="folder-collection-overlay">
-          <Icon name="folder-open" />
+          {onPlayVideo ? (
+            <button
+              className="folder-play-overlay-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlayVideo();
+              }}
+              title="Reproducir todos los vídeos de la carpeta"
+            >
+              <Icon name="play" />
+            </button>
+          ) : (
+            <Icon name="folder-open" />
+          )}
         </span>
       </span>
       <span className="folder-collection-info">
@@ -411,7 +543,6 @@ function FolderCollectionCard({ section, isImage, onOpen }: FolderCollectionCard
           {section.items.length} {section.items.length === 1 ? "archivo" : "archivos"}
         </small>
       </span>
-    </button>
+    </div>
   );
 }
-

@@ -10,6 +10,7 @@ import { MusicLibrary } from "../features/music_library/ui/MusicLibrary";
 import { VisualLibrary } from "../features/visual_library/ui/VisualLibrary";
 import { VideoPlayer } from "../features/visual_library/ui/VideoPlayer";
 import { useVisualLibrary } from "../features/visual_library/useVisualLibrary";
+import type { VisualLibraryItem } from "../features/visual_library/model/types";
 import { AppSettings } from "./ui/AppSettings";
 import { AppSidebar, type AppView } from "./ui/AppSidebar";
 import { LibrarySources } from "./ui/LibrarySources";
@@ -28,6 +29,7 @@ const VIEW_TITLES: Record<AppView, string> = {
 export function App() {
   const [activeView, setActiveView] = useState<AppView>("home");
   const [activeVideoPath, setActiveVideoPath] = useState<string | null>(null);
+  const [activeVideoSessionItems, setActiveVideoSessionItems] = useState<VisualLibraryItem[]>([]);
   const { theme, setTheme } = useTheme();
   const playback = usePlaybackController();
   const library = useMusicLibrary();
@@ -52,11 +54,12 @@ export function App() {
     }
   };
 
-  const playVideoItem = (path: string) => {
+  const playVideoItem = (path: string, sessionItems?: VisualLibraryItem[]) => {
     if (!playback.snapshot.paused) {
       void playback.toggle();
     }
     setActiveVideoPath(path);
+    setActiveVideoSessionItems(sessionItems && sessionItems.length > 0 ? sessionItems : videoLibrary.items);
     setActiveView("video_player");
   };
 
@@ -200,7 +203,7 @@ export function App() {
               onBack={() => setActiveView("videos")}
               onSelectVideo={(path) => setActiveVideoPath(path)}
               path={activeVideoPath}
-              videoItems={videoLibrary.items}
+              videoItems={activeVideoSessionItems.length > 0 ? activeVideoSessionItems : videoLibrary.items}
             />
           ) : null}
 
