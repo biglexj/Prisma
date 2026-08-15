@@ -316,8 +316,9 @@ pub fn playlists_relink_item(
     playlist_path: String,
     old_item_path: String,
     new_item_path: String,
+    item_index: Option<usize>,
 ) -> Result<Vec<PlaylistItem>, String> {
-    relink_item_in_m3u(Path::new(&playlist_path), &old_item_path, &new_item_path)
+    relink_item_in_m3u(Path::new(&playlist_path), item_index, &old_item_path, &new_item_path)
 }
 
 /// Escanea recursivamente una carpeta para reconectar automáticamente pistas no encontradas (estilo DaVinci Relink).

@@ -181,7 +181,8 @@ export async function playlistsRemoveItem(
 export async function playlistsRelinkItem(
   playlistPath: string,
   oldItemPath: string,
-  newItemPath: string
+  newItemPath: string,
+  itemIndex?: number
 ): Promise<PlaylistItem[]> {
   const result = await invoke<Array<{
     path: string;
@@ -193,6 +194,7 @@ export async function playlistsRelinkItem(
     playlistPath,
     oldItemPath,
     newItemPath,
+    itemIndex: itemIndex !== undefined ? itemIndex : null,
   });
 
   return result.map((item) => ({

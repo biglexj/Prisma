@@ -333,34 +333,90 @@ pub fn clean_missing_from_m3u(m3u_path: &Path) -> Result<Vec<PlaylistItem>, Stri
 }
 
 /// Reconecta una pista específica cambiando su ruta por la nueva ruta válida en el archivo de lista .m3u
-pub fn relink_item_in_m3u(m3u_path: &Path, old_path: &str, new_path: &str) -> Result<Vec<PlaylistItem>, String> {
+pub fn relink_item_in_m3u(
+    m3u_path: &Path,
+    item_index: Option<usize>,
+    old_path: &str,
+    new_path: &str,
+) -> Result<Vec<PlaylistItem>, String> {
+    if !m3u_path.is_file() {
+        return Err(format!("El archivo de lista no existe: {}", m3u_path.display()));
+    }
+
     let mut items = parse_playlist(m3u_path)?;
-    let mut found = false;
-    for item in &mut items {
-        if item.path == old_path
-            || item.path.replace('/', "\\").eq_ignore_ascii_case(&old_path.replace('/', "\\"))
-        {
-            item.path = new_path.to_owned();
-            let p = Path::new(new_path);
-            item.is_available = p.is_file();
-            let ext = p
-                .extension()
-                .and_then(|e| e.to_str())
-                .map(|e| e.to_lowercase())
-                .unwrap_or_default();
-            item.is_video = VIDEO_EXTENSIONS.contains(&ext.as_str());
-            found = true;
+    let mut updated_idx: Option<usize> = None;
+
+    // 1. Si se especificó item_index y está dentro del rango
+    if let Some(idx) = item_index {
+        if idx < items.len() {
+            updated_idx = Some(idx);
         }
     }
 
-    if !found {
+    // 2. Si no se encontró por índice, buscar por coincidencia de ruta normalizada
+    if updated_idx.is_none() {
+        let norm_old = old_path.replace('/', "\\").to_lowercase();
+        for (i, item) in items.iter().enumerate() {
+            let norm_item = item.path.replace('/', "\\").to_lowercase();
+            if norm_item == norm_old
+                || (!norm_old.is_empty() && norm_item.ends_with(&norm_old))
+                || (!norm_item.is_empty() && norm_old.ends_with(&norm_item))
+            {
+                updated_idx = Some(i);
+                break;
+            }
+        }
+    }
+
+    // 3. Fallback: buscar por nombre de archivo si aún no se encontró
+    if updated_idx.is_none() {
+        let old_file_name = Path::new(old_path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.to_lowercase());
+        if let Some(target_name) = old_file_name {
+            for (i, item) in items.iter().enumerate() {
+                let item_file_name = Path::new(&item.path)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map(|s| s.to_lowercase());
+                if item_file_name.as_deref() == Some(&target_name) {
+                    updated_idx = Some(i);
+                    break;
+                }
+            }
+        }
+    }
+
+    let Some(idx) = updated_idx else {
         return Err("No se encontró la pista indicada en la lista para reconectar.".to_owned());
+    };
+
+    let p = Path::new(new_path);
+    let is_avail = p.is_file();
+    let ext = p
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+        .unwrap_or_default();
+    let is_video = VIDEO_EXTENSIONS.contains(&ext.as_str());
+
+    items[idx].path = new_path.to_owned();
+    items[idx].is_available = is_avail;
+    items[idx].is_video = is_video;
+
+    // Si el título estaba vacío o genérico ("Pista sin título"), actualizarlo con el nuevo archivo
+    if items[idx].title.is_empty() || items[idx].title == "Pista sin título" {
+        if let Some(new_title) = p.file_stem().and_then(|s| s.to_str()) {
+            items[idx].title = new_title.to_owned();
+        }
     }
 
     let name = m3u_path
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_else(|| "Lista".to_owned());
+
     write_m3u(m3u_path, &name, &items)?;
     Ok(items)
 }
@@ -714,9 +770,21 @@ fn resolve_path(raw: &str, base_dir: &PathBuf) -> PathBuf {
     direct
 }
 
-fn make_relative(target: &Path, base: &PathBuf) -> String {
-    if let Ok(rel) = target.strip_prefix(base) {
-        return rel.to_string_lossy().replace('\\', "/");
+fn make_relative(target: &Path, base: &Path) -> String {
+    let target_str = target.to_string_lossy().replace('/', "\\");
+    let base_str = base.to_string_lossy().replace('/', "\\");
+    let base_with_slash = if base_str.ends_with('\\') {
+        base_str
+    } else {
+        format!("{base_str}\\")
+    };
+
+    if target_str.len() >= base_with_slash.len()
+        && target_str[..base_with_slash.len()].eq_ignore_ascii_case(&base_with_slash)
+    {
+        let rel = &target_str[base_with_slash.len()..];
+        return rel.replace('\\', "/");
     }
+
     target.to_string_lossy().into_owned()
 }

@@ -155,6 +155,17 @@ export function usePlaylists() {
         const updated = await playlistsCleanMissing(path);
         cachedSelectedItems = updated;
         setSelectedItems(updated);
+        setSelectedPlaylist((prev) => {
+          if (!prev || prev.path !== path) return prev;
+          const validCount = updated.filter((it) => it.isAvailable !== false).length;
+          const updatedMeta: PlaylistMeta = {
+            ...prev,
+            validCount,
+            itemCount: updated.length,
+          };
+          cachedSelectedPlaylist = updatedMeta;
+          return updatedMeta;
+        });
         await refresh(false);
       } catch (err) {
         console.error("Error limpiando pistas no encontradas:", err);
@@ -165,11 +176,22 @@ export function usePlaylists() {
   );
 
   const relinkItem = useCallback(
-    async (playlistPath: string, oldItemPath: string, newItemPath: string) => {
+    async (playlistPath: string, oldItemPath: string, newItemPath: string, itemIndex?: number) => {
       try {
-        const updated = await playlistsRelinkItem(playlistPath, oldItemPath, newItemPath);
+        const updated = await playlistsRelinkItem(playlistPath, oldItemPath, newItemPath, itemIndex);
         cachedSelectedItems = updated;
         setSelectedItems(updated);
+        setSelectedPlaylist((prev) => {
+          if (!prev || prev.path !== playlistPath) return prev;
+          const validCount = updated.filter((it) => it.isAvailable !== false).length;
+          const updatedMeta: PlaylistMeta = {
+            ...prev,
+            validCount,
+            itemCount: updated.length,
+          };
+          cachedSelectedPlaylist = updatedMeta;
+          return updatedMeta;
+        });
         await refresh(false);
         return updated;
       } catch (err) {
@@ -186,6 +208,17 @@ export function usePlaylists() {
         const result = await playlistsRelinkFolder(playlistPath, searchFolder);
         cachedSelectedItems = result.updatedItems;
         setSelectedItems(result.updatedItems);
+        setSelectedPlaylist((prev) => {
+          if (!prev || prev.path !== playlistPath) return prev;
+          const validCount = result.updatedItems.filter((it) => it.isAvailable !== false).length;
+          const updatedMeta: PlaylistMeta = {
+            ...prev,
+            validCount,
+            itemCount: result.updatedItems.length,
+          };
+          cachedSelectedPlaylist = updatedMeta;
+          return updatedMeta;
+        });
         await refresh(false);
         return result;
       } catch (err) {

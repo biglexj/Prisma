@@ -31,6 +31,7 @@ export function ImageViewer({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  const imgRef = useRef<HTMLImageElement | null>(null);
   const favorites = useFavorites();
 
   const activeList = itemsList.length > 0 ? itemsList : [currentItem];
@@ -60,19 +61,18 @@ export function ImageViewer({
   const closeViewer = () => {
     if (document.fullscreenElement) {
       void document.exitFullscreen().catch(() => {});
+      setIsFullscreen(false);
     }
-    setIsSlideshowActive(false);
-    setIsFullscreen(false);
     resetImageTransform();
     onClose();
   };
 
   const toggleFullscreen = () => {
-    const container = document.getElementById("image-cinema-container");
-    if (!container) return;
+    const viewerElement = document.querySelector(".image-viewer");
+    if (!viewerElement) return;
 
     if (!document.fullscreenElement) {
-      void container.requestFullscreen().catch(() => {});
+      void viewerElement.requestFullscreen().catch(() => {});
       setIsFullscreen(true);
     } else {
       void document.exitFullscreen().catch(() => {});
@@ -119,6 +119,31 @@ export function ImageViewer({
       handleResetZoom();
     } else {
       setZoomScale(2);
+    }
+  };
+
+  const handleAutoScale = () => {
+    const img = imgRef.current;
+    if (!img) return;
+
+    const naturalW = img.naturalWidth || img.width;
+    const naturalH = img.naturalHeight || img.height;
+    if (!naturalW || !naturalH) return;
+
+    const availableW = window.innerWidth * 0.94;
+    const availableH = window.innerHeight * 0.86;
+
+    const scaleX = availableW / naturalW;
+    const scaleY = availableH / naturalH;
+
+    // Escalar para topar perfectamente el alto o ancho de la pantalla
+    const fitScale = Math.round(Math.min(scaleX, scaleY) * 100) / 100;
+
+    if (Math.abs(zoomScale - fitScale) < 0.04 && fitScale !== 1) {
+      resetImageTransform();
+    } else {
+      setZoomScale(fitScale);
+      setPanOffset({ x: 0, y: 0 });
     }
   };
 
@@ -350,12 +375,13 @@ export function ImageViewer({
             alt={currentItem.title}
             className="image-viewer-media"
             draggable={false}
+            ref={imgRef}
             src={convertFileSrc(cleanPath(currentItem.path))}
           />
         </div>
       </figure>
 
-      {/* Barra de control de Zoom */}
+      {/* Barra de control de Zoom y Escala Automática */}
       <div className="image-viewer-zoom-controls" onClick={(e) => e.stopPropagation()}>
         <button onClick={handleZoomOut} title="Alejar (Ctrl - / Rueda abajo)">
           <Icon name="minus" />
@@ -365,6 +391,13 @@ export function ImageViewer({
         </button>
         <button onClick={handleZoomIn} title="Acercar (Ctrl + / Rueda arriba)">
           <Icon name="plus" />
+        </button>
+        <button
+          className="image-viewer-autofit-btn"
+          onClick={handleAutoScale}
+          title="Escalar automáticamente (Ajustar a pantalla)"
+        >
+          <Icon name="fit-screen" />
         </button>
       </div>
     </div>

@@ -135,7 +135,7 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
     }
   };
 
-  const handleRelinkSingleItem = async (item: PlaylistItem) => {
+  const handleRelinkSingleItem = async (item: PlaylistItem, index: number) => {
     if (!selectedPlaylist) return;
     try {
       const selected = await open({
@@ -144,16 +144,21 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
         filters: [
           {
             name: "Archivos multimedia",
-            extensions: item.isVideo
-              ? ["mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "m4v", "ts"]
-              : ["mp3", "flac", "wav", "m4a", "aac", "ogg", "opus", "wma"],
+            extensions: [
+              "mp3", "flac", "wav", "m4a", "aac", "ogg", "opus", "wma", "aiff", "alac",
+              "mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "m4v", "ts"
+            ],
+          },
+          {
+            name: "Todos los archivos",
+            extensions: ["*"],
           },
         ],
         title: `Reconectar archivo: ${item.title}`,
       });
 
       if (typeof selected === "string") {
-        await relinkItem(selectedPlaylist.path, item.path, selected);
+        await relinkItem(selectedPlaylist.path, item.path, selected, index);
       }
     } catch (err) {
       console.error("Error reconectando pista:", err);
@@ -702,7 +707,10 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
                       {item.isAvailable === false ? (
                         <button
                           className="icon-button relink-btn"
-                          onClick={() => handleRelinkSingleItem(item)}
+                          onClick={() => {
+                            const realIdx = selectedItems.findIndex((it) => it.path === item.path);
+                            handleRelinkSingleItem(item, realIdx >= 0 ? realIdx : idx);
+                          }}
                           title="Reconectar / Re-vincular archivo"
                         >
                           <Icon name="link" />

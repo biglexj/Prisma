@@ -36,29 +36,38 @@ export function useScrollRestoration(
     if (!container || !ready) return;
 
     const savedScroll = sessionScrollMap.get(key) ?? 0;
+    if (savedScroll <= 0) return;
 
-    const applyScroll = () => {
-      const currentContainer = document.querySelector(selector) as HTMLElement | null;
-      if (!currentContainer) return;
-      currentContainer.scrollTop = savedScroll;
+    let attempts = 0;
+    const maxAttempts = 12;
+
+    const tryRestore = () => {
+      const el = document.querySelector(selector) as HTMLElement | null;
+      if (!el) return;
+      el.scrollTop = savedScroll;
+      // Si el DOM aún se está pintando y la altura es menor que savedScroll, reintentar en el siguiente frame
+      if (el.scrollTop < savedScroll && attempts < maxAttempts) {
+        attempts++;
+        requestAnimationFrame(tryRestore);
+      }
     };
 
-    // 1. Inmediato en el ciclo de layout de React
-    applyScroll();
+    // 1. Inmediato en el ciclo de layout sincrónico de React
+    tryRestore();
 
-    // 2. En el siguiente cuadro de animación (después de que el DOM y layouts se estabilicen)
-    const rafId = requestAnimationFrame(() => {
-      applyScroll();
-    });
+    // 2. En el siguiente cuadro de animación
+    const rafId = requestAnimationFrame(tryRestore);
 
-    // 3. Pequeño timeout de seguridad para contenidos que calculan alturas de forma asíncrona
-    const timerId = window.setTimeout(() => {
-      applyScroll();
-    }, 60);
+    // 3. Reintentos temporizados para asegurar que imágenes, grids y layouts asíncronos estabilicen su altura
+    const t1 = window.setTimeout(tryRestore, 40);
+    const t2 = window.setTimeout(tryRestore, 120);
+    const t3 = window.setTimeout(tryRestore, 280);
 
     return () => {
       cancelAnimationFrame(rafId);
-      window.clearTimeout(timerId);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
     };
   }, [key, ready, selector]);
 
@@ -76,8 +85,9 @@ export function useScrollRestoration(
     container.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
-      // Guardar posición al desmontar o cambiar de clave
-      if (lastKeyRef.current) {
+      // Guardar posición al desmontar o cambiar de clave SOLO si es > 0,
+      // evitando que reseteos artificiales del DOM durante el desmontaje borren el scroll real
+      if (lastKeyRef.current && container.scrollTop > 0) {
         sessionScrollMap.set(lastKeyRef.current, container.scrollTop);
       }
       container.removeEventListener("scroll", handleScroll);
