@@ -37,15 +37,5 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
-- [x] **v0.6.0**
-  - Integración completa de la estructura de procesos, reglas de agente `.agents/rules/` y gobernanza del ecosistema biglexj.
-- [x] **v0.5.0**
-  - Motor de vista previa nativa MPV y generación acelerada de miniaturas visuales.
-- [x] **v0.4.0**
-  - Biblioteca de música local, extracción de metadatos (Lofty) y reproductor integrado.
-- [x] **v0.3.0**
-  - Sistema de UI basado en Material 3 Expressive, navegación por dominios y Dashboard.
-- [x] **v0.2.0**
-  - Capa de comunicación IPC entre React/TypeScript y backend nativo Tauri v2 / Rust.
-- [x] **v0.1.0**
-  - Inicialización del proyecto y configuración base de empaquetado.
+- [x] **v0.0.1**
+  - Lanzamiento inicial oficial de Prisma: estación multimedia local-first con reproductor de audio, reproductor de vídeo con PiP, visor y editor de imágenes, Quick Look global y soporte de listas M3U/PLS/XSPF.

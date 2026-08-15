@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTheme } from "./useTheme";
 import { useSystemSettings } from "./useSystemSettings";
 
@@ -55,6 +56,15 @@ export function App() {
 
   const playMusicItem = (path: string, navigate = true) => {
     addToHistory(path, "music");
+
+    // Detener y limpiar cualquier vídeo previo activo para evitar audio simultáneo
+    if (document.pictureInPictureElement) {
+      void document.exitPictureInPicture().catch(() => {});
+    }
+    setActiveVideoPath(null);
+    setActiveVideoSessionItems([]);
+    setIsPip(false);
+
     if (navigate) {
       setActiveView("player");
     }
@@ -110,8 +120,17 @@ export function App() {
         setActiveVideoPath(null);
         setActiveVideoSessionItems([]);
       } else {
-        // El usuario pulsó 'Volver a la pestaña' o toggle PiP: restaurar el reproductor a pantalla completa
+        // El usuario pulsó 'Volver a la pestaña' o toggle PiP: restaurar siempre el reproductor a pantalla completa y traer al frente
         setActiveView("video_player");
+        try {
+          const win = getCurrentWebviewWindow();
+          void win.unminimize().catch(() => {});
+          void win.show().catch(() => {});
+          void win.setFocus().catch(() => {});
+        } catch {}
+        if (typeof window !== "undefined") {
+          window.focus();
+        }
       }
     }
   };

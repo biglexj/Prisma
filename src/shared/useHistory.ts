@@ -8,6 +8,7 @@ const MAX_HISTORY_PER_TYPE = 100;
 export interface HistoryItem {
   path: string;
   playedAt: number;
+  playCount?: number;
 }
 
 export interface HistoryStore {

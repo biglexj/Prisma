@@ -105,6 +105,21 @@ export function VideoPlayer({
     setLocalVideoItems(videoItems);
   }, [videoItems]);
 
+  // Limpieza y reinicio atómico al cambiar de vídeo para evitar audio residual
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
+    if (secondaryAudioRef.current) {
+      secondaryAudioRef.current.pause();
+      secondaryAudioRef.current.src = "";
+    }
+    setExtractedAudioUrl(null);
+    setSelectedTrackIdx(0);
+    setPosition(0);
+    setVideoError(false);
+  }, [path]);
+
   // Auto-detect current index in video list
   const currentIndex = localVideoItems.findIndex((item) => item.path === path);
   const hasNext = currentIndex >= 0 && currentIndex < localVideoItems.length - 1;
@@ -978,6 +993,7 @@ export function VideoPlayer({
                     if (active >= 0) setSelectedTrackIdx(active);
                   }
                 }}
+                onEnded={handleNext}
                 onPause={() => setPaused(true)}
                 onPlay={() => setPaused(false)}
                 onTimeUpdate={(e) => {

@@ -1,15 +1,16 @@
-# 🚀 Prisma v0.6.0 — Estandarización del Ecosistema biglexj
+# 🚀 Prisma v0.0.1 — Lanzamiento Inicial Oficial
 
-¡Nos complace anunciar el lanzamiento de **Prisma v0.6.0**! Esta versión marca la integración oficial y completa de Prisma dentro del ecosistema **biglexj**, estableciendo estándares de arquitectura, gobernanza de código y flujo de procesos estructurados.
+¡Nos complace anunciar el primer lanzamiento oficial de **Prisma (v0.0.1)**! Una estación y reproductor multimedia local-first diseñada bajo el lenguaje Material 3 Expressive, optimizada para máxima velocidad, privacidad y disfrute de tu colección de medios en Windows.
 
 ---
 
 ### ✨ Novedades Destacadas
 
-- 📐 **Estandarización Ecosistema biglexj**: Reglas de agente completas en `.agents/rules/` (`base.md`, `core_profile.md`, `folder_structure.md`).
-- 📁 **Estructura de Procesos `process/`**: Sistema formal de planificación y seguimiento de tareas (`active`, `completed`, `archive`, `templates`).
-- 🎯 **Roadmap & Notas Sanitizadas**: Actualización estratégica en `ROADMAP.md` y notas históricas de versión en `RELEASE_NOTES.md`.
-- 🛠️ **Configuración Sincronizada**: Versiones alineadas en package, bundle de Tauri y Cargo Rust.
+- 🎵 **Biblioteca y Reproductor Musical**: Exploración fluida por Carpetas, Línea de Tiempo y Árbol Jerárquico, con cola de reproducción y ordenación personalizada (fecha, nombre, tamaño o modo aleatorio).
+- ⚡ **Prisma Quick Look**: Vista previa instantánea de fotos, audios y vídeos directamente desde el Explorador de Windows o Escritorio pulsando la barra espaciadora.
+- 🎬 **Reproductor de Vídeo con PiP**: Soporte multicapa de subtítulos y pistas de audio, aceleración continua 3.0x y modo Picture-in-Picture que respeta la proporción original del vídeo.
+- 🖼️ **Visor y Editor de Imágenes**: Transiciones fluidas entre imágenes, zoom ultra-preciso de hasta 500%, recorte y filtros tonales integrados.
+- 📋 **Listas de Reproducción Universales**: Soporte para formatos M3U, M3U8, PLS y XSPF con reconexión inteligente por carpeta.
 
 ---
 
