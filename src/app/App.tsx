@@ -283,7 +283,10 @@ export function App() {
             >
               <VideoPlayer
                 onBack={() => {
+                  // Limpiar sesión completamente al volver: desmonta el <video> y detiene el audio
                   setIsPip(false);
+                  setActiveVideoPath(null);
+                  setActiveVideoSessionItems([]);
                   setActiveView(videoReturnView);
                 }}
                 onPipChange={handlePipChange}

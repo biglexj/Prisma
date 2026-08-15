@@ -275,4 +275,116 @@ pub fn video_read_subtitle_vtt(subtitle_path: String) -> Result<String, String> 
     Ok(vtt)
 }
 
+/// Metadatos de una pista de audio detectada por ffprobe.
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct AudioTrackMeta {
+    pub index: usize,
+    pub label: String,
+    pub language: Option<String>,
+    pub codec: Option<String>,
+    pub channels: Option<u32>,
+}
 
+/// Lee las pistas de audio del archivo de vídeo usando ffprobe.
+/// Devuelve la lista de pistas encontradas, o un error descriptivo si ffprobe no está disponible.
+#[tauri::command]
+pub fn video_get_audio_tracks(path: String) -> Result<Vec<AudioTrackMeta>, String> {
+    let clean = path.trim_start_matches(r"\\?\");
+
+    // Intentar localizar ffprobe en PATH o junto al ejecutable
+    let ffprobe_candidates = [
+        "ffprobe".to_string(),
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("ffprobe.exe")))
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+    ];
+
+    let mut output = None;
+    for candidate in &ffprobe_candidates {
+        if candidate.is_empty() {
+            continue;
+        }
+        let result = std::process::Command::new(candidate)
+            .args([
+                "-v", "quiet",
+                "-print_format", "json",
+                "-show_streams",
+                "-select_streams", "a",
+                clean,
+            ])
+            .output();
+
+        if let Ok(out) = result {
+            if out.status.success() {
+                output = Some(out.stdout);
+                break;
+            }
+        }
+    }
+
+    let raw = output.ok_or_else(|| {
+        "ffprobe no encontrado. Instala ffmpeg para detectar pistas de audio.".to_string()
+    })?;
+
+    let json: serde_json::Value = serde_json::from_slice(&raw)
+        .map_err(|e| format!("Error al parsear salida de ffprobe: {e}"))?;
+
+    let streams = json["streams"]
+        .as_array()
+        .ok_or_else(|| "ffprobe no devolvió streams".to_string())?;
+
+    let mut tracks: Vec<AudioTrackMeta> = Vec::new();
+    for (i, stream) in streams.iter().enumerate() {
+        let lang = stream["tags"]["language"]
+            .as_str()
+            .or_else(|| stream["tags"]["LANGUAGE"].as_str())
+            .map(|s| s.to_string());
+
+        let title = stream["tags"]["title"]
+            .as_str()
+            .or_else(|| stream["tags"]["TITLE"].as_str())
+            .map(|s| s.to_string());
+
+        let codec = stream["codec_name"].as_str().map(|s| s.to_uppercase());
+
+        let channels = stream["channels"].as_u64().map(|c| c as u32);
+
+        // Construir etiqueta legible
+        let label = if let Some(t) = &title {
+            t.clone()
+        } else {
+            let mut parts = vec![format!("Pista {}", i + 1)];
+            if let Some(ref l) = lang {
+                if l != "und" {
+                    parts.push(l.to_uppercase());
+                }
+            }
+            if let Some(ref c) = codec {
+                parts.push(c.clone());
+            }
+            if let Some(ch) = channels {
+                let ch_label = match ch {
+                    1 => "Mono".to_string(),
+                    2 => "Estéreo".to_string(),
+                    6 => "5.1".to_string(),
+                    8 => "7.1".to_string(),
+                    n => format!("{n} ch"),
+                };
+                parts.push(ch_label);
+            }
+            parts.join(" · ")
+        };
+
+        tracks.push(AudioTrackMeta {
+            index: i,
+            label,
+            language: lang,
+            codec,
+            channels,
+        });
+    }
+
+    Ok(tracks)
+}

@@ -28,7 +28,7 @@ use app::commands::quick_look::{
     quick_look_set_shortcut, quick_look_toggle, set_minimize_to_tray,
 };
 use app::commands::visual_library::{
-    show_in_file_manager, video_get_subtitles, video_read_subtitle_vtt,
+    show_in_file_manager, video_get_audio_tracks, video_get_subtitles, video_read_subtitle_vtt,
     visual_library_add_excluded_folder, visual_library_add_folder,
     visual_library_image_preview, visual_library_list_excluded_folders,
     visual_library_list_folders, visual_library_list_items,
@@ -204,6 +204,7 @@ pub fn run() {
             show_in_file_manager,
             video_get_subtitles,
             video_read_subtitle_vtt,
+            video_get_audio_tracks,
             playback_capabilities,
             playback_load,
             playback_next,

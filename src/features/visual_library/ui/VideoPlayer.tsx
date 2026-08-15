@@ -275,8 +275,12 @@ export function VideoPlayer({
     }
   };
 
-  // handleBack sale de PiP si estaba activo antes de navegar
+  // handleBack: pausa el vídeo y sale de PiP antes de notificar a App.tsx
   const handleBack = () => {
+    // Pausar inmediatamente para evitar audio residual durante el desmontaje
+    if (videoRef.current && !videoRef.current.paused) {
+      videoRef.current.pause();
+    }
     if (document.pictureInPictureElement) {
       void document.exitPictureInPicture().catch(() => {});
     }
