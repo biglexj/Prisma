@@ -78,9 +78,14 @@ export function VideoPlayer({
     if (videoRef.current.paused) {
       void videoRef.current.play();
       setPaused(false);
+      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+      controlsTimeoutRef.current = window.setTimeout(() => {
+        setShowControls(false);
+      }, 2200);
     } else {
       videoRef.current.pause();
       setPaused(true);
+      setShowControls(true);
     }
   };
 
@@ -112,10 +117,10 @@ export function VideoPlayer({
     if (!container) return;
 
     if (!document.fullscreenElement) {
-      void container.requestFullscreen().catch(() => {});
+      void container.requestFullscreen().catch(() => { });
       setIsFullscreen(true);
     } else {
-      void document.exitFullscreen().catch(() => {});
+      void document.exitFullscreen().catch(() => { });
       setIsFullscreen(false);
     }
   };
@@ -137,12 +142,23 @@ export function VideoPlayer({
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
     }
-    controlsTimeoutRef.current = window.setTimeout(() => {
-      if (!paused) {
+    if (!paused) {
+      controlsTimeoutRef.current = window.setTimeout(() => {
         setShowControls(false);
-      }
-    }, 3500);
+      }, 2500);
+    }
   };
+
+  useEffect(() => {
+    if (!paused) {
+      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+      controlsTimeoutRef.current = window.setTimeout(() => {
+        setShowControls(false);
+      }, 2500);
+    } else {
+      setShowControls(true);
+    }
+  }, [paused]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -243,7 +259,7 @@ export function VideoPlayer({
               <button
                 className="video-path-explorer-btn"
                 onClick={() => {
-                  invoke("show_in_file_manager", { path }).catch(() => {});
+                  invoke("show_in_file_manager", { path }).catch(() => { });
                 }}
                 title="Abrir ubicación en el Explorador de Windows"
               >
@@ -316,14 +332,14 @@ export function VideoPlayer({
             </div>
           ) : null}
 
-          {/* Central floating play/pause overlay trigger */}
-          {hasMedia ? (
+          {/* Central play trigger: ONLY visible when paused and controls are active */}
+          {hasMedia && paused && showControls ? (
             <button
-              aria-label={paused ? "Reproducir vídeo" : "Pausar vídeo"}
-              className={`video-center-trigger ${paused ? "is-paused" : ""}`}
+              aria-label="Reproducir vídeo"
+              className="video-center-trigger is-paused"
               onClick={togglePlay}
             >
-              <Icon name={paused ? "play" : "pause"} />
+              <Icon name="play" />
             </button>
           ) : null}
         </div>
