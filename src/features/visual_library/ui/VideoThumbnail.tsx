@@ -1,6 +1,7 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
+import { visualLibraryClient } from "../tauri/client";
 
 interface VideoThumbnailProps {
   path: string;
@@ -10,14 +11,12 @@ interface VideoThumbnailProps {
   onLoadDimensions?: (width: number, height: number) => void;
 }
 
+const MAX_FALLBACK_CANVAS_DIM = 480;
+
 /**
- * Captures the first seekable frame of a local video file via an off-screen
- * <video> element + canvas. Uses Tauri's convertFileSrc to generate the
- * correct asset:// URL for WebView2. Reports real video dimensions so the
- * bento grid can assign the correct card shape.
- *
- * Falls back gracefully to the icon placeholder if the browser cannot read
- * the file (unsupported codec, permission error, tainted canvas, etc.).
+ * Loads video thumbnails natively via Rust (Windows Shell API) for fast,
+ * memory-efficient downscaled previews without decoding 4K video in WebView2.
+ * Falls back to an off-screen canvas (strictly downscaled to <= 480px) if needed.
  */
 export function VideoThumbnail({
   path,
@@ -29,7 +28,6 @@ export function VideoThumbnail({
   const [thumbSrc, setThumbSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const containerRef = useRef<HTMLSpanElement>(null);
-  // Stable ref for the callback — avoids re-triggering the effect
   const onLoadDimsRef = useRef(onLoadDimensions);
   onLoadDimsRef.current = onLoadDimensions;
   const startedRef = useRef(false);
@@ -43,10 +41,25 @@ export function VideoThumbnail({
       if (startedRef.current) return;
       startedRef.current = true;
 
+      // 1. Try native Rust thumbnail generator first
+      visualLibraryClient
+        .imagePreview(path)
+        .then((nativeDataUrl) => {
+          if (nativeDataUrl) {
+            setThumbSrc(nativeDataUrl);
+            return;
+          }
+          fallbackCanvasCapture();
+        })
+        .catch(() => {
+          fallbackCanvasCapture();
+        });
+    }
+
+    function fallbackCanvasCapture() {
       const video = document.createElement("video");
       video.muted = true;
       video.preload = "metadata";
-      // Use Tauri's asset protocol — no crossOrigin needed (same-origin)
       video.src = convertFileSrc(path);
 
       function cleanup() {
@@ -65,10 +78,10 @@ export function VideoThumbnail({
         if (videoWidth > 0 && videoHeight > 0) {
           onLoadDimsRef.current?.(videoWidth, videoHeight);
         }
-        // Seek to 1 s or 10 % into the video for a representative frame
-        const target = isFinite(video.duration) && video.duration > 0
-          ? Math.min(1, video.duration * 0.1)
-          : 0;
+        const target =
+          isFinite(video.duration) && video.duration > 0
+            ? Math.min(1, video.duration * 0.1)
+            : 0;
         video.currentTime = target;
       });
 
@@ -79,26 +92,30 @@ export function VideoThumbnail({
           cleanup();
           return;
         }
+
+        // Bound canvas dimension strictly to MAX_FALLBACK_CANVAS_DIM to prevent 4K memory spikes
+        const scale = Math.min(1, MAX_FALLBACK_CANVAS_DIM / Math.max(w, h));
+        const canvasW = Math.max(1, Math.round(w * scale));
+        const canvasH = Math.max(1, Math.round(h * scale));
+
         const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
+        canvas.width = canvasW;
+        canvas.height = canvasH;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
           setFailed(true);
           cleanup();
           return;
         }
-        ctx.drawImage(video, 0, 0, w, h);
+        ctx.drawImage(video, 0, 0, canvasW, canvasH);
         try {
           setThumbSrc(canvas.toDataURL("image/jpeg", 0.72));
         } catch {
-          // Canvas tainted — fallback icon
           setFailed(true);
         }
         cleanup();
       });
 
-      // Some videos don't fire seeked if currentTime = 0; force a seek
       video.addEventListener("loadeddata", () => {
         if (video.readyState >= 2 && video.currentTime === 0) {
           video.currentTime = 0.001;
@@ -109,13 +126,11 @@ export function VideoThumbnail({
       video.load();
     }
 
-    // Eager: capture immediately
     if (eager || !container || !("IntersectionObserver" in window)) {
       startCapture();
       return;
     }
 
-    // Lazy: wait until the card enters the viewport
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -123,7 +138,7 @@ export function VideoThumbnail({
           startCapture();
         }
       },
-      { rootMargin: "400px" },
+      { rootMargin: "300px" },
     );
     observer.observe(container);
     return () => observer.disconnect();

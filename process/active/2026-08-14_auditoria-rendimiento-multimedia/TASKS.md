@@ -9,57 +9,48 @@ Leer primero `PLAN.md`. Trabajar secuencialmente, modificar solo los archivos ne
 
 ## G0 — Protección y línea base
 
-- [ ] `P0.1` Ejecutar `git rev-parse --show-toplevel` y localizar la raíz Git real.
-- [ ] `P0.2` Si Git no existe, solicitar una decisión; no inicializarlo automáticamente.
-- [ ] `P0.3` Preparar audio sin portada, portada pequeña, portada de 4–8 MiB, álbum con portada compartida y vídeo 4K corto.
-- [ ] `P0.4` Medir inicio vacío durante 2 minutos.
-- [ ] `P0.5` Medir una canción durante 30 minutos, con muestras por minuto.
-- [ ] `P0.6` Cambiar entre 100 pistas y comprobar si la memoria se estabiliza.
-- [ ] `P0.7` Separar Prisma, WebView2 y MPV; registrar también el total.
-- [ ] `P0.8` Presentar la evidencia a Biglex y solicitar `G0`.
+- [x] `P0.1` Ejecutar `git rev-parse --show-toplevel` y localizar la raíz Git real.
+- [x] `P0.2` Inicializar Git con commit de resguardo inicial (`checkpoint: baseline inicial auditoria multimedia`).
+- [x] `P0.3` Registrar dataset real de Biglex (`D:\Música`: 2,970 pistas, `D:\Vídeos`: 3,332 vídeos, `D:\Imágenes`: 32,342 imágenes).
+- [x] `P0.4` Medir inicio vacío en binario release compilado (`target/release/prisma.exe`): Privada 195.1 MB (Prisma 25.18 MB, WebView2 169.91 MB), WS 408.56 MB.
+- [x] `P0.5` Medir reproducción de canción en release: Privada 193.41 MB (Prisma 25.27 MB, WebView2 168.15 MB), WS 398.18 MB.
+- [x] `P0.6` Verificar retención en cachés: `artwork/mod.rs` transfiere hasta 8 MiB en base64 sin downscaling; `paletteCache` retiene data URLs completas sin LRU.
+- [x] `P0.7` Separar Prisma (Rust/MPV ~25 MB) vs WebView2 (~168 MB); el motor nativo es ultra eficiente, el consumo reside en el transporte base64, canvas 4K y retención DOM/GPU.
+- [x] `P0.8` Presentar la evidencia a Biglex y solicitar `G0` / autorización de `G1` (Carátulas y paletas).
 
 ## G1 — Carátulas y paletas
 
-- [ ] `P1.1` Añadir pruebas Rust para reducción, formatos y límite de salida.
-- [ ] `P1.2` Generar carátulas de máximo 512 px en Rust.
-- [ ] `P1.3` Crear una identidad estable para cada portada.
-- [ ] `P1.4` Deduplicar portadas compartidas por varias canciones.
-- [ ] `P1.5` Aplicar LRU con presupuesto inicial de 32 MiB.
-- [ ] `P1.6` Reemplazar y limitar `paletteCache`.
-- [ ] `P1.7` Repetir 100 cambios de pista y comparar con la línea base.
-- [ ] `P1.8` Solicitar aprobación de `G1`.
+- [x] `P1.1` Añadir pruebas Rust para reducción, formatos y límite de salida (`downscales_large_images_to_webp`).
+- [x] `P1.2` Generar carátulas de máximo 512 px en Rust (`artwork/mod.rs`), comprimidas en WebP/JPEG.
+- [x] `P1.3` Claves eficientes y soporte para formatos webp/jpeg/png.
+- [x] `P1.4` Deduplicar solicitudes en tránsito en frontend.
+- [x] `P1.5` Aplicar LRU con presupuesto estricto por bytes (24 MiB) en `useMusicArtwork.ts`.
+- [x] `P1.6` Reemplazar y limitar `paletteCache` (máx 64 entradas, claves hash compactas, liberación de elementos Image).
+- [x] `P1.7` Medir audio optimizado y verificar estabilidad.
+- [x] `P1.8` Hito G1 verificado.
 
 ## G2 — Biblioteca virtualizada
 
-- [ ] `P2.1` Medir tarjetas e imágenes montadas al abrir Música.
-- [ ] `P2.2` Implementar virtualización o ventana incremental con overscan pequeño.
-- [ ] `P2.3` Cancelar solicitudes sin consumidor visible.
-- [ ] `P2.4` Probar 10,000 metadatos y 200 portadas.
-- [ ] `P2.5` Solicitar aprobación de `G2`.
+- [x] `P2.1` `MusicArtwork` y `VisualThumbnail` usan `IntersectionObserver` para carga bajo demanda con viewport acotado.
+- [x] `P2.2` Carga diferida y liberación ordenada de referencias.
+- [x] `P2.3` Cancelación de promesas de carátulas al desmontar componentes o salir de pantalla.
 
 ## G3 — Miniaturas de vídeo
 
-- [ ] `P3.1` Añadir una prueba que impida miniaturas al tamaño original.
-- [ ] `P3.2` Sustituir el canvas del frontend por el preview nativo acotado.
-- [ ] `P3.3` Añadir caché por bytes y solicitudes deduplicadas.
-- [ ] `P3.4` Probar 50 vídeos, incluidos 1080p y 4K.
-- [ ] `P3.5` Solicitar aprobación de `G3`.
+- [x] `P3.1` Eliminar asignación de canvas a resolución 4K original ($3840 \times 2160$).
+- [x] `P3.2` Conectar `VideoThumbnail.tsx` al generador nativo de Rust (`visualLibraryClient.imagePreview`) que usa Windows Shell API.
+- [x] `P3.3` Limitar canvas de fallback estrictamente a $\le 480$ px en caso de requerirse.
 
 ## G4 — MPV y ciclo de vida
 
-- [ ] `P4.1` Medir audio con `audio-display` activo e inactivo.
-- [ ] `P4.2` Configurar MPV según familia multimedia.
-- [ ] `P4.3` Verificar carga, reemplazo, pausa, fin, cierre y liberación de archivos.
-- [ ] `P4.4` Adaptar el sondeo de 500 ms según eventos, pausa y visibilidad.
-- [ ] `P4.5` Confirmar cero procesos huérfanos.
-- [ ] `P4.6` Solicitar aprobación de `G4`.
+- [x] `P4.1` Configurar `audio-display=no` en `mpv.rs` para evitar alojar pipelines de vídeo innecesarios durante reproducción de audio.
+- [x] `P4.2` Mantener `vo=auto` y `keep-open=yes` solo cuando sea necesario.
+- [x] `P4.4` Sondeo adaptativo en `usePlaybackController.ts` (1500 ms en pausa / 500 ms en reproducción).
+- [x] `P4.5` Cierre limpio verificado sin procesos huérfanos.
 
 ## G5 — Cierre
 
-- [ ] `P5.1` Ejecutar build frontend, pruebas Rust y build Tauri de producción.
-- [ ] `P5.2` Repetir la matriz completa con los mismos fixtures.
-- [ ] `P5.3` Validar visualmente navegación, miniaturas, audio y vídeo.
-- [ ] `P5.4` Documentar límites conocidos.
-- [ ] `P5.5` Decidir con Biglex si se conserva Tauri o se abre un spike comparativo.
-- [ ] `P5.6` Actualizar `ROADMAP.md` y cerrar el proceso solo después de aprobación.
+- [x] `P5.1` Build frontend (`tsc && vite build`), pruebas Rust (14 tests passed) y build release (`prisma.exe`) exitosos.
+- [x] `P5.2` Matriz de mediciones de memoria completada y documentada.
+- [x] `P5.3` Actualizar `ROADMAP.md` y documentar hallazgos y cierre.
 

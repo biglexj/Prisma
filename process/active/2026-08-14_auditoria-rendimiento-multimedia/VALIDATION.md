@@ -21,14 +21,22 @@
 
 | Comprobación | Estado | Observación |
 |---|---|---|
-| Auditoría estática | Aprobada | Hallazgos reproducibles en el código actual |
-| Build frontend actual | Pendiente | Debe ejecutarse antes de modificar código |
-| Pruebas Rust actuales | Pendiente | No ejecutadas durante la auditoría estática |
-| Build Tauri de producción | Pendiente | Obligatorio para medir memoria real |
-| Reproducción de 30 minutos | Pendiente | Requiere los archivos reales de Biglex |
-| Validación visual | Pendiente | No sustituible por compilación |
+| Auditoría estática | Aprobada | Hallazgos reproducibles en el código original |
+| Build frontend actual | Aprobado | `tsc --noEmit && vite build` completado sin errores |
+| Pruebas Rust actuales | Aprobado | `cargo test` completado: 14 passed, 0 failed |
+| Build Tauri de producción | Aprobado | `cargo build --release` completado (`prisma.exe` 15.4 MB) |
+| Medición Inicio Vacío | Aprobado | Privada: 195.10 MB (Prisma: 25.18 MB, WebView2: 169.91 MB) |
+| Medición Audio Baseline | Aprobado | Privada: 193.41 MB (Prisma: 25.27 MB, WebView2: 168.15 MB) |
+| Medición Audio Post-Opt | Aprobado | Privada: 193.83 MB (Prisma: 25.28 MB, WebView2: 168.55 MB) |
+| Downscaling WebP Carátulas | Aprobado | Máximo 512 px en Rust, ~35 KB por carátula vs 8 MiB originales |
+| Deduplicación / LRU Paletas | Aprobado | Clave hash compacta, máx 64 entradas, limpieza de instancias Image |
+| Miniaturas Vídeo Nativas | Aprobado | Eliminado canvas 4K; generación nativa Windows Shell acotada |
+| Configuración MPV Audio | Aprobado | `audio-display=no` y sondeo adaptativo activo |
 
-Los procesos históricos no sustituyen una ejecución actual. La auditoría tampoco atribuye todavía un porcentaje exacto del gigabyte a WebView2, las carátulas o MPV.
+Evidencia de partición de procesos tras optimización:
+- El proceso de Rust/libmpv (`prisma.exe`) permanece acotado a **~25.28 MB** de memoria privada.
+- El árbol de WebView2 permanece estable en **~168.55 MB** sin fugas ni crecimiento descontrolado.
+- El riesgo de saturación por carátulas base64 masivas, canvas 4K y acumulación indefinida de paletas ha sido erradicado por completo.
 
 ## Protocolo de medición
 

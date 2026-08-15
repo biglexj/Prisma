@@ -2,13 +2,27 @@ import { useEffect, useState } from "react";
 import { musicLibraryClient } from "./tauri/client";
 
 const MAX_CACHE_ITEMS = 96;
-const artworkCache = new Map<string, string | null>();
+const MAX_CACHE_BYTES = 24 * 1024 * 1024; // 24 MiB budget
+
+interface CacheEntry {
+  data: string | null;
+  bytes: number;
+}
+
+const artworkCache = new Map<string, CacheEntry>();
 const pendingArtwork = new Map<string, Promise<string | null>>();
+let totalEstimatedBytes = 0;
+
+function estimateBytes(dataUrl: string | null): number {
+  return dataUrl ? dataUrl.length * 2 : 64;
+}
 
 export function useMusicArtwork(path: string | null, enabled = true) {
-  const [artwork, setArtwork] = useState<string | null | undefined>(() =>
-    path ? artworkCache.get(path) : null,
-  );
+  const [artwork, setArtwork] = useState<string | null | undefined>(() => {
+    if (!path) return null;
+    const entry = artworkCache.get(path);
+    return entry ? entry.data : null;
+  });
 
   useEffect(() => {
     if (!path) {
@@ -17,7 +31,10 @@ export function useMusicArtwork(path: string | null, enabled = true) {
     }
     const cached = artworkCache.get(path);
     if (cached !== undefined) {
-      setArtwork(cached);
+      // LRU refresh
+      artworkCache.delete(path);
+      artworkCache.set(path, cached);
+      setArtwork(cached.data);
       return;
     }
     setArtwork(undefined);
@@ -35,8 +52,11 @@ export function useMusicArtwork(path: string | null, enabled = true) {
 }
 
 function requestArtwork(path: string): Promise<string | null> {
-  if (artworkCache.has(path)) {
-    return Promise.resolve(artworkCache.get(path) ?? null);
+  const cached = artworkCache.get(path);
+  if (cached !== undefined) {
+    artworkCache.delete(path);
+    artworkCache.set(path, cached);
+    return Promise.resolve(cached.data);
   }
   const existingRequest = pendingArtwork.get(path);
   if (existingRequest) return existingRequest;
@@ -44,11 +64,24 @@ function requestArtwork(path: string): Promise<string | null> {
     .artwork(path)
     .catch(() => null)
     .then((dataUrl) => {
-      artworkCache.delete(path);
-      artworkCache.set(path, dataUrl);
-      if (artworkCache.size > MAX_CACHE_ITEMS) {
-        const oldestPath = artworkCache.keys().next().value;
-        if (oldestPath) artworkCache.delete(oldestPath);
+      const bytes = estimateBytes(dataUrl);
+      const existing = artworkCache.get(path);
+      if (existing) {
+        totalEstimatedBytes -= existing.bytes;
+        artworkCache.delete(path);
+      }
+      artworkCache.set(path, { data: dataUrl, bytes });
+      totalEstimatedBytes += bytes;
+
+      while (
+        artworkCache.size > MAX_CACHE_ITEMS ||
+        totalEstimatedBytes > MAX_CACHE_BYTES
+      ) {
+        const oldestKey = artworkCache.keys().next().value;
+        if (!oldestKey) break;
+        const entry = artworkCache.get(oldestKey);
+        if (entry) totalEstimatedBytes -= entry.bytes;
+        artworkCache.delete(oldestKey);
       }
       return dataUrl;
     })

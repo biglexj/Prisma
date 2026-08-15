@@ -14,6 +14,7 @@ impl MpvBackend {
     pub fn new() -> Result<Self, String> {
         let mpv = Mpv::with_initializer(|initializer| {
             initializer.set_property("vo", "auto")?;
+            initializer.set_property("audio-display", "no")?;
             initializer.set_property("keep-open", "yes")?;
             Ok(())
         })

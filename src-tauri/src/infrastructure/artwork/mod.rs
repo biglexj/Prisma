@@ -1,6 +1,7 @@
-use std::{fs, path::Path};
+use std::{fs, io::Cursor, path::Path};
 
 use base64::{Engine as _, engine::general_purpose::STANDARD};
+use image::{ImageFormat, ImageReader};
 use lofty::{
     config::ParseOptions,
     file::TaggedFileExt,
@@ -8,20 +9,25 @@ use lofty::{
     probe::Probe,
 };
 
-const MAX_ARTWORK_BYTES: usize = 8 * 1024 * 1024;
+const MAX_ARTWORK_INPUT_BYTES: usize = 16 * 1024 * 1024;
+const ARTWORK_MAX_DIM: u32 = 512;
 const FOLDER_COVER_NAMES: &[&str] = &[
     "cover.jpg",
     "cover.jpeg",
     "cover.png",
+    "cover.webp",
     "folder.jpg",
     "folder.jpeg",
     "folder.png",
+    "folder.webp",
     "front.jpg",
     "front.jpeg",
     "front.png",
+    "front.webp",
     "album.jpg",
     "album.jpeg",
     "album.png",
+    "album.webp",
 ];
 
 pub fn load_music_artwork_data_url(audio_path: &Path) -> Option<String> {
@@ -83,11 +89,48 @@ fn picture_data_url(picture: &Picture) -> Option<String> {
 }
 
 fn bytes_to_data_url(data: &[u8]) -> Option<String> {
-    if data.is_empty() || data.len() > MAX_ARTWORK_BYTES {
+    if data.is_empty() || data.len() > MAX_ARTWORK_INPUT_BYTES {
         return None;
     }
-    let mime = detect_image_mime(data)?;
-    Some(format!("data:{mime};base64,{}", STANDARD.encode(data)))
+
+    if let Ok(reader) = ImageReader::new(Cursor::new(data)).with_guessed_format() {
+        if let Ok(img) = reader.decode() {
+            let resized = if img.width() > ARTWORK_MAX_DIM || img.height() > ARTWORK_MAX_DIM {
+                img.thumbnail(ARTWORK_MAX_DIM, ARTWORK_MAX_DIM)
+            } else {
+                img
+            };
+
+            let mut buffer = Vec::new();
+            if resized
+                .write_to(&mut Cursor::new(&mut buffer), ImageFormat::WebP)
+                .is_ok()
+            {
+                return Some(format!(
+                    "data:image/webp;base64,{}",
+                    STANDARD.encode(&buffer)
+                ));
+            } else {
+                buffer.clear();
+                if resized
+                    .write_to(&mut Cursor::new(&mut buffer), ImageFormat::Jpeg)
+                    .is_ok()
+                {
+                    return Some(format!(
+                        "data:image/jpeg;base64,{}",
+                        STANDARD.encode(&buffer)
+                    ));
+                }
+            }
+        }
+    }
+
+    if data.len() <= 512 * 1024 {
+        let mime = detect_image_mime(data)?;
+        Some(format!("data:{mime};base64,{}", STANDARD.encode(data)))
+    } else {
+        None
+    }
 }
 
 fn detect_image_mime(data: &[u8]) -> Option<&'static str> {
@@ -110,6 +153,8 @@ fn detect_image_mime(data: &[u8]) -> Option<&'static str> {
 mod tests {
     use std::time::{SystemTime, UNIX_EPOCH};
 
+    use image::{ImageBuffer, Rgb};
+
     use super::{bytes_to_data_url, detect_image_mime, load_music_artwork_data_url};
 
     #[test]
@@ -130,6 +175,19 @@ mod tests {
     }
 
     #[test]
+    fn downscales_large_images_to_webp() {
+        let img: ImageBuffer<Rgb<u8>, _> = ImageBuffer::new(1200, 1200);
+        let mut raw_bytes = Vec::new();
+        img.write_to(&mut std::io::Cursor::new(&mut raw_bytes), image::ImageFormat::Png)
+            .unwrap();
+
+        let data_url = bytes_to_data_url(&raw_bytes).unwrap();
+        assert!(data_url.starts_with("data:image/webp;base64,"));
+        // Transformed WebP should be substantially smaller than raw PNG
+        assert!(data_url.len() < raw_bytes.len() * 2);
+    }
+
+    #[test]
     fn uses_a_folder_cover_when_the_audio_has_no_embedded_picture() {
         let nonce = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -143,7 +201,7 @@ mod tests {
 
         let artwork = load_music_artwork_data_url(&audio_path).unwrap();
 
-        assert!(artwork.starts_with("data:image/jpeg;base64,"));
+        assert!(artwork.starts_with("data:image/jpeg;base64,") || artwork.starts_with("data:image/webp;base64,"));
         std::fs::remove_dir_all(root).unwrap();
     }
 }

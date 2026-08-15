@@ -40,12 +40,13 @@ export function usePlaybackController() {
   useEffect(() => {
     if (!capabilities?.available || !snapshot.path) return;
 
+    const interval = snapshot.paused ? 1500 : 500;
     const timer = window.setInterval(() => {
       playbackClient.snapshot().then(setSnapshot).catch(() => undefined);
-    }, 500);
+    }, interval);
 
     return () => window.clearInterval(timer);
-  }, [capabilities?.available, snapshot.path]);
+  }, [capabilities?.available, snapshot.path, snapshot.paused]);
 
   const loadPath = useCallback(
     async (path: string) => run(() => playbackClient.load(path)),

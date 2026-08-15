@@ -7,20 +7,35 @@ export interface AlbumPalette {
   onAccent: string;
 }
 
+const MAX_PALETTE_ENTRIES = 64;
 const paletteCache = new Map<string, AlbumPalette>();
 
+function getArtworkKey(artwork: string): string {
+  if (artwork.length <= 128) return artwork;
+  let hash = 5381;
+  const step = Math.max(1, Math.floor(artwork.length / 64));
+  for (let i = 0; i < artwork.length; i += step) {
+    hash = ((hash << 5) + hash) + artwork.charCodeAt(i);
+    hash |= 0;
+  }
+  return `${artwork.length}_${hash}`;
+}
+
 export function useAlbumPalette(artwork: string | null) {
+  const key = artwork ? getArtworkKey(artwork) : null;
   const [palette, setPalette] = useState<AlbumPalette | null>(() =>
-    artwork ? paletteCache.get(artwork) ?? null : null,
+    key ? paletteCache.get(key) ?? null : null,
   );
 
   useEffect(() => {
-    if (!artwork) {
+    if (!artwork || !key) {
       setPalette(null);
       return;
     }
-    const cached = paletteCache.get(artwork);
+    const cached = paletteCache.get(key);
     if (cached) {
+      paletteCache.delete(key);
+      paletteCache.set(key, cached);
       setPalette(cached);
       return;
     }
@@ -28,18 +43,32 @@ export function useAlbumPalette(artwork: string | null) {
     const image = new Image();
     image.decoding = "async";
     image.onload = () => {
+      if (cancelled) return;
       const next = extractPalette(image);
-      paletteCache.set(artwork, next);
-      if (!cancelled) setPalette(next);
+      paletteCache.delete(key);
+      paletteCache.set(key, next);
+      if (paletteCache.size > MAX_PALETTE_ENTRIES) {
+        const oldest = paletteCache.keys().next().value;
+        if (oldest) paletteCache.delete(oldest);
+      }
+      setPalette(next);
+      image.onload = null;
+      image.onerror = null;
+      image.src = "";
     };
     image.onerror = () => {
       if (!cancelled) setPalette(null);
+      image.onload = null;
+      image.onerror = null;
     };
     image.src = artwork;
     return () => {
       cancelled = true;
+      image.onload = null;
+      image.onerror = null;
+      image.src = "";
     };
-  }, [artwork]);
+  }, [artwork, key]);
 
   return palette;
 }
