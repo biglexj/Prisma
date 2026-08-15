@@ -26,8 +26,21 @@
 - [x] `T4.2` Integrar navegación jerárquica por subcarpetas y mosaicos de carpetas en `MusicLibrary.tsx` y `VisualLibrary.tsx`.
 - [x] `T4.3` Añadir acciones de reproducción de carpeta completa ("▶ Reproducir carpeta", "▶ Reproducir todo" y "+ Añadir a la cola").
 
-## Fase 5 — Validación y Cierre
+## Fase 5 — Árbol Jerárquico Real, Carpetas Virtuales y Favoritos (Inspirado en Lienzo)
 
-- [x] `T5.1` Ejecutar `npm run build` y pruebas (`test/queueOperations.test.ts`, `cargo test`).
-- [x] `T5.2` Validar visualmente la cola, árbol de carpetas y persistencia.
-- [x] `T5.3` Actualizar `ROADMAP.md` y documentar.
+- [x] `T5.1` Crear `src/shared/mediaTree.ts` con `resolveTreeLevel` para construir el árbol jerárquico real (mostrando solo subcarpetas directas por nivel, evitando rutas aplanadas).
+- [x] `T5.2` Crear `src/shared/useFavorites.ts` con persistencia global en `localStorage` (`prisma_favorites_v1`) y reactividad instantánea.
+- [x] `T5.3` Integrar tarjetas de carpetas virtuales (⭐ **Favoritos** con degradado ámbar y 🎵/🖼️/🎬 **Todos los archivos**) en la raíz del árbol para Música, Imágenes y Vídeos.
+- [x] `T5.4` Conectar botones de corazón ❤️ interactivos en el reproductor `PlaybackPreview`, tarjetas de medios `MusicCard`, `VisualCard` y visor de fotos.
+
+## Fase 6 — Optimización de Transición de Carátulas y Tipografía de Letras
+
+- [x] `T6.1` Eliminar destellos y parpadeos durante el cambio de canciones en `useMusicArtwork.ts` reteniendo el buffer y precargando pistas adyacentes (`prefetchArtwork`).
+- [x] `T6.2` Ajustar escala tipográfica y espaciado compacto en `lyrics-preview.css`.
+- [x] `T6.3` Habilitar clic en la carátula del reproductor para alternar inmediatamente a la vista de letras con insignia flotante.
+
+## Fase 7 — Validación y Cierre
+
+- [x] `T7.1` Ejecutar `npm run build` y pruebas (`test/queueOperations.test.ts`, `cargo test`).
+- [x] `T7.2` Validar visualmente la cola, árbol de carpetas y persistencia.
+- [x] `T7.3` Actualizar `ROADMAP.md` y documentar.

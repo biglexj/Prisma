@@ -10,6 +10,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 - [ ] **Estandarización Ecosistema biglexj** — `process/active/2026-08-11_estandarizacion_ecosistema_biglexj/`
 - [ ] **Modo de Reproducción Flotante (PiP / MiniPlayer)** — `process/active/`
+- [x] **Gestión de Colas, Reproducción Continua, Árbol Jerárquico y Favoritos** — `process/active/2026-08-14_gestion-colas-reproduccion-arbol/`
+- [x] **Auditoría de Rendimiento Multimedia y Memoria** — `process/completed/2026/2026-08-14_auditoria-rendimiento-multimedia/`
 - [x] **Optimización de Renderizado de Listas de Fotos Masivas y Memoria WebView** — `process/completed/2026/2026-08-13_optimizacion_memoria_webview/`
 
 ---
