@@ -1,0 +1,414 @@
+/* ══════════════════════════════════════════════
+   ABOUT VIEW — MATERIAL 3 EXPRESSIVE
+   ══════════════════════════════════════════════ */
+
+.about-view-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 100%;
+  padding-top: clamp(14px, 2vw, 24px);
+  padding-bottom: 40px;
+}
+
+/* Hero Card */
+.about-hero-card {
+  position: relative;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  border-radius: 28px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+}
+
+.about-hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+@media (max-width: 768px) {
+  .about-hero-brand {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 18px;
+  }
+}
+
+.about-app-icon-wrap {
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.about-app-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.about-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.about-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.about-title-row h2 {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 900;
+  color: var(--on-surface);
+  letter-spacing: -0.02em;
+}
+
+.about-version-badge {
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 4px 12px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  border-radius: 20px;
+}
+
+.about-release-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  background: var(--surface-container-highest);
+  color: var(--on-surface-variant);
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.about-tagline {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--on-surface-variant);
+  line-height: 1.5;
+  max-width: 680px;
+}
+
+.about-meta-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.about-chip {
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  background: var(--surface-container-low);
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface-variant);
+  border-radius: 10px;
+}
+
+/* Banner de Actualizaciones */
+.about-update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  border-radius: 20px;
+  flex-wrap: wrap;
+}
+
+.about-update-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.about-update-info svg {
+  width: 24px;
+  height: 24px;
+  color: var(--primary);
+}
+
+.about-update-info strong {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--on-surface);
+}
+
+.about-update-info p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--on-surface-variant);
+}
+
+.about-check-update-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.about-update-toast {
+  padding: 12px 18px;
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-container));
+  border: 1px solid var(--primary);
+  color: var(--on-surface);
+  border-radius: 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Grid de Secciones */
+.about-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.about-card {
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.about-card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.about-card-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.about-card-icon-wrap.is-heart {
+  background: color-mix(in srgb, #e11d48 18%, transparent);
+  color: #e11d48;
+}
+
+.about-card-icon-wrap.is-github {
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+}
+
+.about-card-icon-wrap.is-info {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
+}
+
+.about-card-icon-wrap svg {
+  width: 22px;
+  height: 22px;
+}
+
+.about-card-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--on-surface);
+}
+
+.about-card-header p {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--on-surface-variant);
+}
+
+.about-card-description {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  line-height: 1.5;
+}
+
+/* Botones de Donación */
+.about-donation-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.about-donation-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--outline-variant);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+}
+
+.about-donation-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.about-donation-btn.is-direct {
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface-container-high));
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+.about-donation-btn.is-direct:hover {
+  border-color: var(--primary);
+}
+
+.about-donation-btn svg:first-child {
+  width: 24px;
+  height: 24px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.about-donation-btn.is-coffee svg:first-child {
+  color: #ff813f;
+}
+
+.about-btn-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.about-btn-text strong {
+  font-size: 0.9rem;
+}
+
+.about-btn-text span {
+  font-size: 0.74rem;
+  color: var(--on-surface-variant);
+}
+
+.about-ext-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--on-surface-variant);
+  flex-shrink: 0;
+}
+
+/* Enlaces del Ecosistema */
+.about-ecosystem-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.about-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.about-link-row:hover {
+  background: var(--surface-container-highest);
+  border-color: var(--outline);
+}
+
+.about-link-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.about-link-left svg {
+  width: 18px;
+  height: 18px;
+}
+
+.about-link-row svg:last-child {
+  width: 16px;
+  height: 16px;
+  color: var(--on-surface-variant);
+}
+
+/* Tarjeta de Tecnologías */
+.about-tech-badges {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.about-tech-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  border-radius: 14px;
+}
+
+.about-tech-item strong {
+  font-size: 0.82rem;
+  color: var(--primary);
+}
+
+.about-tech-item span {
+  font-size: 0.74rem;
+  color: var(--on-surface-variant);
+  line-height: 1.4;
+}
+
+.spinning-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

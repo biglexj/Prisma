@@ -21,6 +21,7 @@ import { parseTrackInfo } from "../features/music_library/model/trackInfo";
 import { FavoritesView } from "../features/collections/ui/FavoritesView";
 import { HistoryView } from "../features/collections/ui/HistoryView";
 import { PlaylistsView } from "../features/collections/ui/PlaylistsView";
+import { AboutView } from "./ui/AboutView";
 import { addToHistory } from "../shared/useHistory";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
@@ -35,6 +36,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   images: "Imágenes",
   videos: "Vídeos",
   settings: "Configuración",
+  about: "Acerca de",
   favorites: "Favoritos",
   history: "Historial",
   playlists: "Listas de reproducción",
@@ -127,6 +129,8 @@ export function App() {
           void win.unminimize().catch(() => {});
           void win.show().catch(() => {});
           void win.setFocus().catch(() => {});
+          // Solicitar atención y asegurar foco de ventana nativa de Windows
+          void win.requestUserAttention(1).catch(() => {});
         } catch {}
         if (typeof window !== "undefined") {
           window.focus();
@@ -354,6 +358,10 @@ export function App() {
               theme={theme}
               videos={videoLibrary}
             />
+          ) : null}
+
+          {activeView === "about" ? (
+            <AboutView />
           ) : null}
 
           {activeView === "favorites" ? (

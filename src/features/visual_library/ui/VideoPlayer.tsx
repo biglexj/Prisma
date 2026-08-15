@@ -105,11 +105,8 @@ export function VideoPlayer({
     setLocalVideoItems(videoItems);
   }, [videoItems]);
 
-  // Limpieza y reinicio atómico al cambiar de vídeo para evitar audio residual
+  // Limpieza y reinicio atómico de pistas secundarias al cambiar de vídeo
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.pause();
-    }
     if (secondaryAudioRef.current) {
       secondaryAudioRef.current.pause();
       secondaryAudioRef.current.src = "";
@@ -968,7 +965,8 @@ export function VideoPlayer({
                 onLoadedMetadata={(e) => {
                   const video = e.currentTarget;
                   setDuration(video.duration || 0);
-                  setPaused(video.paused);
+                  setPaused(false);
+                  void video.play().catch(() => {});
 
                   // Si PiP estaba activo (ej. reemplazo de vídeo desde la galería), solicitar PiP de inmediato
                   if (isPipActiveRef.current && document.pictureInPictureEnabled) {

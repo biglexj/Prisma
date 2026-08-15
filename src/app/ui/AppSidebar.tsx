@@ -11,6 +11,7 @@ export type AppView =
   | "images"
   | "videos"
   | "settings"
+  | "about"
   | "favorites"
   | "playlists"
   | "history";
@@ -93,16 +94,31 @@ export function AppSidebar({ activeView, backend, enabled, onNavigate }: AppSide
           aria-label="Abrir Configuración"
           className={`sidebar-settings-button ${activeView === "settings" ? "is-active" : ""}`}
           onClick={() => onNavigate("settings")}
-          title="Configuración de Tema, Carpetas y Motor"
+          title="Configuración de Tema, Atajos y Sistema"
         >
           <span className="sidebar-settings-icon">
             <Icon name="settings" />
           </span>
           <div className="sidebar-copy">
             <strong>Configuración</strong>
-            <span>Fuentes y carpetas</span>
+            <span>Fuentes y atajos</span>
           </div>
           <span className={enabled ? "engine-dot is-ready" : "engine-dot"} title={backend} />
+        </button>
+
+        <button
+          aria-label="Acerca de Prisma"
+          className={`sidebar-settings-button sidebar-about-button ${activeView === "about" ? "is-active" : ""}`}
+          onClick={() => onNavigate("about")}
+          title="Acerca de Prisma, Donaciones y Actualizaciones"
+        >
+          <span className="sidebar-settings-icon">
+            <Icon name="info" />
+          </span>
+          <div className="sidebar-copy">
+            <strong>Acerca de</strong>
+            <span>v0.0.1 · biglexj</span>
+          </div>
         </button>
       </footer>
     </aside>
