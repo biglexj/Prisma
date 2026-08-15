@@ -47,7 +47,8 @@ export type IconName =
   | "fit-screen"
   | "sort-asc"
   | "sort-desc"
-  | "filter";
+  | "filter"
+  | "check";
 
 const paths: Record<IconName, ReactNode> = {
   "arrow-left": <path d="M19 12H5m0 0 7 7m-7-7 7-7" />,
@@ -97,6 +98,7 @@ const paths: Record<IconName, ReactNode> = {
   "sort-asc": <><path d="M4 6h7M4 12h5M4 18h3M15 15l3 3 3-3M18 6v12" /></>,
   "sort-desc": <><path d="M4 6h7M4 12h5M4 18h3M15 9l3-3 3 3M18 18V6" /></>,
   filter: <><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></>,
+  check: <path d="M20 6 9 17l-5-5" />,
 };
 
 export function Icon({ name, ...props }: SVGProps<SVGSVGElement> & { name: IconName }) {

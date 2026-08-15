@@ -279,7 +279,7 @@ export function VisualLibrary({
                   type="button"
                 >
                   <span>Fecha de modificación</span>
-                  {sortField === "date" ? <Icon name="star" /> : null}
+                  {sortField === "date" ? <Icon name="check" /> : null}
                 </button>
                 <button
                   className={`visual-sort-item ${sortField === "name" ? "is-selected" : ""}`}
@@ -290,7 +290,7 @@ export function VisualLibrary({
                   type="button"
                 >
                   <span>Nombre del archivo</span>
-                  {sortField === "name" ? <Icon name="star" /> : null}
+                  {sortField === "name" ? <Icon name="check" /> : null}
                 </button>
                 <button
                   className={`visual-sort-item ${sortField === "size" ? "is-selected" : ""}`}
@@ -301,7 +301,7 @@ export function VisualLibrary({
                   type="button"
                 >
                   <span>Tamaño de archivo</span>
-                  {sortField === "size" ? <Icon name="star" /> : null}
+                  {sortField === "size" ? <Icon name="check" /> : null}
                 </button>
 
                 <div className="visual-sort-divider" />
@@ -317,7 +317,7 @@ export function VisualLibrary({
                   <span>
                     {sortField === "date" ? "Más recientes primero" : sortField === "name" ? "Z a A" : "Más pesados primero"}
                   </span>
-                  {sortDirection === "desc" ? <Icon name="sort-desc" /> : null}
+                  {sortDirection === "desc" ? <Icon name="check" /> : null}
                 </button>
                 <button
                   className={`visual-sort-item ${sortDirection === "asc" ? "is-selected" : ""}`}
@@ -330,7 +330,7 @@ export function VisualLibrary({
                   <span>
                     {sortField === "date" ? "Más antiguos primero" : sortField === "name" ? "A a Z" : "Más ligeros primero"}
                   </span>
-                  {sortDirection === "asc" ? <Icon name="sort-asc" /> : null}
+                  {sortDirection === "asc" ? <Icon name="check" /> : null}
                 </button>
               </div>
             ) : null}

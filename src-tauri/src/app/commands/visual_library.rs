@@ -291,32 +291,45 @@ pub struct AudioTrackMeta {
 pub fn video_get_audio_tracks(path: String) -> Result<Vec<AudioTrackMeta>, String> {
     let clean = path.trim_start_matches(r"\\?\");
 
-    // Intentar localizar ffprobe en PATH o junto al ejecutable
-    let ffprobe_candidates = [
+    // Intentar localizar ffprobe en PATH o en ubicaciones conocidas de Windows
+    let mut ffprobe_candidates = vec![
         "ffprobe".to_string(),
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.join("ffprobe.exe")))
-            .map(|p| p.to_string_lossy().into_owned())
-            .unwrap_or_default(),
+        r"C:\Users\biglexj\AppData\Local\Microsoft\WinGet\Links\ffprobe.exe".to_string(),
+        r"C:\Program Files\Krita (x64)\bin\ffprobe.exe".to_string(),
     ];
+
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(parent) = exe_path.parent() {
+            ffprobe_candidates.push(parent.join("ffprobe.exe").to_string_lossy().into_owned());
+        }
+    }
+
+    if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+        ffprobe_candidates.push(format!(r"{}\Microsoft\WinGet\Links\ffprobe.exe", local_appdata));
+    }
 
     let mut output = None;
     for candidate in &ffprobe_candidates {
         if candidate.is_empty() {
             continue;
         }
-        let result = std::process::Command::new(candidate)
-            .args([
-                "-v", "quiet",
-                "-print_format", "json",
-                "-show_streams",
-                "-select_streams", "a",
-                clean,
-            ])
-            .output();
 
-        if let Ok(out) = result {
+        let mut cmd = std::process::Command::new(candidate);
+        cmd.args([
+            "-v", "quiet",
+            "-print_format", "json",
+            "-show_streams",
+            "-select_streams", "a",
+            clean,
+        ]);
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+
+        if let Ok(out) = cmd.output() {
             if out.status.success() {
                 output = Some(out.stdout);
                 break;

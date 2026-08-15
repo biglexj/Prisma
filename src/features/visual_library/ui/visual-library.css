@@ -207,6 +207,14 @@
   font-weight: 700;
 }
 
+.visual-sort-item svg {
+  width: 16px;
+  height: 16px;
+  max-width: 16px;
+  max-height: 16px;
+  flex-shrink: 0;
+}
+
 .visual-sort-divider {
   height: 1px;
   background: var(--outline-variant);
