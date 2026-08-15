@@ -118,27 +118,31 @@
   background: var(--primary-container);
 }
 
-/* ── Favorites Grid Shelf (Max 2 rows) ── */
+/* ── Favorites Grid Shelf ── */
 .favorites-shelf {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow: visible;
 }
 
 .favorites-grid-shelf {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  grid-auto-rows: min-content;
-  max-height: calc(2 * 210px);
-  overflow: hidden;
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: clamp(12px, 1.6cqi, 18px);
+  width: 100%;
+  padding: 8px 6px 18px;
+  margin: -8px -6px -18px;
+  overflow: visible;
 }
 
 /* ── Favorites Video Shelf (16:9 Widescreen) ── */
 .favorites-grid-shelf.is-video-shelf {
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  max-height: calc(2 * 190px);
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: clamp(14px, 1.8cqi, 22px);
+  padding: 8px 6px 20px;
+  margin: -8px -6px -20px;
+  overflow: visible;
 }
 
 .home-media-card.is-video-card {
@@ -252,12 +256,18 @@
 .favorite-full-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 14px;
+  gap: clamp(12px, 1.6cqi, 18px);
+  padding: 8px 6px 18px;
+  margin: -8px -6px -18px;
+  overflow: visible;
 }
 
 .favorite-full-grid.is-video {
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: clamp(14px, 1.8cqi, 22px);
+  padding: 8px 6px 20px;
+  margin: -8px -6px -20px;
+  overflow: visible;
 }
 
 .favorite-full-card {
@@ -265,18 +275,18 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 10px;
-  background: var(--surface-container);
-  border-radius: 18px;
-  border: 1px solid var(--outline-variant);
-  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  padding: 8px;
+  background: var(--surface-container-lowest, rgba(255, 255, 255, 0.03));
+  border-radius: 20px;
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.06));
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease, background-color 0.18s ease;
   cursor: pointer;
 }
 
 .favorite-full-card:hover {
-  transform: translateY(-3px);
-  background: var(--surface-container-high);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+  background: var(--surface-container, rgba(255, 255, 255, 0.08));
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
 }
 
 .favorite-full-card-media,

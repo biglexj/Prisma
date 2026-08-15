@@ -135,6 +135,9 @@
   grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: clamp(8px, 1.2cqi, 16px);
   width: 100%;
+  padding: 8px 4px 18px;
+  margin: -8px -4px -18px;
+  overflow: visible;
 }
 
 .home-media-card {
