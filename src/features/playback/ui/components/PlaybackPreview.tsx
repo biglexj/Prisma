@@ -5,6 +5,7 @@ import { Icon } from "../../../../shared/ui/Icon";
 import { useMusicArtwork, prefetchArtwork } from "../../../music_library/useMusicArtwork";
 import { VisualThumbnail } from "../../../visual_library/ui/VisualThumbnail";
 import { VideoThumbnail } from "../../../visual_library/ui/VideoThumbnail";
+import { useFavorites } from "../../../../shared/useFavorites";
 import { useAlbumPalette } from "../useAlbumPalette";
 import { LyricsPreview } from "./LyricsPreview";
 import { PlaybackQueuePanel } from "./PlaybackQueuePanel";
@@ -60,6 +61,8 @@ export function PlaybackPreview({
   const isVideo = snapshot.session?.family === "video";
   const artwork = useMusicArtwork(isAudio ? snapshot.path : null, isAudio && hasMedia);
   const palette = useAlbumPalette(artwork);
+  const favorites = useFavorites();
+  const isFav = favorites.isFavorite(snapshot.path);
   const adaptiveStyle = palette ? ({
     "--album-accent": palette.accent,
     "--album-accent-soft": palette.accentSoft,
@@ -168,7 +171,17 @@ export function PlaybackPreview({
               <h2>{title}</h2>
               <p>{snapshot.path ? folderName(snapshot.path) : "Selecciona un archivo compatible para comenzar"}</p>
             </div>
-            <button aria-label="Favorito" disabled title="Favoritos · Próximamente"><Icon name="heart" /></button>
+            <div className="preview-title-actions">
+              <button
+                aria-label={isFav ? "Quitar de favoritos" : "Marcar como favorito"}
+                className={`preview-fav-btn ${isFav ? "is-favorite" : ""}`}
+                disabled={!hasMedia}
+                onClick={() => favorites.toggleFavorite(snapshot.path)}
+                title={isFav ? "Quitar de favoritos" : "Añadir a favoritos"}
+              >
+                <Icon name="heart" />
+              </button>
+            </div>
           </div>
 
           <label className="preview-progress">

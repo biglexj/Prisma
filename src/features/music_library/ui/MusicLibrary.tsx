@@ -2,15 +2,21 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
+import {
+  resolveTreeLevel,
+  FAVORITES_FOLDER_ID,
+  ALL_MEDIA_FOLDER_ID,
+  type HierarchicalFolder,
+} from "../../../shared/mediaTree";
+import { useFavorites } from "../../../shared/useFavorites";
 import type { MusicFolderSource, MusicLibraryItem } from "../model/types";
 import type { MusicQueueItem } from "../../playback/model/queue";
 import { MusicArtwork } from "./MusicArtwork";
 import "./music-library.css";
 
-const VISIBLE_ITEM_LIMIT = 300;
+const VISIBLE_ITEM_LIMIT = 400;
 
 type ViewMode = "timeline" | "folders";
-type FolderNavState = { folderName: string } | null;
 
 interface MusicLibraryProps {
   folders: MusicFolderSource[];
@@ -26,11 +32,6 @@ interface MusicLibraryProps {
 
 interface TimelineSection {
   title: string;
-  items: MusicLibraryItem[];
-}
-
-interface FolderSection {
-  folderName: string;
   items: MusicLibraryItem[];
 }
 
@@ -57,7 +58,8 @@ export function MusicLibrary({
   onOpenFolders,
 }: MusicLibraryProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("timeline");
-  const [selectedFolder, setSelectedFolder] = useState<FolderNavState>(null);
+  const [currentFolderPath, setCurrentFolderPath] = useState<string>("");
+  const favorites = useFavorites();
 
   const chooseFolder = async () => {
     const selection = await open({
@@ -72,11 +74,14 @@ export function MusicLibrary({
 
   const visibleItems = items.slice(0, VISIBLE_ITEM_LIMIT);
   const timelineSections = groupByTimeline(visibleItems);
-  const folderSections = groupByFolder(visibleItems);
 
-  const openedFolder = selectedFolder
-    ? (folderSections.find((s) => s.folderName === selectedFolder.folderName) ?? null)
-    : null;
+  // Árbol jerárquico real con soporte para Favoritos y Todas las canciones
+  const treeLevel = resolveTreeLevel(items, currentFolderPath, favorites.favorites, {
+    allName: "Todas las canciones",
+    mediaType: "music",
+  });
+
+  const isInsideFolder = currentFolderPath !== "";
 
   const handlePlayAll = () => {
     if (items.length === 0) return;
@@ -88,21 +93,19 @@ export function MusicLibrary({
     }
   };
 
-  const handlePlayFolder = (folderName: string) => {
-    const target = folderSections.find((s) => s.folderName === folderName);
-    if (!target || target.items.length === 0) return;
-    const queueItems = target.items.map(toQueueItem);
+  const handlePlayFolder = (folderItems: MusicLibraryItem[], name: string) => {
+    if (folderItems.length === 0) return;
+    const queueItems = folderItems.map(toQueueItem);
     if (onPlayQueue) {
-      onPlayQueue(queueItems, 0, target.folderName);
+      onPlayQueue(queueItems, 0, name);
     } else {
-      onPlay(target.items[0].path);
+      onPlay(folderItems[0].path);
     }
   };
 
-  const handleAddFolderToQueue = (folderName: string) => {
-    const target = folderSections.find((s) => s.folderName === folderName);
-    if (!target || !onAddToQueue) return;
-    onAddToQueue(target.items.map(toQueueItem));
+  const handleAddFolderToQueue = (folderItems: MusicLibraryItem[]) => {
+    if (folderItems.length === 0 || !onAddToQueue) return;
+    onAddToQueue(folderItems.map(toQueueItem));
   };
 
   const handlePlayItemInList = (list: MusicLibraryItem[], index: number, queueName?: string) => {
@@ -116,7 +119,7 @@ export function MusicLibrary({
 
   const handleSwitchMode = (mode: ViewMode) => {
     setViewMode(mode);
-    setSelectedFolder(null);
+    setCurrentFolderPath("");
   };
 
   return (
@@ -126,7 +129,7 @@ export function MusicLibrary({
           <span className="preview-kicker">BIBLIOTECA MUSICAL</span>
           <h1>Música</h1>
           <p>
-            Explora tu colección de canciones locales organizadas en línea de tiempo, árbol de carpetas con carátulas y gestión de colas.
+            Explora tu colección de canciones locales organizadas en línea de tiempo, árbol jerárquico de carpetas con carátulas y gestión de colas.
           </p>
         </div>
         <div className="music-heading-actions">
@@ -176,7 +179,7 @@ export function MusicLibrary({
           <button
             className={viewMode === "folders" ? "is-active" : ""}
             onClick={() => handleSwitchMode("folders")}
-            title="Carpetas"
+            title="Árbol de carpetas"
           >
             <Icon name="folder" />
             <span>Carpetas</span>
@@ -208,54 +211,81 @@ export function MusicLibrary({
               <div className="music-auto-grid">
                 {section.items.map((item, idx) => (
                   <MusicCard
+                    isFavorite={favorites.isFavorite(item.path)}
                     item={item}
                     key={item.path}
                     onClick={() => handlePlayItemInList(section.items, idx, section.title)}
                     onAddToQueue={onAddToQueue ? () => onAddToQueue([toQueueItem(item)]) : undefined}
+                    onToggleFavorite={() => favorites.toggleFavorite(item.path)}
                   />
                 ))}
               </div>
             </div>
           ))}
         </div>
-      ) : openedFolder ? (
-        /* ── Vista interna de carpeta con Breadcrumbs de Lienzo ── */
-        <div className="music-folder-internal-view" aria-busy={loading}>
-          <FolderBreadcrumbHeader
-            currentPath={openedFolder.folderName}
-            itemCount={openedFolder.items.length}
-            onNavigate={() => setSelectedFolder(null)}
-            onPlayFolder={() => handlePlayFolder(openedFolder.folderName)}
-            onAddFolderToQueue={onAddToQueue ? () => handleAddFolderToQueue(openedFolder.folderName) : undefined}
-          />
-          <div className="music-auto-grid">
-            {openedFolder.items.map((item, idx) => (
-              <MusicCard
-                item={item}
-                key={item.path}
-                onClick={() => handlePlayItemInList(openedFolder.items, idx, openedFolder.folderName)}
-                onAddToQueue={onAddToQueue ? () => onAddToQueue([toQueueItem(item)]) : undefined}
-              />
-            ))}
-          </div>
-        </div>
       ) : (
-        /* ── Vista de colecciones de carpetas en árbol/mosaico ── */
-        <div className="music-folder-collections" aria-busy={loading}>
-          {folderSections.map((section) => (
-            <MusicFolderCard
-              key={section.folderName}
-              section={section}
-              onOpen={() => setSelectedFolder({ folderName: section.folderName })}
-              onPlay={() => handlePlayFolder(section.folderName)}
+        /* ── Vista Árbol Jerárquico de Carpetas (Inspirado en Lienzo) ── */
+        <div className="music-folder-tree-view" aria-busy={loading}>
+          {isInsideFolder ? (
+            <FolderBreadcrumbHeader
+              currentPath={currentFolderPath}
+              itemCount={treeLevel.allRecursiveItems.length}
+              onNavigate={(path) => setCurrentFolderPath(path ?? "")}
+              onPlayFolder={() => handlePlayFolder(treeLevel.allRecursiveItems, treeLevel.currentDisplayName)}
+              onAddFolderToQueue={onAddToQueue ? () => handleAddFolderToQueue(treeLevel.allRecursiveItems) : undefined}
             />
-          ))}
+          ) : null}
+
+          {/* Subcarpetas / Colecciones en este nivel */}
+          {treeLevel.subfolders.length > 0 ? (
+            <div className="music-folder-collections-section">
+              {isInsideFolder && treeLevel.directItems.length > 0 ? (
+                <h3 className="music-section-subtitle">Subcarpetas</h3>
+              ) : null}
+              <div className="music-folder-collections">
+                {treeLevel.subfolders.map((folder) => (
+                  <MusicFolderCard
+                    folder={folder}
+                    key={folder.id}
+                    onOpen={() => setCurrentFolderPath(folder.id)}
+                    onPlay={() => handlePlayFolder(folder.allRecursiveItems, folder.displayName)}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Canciones directas o lista de carpeta virtual */}
+          {treeLevel.directItems.length > 0 ? (
+            <div className="music-direct-items-section">
+              {treeLevel.subfolders.length > 0 ? (
+                <h3 className="music-section-subtitle">Canciones</h3>
+              ) : null}
+              <div className="music-auto-grid">
+                {treeLevel.directItems.map((item, idx) => (
+                  <MusicCard
+                    isFavorite={favorites.isFavorite(item.path)}
+                    item={item}
+                    key={item.path}
+                    onClick={() => handlePlayItemInList(treeLevel.directItems, idx, treeLevel.currentDisplayName)}
+                    onAddToQueue={onAddToQueue ? () => onAddToQueue([toQueueItem(item)]) : undefined}
+                    onToggleFavorite={() => favorites.toggleFavorite(item.path)}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : treeLevel.subfolders.length === 0 && treeLevel.allRecursiveItems.length === 0 ? (
+            <div className="music-empty-folder-state">
+              <Icon name="folder" />
+              <p>Esta carpeta no contiene archivos de música directos.</p>
+            </div>
+          ) : null}
         </div>
       )}
 
-      {items.length > VISIBLE_ITEM_LIMIT ? (
+      {items.length > VISIBLE_ITEM_LIMIT && viewMode === "timeline" ? (
         <p className="music-limit-note">
-          Se muestran las {VISIBLE_ITEM_LIMIT} canciones más recientes para mantener la interfaz fluida y ligera.
+          Se muestran las {VISIBLE_ITEM_LIMIT} canciones más recientes para mantener la interfaz fluida.
         </p>
       ) : null}
     </section>
@@ -264,11 +294,13 @@ export function MusicLibrary({
 
 interface MusicCardProps {
   item: MusicLibraryItem;
+  isFavorite: boolean;
   onClick: () => void;
   onAddToQueue?: () => void;
+  onToggleFavorite?: () => void;
 }
 
-function MusicCard({ item, onClick, onAddToQueue }: MusicCardProps) {
+function MusicCard({ item, isFavorite, onClick, onAddToQueue, onToggleFavorite }: MusicCardProps) {
   return (
     <div className="music-media-card-wrapper">
       <button className="music-media-card" onClick={onClick} title={`${item.title} — ${item.relativeFolder}`}>
@@ -301,61 +333,100 @@ function MusicCard({ item, onClick, onAddToQueue }: MusicCardProps) {
         </span>
       </button>
 
-      {onAddToQueue ? (
-        <button
-          className="music-card-queue-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddToQueue();
-          }}
-          title="Añadir a la cola"
-        >
-          <Icon name="queue" />
-        </button>
-      ) : null}
+      <div className="music-card-actions-bar">
+        {onToggleFavorite ? (
+          <button
+            className={`music-card-fav-btn ${isFavorite ? "is-favorite" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite();
+            }}
+            title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
+          >
+            <Icon name="heart" />
+          </button>
+        ) : null}
+
+        {onAddToQueue ? (
+          <button
+            className="music-card-queue-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddToQueue();
+            }}
+            title="Añadir a la cola"
+          >
+            <Icon name="queue" />
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
 
 interface MusicFolderCardProps {
-  section: FolderSection;
+  folder: HierarchicalFolder<MusicLibraryItem>;
   onOpen: () => void;
   onPlay: () => void;
 }
 
-function MusicFolderCard({ section, onOpen, onPlay }: MusicFolderCardProps) {
-  const preview = section.items.slice(0, 4);
+function MusicFolderCard({ folder, onOpen, onPlay }: MusicFolderCardProps) {
+  const isFavorites = folder.isVirtual && folder.virtualType === "favorites";
+  const isAll = folder.isVirtual && folder.virtualType === "all";
+  const preview = folder.allRecursiveItems.slice(0, 4);
 
   return (
-    <div className="music-folder-card" onClick={onOpen} title={`Carpeta ${section.folderName}`}>
+    <div
+      className={`music-folder-card ${isFavorites ? "is-virtual-favorites" : ""} ${isAll ? "is-virtual-all" : ""}`}
+      onClick={onOpen}
+      title={`Carpeta ${folder.displayName}`}
+    >
       <div className="music-folder-mosaic">
-        {preview.map((item, idx) => (
-          <span className="music-folder-mosaic-cell" key={item.path} data-index={idx}>
-            <MusicArtwork alt={item.title} className="music-card-artwork" path={item.path} />
-          </span>
-        ))}
-        {preview.length === 0 && (
-          <span className="music-folder-mosaic-empty">
-            <Icon name="folder" />
-          </span>
+        {isFavorites ? (
+          <div className="music-virtual-card-art is-favorites">
+            <Icon name="star" />
+          </div>
+        ) : isAll ? (
+          <div className="music-virtual-card-art is-all">
+            <Icon name="disc" />
+          </div>
+        ) : (
+          <>
+            {preview.map((item, idx) => (
+              <span className="music-folder-mosaic-cell" key={item.path} data-index={idx}>
+                <MusicArtwork alt={item.title} className="music-card-artwork" path={item.path} />
+              </span>
+            ))}
+            {preview.length === 0 && (
+              <span className="music-folder-mosaic-empty">
+                <Icon name="folder" />
+              </span>
+            )}
+          </>
         )}
+
         <div className="music-folder-hover-overlay">
-          <button
-            className="music-folder-play-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPlay();
-            }}
-            title="Reproducir carpeta"
-          >
-            <Icon name="play" />
-          </button>
+          {folder.allRecursiveItems.length > 0 ? (
+            <button
+              className="music-folder-play-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlay();
+              }}
+              title="Reproducir carpeta"
+            >
+              <Icon name="play" />
+            </button>
+          ) : null}
         </div>
       </div>
       <div className="music-folder-info">
-        <strong className="music-folder-title">{section.folderName}</strong>
+        <strong className="music-folder-title">
+          {isFavorites ? "⭐ Favoritos" : folder.displayName}
+        </strong>
         <span className="music-folder-count">
-          {section.items.length} {section.items.length === 1 ? "canción" : "canciones"}
+          {folder.allRecursiveItems.length}{" "}
+          {folder.allRecursiveItems.length === 1 ? "canción" : "canciones"}
         </span>
       </div>
     </div>
@@ -403,22 +474,6 @@ function groupByTimeline(items: MusicLibraryItem[]): TimelineSection[] {
   }
 
   return Array.from(groupsMap.entries()).map(([title, items]) => ({ title, items }));
-}
-
-function groupByFolder(items: MusicLibraryItem[]): FolderSection[] {
-  const groupsMap = new Map<string, MusicLibraryItem[]>();
-
-  for (const item of items) {
-    const folderName = item.relativeFolder || "Carpeta principal";
-    const existing = groupsMap.get(folderName);
-    if (existing) {
-      existing.push(item);
-    } else {
-      groupsMap.set(folderName, [item]);
-    }
-  }
-
-  return Array.from(groupsMap.entries()).map(([folderName, items]) => ({ folderName, items }));
 }
 
 function formatBytes(bytes: number) {

@@ -3,15 +3,19 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
+import {
+  resolveTreeLevel,
+  type HierarchicalFolder,
+} from "../../../shared/mediaTree";
+import { useFavorites } from "../../../shared/useFavorites";
 import type { VisualFolderSource, VisualLibraryItem, VisualMediaKind } from "../model/types";
 import { VisualThumbnail } from "./VisualThumbnail";
 import { VideoThumbnail } from "./VideoThumbnail";
 import "./visual-library.css";
 
-const VISIBLE_ITEM_LIMIT = 300;
+const VISIBLE_ITEM_LIMIT = 400;
 
 type ViewMode = "timeline" | "folders";
-type FolderNavState = { folderName: string } | null;
 
 interface VisualLibraryProps {
   kind: VisualMediaKind;
@@ -29,11 +33,6 @@ interface TimelineSection {
   items: VisualLibraryItem[];
 }
 
-interface FolderSection {
-  folderName: string;
-  items: VisualLibraryItem[];
-}
-
 export function VisualLibrary({
   kind,
   folders,
@@ -45,9 +44,10 @@ export function VisualLibrary({
   onOpenFolders,
 }: VisualLibraryProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("timeline");
+  const [currentFolderPath, setCurrentFolderPath] = useState<string>("");
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
-  const [selectedFolder, setSelectedFolder] = useState<FolderNavState>(null);
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
+  const favorites = useFavorites();
 
   const isImage = kind === "image";
   const label = isImage ? "Imágenes" : "Vídeos";
@@ -61,15 +61,22 @@ export function VisualLibrary({
     if (typeof selection === "string") await onAdd(selection);
   };
 
-  const timelineSections = groupByTimeline(items.slice(0, VISIBLE_ITEM_LIMIT));
-  const folderSections = groupByFolder(items.slice(0, VISIBLE_ITEM_LIMIT));
+  const visibleItems = items.slice(0, VISIBLE_ITEM_LIMIT);
+  const timelineSections = groupByTimeline(visibleItems);
 
-  const openedFolder = selectedFolder
-    ? (folderSections.find((s) => s.folderName === selectedFolder.folderName) ?? null)
-    : null;
+  // Árbol jerárquico real con soporte para Favoritos y Todos los archivos
+  const treeLevel = resolveTreeLevel(items, currentFolderPath, favorites.favorites, {
+    allName: isImage ? "Todas las imágenes" : "Todos los vídeos",
+    mediaType: isImage ? "image" : "video",
+  });
+
+  const isInsideFolder = currentFolderPath !== "";
 
   // Active list for current view (for next/prev in image viewer or video player queue)
-  const currentActiveList = openedFolder ? openedFolder.items : items;
+  const currentActiveList = isInsideFolder
+    ? (treeLevel.directItems.length > 0 ? treeLevel.directItems : treeLevel.allRecursiveItems)
+    : items;
+
   const selectedImageIndex = selectedImage
     ? currentActiveList.findIndex((it) => it.path === selectedImage.path)
     : -1;
@@ -122,15 +129,14 @@ export function VisualLibrary({
     onOpenVideo(items[0].path, items);
   };
 
-  const handlePlayFolderVideos = (folderName: string) => {
-    const target = folderSections.find((s) => s.folderName === folderName);
-    if (!target || target.items.length === 0) return;
-    onOpenVideo(target.items[0].path, target.items);
+  const handlePlayFolderVideos = (folderItems: VisualLibraryItem[]) => {
+    if (folderItems.length === 0) return;
+    onOpenVideo(folderItems[0].path, folderItems);
   };
 
   const handleSwitchMode = (mode: ViewMode) => {
     setViewMode(mode);
-    setSelectedFolder(null);
+    setCurrentFolderPath("");
   };
 
   return (
@@ -141,8 +147,8 @@ export function VisualLibrary({
           <h1>{label}</h1>
           <p>
             {isImage
-              ? "Explora tus fotografías e ilustraciones organizadas en Bento Grid adaptativo, árbol de carpetas y visor cinematográfico."
-              : "Organiza y reproduce tus vídeos locales con gestión de colas, salto entre pistas y reproductor de cine."}
+              ? "Explora tus fotografías e ilustraciones organizadas en Bento Grid adaptativo, árbol jerárquico de carpetas y visor cinematográfico."
+              : "Organiza y reproduce tus vídeos locales con árbol de carpetas, favoritos, gestión de colas y reproductor de cine."}
           </p>
         </div>
         <div className="visual-heading-actions">
@@ -192,7 +198,7 @@ export function VisualLibrary({
           <button
             className={viewMode === "folders" ? "is-active" : ""}
             onClick={() => handleSwitchMode("folders")}
-            title="Carpetas"
+            title="Árbol de carpetas"
           >
             <Icon name="folder" />
             <span>Carpetas</span>
@@ -225,6 +231,7 @@ export function VisualLibrary({
                 {section.items.map((item, idx) => (
                   <VisualCard
                     index={idx}
+                    isFavorite={favorites.isFavorite(item.path)}
                     isImage={isImage}
                     item={item}
                     key={item.path}
@@ -233,53 +240,79 @@ export function VisualLibrary({
                         ? setSelectedImage(item)
                         : onOpenVideo(item.path, section.items)
                     }
+                    onToggleFavorite={() => favorites.toggleFavorite(item.path)}
                   />
                 ))}
               </div>
             </div>
           ))}
         </div>
-      ) : openedFolder ? (
-        /* ── Vista interna de carpeta con Breadcrumb de Lienzo ── */
-        <div className="visual-folder-view" aria-busy={loading}>
-          <FolderBreadcrumbHeader
-            currentPath={openedFolder.folderName}
-            itemCount={openedFolder.items.length}
-            onNavigate={() => setSelectedFolder(null)}
-            onPlayFolder={!isImage ? () => handlePlayFolderVideos(openedFolder.folderName) : undefined}
-          />
-          <div className="visual-grid bento-grid-layout">
-            {openedFolder.items.map((item, idx) => (
-              <VisualCard
-                index={idx}
-                isImage={isImage}
-                item={item}
-                key={item.path}
-                onClick={() =>
-                  isImage
-                    ? setSelectedImage(item)
-                    : onOpenVideo(item.path, openedFolder.items)
-                }
-              />
-            ))}
-          </div>
-        </div>
       ) : (
-        /* ── Vista de colecciones de carpetas en mosaico ── */
-        <div className="visual-folder-collections" aria-busy={loading}>
-          {folderSections.map((section) => (
-            <FolderCollectionCard
-              isImage={isImage}
-              key={section.folderName}
-              section={section}
-              onOpen={() => setSelectedFolder({ folderName: section.folderName })}
-              onPlayVideo={!isImage ? () => handlePlayFolderVideos(section.folderName) : undefined}
+        /* ── Vista Árbol Jerárquico de Carpetas para Imágenes / Vídeos ── */
+        <div className="visual-folder-tree-view" aria-busy={loading}>
+          {isInsideFolder ? (
+            <FolderBreadcrumbHeader
+              currentPath={currentFolderPath}
+              itemCount={treeLevel.allRecursiveItems.length}
+              onNavigate={(path) => setCurrentFolderPath(path ?? "")}
+              onPlayFolder={!isImage ? () => handlePlayFolderVideos(treeLevel.allRecursiveItems) : undefined}
             />
-          ))}
+          ) : null}
+
+          {/* Subcarpetas / Colecciones en este nivel */}
+          {treeLevel.subfolders.length > 0 ? (
+            <div className="visual-folder-collections-section">
+              {isInsideFolder && treeLevel.directItems.length > 0 ? (
+                <h3 className="visual-section-subtitle">Subcarpetas</h3>
+              ) : null}
+              <div className="visual-folder-collections">
+                {treeLevel.subfolders.map((folder) => (
+                  <VisualFolderCard
+                    folder={folder}
+                    isImage={isImage}
+                    key={folder.id}
+                    onOpen={() => setCurrentFolderPath(folder.id)}
+                    onPlayVideo={!isImage ? () => handlePlayFolderVideos(folder.allRecursiveItems) : undefined}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Archivos directos o lista de carpeta virtual */}
+          {treeLevel.directItems.length > 0 ? (
+            <div className="visual-direct-items-section">
+              {treeLevel.subfolders.length > 0 ? (
+                <h3 className="visual-section-subtitle">{isImage ? "Imágenes" : "Vídeos"}</h3>
+              ) : null}
+              <div className="visual-grid bento-grid-layout">
+                {treeLevel.directItems.map((item, idx) => (
+                  <VisualCard
+                    index={idx}
+                    isFavorite={favorites.isFavorite(item.path)}
+                    isImage={isImage}
+                    item={item}
+                    key={item.path}
+                    onClick={() =>
+                      isImage
+                        ? setSelectedImage(item)
+                        : onOpenVideo(item.path, treeLevel.directItems)
+                    }
+                    onToggleFavorite={() => favorites.toggleFavorite(item.path)}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : treeLevel.subfolders.length === 0 && treeLevel.allRecursiveItems.length === 0 ? (
+            <div className="visual-empty-folder-state">
+              <Icon name={isImage ? "image" : "video"} />
+              <p>Esta carpeta no contiene {label.toLowerCase()} directos.</p>
+            </div>
+          ) : null}
         </div>
       )}
 
-      {items.length > VISIBLE_ITEM_LIMIT ? (
+      {items.length > VISIBLE_ITEM_LIMIT && viewMode === "timeline" ? (
         <p className="visual-limit-note">
           Se muestran los {VISIBLE_ITEM_LIMIT} elementos más recientes para mantener la interfaz ligera.
         </p>
@@ -301,24 +334,33 @@ export function VisualLibrary({
             <span className="image-viewer-counter">
               Foto {selectedImageIndex >= 0 ? selectedImageIndex + 1 : 1} de {currentActiveList.length}
             </span>
-            <button
-              className={`image-viewer-slideshow-btn ${isSlideshowActive ? "is-active" : ""}`}
-              onClick={() => setIsSlideshowActive(!isSlideshowActive)}
-              title={isSlideshowActive ? "Detener presentación" : "Iniciar presentación automática"}
-            >
-              <Icon name="play" />
-              <span>{isSlideshowActive ? "Pausar Diapositivas" : "Presentación"}</span>
-            </button>
-            <button
-              aria-label="Cerrar vista previa"
-              className="image-viewer-close"
-              onClick={() => {
-                setSelectedImage(null);
-                setIsSlideshowActive(false);
-              }}
-            >
-              <Icon name="close" />
-            </button>
+            <div className="image-viewer-top-actions">
+              <button
+                className={`image-viewer-fav-btn ${favorites.isFavorite(selectedImage.path) ? "is-favorite" : ""}`}
+                onClick={() => favorites.toggleFavorite(selectedImage.path)}
+                title={favorites.isFavorite(selectedImage.path) ? "Quitar de favoritos" : "Añadir a favoritos"}
+              >
+                <Icon name="heart" />
+              </button>
+              <button
+                className={`image-viewer-slideshow-btn ${isSlideshowActive ? "is-active" : ""}`}
+                onClick={() => setIsSlideshowActive(!isSlideshowActive)}
+                title={isSlideshowActive ? "Detener presentación" : "Iniciar presentación automática"}
+              >
+                <Icon name="play" />
+                <span>{isSlideshowActive ? "Pausar Diapositivas" : "Presentación"}</span>
+              </button>
+              <button
+                aria-label="Cerrar vista previa"
+                className="image-viewer-close"
+                onClick={() => {
+                  setSelectedImage(null);
+                  setIsSlideshowActive(false);
+                }}
+              >
+                <Icon name="close" />
+              </button>
+            </div>
           </div>
 
           {currentActiveList.length > 1 ? (
@@ -368,10 +410,12 @@ interface VisualCardProps {
   item: VisualLibraryItem;
   index: number;
   isImage: boolean;
+  isFavorite: boolean;
   onClick: () => void;
+  onToggleFavorite?: () => void;
 }
 
-function VisualCard({ item, index, isImage, onClick }: VisualCardProps) {
+function VisualCard({ item, index, isImage, isFavorite, onClick, onToggleFavorite }: VisualCardProps) {
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
   let bentoClass = isImage
@@ -394,36 +438,136 @@ function VisualCard({ item, index, isImage, onClick }: VisualCardProps) {
   }
 
   return (
-    <button className={`visual-media-card ${bentoClass}`} onClick={onClick} title={item.path}>
-      <span className="visual-media-frame">
-        {isImage ? (
-          <VisualThumbnail
-            alt={item.title}
-            className="visual-thumbnail"
-            onLoadDimensions={(w, h) => setDimensions({ width: w, height: h })}
-            path={item.path}
-          />
+    <div className={`visual-media-card-wrapper ${bentoClass}`}>
+      <button className="visual-media-card" onClick={onClick} title={item.path}>
+        <span className="visual-media-frame">
+          {isImage ? (
+            <VisualThumbnail
+              alt={item.title}
+              className="visual-thumbnail"
+              onLoadDimensions={(w, h) => setDimensions({ width: w, height: h })}
+              path={item.path}
+            />
+          ) : (
+            <VideoThumbnail
+              className="visual-thumbnail"
+              path={item.path}
+              title={item.title}
+              onLoadDimensions={(w, h) => setDimensions({ width: w, height: h })}
+            />
+          )}
+          {!isImage ? (
+            <i className="visual-play">
+              <Icon name="play" />
+            </i>
+          ) : null}
+        </span>
+        <span className="visual-card-caption">
+          <strong>{item.title}</strong>
+          <small>
+            {item.relativeFolder} · {formatBytes(item.sizeBytes)}
+          </small>
+        </span>
+      </button>
+
+      {onToggleFavorite ? (
+        <button
+          className={`visual-card-fav-btn ${isFavorite ? "is-favorite" : ""}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite();
+          }}
+          title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
+        >
+          <Icon name="heart" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+interface VisualFolderCardProps {
+  folder: HierarchicalFolder<VisualLibraryItem>;
+  isImage: boolean;
+  onOpen: () => void;
+  onPlayVideo?: () => void;
+}
+
+function VisualFolderCard({
+  folder,
+  isImage,
+  onOpen,
+  onPlayVideo,
+}: VisualFolderCardProps) {
+  const isFavorites = folder.isVirtual && folder.virtualType === "favorites";
+  const isAll = folder.isVirtual && folder.virtualType === "all";
+  const preview = folder.allRecursiveItems.slice(0, 4);
+
+  return (
+    <div
+      className={`folder-collection-card ${isFavorites ? "is-virtual-favorites" : ""} ${isAll ? "is-virtual-all" : ""}`}
+      onClick={onOpen}
+      title={folder.displayName}
+    >
+      <span className="folder-collection-mosaic">
+        {isFavorites ? (
+          <div className="folder-virtual-card-art is-favorites">
+            <Icon name="star" />
+          </div>
+        ) : isAll ? (
+          <div className="folder-virtual-card-art is-all">
+            <Icon name={isImage ? "image" : "video"} />
+          </div>
         ) : (
-          <VideoThumbnail
-            className="visual-thumbnail"
-            path={item.path}
-            title={item.title}
-            onLoadDimensions={(w, h) => setDimensions({ width: w, height: h })}
-          />
+          <>
+            {preview.map((item, i) => (
+              <span className="folder-collection-cell" key={item.path} data-index={i}>
+                {isImage ? (
+                  <VisualThumbnail
+                    alt={item.title}
+                    className="visual-thumbnail"
+                    path={item.path}
+                  />
+                ) : (
+                  <VideoThumbnail className="visual-thumbnail" path={item.path} title={item.title} />
+                )}
+              </span>
+            ))}
+            {preview.length === 0 && (
+              <span className="folder-collection-empty">
+                <Icon name={isImage ? "image" : "video"} />
+              </span>
+            )}
+          </>
         )}
-        {!isImage ? (
-          <i className="visual-play">
-            <Icon name="play" />
-          </i>
-        ) : null}
+
+        <span className="folder-collection-overlay">
+          {onPlayVideo && folder.allRecursiveItems.length > 0 ? (
+            <button
+              className="folder-play-overlay-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlayVideo();
+              }}
+              title="Reproducir todos los vídeos de la carpeta"
+            >
+              <Icon name="play" />
+            </button>
+          ) : (
+            <Icon name="folder-open" />
+          )}
+        </span>
       </span>
-      <span className="visual-card-caption">
-        <strong>{item.title}</strong>
-        <small>
-          {item.relativeFolder} · {formatBytes(item.sizeBytes)}
-        </small>
+      <span className="folder-collection-info">
+        <strong className="folder-collection-name">
+          {isFavorites ? "⭐ Favoritos" : folder.displayName}
+        </strong>
+        <span className="folder-collection-count">
+          {folder.allRecursiveItems.length}{" "}
+          {folder.allRecursiveItems.length === 1 ? "archivo" : "archivos"}
+        </span>
       </span>
-    </button>
+    </div>
   );
 }
 
@@ -462,87 +606,8 @@ function groupByTimeline(items: VisualLibraryItem[]): TimelineSection[] {
   return Array.from(groupsMap.entries()).map(([title, items]) => ({ title, items }));
 }
 
-function groupByFolder(items: VisualLibraryItem[]): FolderSection[] {
-  const groupsMap = new Map<string, VisualLibraryItem[]>();
-
-  for (const item of items) {
-    const folderName = item.relativeFolder || "Carpeta principal";
-    const existing = groupsMap.get(folderName);
-    if (existing) {
-      existing.push(item);
-    } else {
-      groupsMap.set(folderName, [item]);
-    }
-  }
-
-  return Array.from(groupsMap.entries()).map(([folderName, items]) => ({ folderName, items }));
-}
-
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-interface FolderCollectionCardProps {
-  section: FolderSection;
-  isImage: boolean;
-  onOpen: () => void;
-  onPlayVideo?: () => void;
-}
-
-function FolderCollectionCard({
-  section,
-  isImage,
-  onOpen,
-  onPlayVideo,
-}: FolderCollectionCardProps) {
-  const preview = section.items.slice(0, 4);
-
-  return (
-    <div className="folder-collection-card" onClick={onOpen} title={section.folderName}>
-      <span className="folder-collection-mosaic">
-        {preview.map((item, i) => (
-          <span className="folder-collection-cell" key={item.path} data-index={i}>
-            {isImage ? (
-              <VisualThumbnail
-                alt={item.title}
-                className="visual-thumbnail"
-                path={item.path}
-              />
-            ) : (
-              <VideoThumbnail className="visual-thumbnail" path={item.path} title={item.title} />
-            )}
-          </span>
-        ))}
-        {preview.length === 0 && (
-          <span className="folder-collection-empty">
-            <Icon name={isImage ? "image" : "video"} />
-          </span>
-        )}
-        <span className="folder-collection-overlay">
-          {onPlayVideo ? (
-            <button
-              className="folder-play-overlay-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPlayVideo();
-              }}
-              title="Reproducir todos los vídeos de la carpeta"
-            >
-              <Icon name="play" />
-            </button>
-          ) : (
-            <Icon name="folder-open" />
-          )}
-        </span>
-      </span>
-      <span className="folder-collection-info">
-        <strong className="folder-collection-name">{section.folderName}</strong>
-        <small className="folder-collection-count">
-          {section.items.length} {section.items.length === 1 ? "archivo" : "archivos"}
-        </small>
-      </span>
-    </div>
-  );
 }

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Icon } from "./Icon";
+import { FAVORITES_FOLDER_ID, ALL_MEDIA_FOLDER_ID } from "../mediaTree";
 import "./folder-breadcrumb.css";
 
 interface FolderBreadcrumbHeaderProps {
@@ -15,6 +16,7 @@ interface FolderBreadcrumbHeaderProps {
 interface PathSegment {
   name: string;
   path: string;
+  isVirtual?: boolean;
 }
 
 export function FolderBreadcrumbHeader({
@@ -28,6 +30,14 @@ export function FolderBreadcrumbHeader({
 }: FolderBreadcrumbHeaderProps) {
   const segments = useMemo(() => {
     if (!currentPath) return [];
+
+    if (currentPath === FAVORITES_FOLDER_ID) {
+      return [{ name: "⭐ Favoritos", path: FAVORITES_FOLDER_ID, isVirtual: true }];
+    }
+
+    if (currentPath === ALL_MEDIA_FOLDER_ID) {
+      return [{ name: "Todos los archivos", path: ALL_MEDIA_FOLDER_ID, isVirtual: true }];
+    }
 
     const normalized = currentPath.replace(/\\/g, "/").replace(/\/$/, "");
     const parts = normalized.split("/").filter(Boolean);
@@ -51,20 +61,20 @@ export function FolderBreadcrumbHeader({
       accum = accum ? `${accum}/${part}` : part;
       list.push({
         name: part,
-        path: accum.replace(/\//g, "\\"),
+        path: accum,
       });
     }
 
     return list;
   }, [currentPath]);
 
-  const canGoUp = segments.length > 1;
+  const canGoUp = segments.length > 0;
 
   const handleGoUp = () => {
     if (segments.length > 1) {
       const parentPath = segments[segments.length - 2].path;
       onNavigate(parentPath);
-    } else if (segments.length === 1 && !rootPath) {
+    } else {
       onNavigate(null);
     }
   };
@@ -125,7 +135,7 @@ export function FolderBreadcrumbHeader({
           </span>
         ) : null}
 
-        {currentPath && onPlayFolder ? (
+        {currentPath && onPlayFolder && itemCount && itemCount > 0 ? (
           <button
             className="breadcrumb-action-btn is-primary"
             onClick={() => onPlayFolder(currentPath)}
@@ -136,7 +146,7 @@ export function FolderBreadcrumbHeader({
           </button>
         ) : null}
 
-        {currentPath && onAddFolderToQueue ? (
+        {currentPath && onAddFolderToQueue && itemCount && itemCount > 0 ? (
           <button
             className="breadcrumb-action-btn"
             onClick={() => onAddFolderToQueue(currentPath)}
