@@ -30,11 +30,6 @@ interface MusicLibraryProps {
   onOpenFolders: () => void;
 }
 
-interface TimelineSection {
-  title: string;
-  items: MusicLibraryItem[];
-}
-
 function toQueueItem(item: MusicLibraryItem): MusicQueueItem {
   return {
     id: item.path,
@@ -73,7 +68,6 @@ export function MusicLibrary({
   };
 
   const visibleItems = items.slice(0, VISIBLE_ITEM_LIMIT);
-  const timelineSections = groupByTimeline(visibleItems);
 
   // Árbol jerárquico real con soporte para Favoritos y Todas las canciones
   const treeLevel = resolveTreeLevel(items, currentFolderPath, favorites.favorites, {
@@ -199,32 +193,22 @@ export function MusicLibrary({
           </button>
         </div>
       ) : viewMode === "timeline" ? (
-        <div className="music-timeline-container" aria-busy={loading}>
-          {timelineSections.map((section) => (
-            <div className="music-section" key={section.title}>
-              <header className="music-section-header">
-                <h3>{section.title}</h3>
-                <span className="music-section-count">
-                  {section.items.length} {section.items.length === 1 ? "canción" : "canciones"}
-                </span>
-              </header>
-              <div className="music-auto-grid">
-                {section.items.map((item, idx) => (
-                  <MusicCard
-                    isFavorite={favorites.isFavorite(item.path)}
-                    item={item}
-                    key={item.path}
-                    onClick={() => handlePlayItemInList(section.items, idx, section.title)}
-                    onAddToQueue={onAddToQueue ? () => onAddToQueue([toQueueItem(item)]) : undefined}
-                    onToggleFavorite={() => favorites.toggleFavorite(item.path)}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
+        <div className="music-bento-container" aria-busy={loading}>
+          <div className="music-auto-grid">
+            {visibleItems.map((item, idx) => (
+              <MusicCard
+                isFavorite={favorites.isFavorite(item.path)}
+                item={item}
+                key={item.path}
+                onClick={() => handlePlayItemInList(visibleItems, idx, "Música")}
+                onAddToQueue={onAddToQueue ? () => onAddToQueue([toQueueItem(item)]) : undefined}
+                onToggleFavorite={() => favorites.toggleFavorite(item.path)}
+              />
+            ))}
+          </div>
         </div>
       ) : (
-        /* ── Vista Árbol Jerárquico de Carpetas (Inspirado en Lienzo) ── */
+        /* ── Vista Árbol Jerárquico de Carpetas ── */
         <div className="music-folder-tree-view" aria-busy={loading}>
           {isInsideFolder ? (
             <FolderBreadcrumbHeader
@@ -431,49 +415,6 @@ function MusicFolderCard({ folder, onOpen, onPlay }: MusicFolderCardProps) {
       </div>
     </div>
   );
-}
-
-function groupByTimeline(items: MusicLibraryItem[]): TimelineSection[] {
-  const groupsMap = new Map<string, MusicLibraryItem[]>();
-
-  const now = new Date();
-  const todayTimestamp = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const yesterdayTimestamp = todayTimestamp - 86400000;
-
-  for (const item of items) {
-    if (!item.modifiedAtMillis) {
-      const fallbackTitle = "Colección";
-      const existing = groupsMap.get(fallbackTitle);
-      if (existing) existing.push(item);
-      else groupsMap.set(fallbackTitle, [item]);
-      continue;
-    }
-
-    const itemDate = new Date(item.modifiedAtMillis);
-    const itemDayTimestamp = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate()).getTime();
-
-    let title: string;
-    if (itemDayTimestamp === todayTimestamp) {
-      title = "Hoy";
-    } else if (itemDayTimestamp === yesterdayTimestamp) {
-      title = "Ayer";
-    } else {
-      title = itemDate.toLocaleDateString("es-ES", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
-    }
-
-    const existing = groupsMap.get(title);
-    if (existing) {
-      existing.push(item);
-    } else {
-      groupsMap.set(title, [item]);
-    }
-  }
-
-  return Array.from(groupsMap.entries()).map(([title, items]) => ({ title, items }));
 }
 
 function formatBytes(bytes: number) {
