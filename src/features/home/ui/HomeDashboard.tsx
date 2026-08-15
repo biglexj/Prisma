@@ -6,7 +6,7 @@ import { VideoThumbnail } from "../../visual_library/ui/VideoThumbnail";
 import { Icon } from "../../../shared/ui/Icon";
 import "./home-dashboard.css";
 
-const HOME_ROW_ITEMS_LIMIT = 12;
+const HOME_ROW_ITEMS_LIMIT = 8;
 
 interface HomeDashboardProps {
   musicFolders: MusicFolderSource[];
