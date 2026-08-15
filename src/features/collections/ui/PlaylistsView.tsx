@@ -508,11 +508,8 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
                 }`}
                 key={playlist.path}
                 onClick={() => {
-                  if (selectedPlaylist?.path === playlist.path) {
-                    selectPlaylist(null);
-                  } else {
-                    selectPlaylist(playlist);
-                  }
+                  // Siempre seleccionar (o recargar desde disco si ya estaba seleccionado)
+                  void selectPlaylist(playlist);
                 }}
               >
                 <div className="playlist-card-cover">

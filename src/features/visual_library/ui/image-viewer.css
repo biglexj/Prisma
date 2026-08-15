@@ -142,9 +142,38 @@
   margin: 0 2px;
 }
 
-.image-viewer-zoom-controls button.image-viewer-expand-btn.is-active {
+.image-viewer-zoom-controls button.image-viewer-autofit-btn.is-active {
   background: var(--primary, #c90045);
   color: #ffffff;
+}
+
+/* Toast de escala adaptativa */
+.image-viewer-zoom-toast {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10, 8, 12, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: #fff;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  padding: 12px 28px;
+  border-radius: 18px;
+  pointer-events: none;
+  z-index: 60;
+  animation: zoomToastPop 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes zoomToastPop {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+  15%  { opacity: 1; transform: translate(-50%, -50%) scale(1.04); }
+  30%  { transform: translate(-50%, -50%) scale(1); }
+  70%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
 }
 
 /* ══════════════════════════════════════════════

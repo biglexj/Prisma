@@ -37,6 +37,17 @@ export function usePlaylists() {
       const list = await playlistsList();
       cachedPlaylists = list;
       setPlaylists(list);
+
+      // Sincronizar el meta del playlist seleccionado con el objeto fresco de la lista
+      if (cachedSelectedPlaylist) {
+        const freshMeta = list.find(
+          (p) => p.path.toLowerCase() === cachedSelectedPlaylist!.path.toLowerCase()
+        );
+        if (freshMeta) {
+          cachedSelectedPlaylist = freshMeta;
+          setSelectedPlaylist(freshMeta);
+        }
+      }
     } catch (err) {
       console.error("Error listando playlists:", err);
     } finally {
@@ -49,7 +60,13 @@ export function usePlaylists() {
     if (cachedPlaylists === null) {
       void refresh(true);
     }
-  }, [refresh]);
+    // Si hay un playlist seleccionado pero sin ítems en caché (caché stale),
+    // re-leer del disco automáticamente al montar el componente.
+    if (cachedSelectedPlaylist !== null && cachedSelectedItems.length === 0) {
+      void selectPlaylist(cachedSelectedPlaylist);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Intencional: solo al montar
 
   const selectPlaylist = useCallback(async (meta: PlaylistMeta | null) => {
     cachedSelectedPlaylist = meta;

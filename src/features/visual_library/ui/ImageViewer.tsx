@@ -31,6 +31,7 @@ export function ImageViewer({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isAutoFitActive, setIsAutoFitActive] = useState(false);
+  const isAutoFitRef = useRef(false); // Ref para evitar stale closure en onLoad
   const [zoomToast, setZoomToast] = useState<string | null>(null);
   const zoomToastTimerRef = useRef<number | null>(null);
 
@@ -46,11 +47,16 @@ export function ImageViewer({
     zoomToastTimerRef.current = window.setTimeout(() => setZoomToast(null), 1200);
   };
 
+  const setAutoFit = (value: boolean) => {
+    isAutoFitRef.current = value;
+    setIsAutoFitActive(value);
+  };
+
   const resetImageTransform = () => {
     setZoomScale(1);
     setPanOffset({ x: 0, y: 0 });
     setIsDragging(false);
-    setIsAutoFitActive(false);
+    setAutoFit(false);
   };
 
   useEffect(() => {
@@ -106,10 +112,10 @@ export function ImageViewer({
     if (activeList.length === 0 || currentIndex < 0) return;
     const prevIndex = (currentIndex - 1 + activeList.length) % activeList.length;
     const nextItem = activeList[prevIndex];
-    // Mantener pan/drag, pero resetear pan; autofit se re-aplica en onLoad si está activo
+    // Mantener pan; autofit se re-aplica en onLoad si está activo (via isAutoFitRef)
     setPanOffset({ x: 0, y: 0 });
     setIsDragging(false);
-    if (!isAutoFitActive) setZoomScale(1);
+    if (!isAutoFitRef.current) setZoomScale(1);
     setCurrentItem(nextItem);
     onSelectImage?.(nextItem);
   };
@@ -120,13 +126,13 @@ export function ImageViewer({
     const nextItem = activeList[nextIndex];
     setPanOffset({ x: 0, y: 0 });
     setIsDragging(false);
-    if (!isAutoFitActive) setZoomScale(1);
+    if (!isAutoFitRef.current) setZoomScale(1);
     setCurrentItem(nextItem);
     onSelectImage?.(nextItem);
   };
 
   const handleZoomIn = () => {
-    setIsAutoFitActive(false);
+    setAutoFit(false);
     setZoomScale((prev) => {
       const next = Math.min(5, Math.round((prev + 0.25) * 100) / 100);
       showZoomToast(next);
@@ -135,7 +141,7 @@ export function ImageViewer({
   };
 
   const handleZoomOut = () => {
-    setIsAutoFitActive(false);
+    setAutoFit(false);
     setZoomScale((prev) => {
       const next = Math.max(0.5, Math.round((prev - 0.25) * 100) / 100);
       if (next <= 1) setPanOffset({ x: 0, y: 0 });
@@ -157,7 +163,14 @@ export function ImageViewer({
     }
   };
 
+
   const handleAutoScale = () => {
+    if (isAutoFitRef.current) {
+      resetImageTransform();
+      showZoomToast(1);
+      return;
+    }
+
     const img = imgRef.current;
     if (!img) return;
 
@@ -165,26 +178,18 @@ export function ImageViewer({
     const naturalH = img.naturalHeight || img.height;
     if (!naturalW || !naturalH) return;
 
-    // Dimensiones completas de la pantalla al 100% (sin márgenes que dejen pedacitos arriba)
-    const availableW = window.innerWidth;
-    const availableH = window.innerHeight;
-
-    const scaleX = availableW / naturalW;
-    const scaleY = availableH / naturalH;
-
-    // Escalar para topar exactamente el 100% del alto o ancho de la pantalla
+    const scaleX = window.innerWidth / naturalW;
+    const scaleY = window.innerHeight / naturalH;
     const fitScale = Math.round(Math.min(scaleX, scaleY) * 100) / 100;
 
-    if (Math.abs(zoomScale - fitScale) < 0.02 && fitScale !== 1) {
-      resetImageTransform();
-    } else {
-      setZoomScale(fitScale);
-      setPanOffset({ x: 0, y: 0 });
-    }
+    setZoomScale(fitScale);
+    setPanOffset({ x: 0, y: 0 });
+    setAutoFit(true);
+    showZoomToast(fitScale);
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    setIsAutoFitActive(false);
+    setAutoFit(false);
     if (e.deltaY < 0) {
       setZoomScale((prev) => {
         const next = Math.min(5, Math.round((prev + 0.15) * 100) / 100);
@@ -419,9 +424,21 @@ export function ImageViewer({
             draggable={false}
             ref={imgRef}
             src={convertFileSrc(cleanPath(currentItem.path))}
+            onLoad={(e) => {
+              if (isAutoFitRef.current) {
+                applyAutoFitToImage(e.currentTarget);
+              }
+            }}
           />
         </div>
       </figure>
+
+      {/* Toast de escala al hacer zoom */}
+      {zoomToast && (
+        <div className="image-viewer-zoom-toast" key={zoomToast}>
+          {zoomToast}
+        </div>
+      )}
 
       {/* Barra de control de Zoom y Escala Automática */}
       <div className="image-viewer-zoom-controls" onClick={(e) => e.stopPropagation()}>
@@ -435,9 +452,9 @@ export function ImageViewer({
           <Icon name="plus" />
         </button>
         <button
-          className="image-viewer-autofit-btn"
+          className={`image-viewer-autofit-btn${isAutoFitActive ? " is-active" : ""}`}
           onClick={handleAutoScale}
-          title="Escalar automáticamente (Ajustar a pantalla)"
+          title={isAutoFitActive ? "Desactivar ajuste automático" : "Ajustar a la pantalla automáticamente"}
         >
           <Icon name="fit-screen" />
         </button>
