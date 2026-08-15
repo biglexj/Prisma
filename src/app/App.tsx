@@ -44,6 +44,7 @@ export function App() {
   const [activeVideoSessionItems, setActiveVideoSessionItems] = useState<VisualLibraryItem[]>([]);
   const [videoReturnView, setVideoReturnView] = useState<AppView>("videos");
   const [activeInitialImagePath, setActiveInitialImagePath] = useState<string | null>(null);
+  const [isPip, setIsPip] = useState(false);
   const { theme, setTheme } = useTheme();
   const playback = usePlaybackController();
   const library = useMusicLibrary();
@@ -82,7 +83,24 @@ export function App() {
     setVideoReturnView(activeView);
     setActiveVideoPath(path);
     setActiveVideoSessionItems(sessionItems && sessionItems.length > 0 ? sessionItems : videoLibrary.items);
+    setIsPip(false);
     setActiveView("video_player");
+  };
+
+  /**
+   * Gestiona el ciclo de vida de Picture-in-Picture desde App:
+   * - Al activar PiP: vuelve a la vista de galería/origen (limpia el fondo).
+   * - Al desactivar PiP (miniatura flotante cerrada): restaura el reproductor a pantalla completa.
+   */
+  const handlePipChange = (active: boolean) => {
+    setIsPip(active);
+    if (active) {
+      // Ocultar el reproductor y mostrar la vista de fondo limpia
+      setActiveView(videoReturnView);
+    } else {
+      // Restaurar el reproductor completo al salir del modo flotante
+      setActiveView("video_player");
+    }
   };
 
   useEffect(() => {
@@ -247,13 +265,31 @@ export function App() {
             </>
           ) : null}
 
-          {activeView === "video_player" ? (
-            <VideoPlayer
-              onBack={() => setActiveView(videoReturnView)}
-              onSelectVideo={(path) => setActiveVideoPath(path)}
-              path={activeVideoPath}
-              videoItems={activeVideoSessionItems.length > 0 ? activeVideoSessionItems : videoLibrary.items}
-            />
+          {/*
+            VideoPlayer se monta mientras haya un vídeo activo (incluido modo PiP).
+            En modo PiP se mantiene oculto con CSS (display:none) para que el elemento
+            <video> HTML siga siendo el propietario de la sesión PiP del navegador.
+            Al salir de PiP se vuelve a mostrar sin perder el estado de reproducción.
+          */}
+          {activeVideoPath ? (
+            <div
+              style={{
+                display: activeView === "video_player" ? "contents" : "none",
+                position: activeView !== "video_player" ? "absolute" : undefined,
+                visibility: activeView !== "video_player" ? "hidden" : undefined,
+              }}
+            >
+              <VideoPlayer
+                onBack={() => {
+                  setIsPip(false);
+                  setActiveView(videoReturnView);
+                }}
+                onPipChange={handlePipChange}
+                onSelectVideo={(path) => setActiveVideoPath(path)}
+                path={activeVideoPath}
+                videoItems={activeVideoSessionItems.length > 0 ? activeVideoSessionItems : videoLibrary.items}
+              />
+            </div>
           ) : null}
 
           {activeView === "settings" ? (

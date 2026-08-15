@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { formatTime, mediaTitle } from "../../playback/ui/formatters";
 import { Icon } from "../../../shared/ui/Icon";
 import { cleanPath, toPlatformPath } from "../../../shared/mediaTree";
@@ -14,6 +13,8 @@ interface VideoPlayerProps {
   videoItems?: VisualLibraryItem[];
   onBack: () => void;
   onSelectVideo?: (path: string) => void;
+  /** Notifica a App.tsx cuándo entra/sale del modo Picture-in-Picture */
+  onPipChange?: (active: boolean) => void;
 }
 
 type AudioChannelMode = "stereo" | "mono";
@@ -40,6 +41,7 @@ export function VideoPlayer({
   videoItems = [],
   onBack,
   onSelectVideo,
+  onPipChange,
 }: VideoPlayerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isFastForwarding, setIsFastForwarding] = useState(false);
@@ -255,11 +257,10 @@ export function VideoPlayer({
     }
   };
 
-  const handleBack = async () => {
+  // handleBack sale de PiP si estaba activo antes de navegar
+  const handleBack = () => {
     if (document.pictureInPictureElement) {
-      try {
-        await document.exitPictureInPicture();
-      } catch {}
+      void document.exitPictureInPicture().catch(() => {});
     }
     onBack();
   };
@@ -270,17 +271,14 @@ export function VideoPlayer({
 
     const onEnter = () => {
       setIsPipActive(true);
+      // Notificar a App.tsx para que limpie la vista de fondo
+      onPipChange?.(true);
     };
 
     const onLeave = () => {
       setIsPipActive(false);
-      try {
-        const appWindow = getCurrentWindow();
-        void appWindow.unminimize();
-        void appWindow.setFocus();
-      } catch (e) {
-        console.warn("No se pudo re-enfocar la ventana tras salir de PiP:", e);
-      }
+      // Notificar a App.tsx para que restaure el reproductor
+      onPipChange?.(false);
     };
 
     video.addEventListener("enterpictureinpicture", onEnter);
@@ -290,7 +288,7 @@ export function VideoPlayer({
       video.removeEventListener("enterpictureinpicture", onEnter);
       video.removeEventListener("leavepictureinpicture", onLeave);
     };
-  }, [path]);
+  }, [path, onPipChange]);
 
   // Cerrar popovers al hacer clic fuera
   useEffect(() => {
@@ -700,32 +698,6 @@ export function VideoPlayer({
             </div>
           )}
 
-          {isPipActive ? (
-            <div className="video-pip-overlay" onClick={(e) => e.stopPropagation()}>
-              <div className="video-pip-badge-icon">
-                <Icon name="pip" />
-              </div>
-              <h3>Reproduciendo en modo flotante (Picture-in-Picture)</h3>
-              <p>El vídeo continúa en la ventana flotante en miniatura.</p>
-              <div className="video-pip-actions">
-                <button
-                  className="filled-button"
-                  onClick={() => void togglePiP()}
-                  title="Restaurar el vídeo dentro de la ventana de Prisma"
-                >
-                  <Icon name="fullscreen" /> Restaurar en esta ventana
-                </button>
-                <button
-                  className="tonal-button"
-                  onClick={() => void handleBack()}
-                  title="Volver a la galería y cerrar PiP"
-                >
-                  <Icon name="arrow-left" /> Volver a la galería
-                </button>
-              </div>
-            </div>
-          ) : null}
-
           {isFastForwarding ? (
             <div className="video-ffw-indicator">
               <span>⏩ 3.0x Velocidad Rápida</span>
@@ -825,53 +797,60 @@ export function VideoPlayer({
               <Icon name="shuffle" />
             </button>
 
-            {/* Ancla Popover de Audio: solo aparece si hay más de 1 pista */}
-            {audioTracksList.length > 1 ? (
-              <div className="video-popover-anchor" ref={audioMenuRef}>
-                <button
-                  className={`video-icon-btn ${showAudioMenu || selectedTrackIdx > 0 || channelMode === "mono" ? "is-active" : ""}`}
-                  onClick={() => {
-                    setShowAudioMenu(!showAudioMenu);
-                    setShowSubMenu(false);
-                  }}
-                  title="Pistas de audio y canales (B)"
-                >
-                  <Icon name="disc" />
-                </button>
+            {/* Ancla Popover de Audio y Canales */}
+            <div className="video-popover-anchor" ref={audioMenuRef}>
+              <button
+                className={`video-icon-btn ${showAudioMenu || selectedTrackIdx > 0 || channelMode === "mono" ? "is-active" : ""}`}
+                onClick={() => {
+                  setShowAudioMenu(!showAudioMenu);
+                  setShowSubMenu(false);
+                }}
+                title="Pistas de audio y canales (B)"
+              >
+                <Icon name="disc" />
+              </button>
 
-                {showAudioMenu ? (
-                  <div className="video-audio-popover">
-                    <p className="video-audio-popover-title">Pistas de audio ({audioTracksList.length})</p>
-                    {audioTracksList.map((track) => (
-                      <button
-                        className={`video-audio-option ${selectedTrackIdx === track.index ? "is-active" : ""}`}
-                        key={track.index}
-                        onClick={() => selectAudioTrack(track.index)}
-                      >
-                        <Icon name="volume" />
-                        <span>{track.label || `Pista ${track.index + 1}`}</span>
-                      </button>
-                    ))}
+              {showAudioMenu ? (
+                <div className="video-audio-popover">
+                  {audioTracksList.length > 0 ? (
+                    <>
+                      <p className="video-audio-popover-title">Pistas de audio ({audioTracksList.length})</p>
+                      {audioTracksList.map((track) => (
+                        <button
+                          className={`video-audio-option ${selectedTrackIdx === track.index ? "is-active" : ""}`}
+                          key={track.index}
+                          onClick={() => selectAudioTrack(track.index)}
+                        >
+                          <Icon name="volume" />
+                          <span>{track.label || `Pista ${track.index + 1}`}</span>
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <p className="video-audio-popover-title">Pistas de audio</p>
+                      <p className="video-audio-popover-empty">Sin pistas disponibles</p>
+                    </>
+                  )}
 
-                    <p className="video-audio-popover-title" style={{ marginTop: 8 }}>Canales de salida</p>
-                    <button
-                      className={`video-audio-option ${channelMode === "stereo" ? "is-active" : ""}`}
-                      onClick={() => applyChannelMode("stereo")}
-                    >
-                      <Icon name="disc" />
-                      <span>Estéreo</span>
-                    </button>
-                    <button
-                      className={`video-audio-option ${channelMode === "mono" ? "is-active" : ""}`}
-                      onClick={() => applyChannelMode("mono")}
-                    >
-                      <Icon name="volume" />
-                      <span>Mono</span>
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+                  <p className="video-audio-popover-title" style={{ marginTop: 8 }}>Canales de salida</p>
+                  <button
+                    className={`video-audio-option ${channelMode === "stereo" ? "is-active" : ""}`}
+                    onClick={() => applyChannelMode("stereo")}
+                  >
+                    <Icon name="disc" />
+                    <span>Estéreo</span>
+                  </button>
+                  <button
+                    className={`video-audio-option ${channelMode === "mono" ? "is-active" : ""}`}
+                    onClick={() => applyChannelMode("mono")}
+                  >
+                    <Icon name="volume" />
+                    <span>Mono</span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
 
             {/* Ancla Popover de Subtítulos */}
             <div className="video-popover-anchor" ref={subMenuRef}>

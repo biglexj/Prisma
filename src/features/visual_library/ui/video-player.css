@@ -670,6 +670,14 @@
   margin: 0;
 }
 
+.video-audio-popover-empty {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.35);
+  padding: 6px 10px 4px;
+  margin: 0;
+  font-style: italic;
+}
+
 .video-audio-option {
   display: flex;
   align-items: center;
