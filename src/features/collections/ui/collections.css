@@ -134,6 +134,35 @@
   gap: 12px;
 }
 
+/* ── Favorites Video Shelf (16:9 Widescreen) ── */
+.favorites-grid-shelf.is-video-shelf {
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  max-height: calc(2 * 190px);
+  gap: 14px;
+}
+
+.home-media-card.is-video-card {
+  width: 100%;
+}
+
+.home-media-card.is-video-card .home-media-frame,
+.home-media-frame.is-video-frame {
+  aspect-ratio: 16 / 9 !important;
+  border-radius: 14px;
+}
+
+.home-media-frame.is-video-frame .video-thumbnail-container {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.home-media-frame.is-video-frame .video-thumbnail-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* ── Favorite Full View (Internal Overlay) ── */
 .favorite-full-view {
   display: flex;
@@ -226,6 +255,11 @@
   gap: 14px;
 }
 
+.favorite-full-grid.is-video {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
 .favorite-full-card {
   position: relative;
   display: flex;
@@ -245,7 +279,8 @@
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
 }
 
-.favorite-full-card-media {
+.favorite-full-card-media,
+.favorite-card-media {
   position: relative;
   aspect-ratio: 1 / 1;
   border-radius: 12px;
@@ -256,14 +291,24 @@
   justify-content: center;
 }
 
+.favorite-full-card.is-video .favorite-full-card-media,
+.favorite-full-card.is-video .favorite-card-media,
+.favorite-card-media.is-video-media {
+  aspect-ratio: 16 / 9 !important;
+  border-radius: 14px;
+}
+
 .favorite-full-card-media img,
-.favorite-full-card-media video {
+.favorite-full-card-media video,
+.favorite-card-media img,
+.favorite-card-media video {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.favorite-full-card-media svg {
+.favorite-full-card-media svg,
+.favorite-card-media svg {
   width: 32px !important;
   height: 32px !important;
   max-width: 32px !important;
@@ -271,14 +316,16 @@
   color: var(--on-surface-variant);
 }
 
-.favorite-full-card-info {
+.favorite-full-card-info,
+.favorite-card-meta {
   display: flex;
   flex-direction: column;
   gap: 2px;
   overflow: hidden;
 }
 
-.favorite-full-card-info strong {
+.favorite-full-card-info strong,
+.favorite-card-meta strong {
   font-size: 0.84rem;
   font-weight: 750;
   color: var(--on-surface);
@@ -287,7 +334,10 @@
   text-overflow: ellipsis;
 }
 
-.favorite-full-card-info span {
+.favorite-full-card-info span,
+.favorite-full-card-info small,
+.favorite-card-meta span,
+.favorite-card-meta small {
   font-size: 0.74rem;
   color: var(--on-surface-variant);
   white-space: nowrap;
@@ -295,7 +345,8 @@
   text-overflow: ellipsis;
 }
 
-.favorite-remove-btn {
+.favorite-remove-btn,
+.favorite-toggle-btn {
   position: absolute;
   top: 6px;
   right: 6px;
@@ -312,16 +363,39 @@
   transform: scale(0.85);
   transition: opacity 160ms ease, transform 160ms ease;
   cursor: pointer;
+  z-index: 4;
 }
 
-.favorite-full-card:hover .favorite-remove-btn {
+.favorite-full-card:hover .favorite-remove-btn,
+.favorite-full-card:hover .favorite-toggle-btn {
   opacity: 1;
   transform: scale(1);
 }
 
-.favorite-remove-btn svg {
+.favorite-remove-btn svg,
+.favorite-toggle-btn svg {
   width: 14px !important;
   height: 14px !important;
+}
+
+.favorite-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.favorite-full-card:hover .favorite-play-overlay {
+  opacity: 1;
+}
+
+.favorite-play-overlay svg {
+  width: 24px !important;
+  height: 24px !important;
+  color: #ffffff !important;
 }
 
 /* ── Playlists View: Diseño Finito, Compacto y Elegante ── */

@@ -505,6 +505,17 @@
   box-shadow: 0 0 16px rgba(224, 82, 115, 0.45);
 }
 
+.video-icon-btn.video-fav-btn.is-favorite {
+  background: var(--primary, #e05273) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+  box-shadow: 0 0 16px rgba(224, 82, 115, 0.45);
+}
+
+.video-icon-btn.video-fav-btn:hover:not(:disabled) {
+  color: #ff8fa3 !important;
+}
+
 .video-icon-btn svg {
   width: 20px;
   height: 20px;
@@ -655,20 +666,21 @@
   color: rgba(255, 255, 255, 0.5);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  padding: 4px 12px 2px;
+  padding: 4px 10px 2px;
   margin: 0;
 }
 
 .video-audio-option {
   display: flex;
   align-items: center;
-  padding: 8px 16px;
-  min-height: 38px;
-  border-radius: 12px;
+  gap: 0 !important;
+  padding: 7px 10px;
+  min-height: 36px;
+  border-radius: 11px;
   background: transparent;
   border: 1px solid transparent;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   text-align: left;
@@ -691,13 +703,18 @@
 }
 
 .video-audio-option svg {
-  width: 16px !important;
-  height: 16px !important;
-  max-width: 16px !important;
-  max-height: 16px !important;
+  width: 15px !important;
+  height: 15px !important;
+  max-width: 15px !important;
+  max-height: 15px !important;
   flex-shrink: 0;
-  margin-left: 2px;
-  margin-right: 10px; /* Espacio natural y equilibrado entre icono y texto */
+  margin-left: 4px !important; /* Desplaza el conjunto 4px hacia la derecha */
+  margin-right: 5px !important; /* Espaciado compacto y ceñido con el texto */
+}
+
+.video-audio-option span {
+  display: inline-block;
+  line-height: 1;
 }
 
 /* ── Toast de Barajado / Notificaciones ── */

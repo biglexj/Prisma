@@ -5,6 +5,7 @@ import { Icon } from "../../../shared/ui/Icon";
 import { cleanPath } from "../../../shared/mediaTree";
 import type { VisualLibraryItem } from "../model/types";
 import { VideoThumbnail } from "./VideoThumbnail";
+import { useFavorites } from "../../../shared/useFavorites";
 import "./video-player.css";
 
 interface VideoPlayerProps {
@@ -70,6 +71,9 @@ export function VideoPlayer({
 
   // Picture-in-Picture State
   const [isPipActive, setIsPipActive] = useState(false);
+
+  const favorites = useFavorites();
+  const isFav = path ? favorites.isFavorite(path) : false;
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsTimeoutRef = useRef<number | null>(null);
@@ -566,6 +570,14 @@ export function VideoPlayer({
           e.preventDefault();
           handleOneShotShuffle();
           break;
+        case "d":
+          e.preventDefault();
+          if (path) {
+            const nextFav = favorites.toggleFavorite(path, "video");
+            setShuffleToastText(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
+            setTimeout(() => setShuffleToastText(null), 1800);
+          }
+          break;
         case "escape":
           e.preventDefault();
           if (showPlaylist) {
@@ -1006,8 +1018,24 @@ export function VideoPlayer({
             </button>
           </div>
 
-          {/* Lado Derecho: Volumen, PiP y Pantalla Completa */}
+          {/* Lado Derecho: Favorito, Volumen, PiP y Pantalla Completa */}
           <div className="video-controls-right">
+            <button
+              aria-label={isFav ? "Quitar de favoritos" : "Marcar como favorito"}
+              className={`video-icon-btn video-fav-btn ${isFav ? "is-favorite is-active" : ""}`}
+              disabled={!path}
+              onClick={() => {
+                if (path) {
+                  const nextFav = favorites.toggleFavorite(path, "video");
+                  setShuffleToastText(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
+                  setTimeout(() => setShuffleToastText(null), 1800);
+                }
+              }}
+              title={isFav ? "Quitar de favoritos (D)" : "Añadir a favoritos (D)"}
+            >
+              <Icon name="heart" />
+            </button>
+
             <div className="video-volume-group">
               <button
                 aria-label={volume === 0 ? "Activar sonido" : "Silenciar"}

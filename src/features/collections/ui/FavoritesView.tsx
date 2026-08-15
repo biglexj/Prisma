@@ -269,17 +269,18 @@ export function FavoritesView({
               Ver todo ({favoriteVideoItems.length})
             </button>
           </header>
-          <div className="favorites-grid-shelf">
+          <div className="favorites-grid-shelf is-video-shelf">
             {favoriteVideoItems.slice(0, FAVORITE_SHELF_LIMIT).map((item) => (
               <button
-                className="home-media-card"
+                className="home-media-card is-video-card"
                 key={item.path}
                 onClick={() => onPlayVideo(item.path, favoriteVideoItems)}
                 title={item.title}
               >
-                <span className="home-media-frame">
+                <span className="home-media-frame is-video-frame">
                   <VideoThumbnail
                     className="home-media-thumbnail"
+                    eager
                     path={item.path}
                     title={item.title}
                   />

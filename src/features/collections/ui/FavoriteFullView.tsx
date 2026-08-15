@@ -174,10 +174,10 @@ export function FavoriteFullView({
             return (
               <div className="favorite-full-card is-video" key={visualItem.path}>
                 <div
-                  className="favorite-card-media"
+                  className="favorite-card-media is-video-media"
                   onClick={() => onPlayVideo && onPlayVideo(visualItem.path)}
                 >
-                  <VideoThumbnail path={visualItem.path} title={visualItem.title} />
+                  <VideoThumbnail eager path={visualItem.path} title={visualItem.title} />
                   <span className="favorite-play-overlay">
                     <Icon name="play" />
                   </span>
