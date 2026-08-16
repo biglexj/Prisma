@@ -183,7 +183,15 @@ export function usePlaybackController() {
     playQueueAt,
     switchQueueAndPlay,
     previous,
-    toggle: () => run(playbackClient.togglePause),
+    toggle: () => {
+      if (!snapshot.path && queue.activeQueue.items.length > 0) {
+        const currentItem = queue.activeQueue.items[queue.queue.currentIndex] || queue.activeQueue.items[0];
+        if (currentItem) {
+          return loadPath(currentItem.path);
+        }
+      }
+      return run(playbackClient.togglePause);
+    },
     next,
     seek: (seconds: number) => run(() => playbackClient.seek(seconds)),
     setVolume: (volume: number) => run(() => playbackClient.setVolume(volume)),

@@ -68,8 +68,8 @@ impl SynapseServer {
 }
 
 fn handle_client(mut stream: TcpStream, app: AppHandle) {
-    let _ = stream.set_read_timeout(Some(Duration::from_secs(10)));
-    let _ = stream.set_write_timeout(Some(Duration::from_secs(10)));
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(60)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(60)));
 
     let mut reader = BufReader::new(stream.try_clone().unwrap_or_else(|_| stream.try_clone().unwrap()));
 
@@ -229,7 +229,17 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
             // Leer cuerpo del archivo y guardar en disco
             let mut file_data = vec![0u8; content_length];
             if content_length > 0 {
-                let _ = reader.read_exact(&mut file_data);
+                if let Err(e) = reader.read_exact(&mut file_data) {
+                    eprintln!("[Synapse Server] Error al leer archivo del socket: {e}");
+                    let resp = SynapseActionResponse {
+                        success: false,
+                        message: format!("Error de transferencia incompleta: {e}"),
+                        saved_path: None,
+                    };
+                    let json = serde_json::to_vec(&resp).unwrap_or_default();
+                    send_http_response(&mut stream, 400, "application/json", &json);
+                    return;
+                }
             }
 
             match std::fs::write(&target_path, &file_data) {
@@ -244,6 +254,17 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
                         size_bytes: file_data.len() as u64,
                     };
                     let _ = app.emit("prisma://file-received", file_event);
+
+                    // Traer ventana al frente y previsualizar directamente
+                    bring_main_window_to_front(&app);
+                    let open_event = SynapseOpenMediaEvent {
+                        path: Some(saved_path_str.clone()),
+                        current_time: Some(0.0),
+                        autoplay: Some(true),
+                        title: Some(file_name.clone()),
+                        artist: None,
+                    };
+                    let _ = app.emit("prisma://open-media", open_event);
 
                     let resp = SynapseActionResponse {
                         success: true,
