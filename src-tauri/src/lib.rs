@@ -29,6 +29,9 @@ use app::commands::quick_look::{
     quick_look_open_in_main, quick_look_set_shortcut, quick_look_set_size, quick_look_show_file,
     quick_look_start_dragging, quick_look_toggle, quick_look_toggle_maximize, set_minimize_to_tray,
 };
+use app::commands::synapse::{
+    synapse_get_downloads_dir, synapse_get_status, synapse_set_downloads_dir,
+};
 use app::commands::visual_library::{
     open_in_file_manager, show_in_file_manager, video_extract_audio_track, video_get_audio_tracks, video_get_subtitles, video_read_subtitle_vtt,
     visual_library_add_excluded_folder, visual_library_add_folder,
@@ -130,14 +133,17 @@ pub fn run() {
         .manage(PlaybackProbeState::new())
         .manage(InitialFileState(std::sync::Mutex::new(initial_file_for_main)))
         .setup(move |app| {
+            let data_directory = app.path().app_data_dir()?;
+
             // ── Registro de esquema prisma:// y servicios de Aurora Synapse ──
             features::synapse::register_windows_deep_link();
+            let synapse_state = features::synapse::SynapseState::load(data_directory.clone());
+            app.manage(synapse_state);
             let beacon_service = features::synapse::SynapseBeaconService::start();
             app.manage(beacon_service);
             let synapse_server = features::synapse::SynapseServer::start(app.handle().clone());
             app.manage(synapse_server);
 
-            let data_directory = app.path().app_data_dir()?;
             let library_state =
                 MusicLibraryState::load(data_directory.clone()).map_err(std::io::Error::other)?;
             app.manage(library_state);
@@ -344,7 +350,10 @@ pub fn run() {
             autostart_get_status,
             autostart_set,
             set_minimize_to_tray,
-            get_minimize_to_tray
+            get_minimize_to_tray,
+            synapse_get_status,
+            synapse_set_downloads_dir,
+            synapse_get_downloads_dir
         ])
         .run(tauri::generate_context!())
         .expect("Prisma no pudo iniciar el runtime de Tauri");

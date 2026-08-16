@@ -218,7 +218,10 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
                 .cloned()
                 .unwrap_or_else(|| "application/octet-stream".to_string());
 
-            let download_dir = get_prisma_downloads_dir();
+            let download_dir = app
+                .try_state::<super::config::SynapseState>()
+                .map(|s| s.get_downloads_dir())
+                .unwrap_or_else(get_prisma_downloads_dir);
             let _ = std::fs::create_dir_all(&download_dir);
 
             let target_path = get_unique_destination(&download_dir, &file_name);

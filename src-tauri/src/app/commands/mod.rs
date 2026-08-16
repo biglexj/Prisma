@@ -4,5 +4,6 @@ pub mod music_library;
 pub mod playback;
 pub mod playlists;
 pub mod quick_look;
+pub mod synapse;
 pub mod visual_library;
 

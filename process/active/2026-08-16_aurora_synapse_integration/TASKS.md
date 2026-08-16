@@ -12,5 +12,7 @@
 - [x] T06 — Ajustar recepción en el frontend (`App.tsx`) para Handoff instantáneo y notificación de archivos LAN.
 - [x] T07 — Actualizar `.agents/rules/core_profile.md` y `ROADMAP.md`.
 - [x] T08 — Preparar la validación y pruebas de endpoints.
+- [x] T09 — Implementar configuración persistente de carpeta de descargas de Synapse en Rust backend (`SynapseState`, `config.rs`, comandos Tauri).
+- [x] T10 — Crear panel de ajustes de Aurora Synapse en la pestaña 4 de `AppSettings.tsx` con diseño Material 3 Expressive.
 
 Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.

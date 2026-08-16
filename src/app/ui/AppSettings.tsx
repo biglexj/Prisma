@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { LibrarySources } from "./LibrarySources";
+import { SynapseSettingsPanel } from "./SynapseSettingsPanel";
 import type { useMusicLibrary } from "../../features/music_library/useMusicLibrary";
 import type { useVisualLibrary } from "../../features/visual_library/useVisualLibrary";
 import type { ThemeMode } from "../useTheme";
@@ -18,7 +19,7 @@ interface AppSettingsProps {
   onThemeChange: (mode: ThemeMode) => void;
 }
 
-type SettingsTab = "general" | "progress" | "folders" | "shortcuts";
+type SettingsTab = "general" | "progress" | "folders" | "shortcuts" | "synapse";
 
 const THEMES: { mode: ThemeMode; label: string; desc: string; previewClass: string }[] = [
   { mode: "light", label: "Claro", desc: "Interfaz luminosa", previewClass: "light-preview" },
@@ -137,6 +138,13 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
             <span>General y Sistema</span>
           </button>
           <button
+            className={activeTab === "folders" ? "is-active" : ""}
+            onClick={() => setActiveTab("folders")}
+          >
+            <Icon name="folder-open" />
+            <span>Carpetas de Biblioteca</span>
+          </button>
+          <button
             className={activeTab === "progress" ? "is-active" : ""}
             onClick={() => setActiveTab("progress")}
           >
@@ -144,11 +152,11 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
             <span>Barra de Progreso</span>
           </button>
           <button
-            className={activeTab === "folders" ? "is-active" : ""}
-            onClick={() => setActiveTab("folders")}
+            className={activeTab === "synapse" ? "is-active" : ""}
+            onClick={() => setActiveTab("synapse")}
           >
-            <Icon name="folder-open" />
-            <span>Carpetas de Biblioteca</span>
+            <Icon name="synapse" />
+            <span>Aurora Synapse</span>
           </button>
           <button
             className={activeTab === "shortcuts" ? "is-active" : ""}
@@ -298,7 +306,16 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
         )}
 
         {/* ══════════════════════════════════════════════════════════════════════════
-            PESTAÑA 2: BARRA DE PROGRESO (Suite de 10 Estilos Interactivos)
+            PESTAÑA 2: CARPETAS DE BIBLIOTECA
+        ══════════════════════════════════════════════════════════════════════════ */}
+        {activeTab === "folders" && (
+          <div className="settings-panel">
+            <LibrarySources images={images} music={music} onPlay={onPlay} videos={videos} />
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════════════
+            PESTAÑA 3: BARRA DE PROGRESO (Suite de 10 Estilos Interactivos)
         ══════════════════════════════════════════════════════════════════════════ */}
         {activeTab === "progress" && (
           <div className="settings-panel">
@@ -532,16 +549,16 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
         )}
 
         {/* ══════════════════════════════════════════════════════════════════════════
-            PESTAÑA 3: CARPETAS DE BIBLIOTECA
+            PESTAÑA 4: AURORA SYNAPSE
         ══════════════════════════════════════════════════════════════════════════ */}
-        {activeTab === "folders" && (
+        {activeTab === "synapse" && (
           <div className="settings-panel">
-            <LibrarySources images={images} music={music} onPlay={onPlay} videos={videos} />
+            <SynapseSettingsPanel />
           </div>
         )}
 
         {/* ══════════════════════════════════════════════════════════════════════════
-            PESTAÑA 4: ATAJOS DE TECLADO
+            PESTAÑA 5: ATAJOS DE TECLADO
         ══════════════════════════════════════════════════════════════════════════ */}
         {activeTab === "shortcuts" && (
           <div className="settings-panel">
