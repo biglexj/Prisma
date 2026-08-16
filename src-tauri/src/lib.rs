@@ -25,8 +25,9 @@ use app::commands::playlists::{
 use app::commands::media::{media_delete_items, media_rename_item, media_save_image};
 use app::commands::quick_look::{
     autostart_get_status, autostart_set, get_minimize_to_tray, is_minimize_to_tray_enabled,
-    quick_look_get_current, quick_look_get_shortcut, quick_look_hide, quick_look_open_in_main,
-    quick_look_set_shortcut, quick_look_toggle, set_minimize_to_tray,
+    quick_look_get_current, quick_look_get_shortcut, quick_look_hide, quick_look_is_maximized,
+    quick_look_open_in_main, quick_look_set_shortcut, quick_look_set_size, quick_look_show_file,
+    quick_look_start_dragging, quick_look_toggle, quick_look_toggle_maximize, set_minimize_to_tray,
 };
 use app::commands::visual_library::{
     open_in_file_manager, show_in_file_manager, video_extract_audio_track, video_get_audio_tracks, video_get_subtitles, video_read_subtitle_vtt,
@@ -45,13 +46,79 @@ use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let initial_file = std::env::args().nth(1).filter(|path| {
-        !path.starts_with('-') && std::path::Path::new(path).is_file()
+    let raw_initial_arg = std::env::args().nth(1).filter(|path| !path.starts_with('-'));
+    
+    let initial_file = if let Some(ref arg) = raw_initial_arg {
+        if arg.starts_with("prisma://") || arg.starts_with("aurora-synapse://") {
+            features::synapse::parse_prisma_uri(arg).map(|p| p.path)
+        } else if std::path::Path::new(arg).is_file() {
+            Some(arg.clone())
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let initial_file_clone = initial_file.clone();
+    let is_media_initial_file = initial_file_clone.as_ref().is_some_and(|f| {
+        features::quick_look::QuickLookMediaType::from_path(std::path::Path::new(f)).is_some()
     });
+
+    let initial_file_for_main = if is_media_initial_file {
+        None
+    } else {
+        initial_file.clone()
+    };
 
     let is_autostart = std::env::args().any(|a| a == "--autostart");
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            let maybe_arg = args.into_iter().skip(1).find(|arg| !arg.starts_with('-'));
+
+            if let Some(arg_str) = maybe_arg {
+                if arg_str.starts_with("prisma://") || arg_str.starts_with("aurora-synapse://") {
+                    if let Some(parsed) = features::synapse::parse_prisma_uri(&arg_str) {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.unminimize();
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                            let event = features::synapse::SynapseOpenMediaEvent {
+                                path: parsed.path,
+                                current_time: parsed.current_time_sec,
+                                autoplay: Some(parsed.autoplay),
+                                title: parsed.title,
+                                artist: parsed.artist,
+                            };
+                            let _ = app.emit("prisma://open-media", event);
+                        }
+                        return;
+                    }
+                }
+
+                if std::path::Path::new(&arg_str).is_file() {
+                    let file_path = arg_str;
+                    let path = std::path::Path::new(&file_path);
+                    if let Some(quick_look) = app.try_state::<QuickLookState>() {
+                        if quick_look.show_file_path(path) {
+                            return;
+                        }
+                    }
+
+                    if let Some(w) = app.get_webview_window("main") {
+                        let _ = w.unminimize();
+                        let _ = w.show();
+                        let _ = w.set_focus();
+                        let _ = app.emit("prisma://open-media", file_path);
+                    }
+                }
+            } else if let Some(w) = app.get_webview_window("main") {
+                let _ = w.unminimize();
+                let _ = w.show();
+                let _ = w.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
@@ -61,29 +128,14 @@ pub fn run() {
                 .build(),
         )
         .manage(PlaybackProbeState::new())
-        .manage(InitialFileState(std::sync::Mutex::new(initial_file)))
+        .manage(InitialFileState(std::sync::Mutex::new(initial_file_for_main)))
         .setup(move |app| {
-            if let Some(main_window) = app.get_webview_window("main") {
-                let saved_state_exists = app
-                    .path()
-                    .app_config_dir()
-                    .ok()
-                    .and_then(|directory| {
-                        std::fs::read(directory.join(app.handle().filename())).ok()
-                    })
-                    .and_then(|contents| {
-                        serde_json::from_slice::<serde_json::Value>(&contents).ok()
-                    })
-                    .is_some_and(|state| state.get("main").is_some());
-
-                if is_autostart {
-                    let _ = main_window.hide();
-                } else if saved_state_exists {
-                    let _ = main_window.restore_state(StateFlags::all());
-                } else {
-                    let _ = main_window.maximize();
-                }
-            }
+            // ── Registro de esquema prisma:// y servicios de Aurora Synapse ──
+            features::synapse::register_windows_deep_link();
+            let beacon_service = features::synapse::SynapseBeaconService::start();
+            app.manage(beacon_service);
+            let synapse_server = features::synapse::SynapseServer::start(app.handle().clone());
+            app.manage(synapse_server);
 
             let data_directory = app.path().app_data_dir()?;
             let library_state =
@@ -98,7 +150,40 @@ pub fn run() {
 
             let quick_look_state = QuickLookState::new(app.handle().clone());
             quick_look_state.init();
+
+            if let Some(ref file_path) = initial_file_clone {
+                if is_media_initial_file {
+                    quick_look_state.show_file_path(std::path::Path::new(file_path));
+                }
+            }
+
             app.manage(quick_look_state);
+
+            if let Some(main_window) = app.get_webview_window("main") {
+                let saved_state_exists = app
+                    .path()
+                    .app_config_dir()
+                    .ok()
+                    .and_then(|directory| {
+                        std::fs::read(directory.join(app.handle().filename())).ok()
+                    })
+                    .and_then(|contents| {
+                        serde_json::from_slice::<serde_json::Value>(&contents).ok()
+                    })
+                    .is_some_and(|state| state.get("main").is_some());
+
+                if is_autostart || is_media_initial_file {
+                    let _ = main_window.hide();
+                } else {
+                    if saved_state_exists {
+                        let _ = main_window.restore_state(StateFlags::all());
+                    } else {
+                        let _ = main_window.maximize();
+                    }
+                    let _ = main_window.show();
+                    let _ = main_window.set_focus();
+                }
+            }
 
             // ── Menú de la bandeja del sistema (System Tray) ──
             let show_item = MenuItemBuilder::with_id("show", "Mostrar Prisma").build(app)?;
@@ -174,10 +259,19 @@ pub fn run() {
                     }
                 }
             } else if window.label() == "quicklook" {
-                if let WindowEvent::Focused(false) = event {
-                    let _ = window.app_handle().emit("quicklook://hide", ());
-                    let _ = window.hide();
-                    features::quick_look::keyboard_hook::set_preview_open(false);
+                match event {
+                    WindowEvent::CloseRequested { api, .. } => {
+                        // Prevenir el cierre real; ocultar correctamente mediante QuickLookState
+                        api.prevent_close();
+                        if let Some(state) = window.app_handle().try_state::<QuickLookState>() {
+                            state.hide();
+                        } else {
+                            let _ = window.app_handle().emit("quicklook://hide", ());
+                            let _ = window.hide();
+                            features::quick_look::keyboard_hook::set_preview_open(false);
+                        }
+                    }
+                    _ => {}
                 }
             }
         })
@@ -240,8 +334,13 @@ pub fn run() {
             quick_look_hide,
             quick_look_open_in_main,
             quick_look_get_current,
+            quick_look_show_file,
             quick_look_set_shortcut,
             quick_look_get_shortcut,
+            quick_look_toggle_maximize,
+            quick_look_is_maximized,
+            quick_look_start_dragging,
+            quick_look_set_size,
             autostart_get_status,
             autostart_set,
             set_minimize_to_tray,

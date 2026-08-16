@@ -1,7 +1,7 @@
 {
   "name": "prisma",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.3",
   "type": "module",
   "scripts": {
     "predev": "bun run scripts/free-port.ts 1421",
@@ -31,3 +31,4 @@
     "vite": "^7"
   }
 }
+

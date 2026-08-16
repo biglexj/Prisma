@@ -14,6 +14,26 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [0.0.3] - 2026-08-15
+
+### Resumen
+Actualización de estabilidad y pulido visual en la vista previa ligera (Quick Look), garantizando la detención total de la reproducción en segundo plano y el ajuste armónico de todos los controles e iconos de la interfaz.
+
+### Detalles
+- **Detención Integral de Reproducción al Cerrar o Desenfocar**: Sincronización estricta del ciclo de vida multimedia para que al cerrar la vista previa ligera (pulsando '✕', haciendo clic fuera de la ventana o cerrando desde la barra de tareas) la pista de audio o vídeo se detenga por completo, sin dejar audio residual ni procesos ocultos en segundo plano.
+- **Armonización de Iconos y Controles**: Redimensionamiento proporcional de los iconos de volumen, controles de reproducción y botón de apertura en ventana completa dentro de la vista previa rápida, evitando textos divididos o elementos sobredimensionados.
+- **Optimización del Instalador Windows**: Configuración exclusiva para paquetes de instalación NSIS de alto rendimiento, reduciendo el tamaño del bundle y eliminando compilaciones intermedias innecesarias.
+
+## [0.0.2] - 2026-08-15
+
+### Resumen
+Actualización de refinamiento orientada a la experiencia de reproducción multimedia continua, gestión de instancia única del sistema y perfeccionamiento visual de la interfaz del reproductor de vídeo e instalador.
+
+### Detalles
+- **Instancia Única y Conmutación Inteligente de Medios**: Integración del bloqueo de proceso único para evitar la apertura de ventanas duplicadas, múltiples iconos en la bandeja del sistema y audios superpuestos. Al abrir un nuevo archivo desde el sistema, este reemplaza atómicamente la reproducción activa y enfoca la ventana principal o Quick Look.
+- **Perfeccionamiento del Reproductor de Vídeo**: Corrección de superposición de capas en la Cola de Proyección para que quede sobre la barra de controles sin cortes visuales, eliminación de brechas en el diseño del encabezado y ajuste del temporizador de auto-ocultamiento de controles a 3 segundos.
+- **Icono Oficial en el Instalador**: Incorporación del icono de alta resolución de Prisma en el paquete de instalación oficial para Windows (NSIS).
+
 ## [0.0.1] - 2026-08-15
 
 ### Resumen

@@ -1,22 +1,36 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
-export type QuickLookShortcutMode = "space" | "ctrl_space" | "alt_space" | "shift_space" | "disabled";
+export type QuickLookShortcutMode = "space" | "alt_space" | "shift_space" | "disabled";
+export type ProgressBarStyle =
+  | "wavy"
+  | "classic"
+  | "prism"
+  | "soundwave"
+  | "fluid"
+  | "helix"
+  | "neon_pulse"
+  | "particles"
+  | "vinyl_tape"
+  | "elastic_string";
 
 interface SystemSettings {
   quickLookShortcut: QuickLookShortcutMode;
   autostart: boolean;
   minimizeToTray: boolean;
   confirmDeletion: boolean;
+  progressBarStyle: ProgressBarStyle;
 }
 
 const STORAGE_KEY = "prisma.system-settings.v1";
+const SETTINGS_CHANGE_EVENT = "prisma:settings-changed";
 
 const DEFAULT_SETTINGS: SystemSettings = {
   quickLookShortcut: "space",
   autostart: false,
   minimizeToTray: true,
   confirmDeletion: true,
+  progressBarStyle: "wavy",
 };
 
 function loadStoredSettings(): SystemSettings {
@@ -29,29 +43,40 @@ function loadStoredSettings(): SystemSettings {
   }
 }
 
+function notifySettingsChanged() {
+  window.dispatchEvent(new CustomEvent(SETTINGS_CHANGE_EVENT));
+}
+
 export function useSystemSettings() {
   const [settings, setSettings] = useState<SystemSettings>(loadStoredSettings);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Cargar estado real desde el backend de Rust al iniciar
+  // Sincronizar estado con el backend de Rust al iniciar
   useEffect(() => {
     let isMounted = true;
 
     async function syncWithBackend() {
       try {
-        const [shortcut, autostart, minimizeToTray] = await Promise.all([
-          invoke<string>("quick_look_get_shortcut").catch(() => "space"),
-          invoke<boolean>("autostart_get_status").catch(() => false),
-          invoke<boolean>("get_minimize_to_tray").catch(() => true),
-        ]);
+        const stored = loadStoredSettings();
+
+        // Enviar valores guardados de atajo y bandeja al backend de Rust
+        if (stored.quickLookShortcut) {
+          await invoke("quick_look_set_shortcut", { shortcut: stored.quickLookShortcut }).catch(() => {});
+        }
+        if (typeof stored.minimizeToTray === "boolean") {
+          await invoke("set_minimize_to_tray", { enabled: stored.minimizeToTray }).catch(() => {});
+        }
+
+        const autostart = await invoke<boolean>("autostart_get_status").catch(() => false);
 
         if (isMounted) {
           setSettings((prev) => {
             const synced: SystemSettings = {
-              quickLookShortcut: (shortcut as QuickLookShortcutMode) || "space",
+              quickLookShortcut: prev.quickLookShortcut,
               autostart,
-              minimizeToTray,
+              minimizeToTray: prev.minimizeToTray,
               confirmDeletion: prev.confirmDeletion,
+              progressBarStyle: prev.progressBarStyle,
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
             return synced;
@@ -65,8 +90,19 @@ export function useSystemSettings() {
 
     syncWithBackend();
 
+    const handleExternalChange = () => {
+      if (isMounted) {
+        setSettings(loadStoredSettings());
+      }
+    };
+
+    window.addEventListener(SETTINGS_CHANGE_EVENT, handleExternalChange);
+    window.addEventListener("storage", handleExternalChange);
+
     return () => {
       isMounted = false;
+      window.removeEventListener(SETTINGS_CHANGE_EVENT, handleExternalChange);
+      window.removeEventListener("storage", handleExternalChange);
     };
   }, []);
 
@@ -76,6 +112,7 @@ export function useSystemSettings() {
       setSettings((prev) => {
         const next = { ...prev, quickLookShortcut: mode };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        notifySettingsChanged();
         return next;
       });
     } catch (err) {
@@ -89,6 +126,7 @@ export function useSystemSettings() {
       setSettings((prev) => {
         const next = { ...prev, autostart: enabled };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        notifySettingsChanged();
         return next;
       });
     } catch (err) {
@@ -102,6 +140,7 @@ export function useSystemSettings() {
       setSettings((prev) => {
         const next = { ...prev, minimizeToTray: enabled };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        notifySettingsChanged();
         return next;
       });
     } catch (err) {
@@ -113,6 +152,16 @@ export function useSystemSettings() {
     setSettings((prev) => {
       const next = { ...prev, confirmDeletion: enabled };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged();
+      return next;
+    });
+  }, []);
+
+  const setProgressBarStyle = useCallback((style: ProgressBarStyle) => {
+    setSettings((prev) => {
+      const next = { ...prev, progressBarStyle: style };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged();
       return next;
     });
   }, []);
@@ -123,9 +172,11 @@ export function useSystemSettings() {
     autostart: settings.autostart,
     minimizeToTray: settings.minimizeToTray,
     confirmDeletion: settings.confirmDeletion,
+    progressBarStyle: settings.progressBarStyle,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
     setConfirmDeletion,
+    setProgressBarStyle,
   };
 }

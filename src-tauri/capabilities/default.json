@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
   "description": "Permisos para la aplicación de escritorio Prisma.",
-  "windows": ["main"],
+  "windows": ["main", "quicklook"],
   "permissions": [
     "core:default",
     "dialog:allow-open",

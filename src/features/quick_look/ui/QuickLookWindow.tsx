@@ -1,5 +1,8 @@
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, useRef, type CSSProperties } from "react";
+import { useTheme } from "../../../app/useTheme";
 import { Icon } from "../../../shared/ui/Icon";
 import type { QuickLookPayload } from "../model/types";
 import { quickLookClient } from "../tauri/client";
@@ -10,29 +13,68 @@ import { QuickLookVideo } from "./QuickLookVideo";
 import "./quick-look.css";
 
 export function QuickLookWindow() {
+  useTheme();
   const [payload, setPayload] = useState<QuickLookPayload | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [paletteStyle, setPaletteStyle] = useState<CSSProperties | undefined>(undefined);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
-    // Cargar payload actual si existe
-    quickLookClient.getCurrent().then((res) => {
-      if (res) setPayload(res);
-    }).catch(() => {});
+    const refreshCurrent = () => {
+      quickLookClient.getCurrent().then((res) => {
+        if (res) {
+          setPayload(res);
+          setImageDimensions(null);
+        }
+      }).catch(() => {});
+    };
 
-    // Escuchar eventos de previsualización emitidos desde Rust
-    const unlistenPreviewPromise = listen<QuickLookPayload>("quicklook://preview", (event) => {
-      setPayload(event.payload);
+    refreshCurrent();
+
+    const startupIntervalId = window.setInterval(refreshCurrent, 200);
+    const startupTimeoutId = window.setTimeout(() => {
+      window.clearInterval(startupIntervalId);
+    }, 1200);
+
+    const unlistenGlobalPreviewPromise = listen<QuickLookPayload>("quicklook://preview", (event) => {
+      if (event.payload) {
+        setPayload(event.payload);
+        setImageDimensions(null);
+      }
     });
 
-    // Escuchar eventos de ocultación
-    const unlistenHidePromise = listen("quicklook://hide", () => {
+    const unlistenGlobalHidePromise = listen("quicklook://hide", () => {
       setPayload(null);
+      setImageDimensions(null);
       setPaletteStyle(undefined);
     });
 
+    const unlistenWindowPreviewPromise = getCurrentWebviewWindow().listen<QuickLookPayload>(
+      "quicklook://preview",
+      (event) => {
+        if (event.payload) {
+          setPayload(event.payload);
+          setImageDimensions(null);
+        }
+      }
+    );
+
+    const handleFocus = () => refreshCurrent();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refreshCurrent();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+
     return () => {
-      unlistenPreviewPromise.then((unlisten) => unlisten());
-      unlistenHidePromise.then((unlisten) => unlisten());
+      unlistenGlobalPreviewPromise.then((unlisten) => unlisten());
+      unlistenGlobalHidePromise.then((unlisten) => unlisten());
+      unlistenWindowPreviewPromise.then((unlisten) => unlisten());
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
 
@@ -41,34 +83,89 @@ export function QuickLookWindow() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        void quickLookClient.hide();
+        handleClose();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
+
+  // Seguimiento en tiempo real del estado de maximizado / tamaño de ventana
+  useEffect(() => {
+    const updateWindowState = async () => {
+      try {
+        const max = await invoke<boolean>("quick_look_is_maximized");
+        setIsMaximized(max);
+      } catch {
+        try {
+          const max = await getCurrentWebviewWindow().isMaximized();
+          setIsMaximized(max);
+        } catch {}
+      }
+    };
+
+    updateWindowState();
+    const unlistenResizePromise = getCurrentWebviewWindow().onResized(updateWindowState);
+
+    return () => {
+      unlistenResizePromise.then((u) => u());
+    };
+  }, []);
+
+  const handleToggleMaximize = async () => {
+    try {
+      const nowMaximized = await invoke<boolean>("quick_look_toggle_maximize");
+      setIsMaximized(nowMaximized);
+    } catch {
+      try {
+        const win = getCurrentWebviewWindow();
+        const max = await win.isMaximized();
+        if (max) {
+          await win.unmaximize();
+          setIsMaximized(false);
+        } else {
+          await win.maximize();
+          setIsMaximized(true);
+        }
+      } catch {}
+    }
+  };
+
+  const playbackTimeRef = useRef<number>(0);
 
   const handleOpenInMain = () => {
     if (!payload) return;
-    void quickLookClient.openInMain(payload.path);
+    void quickLookClient.openInMain(payload.path, playbackTimeRef.current);
   };
 
   const handleClose = () => {
+    setPayload(null);
+    setPaletteStyle(undefined);
+    setIsMaximized(false);
+    playbackTimeRef.current = 0;
+    try {
+      void getCurrentWebviewWindow().hide();
+    } catch {}
     void quickLookClient.hide();
   };
 
   return (
     <div className="quicklook-root">
       <div
-        className={`quicklook-card ${paletteStyle ? "has-palette" : ""}`}
+        className={`quicklook-card ${paletteStyle ? "has-palette" : ""} ${isMaximized ? "is-maximized" : ""}`}
         style={paletteStyle}
       >
         {payload ? (
           <>
             <QuickLookHeader
+              imageDimensions={imageDimensions}
+              isMaximized={isMaximized}
               onClose={handleClose}
               onOpenInMain={handleOpenInMain}
+              onToggleMaximize={handleToggleMaximize}
               payload={payload}
             />
 
@@ -77,12 +174,26 @@ export function QuickLookWindow() {
                 <QuickLookMusic
                   key={payload.path}
                   onPaletteChange={setPaletteStyle}
+                  onTimeUpdate={(t) => {
+                    playbackTimeRef.current = t;
+                  }}
                   payload={payload}
                 />
               ) : payload.mediaType === "image" ? (
-                <QuickLookImage key={payload.path} payload={payload} />
+                <QuickLookImage
+                  key={payload.path}
+                  onDimensionsLoad={setImageDimensions}
+                  payload={payload}
+                />
               ) : payload.mediaType === "video" ? (
-                <QuickLookVideo key={payload.path} payload={payload} />
+                <QuickLookVideo
+                  key={payload.path}
+                  onDimensionsLoad={setImageDimensions}
+                  onTimeUpdate={(t) => {
+                    playbackTimeRef.current = t;
+                  }}
+                  payload={payload}
+                />
               ) : null}
             </div>
           </>

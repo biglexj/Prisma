@@ -6,8 +6,8 @@ export const quickLookClient = {
     return invoke("quick_look_hide");
   },
 
-  openInMain(path: string): Promise<void> {
-    return invoke("quick_look_open_in_main", { path });
+  openInMain(path: string, currentTime?: number): Promise<void> {
+    return invoke("quick_look_open_in_main", { path, currentTime });
   },
 
   getCurrent(): Promise<QuickLookPayload | null> {

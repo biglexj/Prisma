@@ -3,6 +3,6 @@ pub mod model;
 pub mod service;
 pub mod shell_selection;
 
-pub use model::QuickLookPayload;
+pub use model::{QuickLookMediaType, QuickLookPayload};
 pub use service::QuickLookState;
 

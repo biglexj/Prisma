@@ -103,7 +103,6 @@ export function AppSidebar({ activeView, backend, enabled, onNavigate }: AppSide
             <strong>Configuración</strong>
             <span>Fuentes y atajos</span>
           </div>
-          <span className={enabled ? "engine-dot is-ready" : "engine-dot"} title={backend} />
         </button>
 
         <button

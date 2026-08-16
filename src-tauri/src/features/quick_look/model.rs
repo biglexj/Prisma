@@ -44,6 +44,8 @@ pub struct QuickLookPayload {
     pub track_title: Option<String>,
     pub track_artist: Option<String>,
     pub duration_seconds: Option<f64>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
 }
 
 impl QuickLookPayload {
@@ -67,6 +69,12 @@ impl QuickLookPayload {
             (None, None, None)
         };
 
+        let (width, height) = if media_type == QuickLookMediaType::Image {
+            image::image_dimensions(path).ok().map(|(w, h)| (Some(w), Some(h))).unwrap_or((None, None))
+        } else {
+            (None, None)
+        };
+
         Self {
             path: path_str,
             file_name,
@@ -76,6 +84,8 @@ impl QuickLookPayload {
             track_title,
             track_artist,
             duration_seconds,
+            width,
+            height,
         }
     }
 }

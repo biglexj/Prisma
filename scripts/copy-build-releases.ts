@@ -1,17 +1,34 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 
 const rootDir = process.cwd();
 const bundleDir = join(rootDir, "src-tauri", "target", "release", "bundle");
-const releasesDir = join(rootDir, "releases");
+const targetDirs = [join(rootDir, "releases"), join(rootDir, "release")];
+
+// Leer la versión actual desde package.json
+const packageJson = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf-8"));
+const currentVersion = packageJson.version;
 
 if (!existsSync(bundleDir)) {
   console.log("⚠️ No se encontró la carpeta de bundle en:", bundleDir);
   process.exit(0);
 }
 
-if (!existsSync(releasesDir)) {
-  mkdirSync(releasesDir, { recursive: true });
+for (const targetDir of targetDirs) {
+  if (!existsSync(targetDir)) {
+    mkdirSync(targetDir, { recursive: true });
+  }
+
+  // Limpiar archivos desactualizados (.msi y versiones residuales)
+  const existingFiles = readdirSync(targetDir);
+  for (const file of existingFiles) {
+    if (file.endsWith(".msi") || file.includes("0.6.0")) {
+      try {
+        unlinkSync(join(targetDir, file));
+        console.log(`  🗑️ Eliminado residuo: ${targetDir.split(/[\\/]/).pop()}/${file}`);
+      } catch {}
+    }
+  }
 }
 
 function findArtifacts(dir: string): string[] {
@@ -25,11 +42,9 @@ function findArtifacts(dir: string): string[] {
       results.push(...findArtifacts(fullPath));
     } else if (
       entry.isFile() &&
-      (entry.name.endsWith(".exe") ||
-        entry.name.endsWith(".msi") ||
-        entry.name.endsWith(".AppImage") ||
-        entry.name.endsWith(".dmg") ||
-        entry.name.endsWith(".deb"))
+      entry.name.endsWith(".exe") &&
+      entry.name.includes(`_${currentVersion}_`) &&
+      !entry.name.includes("0.6.0")
     ) {
       results.push(fullPath);
     }
@@ -40,14 +55,17 @@ function findArtifacts(dir: string): string[] {
 const artifacts = findArtifacts(bundleDir);
 
 if (artifacts.length === 0) {
-  console.log("ℹ️ No se encontraron instaladores en el directorio de bundle.");
+  console.log(`ℹ️ No se encontraron instaladores para la versión v${currentVersion} en el bundle.`);
 } else {
-  console.log("\n🚀 Copiando instaladores a la carpeta 'releases' en la raíz...");
+  console.log(`\n🚀 Copiando instalador v${currentVersion} a las carpetas 'releases' y 'release'...`);
   for (const artifact of artifacts) {
     const fileName = artifact.split(/[\/\\]/).pop()!;
-    const destPath = join(releasesDir, fileName);
-    copyFileSync(artifact, destPath);
-    console.log(`  ✅ Copiado: releases/${fileName}`);
+    for (const targetDir of targetDirs) {
+      const destPath = join(targetDir, fileName);
+      copyFileSync(artifact, destPath);
+      const folderName = targetDir.split(/[\\/]/).pop()!;
+      console.log(`  ✅ Copiado: ${folderName}/${fileName}`);
+    }
   }
-  console.log(`\n🎉 ¡Listo! Instaladores disponibles en: ${releasesDir}\n`);
+  console.log(`\n🎉 ¡Listo! Instalador disponible en 'release' y 'releases'.\n`);
 }

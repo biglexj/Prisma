@@ -9,6 +9,12 @@ const isQuickLook =
   window.location.hash === "#quicklook" ||
   getCurrentWebviewWindow().label === "quicklook";
 
+if (isQuickLook) {
+  document.documentElement.classList.add("is-quicklook");
+  document.documentElement.style.background = "transparent";
+  document.body.style.background = "transparent";
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     {isQuickLook ? <QuickLookWindow /> : <App />}

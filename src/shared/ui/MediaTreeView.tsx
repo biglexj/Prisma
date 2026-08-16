@@ -250,7 +250,7 @@ export function MediaTreeView<T extends MediaTreeItem>({
               {isFav ? (
                 <Icon name="star" />
               ) : isAll ? (
-                <Icon name="disc" />
+                <Icon name={mediaType === "music" ? "disc" : mediaType === "image" ? "image" : "video"} />
               ) : (
                 <Icon name={isExpanded ? "folder-open" : "folder"} />
               )}
@@ -269,26 +269,26 @@ export function MediaTreeView<T extends MediaTreeItem>({
                   e.stopPropagation();
                   onPlayFolder(node.allRecursiveItems, node.name);
                 }}
-                title="Reproducir carpeta"
+                title={mediaType === "video" ? "Reproducir vídeos de esta carpeta" : "Reproducir canciones de esta carpeta"}
               >
                 <Icon name="play" />
               </button>
             ) : null}
 
-            {node.allRecursiveItems.length > 0 && onAddFolderToQueue ? (
+            {node.allRecursiveItems.length > 0 && onAddFolderToQueue && mediaType !== "image" ? (
               <button
                 className="media-tree-queue-btn"
                 onClick={(e) => {
                   e.stopPropagation();
                   onAddFolderToQueue(node.allRecursiveItems);
                 }}
-                title="+ Cola"
+                title="Añadir carpeta a la cola"
               >
                 <Icon name="queue" />
               </button>
             ) : null}
 
-            {node.allRecursiveItems.length > 0 && onCreatePlaylistFromFolder && !isFav && !isAll ? (
+            {node.allRecursiveItems.length > 0 && onCreatePlaylistFromFolder && mediaType === "music" && !isFav && !isAll ? (
               <button
                 className="media-tree-playlist-btn"
                 onClick={(e) => {
@@ -381,7 +381,7 @@ export function MediaTreeView<T extends MediaTreeItem>({
             <Icon name="heart" />
           </button>
 
-          {onAddToQueue ? (
+          {onAddToQueue && mediaType !== "image" ? (
             <button
               className="media-tree-queue-btn"
               onClick={(e) => {

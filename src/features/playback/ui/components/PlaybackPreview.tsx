@@ -12,6 +12,7 @@ import { LyricsPreview } from "./LyricsPreview";
 import { PlaybackQueuePanel } from "./PlaybackQueuePanel";
 import { parseTrackInfo } from "../../../music_library/model/trackInfo";
 import { useScrollRestoration } from "../../../../shared/useScrollRestoration";
+import { MediaProgressBar } from "../../../../shared/ui/MediaProgressBar";
 import "./album-adaptive.css";
 import "./playback-queue.css";
 import { cleanPath, formatSession, formatTime, mediaTitle } from "../formatters";
@@ -197,20 +198,18 @@ export function PlaybackPreview({
             </div>
           </div>
 
-          <label className="preview-progress">
-            <input
-              aria-label="Posición"
-              type="range"
-              min={0}
-              max={Math.max(duration, 1)}
-              step={0.1}
-              value={position}
+          <div className="preview-progress">
+            <MediaProgressBar
+              position={position}
+              duration={duration}
+              isPlaying={!snapshot.paused && hasMedia}
               disabled={!enabled || !hasMedia || duration <= 0}
-              onChange={(event) => onSeek(Number(event.target.value))}
+              onSeek={onSeek}
+              ariaLabel="Posición de reproducción"
             />
             <span>{formatTime(snapshot.positionSeconds)}</span>
             <span>{formatTime(snapshot.durationSeconds)}</span>
-          </label>
+          </div>
 
           <div className="preview-transport">
             <button

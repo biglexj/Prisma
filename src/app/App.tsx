@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -22,6 +22,7 @@ import { FavoritesView } from "../features/collections/ui/FavoritesView";
 import { HistoryView } from "../features/collections/ui/HistoryView";
 import { PlaylistsView } from "../features/collections/ui/PlaylistsView";
 import { AboutView } from "./ui/AboutView";
+import { SynapseToast, type SynapseReceivedFile } from "./ui/SynapseToast";
 import { addToHistory } from "../shared/useHistory";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
@@ -45,10 +46,12 @@ const VIEW_TITLES: Record<AppView, string> = {
 export function App() {
   const [activeView, setActiveView] = useState<AppView>("home");
   const [activeVideoPath, setActiveVideoPath] = useState<string | null>(null);
+  const [activeVideoInitialTime, setActiveVideoInitialTime] = useState<number | undefined>(undefined);
   const [activeVideoSessionItems, setActiveVideoSessionItems] = useState<VisualLibraryItem[]>([]);
   const [videoReturnView, setVideoReturnView] = useState<AppView>("videos");
   const [activeInitialImagePath, setActiveInitialImagePath] = useState<string | null>(null);
   const [isPip, setIsPip] = useState(false);
+  const [synapseToastFile, setSynapseToastFile] = useState<SynapseReceivedFile | null>(null);
   const { theme, setTheme } = useTheme();
   const { confirmDeletion } = useSystemSettings();
   const playback = usePlaybackController();
@@ -56,7 +59,7 @@ export function App() {
   const imageLibrary = useVisualLibrary("image");
   const videoLibrary = useVisualLibrary("video");
 
-  const playMusicItem = (path: string, navigate = true) => {
+  const playMusicItem = useCallback((path: string, navigate = true, initialTime?: number) => {
     addToHistory(path, "music");
 
     // Detener y limpiar cualquier vídeo previo activo para evitar audio simultáneo
@@ -87,23 +90,79 @@ export function App() {
     } else {
       void playback.loadPath(path);
     }
-  };
 
-  const playVideoItem = (path: string, sessionItems?: VisualLibraryItem[]) => {
+    if (initialTime && initialTime > 0) {
+      setTimeout(() => {
+        void playback.seek(initialTime);
+      }, 350);
+    }
+  }, [library.items, playback]);
+
+  const playVideoItem = useCallback((path: string, sessionItems?: VisualLibraryItem[], initialTime?: number) => {
     addToHistory(path, "video");
     if (!playback.snapshot.paused) {
       void playback.toggle();
     }
+    setActiveVideoInitialTime(initialTime);
     setVideoReturnView(activeView);
     setActiveVideoPath(path);
-    setActiveVideoSessionItems(sessionItems && sessionItems.length > 0 ? sessionItems : videoLibrary.items);
+    const itemsToUse = sessionItems && sessionItems.length > 0 ? sessionItems : videoLibrary.items;
+    const hasPath = itemsToUse.some((it) => it.path === path);
+    if (!hasPath) {
+      const fileName = path.replace(/\\/g, "/").split("/").pop() || "Vídeo";
+      setActiveVideoSessionItems([
+        {
+          path,
+          title: fileName,
+          sourcePath: "",
+          relativeFolder: "",
+          kind: "video" as const,
+          modifiedAtMillis: Date.now(),
+          sizeBytes: 0,
+        },
+        ...itemsToUse,
+      ]);
+    } else {
+      setActiveVideoSessionItems(itemsToUse);
+    }
     
     // Si ya estamos en PiP, mantenerse en la vista actual (ej. galería) y reemplazar el vídeo en la ventana flotante.
     // Si no estamos en PiP, navegar a la pantalla completa del reproductor.
     if (!isPip) {
       setActiveView("video_player");
     }
-  };
+  }, [activeView, isPip, playback, videoLibrary.items]);
+
+  const handleOpenFile = useCallback((filePath: string, initialTime?: number) => {
+    const lower = filePath.toLowerCase();
+    const isAudio = /\.(mp3|flac|wav|aac|m4a|ogg|opus|wma|m3u|m3u8)$/.test(lower);
+    const isVideo = /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v)$/.test(lower);
+    if (isAudio) {
+      if (document.pictureInPictureElement) {
+        void document.exitPictureInPicture().catch(() => {});
+      }
+      setActiveVideoPath(null);
+      setActiveVideoSessionItems([]);
+      setIsPip(false);
+      setActiveInitialImagePath(null);
+      playMusicItem(filePath, true, initialTime);
+    } else if (isVideo) {
+      if (!playback.snapshot.paused) {
+        void playback.toggle();
+      }
+      setActiveInitialImagePath(null);
+      playVideoItem(filePath, undefined, initialTime);
+    } else {
+      if (document.pictureInPictureElement) {
+        void document.exitPictureInPicture().catch(() => {});
+      }
+      setActiveVideoPath(null);
+      setActiveVideoSessionItems([]);
+      setIsPip(false);
+      setActiveInitialImagePath(filePath);
+      setActiveView("images");
+    }
+  }, [playback, playMusicItem, playVideoItem]);
 
   /**
    * Gestiona el ciclo de vida de Picture-in-Picture desde App:
@@ -140,36 +199,88 @@ export function App() {
   };
 
   useEffect(() => {
-    const handleOpenFile = (filePath: string) => {
-      const lower = filePath.toLowerCase();
-      const isAudio = /\.(mp3|flac|wav|aac|m4a|ogg|opus|wma|m3u|m3u8)$/.test(lower);
-      const isVideo = /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v)$/.test(lower);
-      if (isAudio) {
-        playMusicItem(filePath);
-      } else if (isVideo) {
-        playVideoItem(filePath);
-      } else {
-        setActiveInitialImagePath(filePath);
-        setActiveView("images");
-      }
-    };
-
     invoke<string | null>("get_initial_file")
       .then((filePath) => {
         if (filePath) handleOpenFile(filePath);
       })
       .catch(() => {});
 
-    const unlistenPromise = listen<string>("prisma://open-media", (event) => {
+    const unlistenPromise = listen<string | { path: string; currentTime?: number }>("prisma://open-media", (event) => {
       if (event.payload) {
-        handleOpenFile(event.payload);
+        if (typeof event.payload === "string") {
+          handleOpenFile(event.payload);
+        } else if (typeof event.payload === "object" && event.payload.path) {
+          handleOpenFile(event.payload.path, event.payload.currentTime);
+        }
+      }
+    });
+
+    const unlistenFileReceivedPromise = listen<SynapseReceivedFile>("prisma://file-received", (event) => {
+      if (event.payload) {
+        setSynapseToastFile(event.payload);
+        library.refresh();
+        imageLibrary.refresh();
+        videoLibrary.refresh();
+      }
+    });
+
+    const unlistenNavigatePromise = listen<string>("prisma://navigate", (event) => {
+      if (event.payload && event.payload in VIEW_TITLES) {
+        setActiveView(event.payload as AppView);
       }
     });
 
     return () => {
       unlistenPromise.then((unlisten) => unlisten());
+      unlistenFileReceivedPromise.then((unlisten) => unlisten());
+      unlistenNavigatePromise.then((unlisten) => unlisten());
     };
-  }, []);
+  }, [handleOpenFile, library, imageLibrary, videoLibrary]);
+
+  // Coordinación de reproducción entre QuickLook y la aplicación principal
+  const wasPlayingBeforeQuickLookRef = useRef<boolean>(false);
+  const wasVideoPlayingBeforeQuickLookRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    const unlistenPreviewPromise = listen("quicklook://preview", () => {
+      // Si la música de Prisma estaba reproduciéndose, pausarla y recordar estado
+      if (!playback.snapshot.paused && playback.snapshot.path) {
+        wasPlayingBeforeQuickLookRef.current = true;
+        void playback.toggle();
+      }
+
+      // Si el reproductor de vídeo de Prisma está activo y reproduciéndose, pausarlo
+      const videoEl = document.querySelector<HTMLVideoElement>("video.video-player-media, video");
+      if (videoEl && !videoEl.paused) {
+        wasVideoPlayingBeforeQuickLookRef.current = true;
+        videoEl.pause();
+      }
+    });
+
+    const unlistenHidePromise = listen("quicklook://hide", () => {
+      // Al cerrar QuickLook, si la música de Prisma estaba sonando antes, reanudarla
+      if (wasPlayingBeforeQuickLookRef.current) {
+        wasPlayingBeforeQuickLookRef.current = false;
+        if (playback.snapshot.paused && playback.snapshot.path) {
+          void playback.toggle();
+        }
+      }
+
+      // Al cerrar QuickLook, si el vídeo de Prisma estaba sonando antes, reanudarlo
+      if (wasVideoPlayingBeforeQuickLookRef.current) {
+        wasVideoPlayingBeforeQuickLookRef.current = false;
+        const videoEl = document.querySelector<HTMLVideoElement>("video.video-player-media, video");
+        if (videoEl && videoEl.paused) {
+          void videoEl.play().catch(() => {});
+        }
+      }
+    });
+
+    return () => {
+      unlistenPreviewPromise.then((u) => u());
+      unlistenHidePromise.then((u) => u());
+    };
+  }, [playback.snapshot.paused, playback.snapshot.path, playback.toggle]);
 
   return (
     <div className={`studio-shell ${activeView === "video_player" ? "is-cinema-mode" : ""}`}>
@@ -338,16 +449,21 @@ export function App() {
             >
               <VideoPlayer
                 confirmDeletion={confirmDeletion}
+                initialTime={activeVideoInitialTime}
                 onBack={() => {
                   // Limpiar sesión completamente al volver (Esc): desmonta el <video> y detiene el audio
                   setIsPip(false);
                   setActiveVideoPath(null);
+                  setActiveVideoInitialTime(undefined);
                   setActiveVideoSessionItems([]);
                   setActiveView(videoReturnView);
                 }}
                 onPipChange={handlePipChange}
                 onRefresh={() => videoLibrary.refresh()}
-                onSelectVideo={(path) => setActiveVideoPath(path)}
+                onSelectVideo={(path) => {
+                  setActiveVideoPath(path);
+                  setActiveVideoInitialTime(undefined);
+                }}
                 path={activeVideoPath}
                 videoItems={activeVideoSessionItems.length > 0 ? activeVideoSessionItems : videoLibrary.items}
               />
@@ -408,6 +524,12 @@ export function App() {
           ) : null}
         </main>
       </div>
+
+      <SynapseToast
+        file={synapseToastFile}
+        onClose={() => setSynapseToastFile(null)}
+        onOpenFile={handleOpenFile}
+      />
     </div>
   );
 }

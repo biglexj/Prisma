@@ -105,6 +105,13 @@ body,
   margin: 0;
 }
 
+html.is-quicklook,
+html.is-quicklook body,
+html.is-quicklook #root {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
 body {
   overflow: hidden;
   background: var(--surface);
@@ -769,7 +776,8 @@ button:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-.preview-progress input {
+.preview-progress input,
+.preview-progress .media-progress-bar-root {
   grid-column: 1 / -1;
 }
 

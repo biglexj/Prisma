@@ -20,7 +20,6 @@ import { VisualThumbnail } from "./VisualThumbnail";
 import { VideoThumbnail } from "./VideoThumbnail";
 import { ImageViewer } from "./ImageViewer";
 import { ImageEditor } from "./editor/ImageEditor";
-import { playlistsSaveFromItems } from "../../collections/tauri/client";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
 import "./visual-library.css";
 
@@ -202,23 +201,6 @@ export function VisualLibrary({
     onOpenVideo(folderItems[0].path, folderItems);
   };
 
-  const handleCreatePlaylistFromFolder = async (folderItems: VisualLibraryItem[], folderName: string) => {
-    const cleanName = folderName.replace(/^[⭐📂]\s*/, "");
-    const name = window.prompt("Nombre de la nueva lista de reproducción:", cleanName);
-    if (!name || !name.trim()) return;
-    try {
-      const playlistItems = folderItems.map((it) => ({
-        path: it.path,
-        title: it.title,
-        durationSecs: 0,
-      }));
-      await playlistsSaveFromItems(name.trim(), playlistItems);
-      alert(`✅ Lista "${name.trim()}.m3u" creada exitosamente con ${folderItems.length} archivos.`);
-    } catch (err) {
-      console.error("Error creando lista desde carpeta:", err);
-    }
-  };
-
   const handleCardContextMenu = (event: React.MouseEvent, item: VisualLibraryItem) => {
     mediaDelete.openMenu(event, {
       path: item.path,
@@ -299,14 +281,20 @@ export function VisualLibrary({
     return menuItems;
   };
 
-  // Abrir imagen seleccionada externamente (por ejemplo, desde Inicio)
+  // Abrir imagen seleccionada externamente (por ejemplo, desde Inicio o sistema)
   useEffect(() => {
-    if (initialSelectedImagePath && items.length > 0) {
-      const found = items.find((it) => it.path === initialSelectedImagePath);
-      if (found) {
-        handleSelectImage(found);
-        onClearInitialSelectedImage?.();
-      }
+    if (initialSelectedImagePath) {
+      const found = items.find((it) => it.path === initialSelectedImagePath) || {
+        path: initialSelectedImagePath,
+        title: initialSelectedImagePath.replace(/\\/g, "/").split("/").pop() || "Imagen",
+        sourcePath: "",
+        relativeFolder: "",
+        kind: "image" as const,
+        modifiedAtMillis: Date.now(),
+        sizeBytes: 0,
+      };
+      handleSelectImage(found);
+      onClearInitialSelectedImage?.();
     }
   }, [initialSelectedImagePath, items]);
 
@@ -623,7 +611,6 @@ export function VisualLibrary({
         <MediaTreeView
           items={items}
           mediaType={isImage ? "image" : "video"}
-          onCreatePlaylistFromFolder={handleCreatePlaylistFromFolder}
           onPlayFolder={!isImage ? (folderItems) => handlePlayFolderVideos(folderItems) : undefined}
           onPlayItem={(item, list) => {
             if (isImage) {

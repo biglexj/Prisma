@@ -8,6 +8,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [x] **Integración Aurora Synapse Protocol (Handoff LAN, UDP Beacon, Receptor de Archivos y Deep Links)** — `process/active/2026-08-16_aurora_synapse_integration/`
 - [ ] **Estandarización Ecosistema biglexj** — `process/active/2026-08-11_estandarizacion_ecosistema_biglexj/`
 - [ ] **Modo de Reproducción Flotante (PiP / MiniPlayer)** — `process/active/`
 - [x] **Configuración de Quick Look, Atajos, Autorun y Bandeja del Sistema (System Tray)** — `process/completed/2026/2026-08-15_quick_look_configuracion_autorun_tray/`
@@ -37,5 +38,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v0.0.2**
+  - Refinamiento de reproducción multimedia: bloqueo de instancia única con conmutación atómica de archivos, superposición de capas en el reproductor de vídeo con temporizador de 3s e integración de icono oficial en instalador NSIS.
 - [x] **v0.0.1**
   - Lanzamiento inicial oficial de Prisma: estación multimedia local-first con reproductor de audio, reproductor de vídeo con PiP, visor y editor de imágenes, Quick Look global y soporte de listas M3U/PLS/XSPF.

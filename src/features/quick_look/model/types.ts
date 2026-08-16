@@ -9,4 +9,6 @@ export interface QuickLookPayload {
   trackTitle?: string | null;
   trackArtist?: string | null;
   durationSeconds?: number | null;
+  width?: number | null;
+  height?: number | null;
 }

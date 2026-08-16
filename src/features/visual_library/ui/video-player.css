@@ -102,11 +102,7 @@
   gap: 16px;
   z-index: 35;
   pointer-events: auto;
-  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.video-player-header.has-sidebar-open {
-  right: 340px; /* Se desplaza para quedar elegantemente al lado de la cola sin solaparse */
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .video-header-left {
@@ -231,14 +227,17 @@
   right: 0;
   bottom: 0;
   width: 320px;
-  background: rgba(15, 9, 13, 0.85);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  max-width: 85vw;
+  background: rgba(14, 10, 16, 0.94);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: -12px 0 36px rgba(0, 0, 0, 0.75);
   display: flex;
   flex-direction: column;
   z-index: 50;
   animation: slideInVideoList 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
 }
 
 @keyframes slideInVideoList {

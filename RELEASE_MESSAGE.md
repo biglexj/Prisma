@@ -1,16 +1,14 @@
-# 🚀 Prisma v0.0.1 — Lanzamiento Inicial Oficial
+# 🚀 Prisma v0.0.2 — Instancia Única y Refinamiento Multimedia
 
-¡Nos complace anunciar el primer lanzamiento oficial de **Prisma (v0.0.1)**! Una estación y reproductor multimedia local-first diseñada bajo el lenguaje Material 3 Expressive, optimizada para máxima velocidad, privacidad y disfrute de tu colección de medios en Windows.
+¡Llega **Prisma v0.0.2**! Una actualización enfocada en la fluidez de reproducción, control de procesos del sistema y mejoras visuales del reproductor e instalador.
 
 ---
 
 ### ✨ Novedades Destacadas
 
-- 🎵 **Biblioteca y Reproductor Musical**: Exploración fluida por Carpetas, Línea de Tiempo y Árbol Jerárquico, con cola de reproducción y ordenación personalizada (fecha, nombre, tamaño o modo aleatorio).
-- ⚡ **Prisma Quick Look**: Vista previa instantánea de fotos, audios y vídeos directamente desde el Explorador de Windows o Escritorio pulsando la barra espaciadora.
-- 🎬 **Reproductor de Vídeo con PiP**: Soporte multicapa de subtítulos y pistas de audio, aceleración continua 3.0x y modo Picture-in-Picture que respeta la proporción original del vídeo.
-- 🖼️ **Visor y Editor de Imágenes**: Transiciones fluidas entre imágenes, zoom ultra-preciso de hasta 500%, recorte y filtros tonales integrados.
-- 📋 **Listas de Reproducción Universales**: Soporte para formatos M3U, M3U8, PLS y XSPF con reconexión inteligente por carpeta.
+- 🔒 **Instancia Única y Conmutación Inteligente**: Apertura fluida de archivos multimedia desde el Explorador sin duplicar ventanas, iconos de bandeja ni mezclar audios.
+- 🎬 **Perfeccionamiento del Reproductor de Vídeo**: Cola de proyección sobrepuesta con elevación limpia, corrección de alineación en cabecera y auto-ocultamiento de controles a los 3 segundos.
+- 🖼️ **Icono Oficial en Instalador**: Integración del icono de alta definición de Prisma en el paquete de instalación oficial para Windows (NSIS).
 
 ---
 

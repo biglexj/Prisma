@@ -140,16 +140,3 @@
   font-size: 0.64rem;
   line-height: 1.2;
 }
-
-.sidebar-settings-button .engine-dot {
-  width: 8px;
-  height: 8px;
-  margin-left: auto;
-  border-radius: 50%;
-  background: var(--outline);
-}
-
-.sidebar-settings-button .engine-dot.is-ready {
-  background: var(--success);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--success) 50%, transparent);
-}

@@ -9,11 +9,13 @@ import type { VisualLibraryItem } from "../model/types";
 import { VideoThumbnail } from "./VideoThumbnail";
 import { useFavorites } from "../../../shared/useFavorites";
 import { useMediaDelete } from "../../../shared/useMediaDelete";
+import { MediaProgressBar } from "../../../shared/ui/MediaProgressBar";
 import "./video-player.css";
 
 interface VideoPlayerProps {
   path: string | null;
   videoItems?: VisualLibraryItem[];
+  initialTime?: number;
   onBack: () => void;
   onSelectVideo?: (path: string) => void;
   /** Notifica a App.tsx cuándo entra/sale del modo Picture-in-Picture */
@@ -44,6 +46,7 @@ interface SubtitleTrackInfo {
 export function VideoPlayer({
   path,
   videoItems = [],
+  initialTime,
   onBack,
   onSelectVideo,
   onPipChange,
@@ -59,7 +62,14 @@ export function VideoPlayer({
   const [volume, setVolume] = useState(100);
   const [prevVolume, setPrevVolume] = useState(80);
   const [showPlaylist, setShowPlaylist] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<"off" | "all" | "one">("off");
+  const [repeatMode, setRepeatMode] = useState<"off" | "all" | "one">(() => {
+    try {
+      const saved = localStorage.getItem("prisma:video_repeat");
+      return saved === "all" || saved === "one" || saved === "off" ? saved : "off";
+    } catch {
+      return "off";
+    }
+  });
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [showControls, setShowControls] = useState(true);
 
@@ -568,7 +578,13 @@ export function VideoPlayer({
   };
 
   const toggleRepeat = () => {
-    setRepeatMode((prev) => (prev === "off" ? "all" : prev === "all" ? "one" : "off"));
+    setRepeatMode((prev) => {
+      const next = prev === "off" ? "all" : prev === "all" ? "one" : "off";
+      try {
+        localStorage.setItem("prisma:video_repeat", next);
+      } catch {}
+      return next;
+    });
   };
 
   const togglePlay = () => {
@@ -674,15 +690,15 @@ export function VideoPlayer({
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
     }
-    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist) {
+    if (!paused && !showAudioMenu && !showSubMenu) {
       controlsTimeoutRef.current = window.setTimeout(() => {
         setShowControls(false);
-      }, 2000);
+      }, 3000);
     }
   };
 
   const handleMouseLeave = () => {
-    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist) {
+    if (!paused && !showAudioMenu && !showSubMenu) {
       if (controlsTimeoutRef.current) {
         window.clearTimeout(controlsTimeoutRef.current);
       }
@@ -691,16 +707,16 @@ export function VideoPlayer({
   };
 
   useEffect(() => {
-    if (showAudioMenu || showSubMenu || showPlaylist || paused) {
+    if (showAudioMenu || showSubMenu || paused) {
       setShowControls(true);
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
     } else {
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
       controlsTimeoutRef.current = window.setTimeout(() => {
         setShowControls(false);
-      }, 2000);
+      }, 3000);
     }
-  }, [showAudioMenu, showSubMenu, showPlaylist, paused]);
+  }, [showAudioMenu, showSubMenu, paused]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -874,7 +890,7 @@ export function VideoPlayer({
       ) : null}
 
       {/* Cabecera Flotante */}
-      <header className={`video-player-header ${showPlaylist ? "has-sidebar-open" : ""}`}>
+      <header className="video-player-header">
         <div className="video-header-left">
           <button
             aria-label="Volver a la galería"
@@ -970,6 +986,10 @@ export function VideoPlayer({
                   video.muted = false;
                   setDuration(video.duration || 0);
                   setPaused(false);
+                  if (initialTime && initialTime > 0) {
+                    video.currentTime = initialTime;
+                    setPosition(initialTime);
+                  }
                   void video.play().catch(() => {});
 
                   // Si PiP estaba activo (ej. reemplazo de vídeo desde la galería), solicitar PiP de inmediato
@@ -1038,64 +1058,22 @@ export function VideoPlayer({
             </div>
           ) : null}
         </div>
-
-        {/* Playlist Lateral Desplegable */}
-        {showPlaylist && localVideoItems.length > 0 ? (
-          <aside className="video-playlist-sidebar">
-            <div className="video-playlist-header">
-              <h3>Cola de Proyección ({localVideoItems.length})</h3>
-              <button
-                aria-label="Cerrar lista"
-                className="video-playlist-close"
-                onClick={() => setShowPlaylist(false)}
-              >
-                <Icon name="close" />
-              </button>
-            </div>
-            <div className="video-playlist-items">
-              {localVideoItems.map((item, idx) => {
-                const isSelected = item.path === path;
-                return (
-                  <div
-                    className={`video-playlist-item ${isSelected ? "is-active" : ""}`}
-                    key={item.path}
-                    onClick={() => onSelectVideo && onSelectVideo(item.path)}
-                  >
-                    <span className="video-playlist-item-idx">{idx + 1}</span>
-                    <div className="video-playlist-thumb-wrap">
-                      <VideoThumbnail className="video-playlist-thumb" path={item.path} title={item.title} />
-                      {isSelected ? (
-                        <div className="video-playlist-playing-badge">
-                          <Icon name="play" />
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="video-playlist-item-info">
-                      <strong title={item.title}>{item.title}</strong>
-                      <small>{cleanPath(item.relativeFolder)}</small>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </aside>
-        ) : null}
       </div>
 
       {/* Barra de Controles Inferior */}
       <footer className="video-player-footer">
-        <label className="preview-progress video-seek-bar">
-          <input
-            max={Math.max(duration, 1)}
-            min={0}
-            onChange={(e) => handleSeek(Number(e.target.value))}
-            step={0.1}
-            type="range"
-            value={position}
+        <div className="preview-progress video-seek-bar">
+          <MediaProgressBar
+            position={position}
+            duration={duration}
+            isPlaying={!paused}
+            disabled={duration <= 0}
+            onSeek={handleSeek}
+            ariaLabel="Posición de vídeo"
           />
           <span>{formatTime(position)}</span>
           <span>{formatTime(duration)}</span>
-        </label>
+        </div>
 
         <div className="video-controls-row">
           {/* Lado Izquierdo: Velocidad, Bucle, Shuffle, Audio, Subtítulos y Cola */}
@@ -1376,6 +1354,48 @@ export function VideoPlayer({
           </div>
         </div>
       </footer>
+
+      {/* Playlist Lateral Desplegable (Cola de Proyección) */}
+      {showPlaylist && localVideoItems.length > 0 ? (
+        <aside className="video-playlist-sidebar">
+          <div className="video-playlist-header">
+            <h3>Cola de Proyección ({localVideoItems.length})</h3>
+            <button
+              aria-label="Cerrar lista"
+              className="video-playlist-close"
+              onClick={() => setShowPlaylist(false)}
+            >
+              <Icon name="close" />
+            </button>
+          </div>
+          <div className="video-playlist-items">
+            {localVideoItems.map((item, idx) => {
+              const isSelected = item.path === path;
+              return (
+                <div
+                  className={`video-playlist-item ${isSelected ? "is-active" : ""}`}
+                  key={item.path}
+                  onClick={() => onSelectVideo && onSelectVideo(item.path)}
+                >
+                  <span className="video-playlist-item-idx">{idx + 1}</span>
+                  <div className="video-playlist-thumb-wrap">
+                    <VideoThumbnail className="video-playlist-thumb" path={item.path} title={item.title} />
+                    {isSelected ? (
+                      <div className="video-playlist-playing-badge">
+                        <Icon name="play" />
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="video-playlist-item-info">
+                    <strong title={item.title}>{item.title}</strong>
+                    <small>{cleanPath(item.relativeFolder)}</small>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </aside>
+      ) : null}
 
       {mediaDelete.menu ? (
         <ContextMenu

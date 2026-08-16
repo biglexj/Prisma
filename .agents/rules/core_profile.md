@@ -8,7 +8,7 @@ trigger: always_on
 - Tipo principal: `desktop` (`Core-Docs/types/desktop`)
 - Plataformas: `windows` (`Core-Docs/platforms/windows`)
 - Stack: `react`, `typescript`, `tauri`, `rust` (`Core-Docs/stacks/react`)
-- Funciones activas: `playback`, `music_library`, `visual_library`, `design-system`, `storage`
+- Funciones activas: `playback`, `music_library`, `visual_library`, `design-system`, `storage`, `single-instance`, `aurora-synapse`
 
 ## Regla de selección
 
@@ -35,6 +35,7 @@ No aplicar una capacidad por semejanza. Instancia única, bandeja, autoactualiza
 - `Core-Docs/stacks/react`
 - `Core-Docs/features/design-system`
 - `Core-Docs/features/storage`
+- `Core-Docs/features/aurora-synapse`
 
 ## Excepciones locales
 
