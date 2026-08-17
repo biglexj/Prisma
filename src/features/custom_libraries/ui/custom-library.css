@@ -364,11 +364,15 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px;
+  padding: 14px 16px;
+  height: 72px;
+  min-height: 72px;
   border-radius: 18px;
   background: var(--surface-container);
   border: 1px solid var(--outline-variant);
   cursor: pointer;
+  min-width: 0;
+  box-sizing: border-box;
   transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
@@ -384,6 +388,9 @@
   justify-content: center;
   width: 44px;
   height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
   border-radius: 14px;
   background: var(--surface-container-highest);
   color: var(--primary);
@@ -397,17 +404,30 @@
 .custom-folder-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .custom-folder-info strong {
   font-size: 0.88rem;
+  font-weight: 600;
   color: var(--on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 .custom-folder-info span {
   font-size: 0.74rem;
   color: var(--on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 .custom-empty-state {

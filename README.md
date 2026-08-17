@@ -21,17 +21,25 @@
 
 <div align="center">
 
-| Vista Principal (Inicio) | Biblioteca de Música (Studio Player) |
+| Vista Principal (Inicio) | Biblioteca de Música |
 | :---: | :---: |
-| ![Inicio](screenshots/home.png) | ![Música](screenshots/music_player.png) |
+| ![Inicio](screenshots/home.webp) | ![Música](screenshots/music.webp) |
 
-| Visor de Imágenes Cinematográfico | Bibliotecas Modulares y Lector de Documentos |
+| Reproductor Inmersivo (Now Playing) | Galería de Imágenes |
 | :---: | :---: |
-| ![Imágenes](screenshots/image_viewer.png) | ![Documentos y Editor](screenshots/document_viewer.png) |
+| ![Reproducción](screenshots/now_playing.webp) | ![Imágenes](screenshots/image.webp) |
 
-| Reproductor de Vídeo con PiP Adaptativo | Prisma Quick Look Universal |
+| Bibliotecas Modulares (Libros/Docs) | Lector y Editor de Documentos |
 | :---: | :---: |
-| ![Vídeo](screenshots/video_player.png) | ![Quick Look](screenshots/quick_look.png) |
+| ![Bibliotecas](screenshots/books.webp) | ![Documentos y Editor](screenshots/document_viewer.webp) |
+
+| Reproductor de Vídeo | Colección de Favoritos |
+| :---: | :---: |
+| ![Vídeo](screenshots/video.webp) | ![Favoritos](screenshots/favorites.webp) |
+
+| Configuración General | Acerca de Prisma |
+| :---: | :---: |
+| ![Configuración](screenshots/settings.webp) | ![Acerca de](screenshots/about.webp) |
 
 </div>
 

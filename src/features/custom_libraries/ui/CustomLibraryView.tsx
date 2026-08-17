@@ -626,6 +626,7 @@ export function CustomLibraryView({
                     className="custom-folder-card"
                     key={col.folderPath}
                     onClick={() => setCurrentFolderPath(col.folderPath)}
+                    title={col.folderName}
                   >
                     <div className="custom-folder-icon">
                       <Icon name="folder" />

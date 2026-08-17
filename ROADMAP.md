@@ -22,8 +22,17 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟡 Intermedio (Prioridad Media/Baja)
 
+- [ ] **Motor de Conversión de Media con FFmpeg (Prisma Convert)** — Integración de FFmpeg como motor backend de conversión unificado para imágenes, audio y vídeo, a la altura de XnConvert:
+  - **Conversión de Imágenes**: Conversión por lotes entre formatos (JPG, PNG, WebP, AVIF, HEIC, TIFF, BMP, GIF…), con acciones encadenables: redimensión, recorte, ajuste de calidad, marca de agua, metadatos EXIF.
+  - **Video → Audio**: Extracción de pista de audio desde archivos de vídeo (MP4, MKV, AVI…) a formatos como MP3, FLAC, OGG, WAV, AAC.
+  - **Conversión de Vídeo**: Transcodificación entre contenedores y codecs (H.264, H.265/HEVC, AV1, VP9) con control de bitrate, resolución y FPS.
+  - **Renombrado Global (Batch Rename)**: Reglas de renombrado por expresión regular, numeración secuencial, reemplazo de texto y uso de metadatos como variables — extensión del renombrado actual a todas las bibliotecas (música, imágenes, vídeo).
+  - **Cola de Conversión y Progreso**: UI de colas con progreso por ítem, cancelación individual y reporte de errores por archivo.
+- [ ] **Editor de Tags de Música (Prisma Tag Editor)** — Panel de edición de metadatos ID3/Vorbis/MP4 directamente desde la biblioteca, al nivel de Mp3tag: título, artista, álbum, año, género, número de pista, carátula embebida, comentarios y tags personalizados. Edición individual y por lotes (multi-selección).
+- [ ] **Letras Sincronizadas — Completar y Mejorar** *(base LRC ya existe; falta sincronización activa y editor)* — El backend lee `.lrc` y tags incrustados (`Lyrics` / `UnsyncLyrics`), el frontend muestra `LyricsPreview`, pero falta: (a) resaltado línea activa sincronizado con posición MPV, (b) búsqueda y descarga automática de letras desde proveedores públicos (lrclib.net / Musixmatch), (c) editor visual LRC in-app para ajustar tiempos, (d) escritura de vuelta al tag del archivo.
 - [ ] Soporte para listas de reproducción personalizadas y exportación M3U.
 - [ ] Búsqueda y filtrado avanzado por metadatos (artista, álbum, formato, fecha).
+- [ ] **Visor de Metadatos EXIF** — Panel de inspección de metadatos de imagen (cámara, lente, ISO, apertura, velocidad, GPS, fecha, software) accesible desde el explorador visual y el Quick Look, sin edición destructiva.
 - [ ] Ajustes de ecualizador y filtros de audio mediante MPV.
 - [ ] Sistema de marcadores y etiquetas en galería visual.
 
@@ -31,6 +40,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## ⚪ Descartado / En Pausa
 
+- ⏸️ **Cortador de Audio Básico** — Recorte no-destructivo de segmentos de audio con vista de forma de onda, puntos de entrada/salida y exportación del fragmento. Aplazado: alta complejidad, baja urgencia actual.
 - ⏸️ Integración con servicios de streaming en la nube (Prisma se mantiene como visor 100% local-first).
 
 ---

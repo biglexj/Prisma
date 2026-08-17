@@ -28,10 +28,10 @@ export function AboutView() {
     setUpdateStatus(null);
     try {
       // Simulación de comprobación de release contra GitHub
-      await new Promise((resolve) => setTimeout(resolve, 900));
-      setUpdateStatus("✅ ¡Estás en la última versión oficial (v0.0.1)!");
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setUpdateStatus("✅ ¡Estás en la última versión oficial (v1.0.0)!");
     } catch {
-      setUpdateStatus("ℹ️ No se pudo verificar la actualización. Revisa tu conexión.");
+      setUpdateStatus("ℹ️ No se pudo verificar la actualización. Revisa tu conexión a internet.");
     } finally {
       setCheckingUpdate(false);
     }
@@ -49,8 +49,8 @@ export function AboutView() {
             <div className="about-hero-text">
               <div className="about-title-row">
                 <h2>Prisma</h2>
-                <span className="about-version-badge">v0.0.1</span>
-                <span className="about-release-tag">Official Release</span>
+                <span className="about-version-badge">v1.0.0</span>
+                <span className="about-release-tag">Lanzamiento Oficial</span>
               </div>
               <p className="about-tagline">
                 Estación y reproductor multimedia local-first diseñada bajo el lenguaje Material 3 Expressive para Windows.
@@ -59,7 +59,7 @@ export function AboutView() {
                 <span className="about-chip">Licencia MIT</span>
                 <span className="about-chip">Autor: biglexj (2026)</span>
                 <span className="about-chip">Local-First</span>
-                <span className="about-chip">Audio • Vídeo • Imágenes</span>
+                <span className="about-chip">Audio • Vídeo • Imágenes • Libros • Documentos</span>
               </div>
             </div>
           </div>
@@ -72,7 +72,7 @@ export function AboutView() {
               </div>
               <div className="about-update-text">
                 <strong>Estado de Versión</strong>
-                <p>Prisma v0.0.1 (64-bit Windows)</p>
+                <p>Prisma v1.0.0 (Windows 64-bit)</p>
               </div>
             </div>
             <button
@@ -81,7 +81,7 @@ export function AboutView() {
               onClick={handleCheckUpdates}
             >
               <Icon name="refresh" className={checkingUpdate ? "spinning-icon" : ""} />
-              <span>{checkingUpdate ? "Buscando versión…" : "Buscar actualizaciones"}</span>
+              <span>{checkingUpdate ? "Comprobando versión…" : "Buscar actualizaciones"}</span>
             </button>
           </div>
         </div>
