@@ -325,7 +325,12 @@ export function App() {
           if (activeView === "video_player") {
             window.dispatchEvent(new CustomEvent("prisma-video-mute"));
           } else {
-            void playback.toggleMute?.();
+            const currentVol = playback.snapshot.volume ?? 70;
+            if (currentVol > 0) {
+              void playback.setVolume(0);
+            } else {
+              void playback.setVolume(70);
+            }
           }
           break;
         }

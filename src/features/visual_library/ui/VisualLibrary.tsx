@@ -185,8 +185,8 @@ export function VisualLibrary({
   const visibleItems = nonExcludedItems.slice(0, VISIBLE_ITEM_LIMIT);
   const timelineSections = groupByTimeline(visibleItems, sortItemList);
 
-  // Árbol jerárquico y colecciones
-  const treeLevel = resolveTreeLevel(items, currentFolderPath, favorites.favorites, {
+  // Árbol jerárquico y colecciones (Solo con carpetas y elementos NO excluidos)
+  const treeLevel = resolveTreeLevel(nonExcludedItems, currentFolderPath, favorites.favorites, {
     allName: isImage ? "Todas las imágenes" : "Todos los vídeos",
     mediaType: isImage ? "image" : "video",
   });
@@ -196,11 +196,11 @@ export function VisualLibrary({
 
   const isInsideFolder = currentFolderPath !== "";
 
-  // Active list for current view
+  // Active list for current view (Nunca incluye carpetas excluidas u ocultas)
   const currentActiveList = activeImageSessionList ?? (
     isInsideFolder
       ? (sortedDirectItems.length > 0 ? sortedDirectItems : sortItemList(treeLevel.allRecursiveItems))
-      : (viewMode === "timeline" ? nonExcludedItems : items)
+      : nonExcludedItems
   );
 
   const handleSelectImage = (item: VisualLibraryItem, queueList?: VisualLibraryItem[]) => {
@@ -214,8 +214,8 @@ export function VisualLibrary({
   };
 
   const handlePlayAllVideos = () => {
-    if (items.length === 0) return;
-    onOpenVideo(items[0].path, items);
+    if (nonExcludedItems.length === 0) return;
+    onOpenVideo(nonExcludedItems[0].path, nonExcludedItems);
   };
 
   const handlePlayFolderVideos = (folderItems: VisualLibraryItem[]) => {
@@ -306,7 +306,7 @@ export function VisualLibrary({
   // Abrir imagen seleccionada externamente (por ejemplo, desde Inicio o sistema)
   useEffect(() => {
     if (initialSelectedImagePath) {
-      const found = items.find((it) => it.path === initialSelectedImagePath) || {
+      const found = nonExcludedItems.find((it) => it.path === initialSelectedImagePath) || {
         path: initialSelectedImagePath,
         title: initialSelectedImagePath.replace(/\\/g, "/").split("/").pop() || "Imagen",
         sourcePath: "",
@@ -315,10 +315,10 @@ export function VisualLibrary({
         modifiedAtMillis: Date.now(),
         sizeBytes: 0,
       };
-      handleSelectImage(found);
+      handleSelectImage(found, nonExcludedItems);
       onClearInitialSelectedImage?.();
     }
-  }, [initialSelectedImagePath, items]);
+  }, [initialSelectedImagePath, nonExcludedItems]);
 
   // Preservar y restaurar la posición exacta del scroll al navegar o volver
   useScrollRestoration(`view:${kind}:${viewMode}:${currentFolderPath}`, !loading);
@@ -574,8 +574,8 @@ export function VisualLibrary({
                     key={item.path}
                     onClick={() =>
                       isImage
-                        ? handleSelectImage(item, items)
-                        : onOpenVideo(item.path, items)
+                        ? handleSelectImage(item, nonExcludedItems)
+                        : onOpenVideo(item.path, nonExcludedItems)
                     }
                     onContextMenu={(event) => handleCardContextMenu(event, item)}
                     onDeleteRequest={() => handleCardDeleteRequest(item)}
@@ -601,7 +601,7 @@ export function VisualLibrary({
           {/* Subcarpetas / Colecciones en este nivel */}
           {treeLevel.subfolders.length > 0 ? (
             <div className="visual-folder-collections-section">
-              <div className="visual-folder-collections">
+              <div className="music-folder-collections">
                 {treeLevel.subfolders.map((folder) => (
                   <VisualFolderCard
                     folder={folder}
@@ -643,7 +643,7 @@ export function VisualLibrary({
       ) : (
         /* ── 3. Vista en Árbol Expandible (Lienzo Style) ── */
         <MediaTreeView
-          items={items}
+          items={nonExcludedItems}
           mediaType={isImage ? "image" : "video"}
           onPlayFolder={!isImage ? (folderItems) => handlePlayFolderVideos(folderItems) : undefined}
           onPlayItem={(item, list) => {
@@ -658,7 +658,7 @@ export function VisualLibrary({
         />
       )}
 
-      {items.length > VISIBLE_ITEM_LIMIT && viewMode === "timeline" ? (
+      {nonExcludedItems.length > VISIBLE_ITEM_LIMIT && viewMode === "timeline" ? (
         <p className="visual-limit-note">
           Se muestran los {VISIBLE_ITEM_LIMIT} elementos más recientes para mantener la interfaz ligera.
         </p>

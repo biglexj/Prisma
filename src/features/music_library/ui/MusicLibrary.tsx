@@ -201,8 +201,8 @@ export function MusicLibrary({
     return groups;
   }, [visibleItems]);
 
-  // Árbol jerárquico y colecciones
-  const treeLevel = resolveTreeLevel(items, currentFolderPath, favorites.favorites, {
+  // Árbol jerárquico y colecciones (Solo con carpetas y elementos NO excluidos)
+  const treeLevel = resolveTreeLevel(nonExcludedItems, currentFolderPath, favorites.favorites, {
     allName: "Todas las canciones",
     mediaType: "music",
   });
@@ -629,7 +629,7 @@ export function MusicLibrary({
       ) : (
         /* ── 3. Vista en Árbol Expandible ── */
         <MediaTreeView
-          items={items}
+          items={nonExcludedItems}
           mediaType="music"
           onAddFolderToQueue={onAddToQueue ? (folderItems) => onAddToQueue(folderItems.map(toQueueItem)) : undefined}
           onAddToQueue={onAddToQueue ? (item) => onAddToQueue([toQueueItem(item)]) : undefined}
@@ -644,7 +644,7 @@ export function MusicLibrary({
         />
       )}
 
-      {items.length > VISIBLE_ITEM_LIMIT && viewMode === "timeline" ? (
+      {nonExcludedItems.length > VISIBLE_ITEM_LIMIT && viewMode === "timeline" ? (
         <p className="music-limit-note">
           Se muestran las {VISIBLE_ITEM_LIMIT} canciones más recientes para mantener la interfaz fluida.
         </p>

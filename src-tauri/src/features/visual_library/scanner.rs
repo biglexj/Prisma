@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::features::folder_session::{
-    classify_path, clean_path, compare_naturally, is_path_excluded,
+    classify_path, clean_path, compare_naturally, is_ignored_directory_name, is_path_excluded,
 };
 
 use super::{VisualFolderScan, VisualFolderSource, VisualLibraryItem, VisualMediaKind};
@@ -35,6 +35,9 @@ pub fn scan_visual_folder(
 
     while let Some(directory) = pending.pop() {
         let is_dir_excluded = is_path_excluded(&directory, excluded_paths);
+        if is_dir_excluded {
+            continue;
+        }
 
         let entries = match fs::read_dir(&directory) {
             Ok(entries) => entries,
@@ -58,7 +61,8 @@ pub fn scan_visual_folder(
                 continue;
             }
             if file_type.is_dir() {
-                if !entry.file_name().to_string_lossy().starts_with('.') {
+                let dir_name = entry.file_name().to_string_lossy().into_owned();
+                if !is_ignored_directory_name(&dir_name) && !is_path_excluded(&path, excluded_paths) {
                     pending.push(path);
                 }
                 continue;
@@ -67,7 +71,7 @@ pub fn scan_visual_folder(
                 continue;
             }
 
-            let is_excluded = is_dir_excluded || is_path_excluded(&path, excluded_paths);
+            let is_excluded = is_path_excluded(&path, excluded_paths);
 
             let metadata = entry.metadata().ok();
             let modified_at_millis = metadata
