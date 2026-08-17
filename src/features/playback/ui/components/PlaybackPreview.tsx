@@ -96,6 +96,29 @@ export function PlaybackPreview({
     }
   }, [queueState?.queue.currentIndex, queueState?.queue.items]);
 
+  // Escucha remota de pestañas desde Aurora Synapse (Super Gallery)
+  useEffect(() => {
+    const handleSetTab = (e: CustomEvent<{ tab: "cover" | "lyrics" | "queue" }>) => {
+      if (e.detail?.tab) {
+        setViewMode(e.detail.tab);
+      }
+    };
+    const handleToggleLyrics = () => {
+      setViewMode((prev) => (prev === "lyrics" ? "cover" : "lyrics"));
+    };
+    const handleToggleQueue = () => {
+      setViewMode((prev) => (prev === "queue" ? "cover" : "queue"));
+    };
+    window.addEventListener("prisma-music-tab", handleSetTab as EventListener);
+    window.addEventListener("prisma-music-toggle-lyrics", handleToggleLyrics);
+    window.addEventListener("prisma-music-toggle-queue", handleToggleQueue);
+    return () => {
+      window.removeEventListener("prisma-music-tab", handleSetTab as EventListener);
+      window.removeEventListener("prisma-music-toggle-lyrics", handleToggleLyrics);
+      window.removeEventListener("prisma-music-toggle-queue", handleToggleQueue);
+    };
+  }, []);
+
   return (
     <section className={`preview-screen ${palette ? "has-album-palette" : ""}`} id="studio-home" style={adaptiveStyle}>
       <header className="preview-heading">

@@ -1,6 +1,6 @@
 [package]
 name = "prisma"
-version = "0.0.3"
+version = "1.0.0"
 description = "Visor y reproductor multimedia local-first"
 authors = ["Biglex J"]
 edition = "2024"

@@ -190,13 +190,19 @@ impl CustomLibrariesState {
             .map(|e| e.to_ascii_lowercase().trim_start_matches('.').to_string())
             .collect();
 
+        let excluded_paths: Vec<PathBuf> = lib
+            .excluded_folder_paths
+            .iter()
+            .map(|p| PathBuf::from(p))
+            .collect();
+
         lib.folder_paths
             .into_iter()
             .map(|folder| {
                 let path = Path::new(&folder);
                 let available = path.exists() && path.is_dir();
                 let count = if available {
-                    count_matching_files(path, &extensions, 0, 10)
+                    count_matching_files(path, &extensions, &excluded_paths, 0, 10)
                 } else {
                     0
                 };
@@ -227,7 +233,7 @@ impl CustomLibrariesState {
                 let path = Path::new(&folder);
                 let available = path.exists() && path.is_dir();
                 let count = if available {
-                    count_matching_files(path, &extensions, 0, 10)
+                    count_matching_files(path, &extensions, &[], 0, 10)
                 } else {
                     0
                 };
@@ -296,9 +302,20 @@ fn is_ignored_dir_name(name: &str) -> bool {
     IGNORED_NAMES.iter().any(|&ign| ign.eq_ignore_ascii_case(name))
 }
 
-fn count_matching_files(dir: &Path, extensions: &HashSet<String>, depth: usize, max_depth: usize) -> usize {
+fn count_matching_files(
+    dir: &Path,
+    extensions: &HashSet<String>,
+    excluded_paths: &[PathBuf],
+    depth: usize,
+    max_depth: usize,
+) -> usize {
     if depth > max_depth {
         return 0;
+    }
+    for excluded in excluded_paths {
+        if dir.starts_with(excluded) {
+            return 0;
+        }
     }
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
@@ -319,10 +336,16 @@ fn count_matching_files(dir: &Path, extensions: &HashSet<String>, depth: usize, 
                 if is_ignored_dir_name(&name_str) {
                     continue;
                 }
-                count += count_matching_files(&path, extensions, depth + 1, max_depth);
+                let is_excluded = excluded_paths.iter().any(|ex| path.starts_with(ex));
+                if !is_excluded {
+                    count += count_matching_files(&path, extensions, excluded_paths, depth + 1, max_depth);
+                }
             } else if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
                 if matches_ext(ext, extensions) {
-                    count += 1;
+                    let is_excluded = excluded_paths.iter().any(|ex| path.starts_with(ex));
+                    if !is_excluded {
+                        count += 1;
+                    }
                 }
             }
         }

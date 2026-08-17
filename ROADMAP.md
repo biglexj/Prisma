@@ -8,7 +8,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [ ] **Bibliotecas Modulares Personalizables y Quick Look Universal (Documentos, Libros, Proyectos Creativos y Tipos de Archivo Dinámicos)** — `process/active/2026-08-16_bibliotecas_modulares_y_quicklook_universal/`
+- [x] **Bibliotecas Modulares Personalizables y Quick Look Universal (Documentos, Libros, Proyectos Creativos y Tipos de Archivo Dinámicos)** — `process/active/2026-08-16_bibliotecas_modulares_y_quicklook_universal/`
 - [x] **Integración Aurora Synapse Protocol (Handoff LAN, UDP Beacon, Receptor de Archivos y Deep Links)** — `process/active/2026-08-16_aurora_synapse_integration/`
 - [ ] **Estandarización Ecosistema biglexj** — `process/active/2026-08-11_estandarizacion_ecosistema_biglexj/`
 - [ ] **Modo de Reproducción Flotante (PiP / MiniPlayer)** — `process/active/`
@@ -17,8 +17,6 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 - [x] **Gestión de Colas, Reproducción Continua, Árbol Jerárquico y Favoritos** — `process/completed/2026/2026-08-14_gestion-colas-reproduccion-arbol/`
 - [x] **Auditoría de Rendimiento Multimedia y Memoria** — `process/completed/2026/2026-08-14_auditoria-rendimiento-multimedia/`
 - [x] **Optimización de Renderizado de Listas de Fotos Masivas y Memoria WebView** — `process/completed/2026/2026-08-13_optimizacion_memoria_webview/`
-
-
 
 ---
 
@@ -39,7 +37,5 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
-- [x] **v0.0.2**
-  - Refinamiento de reproducción multimedia: bloqueo de instancia única con conmutación atómica de archivos, superposición de capas en el reproductor de vídeo con temporizador de 3s e integración de icono oficial en instalador NSIS.
-- [x] **v0.0.1**
-  - Lanzamiento inicial oficial de Prisma: estación multimedia local-first con reproductor de audio, reproductor de vídeo con PiP, visor y editor de imágenes, Quick Look global y soporte de listas M3U/PLS/XSPF.
+- [x] **v1.0.0**
+  - **Lanzamiento oficial de Prisma**: Estación multimedia local-first integral para Windows. Reproducción de audio de alta fidelidad, reproductor de vídeo con PiP, visor y editor de imágenes, Quick Look universal, **Bibliotecas Modulares Personalizables** con lector y editor interactivo in-app (*Split View*, fuentes y zoom), blindaje universal contra exclusiones, listas universales M3U/PLS/XSPF y control remoto LAN mediante Aurora Synapse.

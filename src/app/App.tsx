@@ -223,13 +223,47 @@ export function App() {
       })
       .catch(() => {});
 
-    const unlistenPromise = listen<string | { path: string; currentTime?: number }>("prisma://open-media", (event) => {
+    const unlistenPromise = listen<string | { path: string; currentTime?: number; title?: string; artist?: string }>("prisma://open-media", (event) => {
       if (event.payload) {
-        if (typeof event.payload === "string") {
-          handleOpenFile(event.payload);
-        } else if (typeof event.payload === "object" && event.payload.path) {
-          handleOpenFile(event.payload.path, event.payload.currentTime);
+        let filePath = typeof event.payload === "string" ? event.payload : event.payload.path;
+        const currentTime = typeof event.payload === "object" ? event.payload.currentTime : undefined;
+        const title = typeof event.payload === "object" ? event.payload.title : undefined;
+        const artist = typeof event.payload === "object" ? event.payload.artist : undefined;
+
+        // Si la ruta recibida no existe en Windows (ej. viene de Android /storage/...)
+        const isAndroidOrInvalidPath = !filePath || filePath.startsWith("/storage/") || filePath.startsWith("content://") || (!filePath.includes(":\\") && !filePath.startsWith("\\\\"));
+
+        if (isAndroidOrInvalidPath) {
+          // Intentar resolver desde la biblioteca de música cargada en memoria
+          const queryTitle = (title || filePath.replace(/.*[/\\]/, "")).toLowerCase().trim();
+          const queryArtist = (artist || "").toLowerCase().trim();
+
+          const foundMusic = library.items.find(item => {
+            const itemTitle = (item.title || "").toLowerCase();
+            const relFolder = (item.relativeFolder || "").toLowerCase();
+            if (queryTitle && itemTitle === queryTitle) return true;
+            if (queryTitle && itemTitle.includes(queryTitle)) return true;
+            if (queryArtist && relFolder.includes(queryArtist) && itemTitle.includes(queryTitle)) return true;
+            return false;
+          });
+
+          if (foundMusic) {
+            handleOpenFile(foundMusic.path, currentTime);
+            return;
+          }
+
+          // Si no se encuentra en las carpetas locales de la PC, avisar de manera amigable
+          const displayName = title || filePath.replace(/.*[/\\]/, "") || "el archivo";
+          setSynapseToastFile({
+            fileName: displayName,
+            savedPath: "",
+            sizeBytes: 0,
+            mediaType: "audio",
+          });
+          return;
         }
+
+        handleOpenFile(filePath, currentTime);
       }
     });
 
@@ -365,6 +399,39 @@ export function App() {
         }
         case "quick_look": {
           void invoke("quick_look_toggle").catch(() => {});
+          break;
+        }
+        case "lyrics":
+        case "toggle_lyrics": {
+          setActiveView("studio_player");
+          window.dispatchEvent(new CustomEvent("prisma-music-toggle-lyrics"));
+          break;
+        }
+        case "queue":
+        case "toggle_queue": {
+          setActiveView("studio_player");
+          window.dispatchEvent(new CustomEvent("prisma-music-toggle-queue"));
+          break;
+        }
+        case "previa":
+        case "music_cover": {
+          setActiveView("studio_player");
+          window.dispatchEvent(new CustomEvent("prisma-music-tab", { detail: { tab: "cover" } }));
+          break;
+        }
+        case "search":
+        case "type_text": {
+          const text = (event.payload as { text?: string })?.text;
+          if (text !== undefined) {
+            const searchInput = document.querySelector<HTMLInputElement>("input[type='search'], input[placeholder*='Buscar'], input[placeholder*='buscar']");
+            if (searchInput) {
+              searchInput.focus();
+              searchInput.value = text;
+              searchInput.dispatchEvent(new Event("input", { bubbles: true }));
+              searchInput.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+            window.dispatchEvent(new CustomEvent("prisma-remote-search", { detail: { query: text } }));
+          }
           break;
         }
       }

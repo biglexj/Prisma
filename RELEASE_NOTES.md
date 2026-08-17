@@ -14,34 +14,16 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
-## [0.0.3] - 2026-08-15
+## [1.0.0] - 2026-08-16
 
 ### Resumen
-Actualización de estabilidad y pulido visual en la vista previa ligera (Quick Look), garantizando la detención total de la reproducción en segundo plano y el ajuste armónico de todos los controles e iconos de la interfaz.
+Lanzamiento inaugural de **Prisma v1.0.0**, la estación multimedia local-first diseñada bajo el lenguaje Material 3 Expressive para Windows. Combina reproducción de audio de alta fidelidad, visor cinematográfico de imágenes con editor integrado, reproductor de vídeo con PiP, Quick Look universal para todo tipo de archivos, **Bibliotecas Modulares Personalizables** con lector y editor in-app, y control remoto LAN mediante Aurora Synapse.
 
 ### Detalles
-- **Detención Integral de Reproducción al Cerrar o Desenfocar**: Sincronización estricta del ciclo de vida multimedia para que al cerrar la vista previa ligera (pulsando '✕', haciendo clic fuera de la ventana o cerrando desde la barra de tareas) la pista de audio o vídeo se detenga por completo, sin dejar audio residual ni procesos ocultos en segundo plano.
-- **Armonización de Iconos y Controles**: Redimensionamiento proporcional de los iconos de volumen, controles de reproducción y botón de apertura en ventana completa dentro de la vista previa rápida, evitando textos divididos o elementos sobredimensionados.
-- **Optimización del Instalador Windows**: Configuración exclusiva para paquetes de instalación NSIS de alto rendimiento, reduciendo el tamaño del bundle y eliminando compilaciones intermedias innecesarias.
-
-## [0.0.2] - 2026-08-15
-
-### Resumen
-Actualización de refinamiento orientada a la experiencia de reproducción multimedia continua, gestión de instancia única del sistema y perfeccionamiento visual de la interfaz del reproductor de vídeo e instalador.
-
-### Detalles
-- **Instancia Única y Conmutación Inteligente de Medios**: Integración del bloqueo de proceso único para evitar la apertura de ventanas duplicadas, múltiples iconos en la bandeja del sistema y audios superpuestos. Al abrir un nuevo archivo desde el sistema, este reemplaza atómicamente la reproducción activa y enfoca la ventana principal o Quick Look.
-- **Perfeccionamiento del Reproductor de Vídeo**: Corrección de superposición de capas en la Cola de Proyección para que quede sobre la barra de controles sin cortes visuales, eliminación de brechas en el diseño del encabezado y ajuste del temporizador de auto-ocultamiento de controles a 3 segundos.
-- **Icono Oficial en el Instalador**: Incorporación del icono de alta resolución de Prisma en el paquete de instalación oficial para Windows (NSIS).
-
-## [0.0.1] - 2026-08-15
-
-### Resumen
-Primer lanzamiento oficial de **Prisma**, la estación y reproductor multimedia local-first diseñada bajo el lenguaje Material 3 Expressive para Windows. Integra reproducción de audio de alta fidelidad, visor avanzado de imágenes con edición, reproductor de vídeo con PiP nativo, Quick Look global y soporte universal de listas de reproducción.
-
-### Detalles
-- **Explorador y Biblioteca Integral**: Navegación por tiempo, carpetas y árbol jerárquico para Música, Imágenes y Vídeos con ordenación dinámica por fecha, nombre, tamaño y modo aleatorio (shuffle).
-- **Prisma Quick Look**: Previsualización instantánea de archivos de audio, imagen y vídeo desde el Explorador de Windows o Escritorio pulsando la barra espaciadora.
-- **Reproductor de Vídeo Avanzado**: Proyección fluida con selección de pistas de audio y subtítulos, avance rápido 3.0x continuo y modo Picture-in-Picture (PiP) adaptativo respetando la relación de aspecto real.
-- **Visor y Editor de Imágenes**: Navegación con fundido suave entre imágenes, zoom fluido hasta 500%, recorte interactivo, filtros tonales y guardado con renombrado seguro.
-- **Listas de Reproducción Universales**: Detección, importación y gestión de listas en formatos M3U, M3U8, PLS y XSPF con reconexión inteligente de archivos faltantes.
+- **Bibliotecas Modulares y Lector/Editor Integrado**: Creación y gestión de colecciones personalizadas (Libros/PDFs, Documentos Markdown, Código Fuente, Proyectos Gráficos como Krita `.kra` y Photoshop `.psd`) con modo dividido (*Split View*), edición en tiempo real, atajos (`Ctrl+S`), control tipográfico (*Sans*, *Serif*, *Mono*) y zoom fluido de 11px a 32px.
+- **Explorador y Biblioteca Universal**: Navegación fluida por Línea de Tiempo, Álbumes por Carpetas y Árbol Jerárquico para Música, Imágenes y Vídeos con ordenación dinámica por fecha, nombre, tamaño y modo aleatorio.
+- **Prisma Quick Look Universal**: Previsualización instantánea con barra espaciadora desde el Explorador de Windows o Escritorio para audio, vídeo, imágenes, documentos PDF, textos planos, código y proyectos de diseño.
+- **Reproductor de Vídeo y Modo PiP Adaptativo**: Proyección fluida con selección de pistas de audio y subtítulos, conmutación fluida, avance rápido 3.0x continuo y ventana flotante Picture-in-Picture que respeta la relación de aspecto original.
+- **Visor y Editor de Imágenes**: Navegación suave entre fotos con zoom hasta 500%, filtros tonales, recorte interactivo, guardado seguro y aislamiento estricto de carpetas excluidas.
+- **Sincronización y Mando Remoto LAN**: Control de reproducción, volumen, pistas y navegación a distancia desde dispositivos de la red local mediante el protocolo Aurora Synapse.
+- **Listas de Reproducción y Gestión de Archivos**: Soporte universal de listas en formatos M3U, M3U8, PLS y XSPF con reconexión inteligente, historial consolidado y gestión de favoritos.

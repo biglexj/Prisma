@@ -461,7 +461,7 @@ fn resolve_local_media_path(app: &AppHandle, handoff: &SynapseHandoffPayload) ->
             .to_lowercase();
 
         if !file_name.is_empty() {
-            // Buscar en carpetas registradas de música
+            // Buscar en carpetas registradas de música recursivamente
             if let Some(music_state) = app.try_state::<MusicLibraryState>() {
                 if let Ok(paths) = music_state.paths() {
                     if let Some(found) = find_file_in_folders(&paths, &file_name) {
@@ -492,11 +492,34 @@ fn resolve_local_media_path(app: &AppHandle, handoff: &SynapseHandoffPayload) ->
         }
     }
 
-    // Fallback: devolver la ruta original recibida
+    // Búsqueda por título si la ruta no coincidió exactamente
+    if let Some(ref title) = handoff.title {
+        let lower_title = title.to_lowercase().trim().to_string();
+        if !lower_title.is_empty() {
+            if let Some(music_state) = app.try_state::<MusicLibraryState>() {
+                if let Ok(paths) = music_state.paths() {
+                    for folder in &paths {
+                        if let Some(found) = search_dir_by_name_part(Path::new(folder), &lower_title, 0, 4) {
+                            return found;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Si la ruta original es de Android o no existe en Windows, devolver cadena vacía
+    // para evitar que libmpv intente abrir /storage/emulated/0/... y falle con Raw(-10)
+    if let Some(ref raw_path) = handoff.path {
+        if raw_path.starts_with("/storage/") || raw_path.starts_with("content://") || (!raw_path.contains(":\\") && !raw_path.starts_with("\\\\")) {
+            return String::new();
+        }
+    }
+
     handoff.path.clone().unwrap_or_default()
 }
 
-/// Busca recursivamente un archivo por nombre en una lista de carpetas base
+/// Busca recursivamente un archivo por coincidencia de nombre exacto (hasta 4 niveles)
 fn find_file_in_folders(folders: &[String], target_file_name: &str) -> Option<String> {
     let lower_target = target_file_name.to_lowercase();
     for folder in folders {
@@ -504,19 +527,53 @@ fn find_file_in_folders(folders: &[String], target_file_name: &str) -> Option<St
         if !dir.is_dir() {
             continue;
         }
-        let direct_candidate = dir.join(target_file_name);
-        if direct_candidate.is_file() {
-            return Some(direct_candidate.to_string_lossy().to_string());
+        if let Some(found) = search_dir_recursive(dir, &lower_target, 0, 4) {
+            return Some(found);
         }
-        if let Ok(entries) = std::fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_file() {
-                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                        if name.to_lowercase() == lower_target {
-                            return Some(path.to_string_lossy().to_string());
-                        }
+    }
+    None
+}
+
+fn search_dir_recursive(dir: &Path, lower_target: &str, current_depth: usize, max_depth: usize) -> Option<String> {
+    if current_depth > max_depth {
+        return None;
+    }
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    if name.to_lowercase() == lower_target {
+                        return Some(path.to_string_lossy().to_string());
                     }
+                }
+            } else if path.is_dir() {
+                if let Some(found) = search_dir_recursive(&path, lower_target, current_depth + 1, max_depth) {
+                    return Some(found);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn search_dir_by_name_part(dir: &Path, lower_part: &str, current_depth: usize, max_depth: usize) -> Option<String> {
+    if current_depth > max_depth {
+        return None;
+    }
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    let lower_name = name.to_lowercase();
+                    if lower_name.contains(lower_part) {
+                        return Some(path.to_string_lossy().to_string());
+                    }
+                }
+            } else if path.is_dir() {
+                if let Some(found) = search_dir_by_name_part(&path, lower_part, current_depth + 1, max_depth) {
+                    return Some(found);
                 }
             }
         }

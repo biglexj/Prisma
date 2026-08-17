@@ -643,7 +643,7 @@ export function CustomLibraryView({
           {viewMode === "tree" ? (
             <div className="custom-tree-container">
               <MediaTreeView
-                items={items.map((it) => ({
+                items={displayedItems.map((it) => ({
                   path: it.path,
                   title: it.name,
                   relativeFolder: it.relativeFolder,
@@ -651,7 +651,7 @@ export function CustomLibraryView({
                 }))}
                 mediaType="image"
                 onPlayItem={(item) => {
-                  const found = items.find((i) => i.path === item.path);
+                  const found = displayedItems.find((i) => i.path === item.path);
                   if (found) handleOpenFile(found);
                 }}
               />

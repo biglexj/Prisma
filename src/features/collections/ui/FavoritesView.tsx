@@ -82,17 +82,32 @@ export function FavoritesView({
   // Mapear rutas de favoritos con los objetos reales de la biblioteca o sintetizar respaldo
   const favoriteMusicItems = useMemo(() => {
     const musicMap = new Map(musicItems.map((it) => [normalizePath(it.path), it]));
-    return store.music.map((path) => musicMap.get(normalizePath(path)) || synthesizeMusicItem(path));
+    return store.music
+      .map((path) => musicMap.get(normalizePath(path)) || synthesizeMusicItem(path))
+      .filter((it) => {
+        const real = musicMap.get(normalizePath(it.path));
+        return real ? !real.isExcluded : true;
+      });
   }, [store.music, musicItems]);
 
   const favoriteImageItems = useMemo(() => {
     const imgMap = new Map(images.map((it) => [normalizePath(it.path), it]));
-    return store.images.map((path) => imgMap.get(normalizePath(path)) || synthesizeVisualItem(path));
+    return store.images
+      .map((path) => imgMap.get(normalizePath(path)) || synthesizeVisualItem(path))
+      .filter((it) => {
+        const real = imgMap.get(normalizePath(it.path));
+        return real ? !real.isExcluded : true;
+      });
   }, [store.images, images]);
 
   const favoriteVideoItems = useMemo(() => {
     const vidMap = new Map(videos.map((it) => [normalizePath(it.path), it]));
-    return store.videos.map((path) => vidMap.get(normalizePath(path)) || synthesizeVisualItem(path));
+    return store.videos
+      .map((path) => vidMap.get(normalizePath(path)) || synthesizeVisualItem(path))
+      .filter((it) => {
+        const real = vidMap.get(normalizePath(it.path));
+        return real ? !real.isExcluded : true;
+      });
   }, [store.videos, videos]);
 
   const totalFavorites =

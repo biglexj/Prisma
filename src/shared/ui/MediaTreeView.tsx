@@ -81,9 +81,10 @@ export function MediaTreeView<T extends MediaTreeItem>({
     });
   };
 
-  // Construcción de la estructura de árbol jerárquico
+  // Construcción de la estructura de árbol jerárquico (Excluye completamente archivos/carpetas ocultas)
   const rootNodes = useMemo(() => {
-    const favItems = items.filter((it) => favorites.isFavorite(it.path));
+    const validItems = items.filter((it) => !(it as { isExcluded?: boolean }).isExcluded);
+    const favItems = validItems.filter((it) => favorites.isFavorite(it.path));
 
     const favNode: TreeNode<T> = {
       path: "virtual_favorites",
@@ -113,8 +114,6 @@ export function MediaTreeView<T extends MediaTreeItem>({
         ? "Todas las imágenes"
         : "Todos los vídeos";
 
-    const nonExcludedForVirtualAll = items.filter((it) => !(it as { isExcluded?: boolean }).isExcluded);
-
     const allNode: TreeNode<T> = {
       path: "virtual_all",
       name: allLabel,
@@ -122,9 +121,9 @@ export function MediaTreeView<T extends MediaTreeItem>({
       isDirectory: true,
       isVirtual: true,
       virtualType: "all",
-      directItems: nonExcludedForVirtualAll,
-      allRecursiveItems: nonExcludedForVirtualAll,
-      children: nonExcludedForVirtualAll.map((it) => ({
+      directItems: validItems,
+      allRecursiveItems: validItems,
+      children: validItems.map((it) => ({
         path: `all_${it.path}`,
         name: it.title,
         level: 1,
@@ -151,7 +150,7 @@ export function MediaTreeView<T extends MediaTreeItem>({
       directFiles: [],
     };
 
-    for (const item of items) {
+    for (const item of validItems) {
       const rel = (item.relativeFolder || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
       if (!rel || rel === "Carpeta principal" || rel === ".") {
         rootBucket.directFiles.push(item);

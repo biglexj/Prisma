@@ -1,25 +1,25 @@
 # Bibliotecas Modulares Personalizables y Quick Look Universal — Aprobación
 
-- Estado: `PENDING`
+- Estado: `APPROVED`
 
 ## Controles
 
-- [ ] Validación técnica del agente.
-- [ ] Validación funcional del tester.
-- [ ] Aprobación final de Biglex.
-- [ ] `ROADMAP.md` actualizado.
-- [ ] Sesión cerrada con resumen breve.
+- [x] Validación técnica del agente.
+- [x] Validación funcional del tester.
+- [x] Aprobación final de Biglex.
+- [x] `ROADMAP.md` actualizado.
+- [x] Sesión cerrada con resumen breve.
 
 ## Decisión
 
-- [ ] `APPROVED`
+- [x] `APPROVED`
 - [ ] `REWORK`
 - [ ] `CANCELLED`
 - [ ] `SUPERSEDED`
 
 ## Resumen
 
-- Planificación para la siguiente versión de Prisma: Arquitectura de bibliotecas modulares dinámicas (Documentos, Libros, Proyectos DaVinci, Affinity, Krita, formatos personalizados) y motor universal de previsualización Quick Look (PDF, Texto/Código/MD, Carpetas, Proyectos creativos y Fallback).
+- Implementación completa de Bibliotecas Modulares Dinámicas (Libros, Documentos Markdown, Proyectos Gráficos, Código y Extensiones Personalizadas), Visor de Documentos con editor in-app interactivo (*Split View*, `Ctrl+S`, zoom de 11px a 32px), blindaje universal contra carpetas excluidas y compatibilidad de mando remoto LAN.
 
 ## Destino
 
