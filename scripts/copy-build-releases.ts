@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 const rootDir = process.cwd();
 const bundleDir = join(rootDir, "src-tauri", "target", "release", "bundle");
-const targetDirs = [join(rootDir, "releases"), join(rootDir, "release")];
+const targetDirs = [join(rootDir, "release")];
 
 // Leer la versión actual desde package.json
 const packageJson = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf-8"));
@@ -57,7 +57,7 @@ const artifacts = findArtifacts(bundleDir);
 if (artifacts.length === 0) {
   console.log(`ℹ️ No se encontraron instaladores para la versión v${currentVersion} en el bundle.`);
 } else {
-  console.log(`\n🚀 Copiando instalador v${currentVersion} a las carpetas 'releases' y 'release'...`);
+  console.log(`\n🚀 Copiando instalador v${currentVersion} a la carpeta 'release'...`);
   for (const artifact of artifacts) {
     const fileName = artifact.split(/[\/\\]/).pop()!;
     for (const targetDir of targetDirs) {
@@ -67,5 +67,5 @@ if (artifacts.length === 0) {
       console.log(`  ✅ Copiado: ${folderName}/${fileName}`);
     }
   }
-  console.log(`\n🎉 ¡Listo! Instalador disponible en 'release' y 'releases'.\n`);
+  console.log(`\n🎉 ¡Listo! Instalador disponible en 'release/'.\n`);
 }

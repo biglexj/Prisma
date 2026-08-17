@@ -15,7 +15,6 @@ $root = if (Test-Path (Join-Path $PSScriptRoot "package.json")) {
 }
 
 $releaseDir = Join-Path $root "release"
-$releasesDir = Join-Path $root "releases"
 $packageFile = Join-Path $root "package.json"
 
 # 1. Determinar versión
