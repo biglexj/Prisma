@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Icon, type IconName } from "../../../shared/ui/Icon";
 import type { AppView } from "../../../app/ui/AppSidebar";
+import galleryDlLogo from "../../../assets/icons/gallery-dl.png";
 import "./gallery-dl.css";
 
 interface GalleryDlViewProps {
@@ -176,7 +177,7 @@ export function GalleryDlView({ onNavigate }: GalleryDlViewProps) {
         <div className="gallery-dl-header-content">
           <div className="gallery-dl-brand">
             <div className="gallery-dl-icon-badge">
-              <img src="/Aurora-Synapse/Icon/gallery-dl.png" alt="Gallery-DL" />
+              <img src={galleryDlLogo} alt="Gallery-DL" />
             </div>
             <div>
               <div className="gallery-dl-title-row">

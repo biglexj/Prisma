@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../shared/ui/Icon";
+import lunaFetchLogo from "../../assets/icons/luna-fetch.png";
+import galleryDlLogo from "../../assets/icons/gallery-dl.png";
+import superGalleryLogo from "../../assets/icons/super-gallery.png";
+import lyraflowLogo from "../../assets/icons/lyraflow.png";
+import elyTesiaLogo from "../../assets/icons/ely-tesia.png";
 import "./synapse-settings.css";
 
 interface SynapseStatus {
@@ -29,7 +34,7 @@ const ECOSYSTEM_APPS: EcosystemApp[] = [
     id: "luna-fetch",
     name: "Luna Fetch",
     category: "Descargas · Audio & Vídeo",
-    iconPath: "/Aurora-Synapse/Icon/luna-fetch.png",
+    iconPath: lunaFetchLogo,
     description: "Gestor y analizador de descargas multimedia de alta fidelidad conectado directamente con Prisma.",
     repoUrl: "https://github.com/biglexj/Luna---Fetch/releases",
     canLaunch: true,
@@ -39,7 +44,7 @@ const ECOSYSTEM_APPS: EcosystemApp[] = [
     id: "gallery-dl",
     name: "Gallery-DL GUI",
     category: "Descargas · Galerías de Imágenes",
-    iconPath: "/Aurora-Synapse/Icon/gallery-dl.png",
+    iconPath: galleryDlLogo,
     description: "Descargador masivo de álbumes, perfiles de artistas y galerías completas (+100 sitios de arte).",
     repoUrl: "https://github.com/biglexj/Gallery-DL-GUI/releases",
     canLaunch: true,
@@ -49,7 +54,7 @@ const ECOSYSTEM_APPS: EcosystemApp[] = [
     id: "super-gallery",
     name: "Super Gallery",
     category: "Móvil · Android LAN",
-    iconPath: "/Aurora-Synapse/Icon/super-gallery.png",
+    iconPath: superGalleryLogo,
     description: "Galería móvil con visor fluido, categorización y envío directo de fotos y vídeos a PC vía Wi-Fi sin cables.",
     repoUrl: "https://github.com/biglexj/Lienzo--Gallery/releases",
     canLaunch: false,
@@ -58,7 +63,7 @@ const ECOSYSTEM_APPS: EcosystemApp[] = [
     id: "lyraflow",
     name: "LyraFlow",
     category: "IA Local · Transcripción",
-    iconPath: "/Aurora-Synapse/Icon/lyraflow.png",
+    iconPath: lyraflowLogo,
     description: "Asistente inteligente de transcripción, subtítulos y análisis de voz con modelos locales.",
     repoUrl: "https://github.com/biglexj/LyraFlow/releases",
     canLaunch: false,
@@ -67,7 +72,7 @@ const ECOSYSTEM_APPS: EcosystemApp[] = [
     id: "ely-tesia",
     name: "Ely-Tesia",
     category: "Música · Reproductor MIDI",
-    iconPath: "/Aurora-Synapse/Icon/ely-tesia.png",
+    iconPath: elyTesiaLogo,
     description: "Lector y sintetizador MIDI multi-instancia de alta precisión para compositores y creadores.",
     repoUrl: "https://github.com/biglexj/Ely-Tesia/releases",
     canLaunch: false,
