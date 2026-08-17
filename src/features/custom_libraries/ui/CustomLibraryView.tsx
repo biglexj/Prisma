@@ -746,6 +746,26 @@ export function CustomLibraryView({
                   const found = displayedItems.find((i) => i.path === item.path);
                   if (found) handleOpenFile(found);
                 }}
+                onOpenItemMenu={(event, item) => {
+                  const found = displayedItems.find((i) => i.path === item.path);
+                  if (found) {
+                    mediaDelete.openMenu(event, {
+                      path: found.path,
+                      title: found.name,
+                      kind: "image",
+                    });
+                  }
+                }}
+                onOpenFolderMenu={(event, folder) => {
+                  const folderFiles = folder.allRecursiveItems
+                    .map((it) => displayedItems.find((i) => i.path === it.path))
+                    .filter((it): it is CustomLibraryItem => it !== undefined);
+                  handleFolderContextMenu(event, {
+                    folderName: folder.displayName,
+                    folderPath: folder.id,
+                    items: folderFiles,
+                  });
+                }}
               />
             </div>
           ) : null}

@@ -175,24 +175,37 @@ export function useMediaConverter() {
   );
 
   useEffect(() => {
-    const handleAddFile = (e: Event) => {
+    const handleAddFile = async (e: Event) => {
       const customEvent = e as CustomEvent<{
         path?: string;
         paths?: string[];
         mode?: ConversionMode;
+        isFolder?: boolean;
       }>;
+      const targetMode = customEvent.detail?.mode || mode;
       if (customEvent.detail?.mode) {
         setMode(customEvent.detail.mode);
       }
       if (customEvent.detail?.paths && customEvent.detail.paths.length > 0) {
         addFilesToQueue(customEvent.detail.paths);
       } else if (customEvent.detail?.path) {
-        addFilesToQueue([customEvent.detail.path]);
+        if (customEvent.detail.isFolder) {
+          try {
+            const scanned = await converterClient.scanFolder(customEvent.detail.path, targetMode);
+            if (scanned && scanned.length > 0) {
+              addFilesToQueue(scanned);
+            }
+          } catch (err) {
+            console.error("Error al escanear carpeta para el conversor:", err);
+          }
+        } else {
+          addFilesToQueue([customEvent.detail.path]);
+        }
       }
     };
     window.addEventListener("prisma-converter-add-file", handleAddFile);
     return () => window.removeEventListener("prisma-converter-add-file", handleAddFile);
-  }, [addFilesToQueue]);
+  }, [addFilesToQueue, mode]);
 
   const pickFiles = async () => {
     try {

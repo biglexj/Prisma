@@ -861,6 +861,16 @@ export function MusicLibrary({
             handlePlayItemInList(list, idx >= 0 ? idx : 0, "Árbol de Música");
           }}
           onOpenItemMenu={(event, item) => handleCardContextMenu(event, item)}
+          onOpenFolderMenu={(event, folder) => {
+            handleFolderContextMenu(event, {
+              id: folder.id,
+              displayName: folder.displayName,
+              parentPath: folder.id,
+              directItems: folder.directItems,
+              allRecursiveItems: folder.allRecursiveItems,
+              isVirtual: folder.isVirtual,
+            });
+          }}
           onDeleteRequest={handleCardDeleteRequest}
         />
       )}

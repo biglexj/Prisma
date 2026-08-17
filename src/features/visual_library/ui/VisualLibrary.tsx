@@ -772,6 +772,16 @@ export function VisualLibrary({
             }
           }}
           onOpenItemMenu={handleCardContextMenu}
+          onOpenFolderMenu={(event, folder) => {
+            handleFolderContextMenu(event, {
+              id: folder.id,
+              displayName: folder.displayName,
+              parentPath: folder.id,
+              directItems: folder.directItems,
+              allRecursiveItems: folder.allRecursiveItems,
+              isVirtual: folder.isVirtual,
+            });
+          }}
           onDeleteRequest={handleCardDeleteRequest}
         />
       )}
