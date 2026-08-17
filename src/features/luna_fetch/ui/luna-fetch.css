@@ -239,65 +239,68 @@
   line-height: 1.45;
 }
 
-/* ── Parámetros de Descarga (Formato y Calidad) ── */
-.luna-params-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-  margin-bottom: 16px;
-}
-
-.luna-param-box {
-  background: var(--surface-container-low, #fdf2f2);
+/* ── Selectores Inline (Formato y Calidad) ── */
+.luna-inline-select-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--surface-container-high, #f1e8e8);
   border: 1px solid var(--outline-variant, #eadadd);
-  border-radius: 16px;
-  padding: 10px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  color: var(--on-surface, #22191b);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 42px;
+  box-sizing: border-box;
 }
 
-.luna-param-box:focus-within {
+.luna-inline-select-pill:hover {
+  background: var(--surface-container-highest, #ebe1e2);
+  border-color: var(--outline, #9e898d);
+}
+
+.luna-inline-select-pill:focus-within {
   border-color: var(--primary, #c90045);
   box-shadow: 0 0 0 3px var(--primary-container, #ffd9df);
 }
 
-.luna-param-label {
-  font-size: 11.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.luna-inline-select-pill svg {
   color: var(--primary, #c90045);
-}
-
-.luna-param-select-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.luna-param-select-wrap svg {
-  color: var(--on-surface-variant, #6a595d);
   flex-shrink: 0;
+  pointer-events: none;
 }
 
-.luna-param-select-wrap select {
-  width: 100%;
+.luna-inline-select-pill .select-chevron-icon {
+  color: var(--on-surface-variant, #6a595d);
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
+  margin-left: 2px;
+}
+
+.luna-inline-select-pill select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   background: transparent;
   border: none;
   color: var(--on-surface, #22191b);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   outline: none;
   font-family: inherit;
   cursor: pointer;
+  padding-right: 2px;
 }
 
-.luna-param-select-wrap select option {
+.luna-inline-select-pill select option {
   background: var(--surface-container, #f7eeee);
   color: var(--on-surface, #22191b);
-  font-weight: normal;
+  font-size: 13px;
+  padding: 6px 10px;
 }
 
 /* ── Input Group ── */

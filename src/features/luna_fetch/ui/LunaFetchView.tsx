@@ -170,43 +170,6 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
             Introduce el enlace de un vídeo o pista de audio (YouTube, SoundCloud, Vimeo, TikTok, etc.) y selecciona el formato y calidad deseados para enviarlos a Luna Fetch.
           </p>
 
-          {/* Fila de Parámetros: Formato y Calidad */}
-          <div className="luna-params-row">
-            <div className="luna-param-box">
-              <span className="luna-param-label">Formato</span>
-              <div className="luna-param-select-wrap">
-                <Icon name={isAudio ? "music" : "video"} />
-                <select
-                  value={format}
-                  onChange={(e) => handleFormatChange(e.target.value as MediaFormat)}
-                >
-                  {FORMAT_OPTIONS.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="luna-param-box">
-              <span className="luna-param-label">Calidad</span>
-              <div className="luna-param-select-wrap">
-                <Icon name="sliders" />
-                <select
-                  value={quality}
-                  onChange={(e) => setQuality(e.target.value)}
-                >
-                  {qualityList.map((q) => (
-                    <option key={q.id} value={q.id}>
-                      {q.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
           <div className="luna-fetch-input-group">
             <div className="input-with-icon">
               <Icon name="search" />
@@ -231,6 +194,41 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
               <Icon name="copy" />
               <span>Pegar</span>
             </button>
+
+            {/* Selector inline: Formato */}
+            <div className="luna-inline-select-pill" title="Seleccionar formato">
+              <Icon name={isAudio ? "music" : "video"} />
+              <select
+                aria-label="Formato de descarga"
+                value={format}
+                onChange={(e) => handleFormatChange(e.target.value as MediaFormat)}
+              >
+                {FORMAT_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <Icon name="chevron-down" className="select-chevron-icon" />
+            </div>
+
+            {/* Selector inline: Calidad */}
+            <div className="luna-inline-select-pill" title="Seleccionar calidad">
+              <Icon name="sliders" />
+              <select
+                aria-label="Calidad de descarga"
+                value={quality}
+                onChange={(e) => setQuality(e.target.value)}
+              >
+                {qualityList.map((q) => (
+                  <option key={q.id} value={q.id}>
+                    {q.label}
+                  </option>
+                ))}
+              </select>
+              <Icon name="chevron-down" className="select-chevron-icon" />
+            </div>
+
             <button
               className="luna-fetch-btn primary"
               onClick={() => void handleLaunchLunaFetch(url)}
