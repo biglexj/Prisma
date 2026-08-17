@@ -211,7 +211,7 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
         <div className="luna-fetch-header-content">
           <div className="luna-fetch-brand">
             <div className="luna-fetch-icon-badge">
-              <Icon name="download" />
+              <img src="/Aurora-Synapse/Icon/luna-fetch.png" alt="Luna Fetch" />
             </div>
             <div>
               <div className="luna-fetch-title-row">

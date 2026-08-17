@@ -113,45 +113,132 @@
 
 .synapse-ecosystem-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-  margin-top: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
 }
 
 .synapse-eco-card {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  border: 2px solid var(--outline-variant);
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--outline-variant);
   border-radius: 20px;
   padding: 18px;
   color: var(--on-surface);
-  background: var(--surface-container);
+  background: var(--surface-container-low, #fdf2f2);
   text-align: left;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.synapse-eco-card:hover {
+  background: var(--surface-container, #f7eeee);
+  border-color: var(--outline, #9e898d);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.eco-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.eco-app-icon-wrap {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--surface-container-high, #f1e8e8);
+  border: 1px solid var(--outline-variant);
+  padding: 5px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eco-app-icon-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.eco-app-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .synapse-eco-card .eco-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 10px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: var(--on-primary);
-  background: var(--primary);
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  font-weight: 750;
+  color: var(--on-primary-container);
+  background: var(--primary-container);
 }
 
 .synapse-eco-card strong {
-  font-size: 0.88rem;
-  font-weight: 800;
+  font-size: 0.95rem;
+  font-weight: 750;
   color: var(--on-surface);
 }
 
 .synapse-eco-card p {
   margin: 0;
   color: var(--on-surface-variant);
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   line-height: 1.45;
+}
+
+.eco-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.eco-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  font-family: inherit;
+}
+
+.eco-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.eco-btn.filled {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.eco-btn.filled:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.eco-btn.outline {
+  background: transparent;
+  color: var(--on-surface);
+  border: 1px solid var(--outline-variant);
+}
+
+.eco-btn.outline:hover {
+  background: var(--surface-container-high);
+  border-color: var(--outline);
 }

@@ -81,14 +81,23 @@
   width: 56px;
   height: 56px;
   border-radius: 18px;
-  background: linear-gradient(135deg, #0284c7, #4f46e5);
-  color: #ffffff;
+  background: var(--surface-container-high, #f1e8e8);
+  border: 1px solid var(--outline-variant, #eadadd);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
-  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
+  overflow: hidden;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.luna-fetch-icon-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
 }
 
 .luna-fetch-title-row {
@@ -113,8 +122,8 @@
   letter-spacing: 0.06em;
   padding: 4px 10px;
   border-radius: 999px;
-  background: var(--surface-container-highest, #ebe1e2);
-  color: var(--primary, #c90045);
+  background: var(--primary-container, #ffd9df);
+  color: var(--on-primary-container, #3f0012);
   border: 1px solid var(--outline-variant, #eadadd);
 }
 
