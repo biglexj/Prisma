@@ -1,17 +1,15 @@
-# 🚀 Prisma v1.0.0 — El Lanzamiento Oficial
+# 🚀 Prisma v1.0.1 — Convertidor por Lotes, Álbumes Inteligentes y Quick Look Windows 11
 
-¡Es oficial! Llega **Prisma v1.0.0**, la estación multimedia local-first definitiva para Windows, diseñada bajo el lenguaje Material 3 Expressive. Una experiencia integral que reúne reproducción de audio de alta fidelidad, visor de imágenes con editor, reproductor de vídeo con PiP adaptable, Quick Look universal, **Bibliotecas Modulares Personalizables** con editor en vivo y control remoto LAN mediante Aurora Synapse.
+Llega **Prisma v1.0.1**, una potente actualización que incorpora el nuevo **Convertidor Prisma** con soporte por lotes y carpetas completas, una experiencia musical más inteligente con agrupación por metadatos de álbum y lista detallada de canciones, y detección de alta precisión en **Prisma Quick Look** para Windows 11 con pestañas.
 
 ---
 
 ### ✨ Novedades Destacadas
 
-- 📚 **Bibliotecas Modulares Personalizables**: Crea y gestiona secciones dedicadas para tus Libros/PDFs, Documentos Markdown, Código Fuente o Proyectos de Diseño (Krita, PSD) con iconos y extensiones personalizadas.
-- 📖 **Visor de Documentos y Editor en Vivo**: Lector in-app para PDFs, Markdown, textos y código con modo dividido (*Split View*), edición en tiempo real, atajos (`Ctrl+S`, `Tab`), selector de fuentes (*Sans*, *Serif*, *Mono*) y zoom adaptable de 11px a 32px.
-- 👁️ **Prisma Quick Look Universal**: Previsualización instantánea pulsando la barra espaciadora desde el Explorador de Windows o Escritorio para audio, vídeo, imágenes, PDFs, textos, código y proyectos de diseño.
-- 🎬 **Vídeo con PiP Inteligente y Audio Hi-Fi**: Proyección con selección de pistas de audio y subtítulos, avance rápido continuo y modo Picture-in-Picture que respeta la proporción original.
-- 🛡️ **Aislamiento Universal de Exclusiones**: Blindaje absoluto en escáneres y vistas para que las carpetas excluidas y ocultas no aparezcan en la navegación de la galería.
-- 📡 **Mando a Distancia LAN**: Control remoto de reproducción, navegación y volumen mediante el protocolo de red local Aurora Synapse.
+- 🔄 **Convertidor Prisma por Lotes**: Conversión masiva y optimización de imágenes con soporte de archivos o carpetas completas, ajustes de redimensión y calidad, y acceso rápido con clic derecho desde el menú contextual.
+- 🎵 **Música por Álbum y Vista Detallada**: Agrupación automática por etiquetas ID3 de álbum con vista dedicada de pistas, carátula, estadísticas y doble interacción en tarjetas.
+- 👁️ **Prisma Quick Look Perfeccionado**: Detección jerárquica de la pestaña activa en Windows 11 Explorer, eliminación de parpadeos en segundo plano y auto-cierre al abrir con la aplicación predeterminada.
+- 📐 **Densidad de Altura en Configuración**: Selector de densidad de interfaz con opción intermedia equilibrada a 42px.
 
 ---
 

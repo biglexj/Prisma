@@ -14,6 +14,17 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.0.1] - 2026-08-17
+
+### Resumen
+Actualización **Prisma v1.0.1** orientada a la integración del nuevo **Convertidor Prisma** por lotes con soporte de carpetas completas y menús contextuales, agrupación inteligente de música por metadatos de álbum con vista de detalle dedicada, y perfeccionamiento de alta precisión en **Prisma Quick Look** para Windows 11 con pestañas.
+
+### Detalles
+- **Convertidor Prisma e Integración Contextual**: Módulo de conversión por lotes para imágenes con soporte de procesamiento de archivos sueltos o carpetas completas, ajustes de redimensión proporcional, calidad y formatos (JPG, PNG, WebP, AVIF, BMP, TIFF, GIF...). Incluye acción directa desde el menú contextual con clic derecho en carpetas y álbumes para convertir al instante.
+- **Música Inteligente por Álbum y Vista Detallada**: Agrupación automática basada en etiquetas ID3 de álbum con fallback ordenado por carpetas. Nueva vista detallada de álbum con lista de pistas, duración total, carátula y doble interacción en tarjetas (clic para explorar canciones, botón central para reproducción directa), además de estabilización en el editor de metadatos.
+- **Prisma Quick Look Perfeccionado para Windows 11**: Detección jerárquica de la pestaña activa en el Explorador de Windows 11 mediante seguimiento de foco e inspección de ventanas en primer plano, eliminando parpadeos y asegurando la previsualización del archivo exacto. Incorpora auto-cierre inmediato de la ventana flotante al abrir archivos con la aplicación predeterminada del sistema.
+- **Densidad de Interfaz y Ajustes**: Nuevo selector de densidad de altura en configuración con opción intermedia equilibrada a 42px y adaptación responsiva de componentes.
+
 ## [1.0.0] - 2026-08-16
 
 ### Resumen

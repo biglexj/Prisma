@@ -47,5 +47,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.0.1**
+  - **Convertidor por Lotes, Álbumes Inteligentes y Quick Look Windows 11**: Integración del Convertidor Prisma con soporte por lotes y carpetas completas, menú contextual para conversión directa, agrupación de música por etiquetas de álbum con vista de detalle dedicada, doble interacción en tarjetas, selector de densidad de altura en configuración y perfeccionamiento de alta precisión en Quick Look para Windows 11 con pestañas.
 - [x] **v1.0.0**
   - **Lanzamiento oficial de Prisma**: Estación multimedia local-first integral para Windows. Reproducción de audio de alta fidelidad, reproductor de vídeo con PiP, visor y editor de imágenes, Quick Look universal, **Bibliotecas Modulares Personalizables** con lector y editor interactivo in-app (*Split View*, fuentes y zoom), blindaje universal contra exclusiones, listas universales M3U/PLS/XSPF y control remoto LAN mediante Aurora Synapse.
