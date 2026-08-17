@@ -42,7 +42,7 @@ use app::commands::quick_look::{
     quick_look_start_dragging, quick_look_toggle, quick_look_toggle_maximize, set_minimize_to_tray,
 };
 use app::commands::synapse::{
-    synapse_get_downloads_dir, synapse_get_status, synapse_set_downloads_dir,
+    launch_luna_fetch, synapse_get_downloads_dir, synapse_get_status, synapse_set_downloads_dir,
 };
 use app::commands::tags::{
     audio_batch_write_tags, audio_read_tags, audio_save_lyrics, audio_write_tags,
@@ -368,6 +368,7 @@ pub fn run() {
             synapse_get_status,
             synapse_set_downloads_dir,
             synapse_get_downloads_dir,
+            launch_luna_fetch,
             custom_libraries_get_all,
             custom_libraries_save,
             custom_libraries_toggle_active,

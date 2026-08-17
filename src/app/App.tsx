@@ -28,6 +28,7 @@ import { addToHistory } from "../shared/useHistory";
 import { CustomLibraryView } from "../features/custom_libraries/ui/CustomLibraryView";
 import { useCustomLibraries } from "../features/custom_libraries/hooks/useCustomLibraries";
 import { PrismaConvertView } from "../features/converter/ui/PrismaConvertView";
+import { LunaFetchView } from "../features/luna_fetch/ui/LunaFetchView";
 import { Icon, type IconName } from "../shared/ui/Icon";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
@@ -47,6 +48,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   history: "Historial",
   playlists: "Listas de reproducción",
   converter: "Convertidor Prisma",
+  luna_fetch: "Luna Fetch",
 };
 
 export function App() {
@@ -871,6 +873,7 @@ export function App() {
             />
           ) : null}
           {activeView === "converter" ? <PrismaConvertView /> : null}
+          {activeView === "luna_fetch" ? <LunaFetchView onNavigate={setActiveView} /> : null}
         </main>
       </div>
 
