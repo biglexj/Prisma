@@ -69,4 +69,8 @@ pub struct SynapseRemoteCommandPayload {
     pub command: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dx: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dy: Option<f64>,
 }

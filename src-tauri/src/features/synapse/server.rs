@@ -219,7 +219,63 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
                 }
             };
 
-            bring_main_window_to_front(&app);
+            // Manejo de eventos nativos de Trackpad / Mouse en Windows
+            #[cfg(windows)]
+            match cmd.command.as_str() {
+                "mouse_move" => {
+                    use windows::Win32::Foundation::POINT;
+                    use windows::Win32::UI::WindowsAndMessaging::{GetCursorPos, SetCursorPos};
+                    let mut pt = POINT::default();
+                    unsafe {
+                        if GetCursorPos(&mut pt).is_ok() {
+                            let dx = cmd.dx.unwrap_or(0.0) as i32;
+                            let dy = cmd.dy.unwrap_or(0.0) as i32;
+                            let _ = SetCursorPos(pt.x + dx, pt.y + dy);
+                        }
+                    }
+                }
+                "mouse_click" => {
+                    use windows::Win32::UI::Input::KeyboardAndMouse::{
+                        mouse_event, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
+                    };
+                    unsafe {
+                        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                    }
+                }
+                "mouse_right_click" => {
+                    use windows::Win32::UI::Input::KeyboardAndMouse::{
+                        mouse_event, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_RIGHTUP,
+                    };
+                    unsafe {
+                        mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+                        mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+                    }
+                }
+                "mouse_double_click" => {
+                    use windows::Win32::UI::Input::KeyboardAndMouse::{
+                        mouse_event, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP,
+                    };
+                    unsafe {
+                        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                        std::thread::sleep(std::time::Duration::from_millis(50));
+                        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                    }
+                }
+                "mouse_scroll" => {
+                    use windows::Win32::UI::Input::KeyboardAndMouse::{mouse_event, MOUSEEVENTF_WHEEL};
+                    let delta = (cmd.dy.unwrap_or(0.0) * 120.0) as i32;
+                    unsafe {
+                        mouse_event(MOUSEEVENTF_WHEEL, 0, 0, delta, 0);
+                    }
+                }
+                _ => {
+                    bring_main_window_to_front(&app);
+                }
+            }
+
             let _ = app.emit("prisma://remote-command", &cmd);
 
             let resp = SynapseActionResponse {

@@ -227,7 +227,22 @@ export function DocumentViewer({
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+
+    // Integración de Mando a Distancia LAN (Super Gallery)
+    const onRemotePrev = () => handlePrev();
+    const onRemoteNext = () => handleNext();
+    const onRemoteEscape = () => onClose();
+
+    window.addEventListener("prisma-gallery-prev", onRemotePrev);
+    window.addEventListener("prisma-gallery-next", onRemoteNext);
+    window.addEventListener("prisma-gallery-escape", onRemoteEscape);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("prisma-gallery-prev", onRemotePrev);
+      window.removeEventListener("prisma-gallery-next", onRemoteNext);
+      window.removeEventListener("prisma-gallery-escape", onRemoteEscape);
+    };
   }, [onClose, hasPrev, hasNext, currentIndex, isPdf, textContent, isSaving]);
 
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

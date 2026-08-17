@@ -17,25 +17,41 @@
   background: var(--surface-container);
   border: 1px solid var(--outline-variant);
   border-radius: 28px;
-  padding: 32px;
+  padding: 28px 32px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+}
+
+.about-hero-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+@media (max-width: 1100px) {
+  .about-hero-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+  }
 }
 
 .about-hero-brand {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 24px;
+  flex: 1;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .about-hero-brand {
     flex-direction: column;
     align-items: flex-start;
-    gap: 18px;
+    gap: 16px;
   }
 }
 
@@ -125,29 +141,30 @@
   border-radius: 10px;
 }
 
-/* Banner de Actualizaciones Horizontal y Espacioso */
+/* Banner de Actualizaciones a la derecha horizontal */
 .about-update-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 18px 24px;
+  gap: 18px;
+  padding: 14px 20px;
   background: var(--surface-container-high);
   border: 1px solid var(--outline-variant);
-  border-radius: 22px;
-  flex-wrap: wrap;
+  border-radius: 20px;
+  flex-shrink: 0;
 }
 
 .about-update-info {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
+  white-space: nowrap;
 }
 
 .about-update-icon-bubble {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--primary) 18%, transparent);
   color: var(--primary);
   display: grid;
@@ -156,33 +173,35 @@
 }
 
 .about-update-icon-bubble svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .about-update-text strong {
   display: block;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: var(--on-surface);
 }
 
 .about-update-text p {
   margin: 2px 0 0;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--on-surface-variant);
+  white-space: nowrap;
 }
 
 .about-check-update-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 12px 24px;
-  border-radius: 18px;
-  font-size: 0.88rem;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  font-size: 0.84rem;
   font-weight: 700;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .about-update-toast {
