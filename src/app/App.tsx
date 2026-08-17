@@ -543,6 +543,9 @@ export function App() {
     const durationMs = Math.round(
       ((playback.snapshot.durationSeconds || currentTrack?.durationSeconds) || 0) * 1000
     );
+    const currentPath = isVideo
+      ? activeVideoPath
+      : (playback.snapshot.path || currentTrack?.path || null);
 
     const status = {
       isPlaying,
@@ -552,11 +555,13 @@ export function App() {
       positionMs,
       durationMs,
       isVideo,
-      artworkUrl: (currentTrack as { coverUrl?: string } | null)?.coverUrl || null,
+      path: currentPath,
+      artworkUrl: null,
     };
     void invoke("synapse_update_playback", { status }).catch(() => {});
   }, [
     playback.snapshot.paused,
+    playback.snapshot.path,
     playback.snapshot.positionSeconds,
     playback.snapshot.durationSeconds,
     playback.queue.currentItem,

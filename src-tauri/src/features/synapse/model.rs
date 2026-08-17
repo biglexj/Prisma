@@ -88,5 +88,7 @@ pub struct SynapsePlaybackStatus {
     pub duration_ms: u64,
     pub is_video: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub artwork_url: Option<String>,
 }

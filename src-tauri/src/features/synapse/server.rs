@@ -154,12 +154,38 @@ fn handle_client(stream: TcpStream, app: AppHandle) {
 
         // ── GET /api/v1/synapse/playback (Estado de Reproducción Actual) ──
         ("GET", "/api/v1/synapse/playback") | ("GET", "/playback") => {
+            let mut status = app
+                .try_state::<super::config::SynapseState>()
+                .map(|s| s.get_playback_status())
+                .unwrap_or_default();
+
+            if status.path.is_some() && !status.is_video && !status.title.trim().is_empty() {
+                let cache_bust = (status.position_ms / 15_000) ^ (status.title.len() as u64);
+                status.artwork_url = Some(format!("/api/v1/synapse/artwork?t={cache_bust}"));
+            }
+
+            let json = serde_json::to_vec(&status).unwrap_or_default();
+            send_http_response(reader.get_mut(), 200, "application/json", &json);
+        }
+
+        // ── GET /api/v1/synapse/artwork (Carátula de Álbum en Tiempo Real) ──
+        ("GET", "/api/v1/synapse/artwork") | ("GET", "/artwork") => {
             let status = app
                 .try_state::<super::config::SynapseState>()
                 .map(|s| s.get_playback_status())
                 .unwrap_or_default();
-            let json = serde_json::to_vec(&status).unwrap_or_default();
-            send_http_response(reader.get_mut(), 200, "application/json", &json);
+
+            if let Some(ref path_str) = status.path {
+                let p = Path::new(path_str);
+                if p.is_file() {
+                    if let Some((bytes, mime)) = crate::infrastructure::artwork::load_music_artwork_raw_bytes(p) {
+                        send_http_response(reader.get_mut(), 200, mime, &bytes);
+                        return;
+                    }
+                }
+            }
+
+            send_http_response(reader.get_mut(), 404, "text/plain", b"No artwork available");
         }
 
         // ── POST /api/v1/synapse/handoff (Continuidad Multimedia) ──

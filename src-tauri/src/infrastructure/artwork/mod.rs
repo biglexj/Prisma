@@ -37,7 +37,16 @@ pub fn load_music_artwork_data_url(audio_path: &Path) -> Option<String> {
     embedded_artwork(audio_path).or_else(|| folder_artwork(audio_path))
 }
 
-fn embedded_artwork(audio_path: &Path) -> Option<String> {
+pub fn load_music_artwork_raw_bytes(audio_path: &Path) -> Option<(Vec<u8>, &'static str)> {
+    if let Some(picture) = embedded_picture(audio_path) {
+        let data = picture.data().to_vec();
+        let mime = detect_image_mime(&data).unwrap_or("image/jpeg");
+        return Some((data, mime));
+    }
+    folder_artwork_bytes(audio_path)
+}
+
+fn embedded_picture(audio_path: &Path) -> Option<Picture> {
     let options = ParseOptions::new().read_properties(false);
     let tagged_file = Probe::open(audio_path)
         .ok()?
@@ -47,7 +56,7 @@ fn embedded_artwork(audio_path: &Path) -> Option<String> {
         .read()
         .ok()?;
 
-    let picture = tagged_file
+    tagged_file
         .tags()
         .iter()
         .flat_map(|tag| tag.pictures())
@@ -58,12 +67,16 @@ fn embedded_artwork(audio_path: &Path) -> Option<String> {
                 .iter()
                 .flat_map(|tag| tag.pictures())
                 .next()
-        })?;
-
-    picture_data_url(picture)
+        })
+        .cloned()
 }
 
-fn folder_artwork(audio_path: &Path) -> Option<String> {
+fn embedded_artwork(audio_path: &Path) -> Option<String> {
+    let picture = embedded_picture(audio_path)?;
+    picture_data_url(&picture)
+}
+
+fn folder_artwork_bytes(audio_path: &Path) -> Option<(Vec<u8>, &'static str)> {
     let parent = audio_path.parent()?;
     let entries: Vec<_> = fs::read_dir(parent).ok()?.flatten().collect();
 
@@ -79,12 +92,16 @@ fn folder_artwork(audio_path: &Path) -> Option<String> {
         let Ok(data) = fs::read(entry.path()) else {
             continue;
         };
-        if let Some(data_url) = bytes_to_data_url(&data) {
-            return Some(data_url);
-        }
+        let mime = detect_image_mime(&data).unwrap_or("image/jpeg");
+        return Some((data, mime));
     }
 
     None
+}
+
+fn folder_artwork(audio_path: &Path) -> Option<String> {
+    let (data, _) = folder_artwork_bytes(audio_path)?;
+    bytes_to_data_url(&data)
 }
 
 fn picture_data_url(picture: &Picture) -> Option<String> {
