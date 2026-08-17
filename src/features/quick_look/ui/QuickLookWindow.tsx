@@ -217,11 +217,11 @@ export function QuickLookWindow() {
               ) : payload.mediaType === "folder" ? (
                 <QuickLookFolder key={payload.path} payload={payload} />
               ) : payload.mediaType === "project" ? (
-                <QuickLookProject key={payload.path} payload={payload} />
+                <QuickLookProject key={payload.path} onClose={handleClose} payload={payload} />
               ) : payload.mediaType === "playlist" ? (
                 <QuickLookPlaylist key={payload.path} payload={payload} />
               ) : (
-                <QuickLookFallback key={payload.path} payload={payload} />
+                <QuickLookFallback key={payload.path} onClose={handleClose} payload={payload} />
               )}
             </div>
           </>

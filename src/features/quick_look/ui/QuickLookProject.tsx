@@ -4,11 +4,13 @@ import type { QuickLookPayload } from "../model/types";
 
 interface QuickLookProjectProps {
   payload: QuickLookPayload;
+  onClose?: () => void;
 }
 
-export function QuickLookProject({ payload }: QuickLookProjectProps) {
+export function QuickLookProject({ payload, onClose }: QuickLookProjectProps) {
   const handleOpenDefault = () => {
     void invoke("open_path_with_default_app", { path: payload.path });
+    onClose?.();
   };
 
   const previewUrl = payload.projectPreviewUrl;

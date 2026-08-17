@@ -2,19 +2,20 @@
 pub mod windows_impl {
     use std::path::PathBuf;
     use windows::core::{w, Interface, GUID, PWSTR, VARIANT};
-    use windows::Win32::Foundation::HWND;
+    use windows::Win32::Foundation::{HWND, RECT};
     use windows::Win32::System::Com::{
         CoCreateInstance, CoInitializeEx, CoTaskMemFree, CoUninitialize, IDispatch,
         IServiceProvider, CLSCTX_LOCAL_SERVER, COINIT_APARTMENTTHREADED,
     };
     use windows::Win32::UI::Shell::{
-        IFolderView, IShellBrowser, IShellItem, IShellItemArray, IShellView, IShellWindows,
+        IFolderView, IShellBrowser, IShellItem, IShellItemArray, IShellWindows,
         ShellWindows, SIGDN_DESKTOPABSOLUTEPARSING, SIGDN_FILESYSPATH, SVGIO_SELECTION,
     };
     use std::io::Write;
     use windows::Win32::UI::WindowsAndMessaging::{
         FindWindowExW, FindWindowW, GetAncestor, GetClassNameW, GetForegroundWindow,
-        IsChild, IsWindowVisible, GA_ROOT,
+        GetGUIThreadInfo, GetWindowRect, GetWindowThreadProcessId, IsChild, IsWindowVisible,
+        GA_ROOT, GUITHREADINFO,
     };
 
     macro_rules! ql_log {
@@ -102,6 +103,12 @@ pub mod windows_impl {
         None
     }
 
+    struct ExplorerTabCandidate {
+        score: i32,
+        window_hwnd: HWND,
+        browser: IShellBrowser,
+    }
+
     unsafe fn get_selection_from_explorer(target_hwnd: HWND) -> Option<PathBuf> {
         let shell_windows: IShellWindows =
             match unsafe { CoCreateInstance(&ShellWindows, None, CLSCTX_LOCAL_SERVER) } {
@@ -122,14 +129,36 @@ pub mod windows_impl {
 
         ql_log!("shell_windows.Count() = {}, target_hwnd = {:?}", count, target_hwnd);
 
-        let target_root = unsafe { GetAncestor(target_hwnd, GA_ROOT) };
-        let target_tab = unsafe { FindWindowExW(target_hwnd, None, w!("ShellTabWindowClass"), None).unwrap_or_default() };
-        let root_tab = if !target_root.0.is_null() && target_root != target_hwnd {
-            unsafe { FindWindowExW(target_root, None, w!("ShellTabWindowClass"), None).unwrap_or_default() }
+        let target_root = if !target_hwnd.0.is_null() {
+            unsafe { GetAncestor(target_hwnd, GA_ROOT) }
         } else {
             HWND::default()
         };
 
+        // Obtener el hilo y el control enfocado de la ventana objetivo
+        let mut thread_pid = 0u32;
+        let target_for_thread = if !target_hwnd.0.is_null() {
+            target_hwnd
+        } else if !target_root.0.is_null() {
+            target_root
+        } else {
+            HWND::default()
+        };
+
+        let thread_id = if !target_for_thread.0.is_null() {
+            unsafe { GetWindowThreadProcessId(target_for_thread, Some(&mut thread_pid)) }
+        } else {
+            0
+        };
+
+        let mut gui_info = GUITHREADINFO::default();
+        gui_info.cbSize = std::mem::size_of::<GUITHREADINFO>() as u32;
+        let has_gui = thread_id != 0 && unsafe { GetGUIThreadInfo(thread_id, &mut gui_info) }.is_ok();
+        let focused_hwnd = if has_gui { gui_info.hwndFocus } else { HWND::default() };
+        ql_log!("Thread ID: {}, Focused HWND: {:?}", thread_id, focused_hwnd);
+
+        let mut candidates: Vec<ExplorerTabCandidate> = Vec::new();
+
         for i in 0..count {
             let var_index = VARIANT::from(i);
             let dispatch: IDispatch = match unsafe { shell_windows.Item(&var_index) } {
@@ -157,85 +186,68 @@ pub mod windows_impl {
                 Err(_) => continue,
             };
 
-            // En Windows 11 con pestañas, descartar pestañas en segundo plano (no visibles)
             let is_visible = unsafe { IsWindowVisible(window_hwnd).as_bool() };
-            if !is_visible {
-                ql_log!("Explorer window #{}: hwnd={:?} es pestaña inactiva en segundo plano, omitiendo", i, window_hwnd);
-                continue;
-            }
-
             let window_root = unsafe { GetAncestor(window_hwnd, GA_ROOT) };
 
-            let matches_target = window_hwnd == target_hwnd
-                || (target_tab != HWND::default() && window_hwnd == target_tab)
-                || (root_tab != HWND::default() && window_hwnd == root_tab)
-                || (target_root != HWND::default() && target_root == window_root)
-                || is_child_window(target_hwnd, window_hwnd)
-                || is_child_window(window_hwnd, target_hwnd);
-
-            ql_log!(
-                "Explorer window #{}: hwnd={:?}, root={:?}, matches={}",
-                i, window_hwnd, window_root, matches_target
-            );
-
-            if matches_target {
-                let shell_view: IShellView = match unsafe { browser.QueryActiveShellView() } {
-                    Ok(v) => v,
-                    Err(e) => {
-                        ql_log!("QueryActiveShellView falló: {:?}", e);
-                        continue;
-                    }
-                };
-
-                let folder_view: IFolderView = match shell_view.cast() {
-                    Ok(fv) => fv,
-                    Err(e) => {
-                        ql_log!("shell_view.cast::<IFolderView>() falló: {:?}", e);
-                        continue;
-                    }
-                };
-
-                if let Some(path) = unsafe { get_selection_from_folder_view(&folder_view) } {
-                    ql_log!("Archivo resuelto con éxito: {:?}", path);
-                    return Some(path);
-                } else {
-                    ql_log!("get_selection_from_folder_view devolvió None para window #{:?}", i);
-                }
-            }
-        }
-
-        // Si la coincidencia estricta de HWND falló, intentar con la ventana visible activa
-        ql_log!("Intentando fallback sobre ventanas de Explorer visibles...");
-        for i in 0..count {
-            let var_index = VARIANT::from(i);
-            let dispatch: IDispatch = match unsafe { shell_windows.Item(&var_index) } {
-                Ok(d) => d,
-                Err(_) => continue,
-            };
-            let service_provider: IServiceProvider = match dispatch.cast() {
-                Ok(sp) => sp,
-                Err(_) => continue,
-            };
-            let browser: IShellBrowser = match unsafe {
-                service_provider.QueryService(&SID_STOPLEVELLBROWSER)
-            } {
-                Ok(b) => b,
-                Err(_) => match unsafe { service_provider.QueryService(&SID_SSHELL_BROWSER) } {
-                    Ok(b) => b,
-                    Err(_) => continue,
-                },
-            };
-            let window_hwnd = match unsafe { browser.GetWindow() } {
-                Ok(h) => h,
-                Err(_) => continue,
-            };
-            if !unsafe { IsWindowVisible(window_hwnd).as_bool() } {
+            // Si se especificó una ventana raíz objetivo, ignorar las pestañas de otras ventanas distintas
+            if !target_root.0.is_null() && window_root != target_root {
                 continue;
             }
-            if let Ok(shell_view) = unsafe { browser.QueryActiveShellView() } {
+
+            let mut score = 0;
+
+            // 1. Coincidencia directa o jerárquica con el control enfocado (Pestaña activa garantizada)
+            if !focused_hwnd.0.is_null() {
+                if window_hwnd == focused_hwnd || is_child_window(window_hwnd, focused_hwnd) {
+                    score += 10000;
+                }
+            }
+
+            // 2. Coincidencia con target_hwnd
+            if !target_hwnd.0.is_null() {
+                if window_hwnd == target_hwnd || is_child_window(window_hwnd, target_hwnd) {
+                    score += 5000;
+                }
+            }
+
+            // 3. Área visible de la ventana/pestaña
+            let mut rc = RECT::default();
+            if unsafe { GetWindowRect(window_hwnd, &mut rc) }.is_ok() {
+                let w = rc.right - rc.left;
+                let h = rc.bottom - rc.top;
+                if is_visible && w > 50 && h > 50 {
+                    score += 1000 + (w * h / 10000);
+                }
+            }
+
+            // 4. Si la ventana es visible
+            if is_visible {
+                score += 500;
+            }
+
+            ql_log!("Candidato #{}: hwnd={:?}, root={:?}, score={}", i, window_hwnd, window_root, score);
+
+            candidates.push(ExplorerTabCandidate {
+                score,
+                window_hwnd,
+                browser,
+            });
+        }
+
+        // Ordenar candidatos por puntuación descendente
+        candidates.sort_by(|a, b| b.score.cmp(&a.score));
+
+        // Evaluar candidatos empezando por la pestaña activa de mayor puntuación
+        for candidate in candidates {
+            if let Ok(shell_view) = unsafe { candidate.browser.QueryActiveShellView() } {
                 if let Ok(folder_view) = shell_view.cast::<IFolderView>() {
                     if let Some(path) = unsafe { get_selection_from_folder_view(&folder_view) } {
-                        ql_log!("Fallback resolvió archivo: {:?}", path);
+                        ql_log!(
+                            "Archivo resuelto con éxito desde candidato (hwnd={:?}, score={}): {:?}",
+                            candidate.window_hwnd,
+                            candidate.score,
+                            path
+                        );
                         return Some(path);
                     }
                 }
@@ -312,7 +324,22 @@ pub mod windows_impl {
     }
 
     unsafe fn get_selection_from_folder_view(folder_view: &IFolderView) -> Option<PathBuf> {
+        // 1. Intentar obtener el elemento seleccionado
         if let Ok(items) = unsafe { folder_view.Items::<IShellItemArray>(SVGIO_SELECTION) } {
+            if let Ok(count) = unsafe { items.GetCount() } {
+                if count > 0 {
+                    if let Ok(item) = unsafe { items.GetItemAt(0) } {
+                        if let Some(path) = unsafe { shell_item_to_path(&item) } {
+                            return Some(path);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Si no hay selección estándar, comprobar elementos marcados / checked
+        use windows::Win32::UI::Shell::SVGIO_CHECKED;
+        if let Ok(items) = unsafe { folder_view.Items::<IShellItemArray>(SVGIO_CHECKED) } {
             if let Ok(count) = unsafe { items.GetCount() } {
                 if count > 0 {
                     if let Ok(item) = unsafe { items.GetItemAt(0) } {

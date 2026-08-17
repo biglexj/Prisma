@@ -4,11 +4,13 @@ import type { QuickLookPayload } from "../model/types";
 
 interface QuickLookFallbackProps {
   payload: QuickLookPayload;
+  onClose?: () => void;
 }
 
-export function QuickLookFallback({ payload }: QuickLookFallbackProps) {
+export function QuickLookFallback({ payload, onClose }: QuickLookFallbackProps) {
   const handleOpenDefault = () => {
     void invoke("open_path_with_default_app", { path: payload.path });
+    onClose?.();
   };
 
   const ext = payload.extension ? `.${payload.extension.toUpperCase()}` : "ARCHIVO";
