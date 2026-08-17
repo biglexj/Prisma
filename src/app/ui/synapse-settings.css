@@ -169,7 +169,14 @@
 .eco-app-titles {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+}
+
+.eco-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .synapse-eco-card .eco-badge {
@@ -179,8 +186,32 @@
   border-radius: 8px;
   font-size: 0.68rem;
   font-weight: 750;
-  color: var(--on-primary-container);
-  background: var(--primary-container);
+  color: var(--on-surface-variant);
+  background: var(--surface-container-highest, #ebe1e2);
+  border: 1px solid var(--outline-variant);
+}
+
+.synapse-eco-card .eco-status-pill {
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.synapse-eco-card .eco-status-pill.is-active {
+  background: var(--primary-container, #ffd9df);
+  color: var(--on-primary-container, #3f0012);
+  border: 1px solid var(--outline-variant);
+}
+
+.synapse-eco-card .eco-status-pill.is-coming_soon {
+  background: var(--surface-container-high, #f1e8e8);
+  color: var(--primary, #c90045);
+  border: 1px solid var(--outline-variant);
 }
 
 .synapse-eco-card strong {

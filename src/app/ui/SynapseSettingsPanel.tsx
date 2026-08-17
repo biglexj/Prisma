@@ -22,9 +22,12 @@ interface EcosystemApp {
   id: string;
   name: string;
   category: string;
+  statusBadge: "active" | "coming_soon";
+  statusText: string;
   iconPath: string;
   description: string;
   repoUrl: string;
+  downloadLabel: string;
   canLaunch: boolean;
   launchCommand?: string;
 }
@@ -34,19 +37,25 @@ const ECOSYSTEM_APPS: EcosystemApp[] = [
     id: "luna-fetch",
     name: "Luna Fetch",
     category: "Descargas · Audio & Vídeo",
+    statusBadge: "active",
+    statusText: "Sinergia Activa",
     iconPath: lunaFetchLogo,
     description: "Gestor y analizador de descargas multimedia de alta fidelidad conectado directamente con Prisma.",
     repoUrl: "https://github.com/biglexj/Luna---Fetch/releases",
+    downloadLabel: "Releases",
     canLaunch: true,
     launchCommand: "launch_luna_fetch",
   },
   {
     id: "gallery-dl",
     name: "Gallery-DL GUI",
-    category: "Descargas · Galerías de Imágenes",
+    category: "Descargas · Galerías",
+    statusBadge: "active",
+    statusText: "Sinergia Activa",
     iconPath: galleryDlLogo,
-    description: "Descargador masivo de álbumes, perfiles de artistas y galerías completas (+100 sitios de arte).",
+    description: "Descargador masivo de álbumes, perfiles de artistas y colecciones (+100 sitios de arte).",
     repoUrl: "https://github.com/biglexj/Gallery-DL-GUI/releases",
+    downloadLabel: "Releases",
     canLaunch: true,
     launchCommand: "launch_gallery_dl",
   },
@@ -54,27 +63,36 @@ const ECOSYSTEM_APPS: EcosystemApp[] = [
     id: "super-gallery",
     name: "Super Gallery",
     category: "Móvil · Android LAN",
+    statusBadge: "coming_soon",
+    statusText: "Próximamente",
     iconPath: superGalleryLogo,
-    description: "Galería móvil con visor fluido, categorización y envío directo de fotos y vídeos a PC vía Wi-Fi sin cables.",
-    repoUrl: "https://github.com/biglexj/Lienzo--Gallery/releases",
+    description: "Galería móvil inteligente con visor fluido y recepción directa LAN sin cables en Prisma.",
+    repoUrl: "https://www.biglexj.com/desarrollo/lienzo-gallery",
+    downloadLabel: "Descargar APK",
     canLaunch: false,
   },
   {
     id: "lyraflow",
     name: "LyraFlow",
     category: "IA Local · Transcripción",
+    statusBadge: "coming_soon",
+    statusText: "Próximamente",
     iconPath: lyraflowLogo,
     description: "Asistente inteligente de transcripción, subtítulos y análisis de voz con modelos locales.",
     repoUrl: "https://github.com/biglexj/LyraFlow/releases",
+    downloadLabel: "Descargar",
     canLaunch: false,
   },
   {
     id: "ely-tesia",
     name: "Ely-Tesia",
     category: "Música · Reproductor MIDI",
+    statusBadge: "coming_soon",
+    statusText: "Próximamente",
     iconPath: elyTesiaLogo,
     description: "Lector y sintetizador MIDI multi-instancia de alta precisión para compositores y creadores.",
     repoUrl: "https://github.com/biglexj/Ely-Tesia/releases",
+    downloadLabel: "Descargar",
     canLaunch: false,
   },
 ];
@@ -257,7 +275,12 @@ export function SynapseSettingsPanel() {
                   <img src={app.iconPath} alt={app.name} />
                 </div>
                 <div className="eco-app-titles">
-                  <span className="eco-badge">{app.category}</span>
+                  <div className="eco-badges-row">
+                    <span className="eco-badge">{app.category}</span>
+                    <span className={`eco-status-pill is-${app.statusBadge}`}>
+                      {app.statusText}
+                    </span>
+                  </div>
                   <strong>{app.name}</strong>
                 </div>
               </div>
@@ -280,10 +303,10 @@ export function SynapseSettingsPanel() {
                   type="button"
                   className="eco-btn outline"
                   onClick={() => void invoke("open_external_url", { url: app.repoUrl })}
-                  title="Abrir página oficial de descarga o repositorio"
+                  title="Abrir enlace oficial de descarga o ficha de desarrollo"
                 >
                   <Icon name="download" />
-                  <span>{app.canLaunch ? "Releases" : "Descargar"}</span>
+                  <span>{app.downloadLabel}</span>
                 </button>
               </div>
             </div>
