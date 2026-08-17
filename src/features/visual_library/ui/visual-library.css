@@ -1123,3 +1123,92 @@
   height: 42px;
   opacity: 0.5;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Pull-to-Refresh y Botón Compacto de Recarga (Material 3 Expressive)
+   ══════════════════════════════════════════════════════════════════ */
+.pull-to-refresh-container {
+  position: fixed;
+  top: 12px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 999;
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s ease;
+}
+
+.pull-to-refresh-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  border-radius: 24px;
+  background: var(--surface-bright);
+  color: var(--on-surface);
+  border: 1px solid var(--outline-variant);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.dark .pull-to-refresh-pill {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.pull-to-refresh-pill svg {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+  transition: transform 0.15s ease;
+}
+
+.media-icon-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container);
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, transform 120ms ease;
+}
+
+.media-icon-refresh-btn:hover {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  border-color: var(--outline);
+  transform: translateY(-1px);
+}
+
+.media-icon-refresh-btn:active {
+  transform: translateY(0) scale(0.94);
+}
+
+.media-icon-refresh-btn svg {
+  width: 15px;
+  height: 15px;
+  color: var(--primary);
+}
+
+.media-icon-refresh-btn.is-refreshing svg,
+.spinning-icon {
+  animation: visual-spin 0.75s linear infinite;
+}
+
+@keyframes visual-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

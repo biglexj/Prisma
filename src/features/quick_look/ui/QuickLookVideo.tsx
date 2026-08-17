@@ -135,6 +135,10 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate }: Quic
       onDimensionsLoad?.({ width: vw, height: vh });
 
       try {
+        const isMax = await invoke<boolean>("quick_look_is_maximized");
+        if (isMax) return;
+        if (payload.width === vw && payload.height === vh) return;
+
         const screenW = window.screen.availWidth || 1920;
         const screenH = window.screen.availHeight || 1080;
         const maxAvailW = Math.min(screenW * 0.85, 1280);
@@ -229,6 +233,9 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate }: Quic
           onSeek={handleSeek}
           className="quicklook-seek-bar"
           ariaLabel="Posición de vídeo"
+          activeColor="var(--primary, #e06b9b)"
+          inactiveColor="rgba(255, 255, 255, 0.32)"
+          thumbColor="#ffffff"
         />
 
         <span className="quicklook-time-text">{formatTime(duration)}</span>

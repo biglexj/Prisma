@@ -846,7 +846,81 @@ export function VideoPlayer({
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+
+    // Integración de Control Remoto LAN de Synapse (Super Gallery)
+    const onRemoteTogglePlay = () => togglePlay();
+    const onRemoteNext = () => handleNext();
+    const onRemotePrev = () => handlePrevious();
+    const onRemoteSeek = (ev: Event) => {
+      const customEv = ev as CustomEvent<{ delta: number }>;
+      const delta = customEv.detail?.delta || 0;
+      if (videoRef.current) {
+        const nextPos = Math.max(0, Math.min(duration, videoRef.current.currentTime + delta));
+        videoRef.current.currentTime = nextPos;
+        setPosition(nextPos);
+      }
+    };
+    const onRemoteVolume = (ev: Event) => {
+      const customEv = ev as CustomEvent<{ delta: number }>;
+      const delta = customEv.detail?.delta || 0;
+      setVolume((prevVol) => {
+        const next = Math.max(0, Math.min(100, prevVol + delta));
+        if (next > 0) {
+          setPrevVolume(next);
+        }
+        if (videoRef.current) {
+          videoRef.current.volume = next / 100;
+        }
+        if (secondaryAudioRef.current) {
+          secondaryAudioRef.current.volume = next / 100;
+        }
+        return next;
+      });
+    };
+    const onRemoteMute = () => {
+      setVolume((currVol) => {
+        if (currVol > 0) {
+          setPrevVolume(currVol);
+          if (videoRef.current) videoRef.current.volume = 0;
+          if (secondaryAudioRef.current) secondaryAudioRef.current.volume = 0;
+          return 0;
+        } else {
+          const restored = prevVolume > 0 ? prevVolume : 80;
+          if (videoRef.current) videoRef.current.volume = restored / 100;
+          if (secondaryAudioRef.current) secondaryAudioRef.current.volume = restored / 100;
+          return restored;
+        }
+      });
+    };
+    const onRemoteSubtitles = () => cycleSubtitle();
+    const onRemoteAudioTrack = () => cycleAudioTrack();
+    const onRemoteShuffle = () => handleOneShotShuffle();
+    const onRemoteFullscreen = () => toggleFullscreen();
+
+    window.addEventListener("prisma-video-toggle-play", onRemoteTogglePlay);
+    window.addEventListener("prisma-video-next", onRemoteNext);
+    window.addEventListener("prisma-video-prev", onRemotePrev);
+    window.addEventListener("prisma-video-seek", onRemoteSeek);
+    window.addEventListener("prisma-video-volume", onRemoteVolume);
+    window.addEventListener("prisma-video-mute", onRemoteMute);
+    window.addEventListener("prisma-video-toggle-subtitles", onRemoteSubtitles);
+    window.addEventListener("prisma-video-toggle-audio-track", onRemoteAudioTrack);
+    window.addEventListener("prisma-video-shuffle", onRemoteShuffle);
+    window.addEventListener("prisma-video-fullscreen", onRemoteFullscreen);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("prisma-video-toggle-play", onRemoteTogglePlay);
+      window.removeEventListener("prisma-video-next", onRemoteNext);
+      window.removeEventListener("prisma-video-prev", onRemotePrev);
+      window.removeEventListener("prisma-video-seek", onRemoteSeek);
+      window.removeEventListener("prisma-video-volume", onRemoteVolume);
+      window.removeEventListener("prisma-video-mute", onRemoteMute);
+      window.removeEventListener("prisma-video-toggle-subtitles", onRemoteSubtitles);
+      window.removeEventListener("prisma-video-toggle-audio-track", onRemoteAudioTrack);
+      window.removeEventListener("prisma-video-shuffle", onRemoteShuffle);
+      window.removeEventListener("prisma-video-fullscreen", onRemoteFullscreen);
+    };
   }, [
     hasMedia,
     paused,

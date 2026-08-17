@@ -10,6 +10,12 @@ import { QuickLookHeader } from "./QuickLookHeader";
 import { QuickLookImage } from "./QuickLookImage";
 import { QuickLookMusic } from "./QuickLookMusic";
 import { QuickLookVideo } from "./QuickLookVideo";
+import { QuickLookPdf } from "./QuickLookPdf";
+import { QuickLookMarkdown } from "./QuickLookMarkdown";
+import { QuickLookText } from "./QuickLookText";
+import { QuickLookFolder } from "./QuickLookFolder";
+import { QuickLookProject } from "./QuickLookProject";
+import { QuickLookFallback } from "./QuickLookFallback";
 import "./quick-look.css";
 
 export function QuickLookWindow() {
@@ -78,11 +84,12 @@ export function QuickLookWindow() {
     };
   }, []);
 
-  // Atajos locales de teclado (Esc para cerrar)
+  // Atajos locales de teclado (Esc y Espacio para cerrar la vista previa)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" || e.code === "Space" || e.key === " ") {
         e.preventDefault();
+        e.stopPropagation();
         handleClose();
       }
     };
@@ -194,7 +201,19 @@ export function QuickLookWindow() {
                   }}
                   payload={payload}
                 />
-              ) : null}
+              ) : payload.mediaType === "pdf" ? (
+                <QuickLookPdf key={payload.path} payload={payload} />
+              ) : payload.mediaType === "markdown" ? (
+                <QuickLookMarkdown key={payload.path} payload={payload} />
+              ) : payload.mediaType === "text" ? (
+                <QuickLookText key={payload.path} payload={payload} />
+              ) : payload.mediaType === "folder" ? (
+                <QuickLookFolder key={payload.path} payload={payload} />
+              ) : payload.mediaType === "project" ? (
+                <QuickLookProject key={payload.path} payload={payload} />
+              ) : (
+                <QuickLookFallback key={payload.path} payload={payload} />
+              )}
             </div>
           </>
         ) : (

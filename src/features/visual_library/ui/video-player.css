@@ -504,6 +504,10 @@
   box-shadow: 0 0 16px rgba(224, 82, 115, 0.45);
 }
 
+.video-icon-btn.video-fav-btn {
+  margin-right: 12px;
+}
+
 .video-icon-btn.video-fav-btn.is-favorite {
   background: var(--primary, #e05273) !important;
   border-color: transparent !important;

@@ -22,6 +22,20 @@ pub fn clean_path_str(path_str: &str) -> String {
     }
 }
 
+pub fn is_ignored_directory_name(name: &str) -> bool {
+    // 1. Ignorar cualquier carpeta que comience con un punto (.git, .gemini, .next, .vscode, .idea, etc.)
+    if name.starts_with('.') {
+        return true;
+    }
+    // 2. Ignorar carpetas de compilación, dependencias y temporales
+    const IGNORED_NAMES: &[&str] = &[
+        "node_modules", "target", "dist", "build", "out", "vendor", "bin", "obj",
+        "temp", "tmp", "coverage", ".next", ".turbo", ".cargo", ".gradle",
+        "$recycle.bin", "system volume information",
+    ];
+    IGNORED_NAMES.iter().any(|&ign| ign.eq_ignore_ascii_case(name))
+}
+
 pub fn is_path_excluded(path: &Path, excluded_paths: &[String]) -> bool {
     if excluded_paths.is_empty() {
         return false;

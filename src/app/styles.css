@@ -94,6 +94,27 @@
 
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--primary) 35%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
+  border-radius: 9999px;
+  border: 1px solid transparent;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
 
 html,
@@ -183,11 +204,13 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px;
+  padding: 0 18px;
 }
 
 .brand-lockup {
-  min-height: 76px;
+  height: 68px;
+  min-height: 68px;
+  max-height: 68px;
   border-bottom: 1px solid var(--outline-variant);
 }
 

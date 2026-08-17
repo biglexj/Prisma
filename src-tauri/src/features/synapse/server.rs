@@ -11,7 +11,7 @@ use crate::app::state::{MusicLibraryState, VisualLibraryState};
 use super::deep_link::{parse_prisma_uri, url_decode};
 use super::model::{
     SynapseActionResponse, SynapseFileReceivedEvent, SynapseHandoffPayload, SynapseOpenMediaEvent,
-    SynapseStatusResponse,
+    SynapseRemoteCommandPayload, SynapseStatusResponse,
 };
 
 #[allow(dead_code)]
@@ -71,7 +71,7 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(60)));
     let _ = stream.set_write_timeout(Some(Duration::from_secs(60)));
 
-    let mut reader = BufReader::new(stream.try_clone().unwrap_or_else(|_| stream.try_clone().unwrap()));
+    let mut reader = BufReader::new(stream);
 
     let mut first_line = String::new();
     if reader.read_line(&mut first_line).is_err() || first_line.is_empty() {
@@ -94,8 +94,8 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
                 artist: parsed.artist,
             };
             let _ = app.emit("prisma://open-media", event);
-            let _ = stream.write_all(b"OK\r\n");
-            let _ = stream.flush();
+            let _ = reader.get_mut().write_all(b"OK\r\n");
+            let _ = reader.get_mut().flush();
         }
         return;
     }
@@ -126,7 +126,7 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
     // Manejo de CORS preflight (OPTIONS)
     if method == "OPTIONS" {
         send_http_response(
-            &mut stream,
+            reader.get_mut(),
             200,
             "application/json",
             b"{\"success\":true,\"message\":\"CORS OK\"}",
@@ -149,7 +149,7 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
                 device_name,
             };
             let json = serde_json::to_vec(&resp).unwrap_or_default();
-            send_http_response(&mut stream, 200, "application/json", &json);
+            send_http_response(reader.get_mut(), 200, "application/json", &json);
         }
 
         // ── POST /api/v1/synapse/handoff (Continuidad Multimedia) ──
@@ -168,7 +168,7 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
                         saved_path: None,
                     };
                     let json = serde_json::to_vec(&err_resp).unwrap_or_default();
-                    send_http_response(&mut stream, 400, "application/json", &json);
+                    send_http_response(reader.get_mut(), 400, "application/json", &json);
                     return;
                 }
             };
@@ -195,7 +195,40 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
                 saved_path: None,
             };
             let json = serde_json::to_vec(&resp).unwrap_or_default();
-            send_http_response(&mut stream, 200, "application/json", &json);
+            send_http_response(reader.get_mut(), 200, "application/json", &json);
+        }
+
+        // ── POST /api/v1/synapse/remote (Mando a Distancia LAN) ──
+        ("POST", "/api/v1/synapse/remote") | ("POST", "/remote") => {
+            let mut body = vec![0u8; content_length];
+            if content_length > 0 {
+                let _ = reader.read_exact(&mut body);
+            }
+
+            let cmd: SynapseRemoteCommandPayload = match serde_json::from_slice(&body) {
+                Ok(c) => c,
+                Err(e) => {
+                    let err_resp = SynapseActionResponse {
+                        success: false,
+                        message: format!("Payload de comando inválido: {e}"),
+                        saved_path: None,
+                    };
+                    let json = serde_json::to_vec(&err_resp).unwrap_or_default();
+                    send_http_response(reader.get_mut(), 400, "application/json", &json);
+                    return;
+                }
+            };
+
+            bring_main_window_to_front(&app);
+            let _ = app.emit("prisma://remote-command", &cmd);
+
+            let resp = SynapseActionResponse {
+                success: true,
+                message: format!("Comando '{}' procesado", cmd.command),
+                saved_path: None,
+            };
+            let json = serde_json::to_vec(&resp).unwrap_or_default();
+            send_http_response(reader.get_mut(), 200, "application/json", &json);
         }
 
         // ── POST /api/v1/synapse/upload (Recepción de Archivos LAN) ──
@@ -226,19 +259,41 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
 
             let target_path = get_unique_destination(&download_dir, &file_name);
 
-            // Leer cuerpo del archivo y guardar en disco
-            let mut file_data = vec![0u8; content_length];
+            // Leer cuerpo del archivo por chunks exactos
+            let mut file_data = Vec::with_capacity(content_length);
             if content_length > 0 {
-                if let Err(e) = reader.read_exact(&mut file_data) {
-                    eprintln!("[Synapse Server] Error al leer archivo del socket: {e}");
-                    let resp = SynapseActionResponse {
-                        success: false,
-                        message: format!("Error de transferencia incompleta: {e}"),
-                        saved_path: None,
-                    };
-                    let json = serde_json::to_vec(&resp).unwrap_or_default();
-                    send_http_response(&mut stream, 400, "application/json", &json);
-                    return;
+                let mut chunk = vec![0u8; 64 * 1024];
+                let mut bytes_left = content_length;
+                while bytes_left > 0 {
+                    let to_read = std::cmp::min(bytes_left, chunk.len());
+                    match reader.read(&mut chunk[..to_read]) {
+                        Ok(0) => {
+                            eprintln!("[Synapse Server] EOF prematuro: esperados {content_length} bytes, recibidos {}", file_data.len());
+                            let resp = SynapseActionResponse {
+                                success: false,
+                                message: format!("Error: transferencia incompleta (esperados {content_length} bytes, recibidos {})", file_data.len()),
+                                saved_path: None,
+                            };
+                            let json = serde_json::to_vec(&resp).unwrap_or_default();
+                            send_http_response(reader.get_mut(), 400, "application/json", &json);
+                            return;
+                        }
+                        Ok(n) => {
+                            file_data.extend_from_slice(&chunk[..n]);
+                            bytes_left -= n;
+                        }
+                        Err(e) => {
+                            eprintln!("[Synapse Server] Error al leer socket: {e}");
+                            let resp = SynapseActionResponse {
+                                success: false,
+                                message: format!("Error de socket al transferir: {e}"),
+                                saved_path: None,
+                            };
+                            let json = serde_json::to_vec(&resp).unwrap_or_default();
+                            send_http_response(reader.get_mut(), 400, "application/json", &json);
+                            return;
+                        }
+                    }
                 }
             }
 
@@ -258,7 +313,7 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
                     // Traer ventana al frente y previsualizar directamente
                     bring_main_window_to_front(&app);
                     let open_event = SynapseOpenMediaEvent {
-                        path: Some(saved_path_str.clone()),
+                        path: saved_path_str.clone(),
                         current_time: Some(0.0),
                         autoplay: Some(true),
                         title: Some(file_name.clone()),
@@ -272,7 +327,7 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
                         saved_path: Some(saved_path_str),
                     };
                     let json = serde_json::to_vec(&resp).unwrap_or_default();
-                    send_http_response(&mut stream, 200, "application/json", &json);
+                    send_http_response(reader.get_mut(), 200, "application/json", &json);
                 }
                 Err(e) => {
                     let resp = SynapseActionResponse {
@@ -281,7 +336,7 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
                         saved_path: None,
                     };
                     let json = serde_json::to_vec(&resp).unwrap_or_default();
-                    send_http_response(&mut stream, 500, "application/json", &json);
+                    send_http_response(reader.get_mut(), 500, "application/json", &json);
                 }
             }
         }
@@ -293,7 +348,7 @@ fn handle_client(mut stream: TcpStream, app: AppHandle) {
                 saved_path: None,
             };
             let json = serde_json::to_vec(&resp).unwrap_or_default();
-            send_http_response(&mut stream, 404, "application/json", &json);
+            send_http_response(reader.get_mut(), 404, "application/json", &json);
         }
     }
 }

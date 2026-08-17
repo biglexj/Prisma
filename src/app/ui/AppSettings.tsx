@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { LibrarySources } from "./LibrarySources";
+import { ModularLibrariesPanel } from "./ModularLibrariesPanel";
 import { SynapseSettingsPanel } from "./SynapseSettingsPanel";
 import type { useMusicLibrary } from "../../features/music_library/useMusicLibrary";
 import type { useVisualLibrary } from "../../features/visual_library/useVisualLibrary";
@@ -19,7 +20,7 @@ interface AppSettingsProps {
   onThemeChange: (mode: ThemeMode) => void;
 }
 
-type SettingsTab = "general" | "progress" | "folders" | "shortcuts" | "synapse";
+type SettingsTab = "general" | "folders" | "libraries" | "progress" | "synapse" | "shortcuts";
 
 const THEMES: { mode: ThemeMode; label: string; desc: string; previewClass: string }[] = [
   { mode: "light", label: "Claro", desc: "Interfaz luminosa", previewClass: "light-preview" },
@@ -136,6 +137,13 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
           >
             <Icon name="settings" />
             <span>General y Sistema</span>
+          </button>
+          <button
+            className={activeTab === "libraries" ? "is-active" : ""}
+            onClick={() => setActiveTab("libraries")}
+          >
+            <Icon name="layers" />
+            <span>Bibliotecas</span>
           </button>
           <button
             className={activeTab === "folders" ? "is-active" : ""}
@@ -306,7 +314,16 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
         )}
 
         {/* ══════════════════════════════════════════════════════════════════════════
-            PESTAÑA 2: CARPETAS DE BIBLIOTECA
+            PESTAÑA 2: BIBLIOTECAS MODULARES PERSONALIZABLES
+        ══════════════════════════════════════════════════════════════════════════ */}
+        {activeTab === "libraries" && (
+          <div className="settings-panel">
+            <ModularLibrariesPanel />
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════════════
+            PESTAÑA 3: CARPETAS DE BIBLIOTECA
         ══════════════════════════════════════════════════════════════════════════ */}
         {activeTab === "folders" && (
           <div className="settings-panel">
@@ -315,7 +332,7 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
         )}
 
         {/* ══════════════════════════════════════════════════════════════════════════
-            PESTAÑA 3: BARRA DE PROGRESO (Suite de 10 Estilos Interactivos)
+            PESTAÑA 4: BARRA DE PROGRESO (Suite de 10 Estilos Interactivos)
         ══════════════════════════════════════════════════════════════════════════ */}
         {activeTab === "progress" && (
           <div className="settings-panel">

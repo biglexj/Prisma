@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { emit, listen } from "@tauri-apps/api/event";
 
 export type QuickLookShortcutMode = "space" | "alt_space" | "shift_space" | "disabled";
 export type ProgressBarStyle =
@@ -24,6 +25,7 @@ interface SystemSettings {
 
 const STORAGE_KEY = "prisma.system-settings.v1";
 const SETTINGS_CHANGE_EVENT = "prisma:settings-changed";
+const TAURI_SYNC_EVENT = "prisma:settings-sync";
 
 const DEFAULT_SETTINGS: SystemSettings = {
   quickLookShortcut: "space",
@@ -43,15 +45,17 @@ function loadStoredSettings(): SystemSettings {
   }
 }
 
-function notifySettingsChanged() {
+function notifySettingsChanged(newSettings?: SystemSettings) {
   window.dispatchEvent(new CustomEvent(SETTINGS_CHANGE_EVENT));
+  const payload = newSettings ?? loadStoredSettings();
+  void emit(TAURI_SYNC_EVENT, payload).catch(() => {});
 }
 
 export function useSystemSettings() {
   const [settings, setSettings] = useState<SystemSettings>(loadStoredSettings);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Sincronizar estado con el backend de Rust al iniciar
+  // Sincronizar estado con el backend de Rust al iniciar y escuchar eventos entre ventanas
   useEffect(() => {
     let isMounted = true;
 
@@ -72,11 +76,11 @@ export function useSystemSettings() {
         if (isMounted) {
           setSettings((prev) => {
             const synced: SystemSettings = {
-              quickLookShortcut: prev.quickLookShortcut,
+              quickLookShortcut: stored.quickLookShortcut ?? prev.quickLookShortcut,
               autostart,
-              minimizeToTray: prev.minimizeToTray,
-              confirmDeletion: prev.confirmDeletion,
-              progressBarStyle: prev.progressBarStyle,
+              minimizeToTray: stored.minimizeToTray ?? prev.minimizeToTray,
+              confirmDeletion: stored.confirmDeletion ?? prev.confirmDeletion,
+              progressBarStyle: stored.progressBarStyle ?? prev.progressBarStyle,
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
             return synced;
@@ -99,10 +103,20 @@ export function useSystemSettings() {
     window.addEventListener(SETTINGS_CHANGE_EVENT, handleExternalChange);
     window.addEventListener("storage", handleExternalChange);
 
+    const unlistenTauriPromise = listen<SystemSettings>(TAURI_SYNC_EVENT, (event) => {
+      if (isMounted && event.payload) {
+        setSettings(event.payload);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(event.payload));
+        } catch {}
+      }
+    });
+
     return () => {
       isMounted = false;
       window.removeEventListener(SETTINGS_CHANGE_EVENT, handleExternalChange);
       window.removeEventListener("storage", handleExternalChange);
+      unlistenTauriPromise.then((unlisten) => unlisten());
     };
   }, []);
 
@@ -112,7 +126,7 @@ export function useSystemSettings() {
       setSettings((prev) => {
         const next = { ...prev, quickLookShortcut: mode };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        notifySettingsChanged();
+        notifySettingsChanged(next);
         return next;
       });
     } catch (err) {
@@ -126,7 +140,7 @@ export function useSystemSettings() {
       setSettings((prev) => {
         const next = { ...prev, autostart: enabled };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        notifySettingsChanged();
+        notifySettingsChanged(next);
         return next;
       });
     } catch (err) {
@@ -140,7 +154,7 @@ export function useSystemSettings() {
       setSettings((prev) => {
         const next = { ...prev, minimizeToTray: enabled };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        notifySettingsChanged();
+        notifySettingsChanged(next);
         return next;
       });
     } catch (err) {
@@ -152,7 +166,7 @@ export function useSystemSettings() {
     setSettings((prev) => {
       const next = { ...prev, confirmDeletion: enabled };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      notifySettingsChanged();
+      notifySettingsChanged(next);
       return next;
     });
   }, []);
@@ -161,7 +175,7 @@ export function useSystemSettings() {
     setSettings((prev) => {
       const next = { ...prev, progressBarStyle: style };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      notifySettingsChanged();
+      notifySettingsChanged(next);
       return next;
     });
   }, []);

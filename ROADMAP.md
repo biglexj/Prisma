@@ -8,6 +8,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [ ] **Bibliotecas Modulares Personalizables y Quick Look Universal (Documentos, Libros, Proyectos Creativos y Tipos de Archivo Dinámicos)** — `process/active/2026-08-16_bibliotecas_modulares_y_quicklook_universal/`
 - [x] **Integración Aurora Synapse Protocol (Handoff LAN, UDP Beacon, Receptor de Archivos y Deep Links)** — `process/active/2026-08-16_aurora_synapse_integration/`
 - [ ] **Estandarización Ecosistema biglexj** — `process/active/2026-08-11_estandarizacion_ecosistema_biglexj/`
 - [ ] **Modo de Reproducción Flotante (PiP / MiniPlayer)** — `process/active/`

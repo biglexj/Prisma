@@ -24,6 +24,10 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
       onDimensionsLoad?.({ width: nw, height: nh });
 
       try {
+        const isMax = await invoke<boolean>("quick_look_is_maximized");
+        if (isMax) return;
+        if (payload.width === nw && payload.height === nh) return;
+
         const screenW = window.screen.availWidth || 1920;
         const screenH = window.screen.availHeight || 1080;
         const maxAvailW = Math.min(screenW * 0.85, 1280);

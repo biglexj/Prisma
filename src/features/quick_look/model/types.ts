@@ -1,4 +1,13 @@
-export type QuickLookMediaType = "audio" | "video" | "image";
+export type QuickLookMediaType =
+  | "audio"
+  | "video"
+  | "image"
+  | "pdf"
+  | "text"
+  | "markdown"
+  | "folder"
+  | "project"
+  | "generic";
 
 export interface QuickLookPayload {
   path: string;
@@ -11,4 +20,10 @@ export interface QuickLookPayload {
   durationSeconds?: number | null;
   width?: number | null;
   height?: number | null;
+  folderItemsCount?: number | null;
+  folderPreviewItems?: string[] | null;
+  textContent?: string | null;
+  projectPreviewUrl?: string | null;
+  extension: string;
+  modifiedDate?: string | null;
 }

@@ -22,6 +22,13 @@ use app::commands::playlists::{
     playlists_relink_item, playlists_remove_item, playlists_save_from_items,
     playlists_toggle_hidden,
 };
+use app::commands::custom_libraries::{
+    custom_libraries_add_excluded_folder, custom_libraries_add_folder, custom_libraries_delete,
+    custom_libraries_get_all, custom_libraries_get_excluded_folders, custom_libraries_get_folders,
+    custom_libraries_get_thumbnail, custom_libraries_open_file, custom_libraries_read_text_file,
+    custom_libraries_remove_excluded_folder, custom_libraries_remove_folder, custom_libraries_save,
+    custom_libraries_save_text_file, custom_libraries_scan_items, custom_libraries_toggle_active,
+};
 use app::commands::media::{media_delete_items, media_rename_item, media_save_image};
 use app::commands::quick_look::{
     autostart_get_status, autostart_set, get_minimize_to_tray, is_minimize_to_tray_enabled,
@@ -115,8 +122,11 @@ pub fn run() {
                         let _ = w.set_focus();
                         let _ = app.emit("prisma://open-media", file_path);
                     }
+                    return;
                 }
-            } else if let Some(w) = app.get_webview_window("main") {
+            }
+
+            if let Some(w) = app.get_webview_window("main") {
                 let _ = w.unminimize();
                 let _ = w.show();
                 let _ = w.set_focus();
@@ -127,7 +137,7 @@ pub fn run() {
             tauri_plugin_window_state::Builder::default()
                 .with_filename(".window-state-v2.json")
                 .skip_initial_state("main")
-                .with_state_flags(StateFlags::all())
+                .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
                 .build(),
         )
         .manage(PlaybackProbeState::new())
@@ -151,8 +161,12 @@ pub fn run() {
                 VisualLibraryState::load(data_directory.clone()).map_err(std::io::Error::other)?;
             app.manage(visual_library_state);
             let favorites_state =
-                FavoritesState::load(data_directory).map_err(std::io::Error::other)?;
+                FavoritesState::load(data_directory.clone()).map_err(std::io::Error::other)?;
             app.manage(favorites_state);
+            let custom_libraries_state =
+                features::custom_libraries::CustomLibrariesState::load(data_directory)
+                    .map_err(std::io::Error::other)?;
+            app.manage(custom_libraries_state);
 
             let quick_look_state = QuickLookState::new(app.handle().clone());
             quick_look_state.init();
@@ -166,27 +180,12 @@ pub fn run() {
             app.manage(quick_look_state);
 
             if let Some(main_window) = app.get_webview_window("main") {
-                let saved_state_exists = app
-                    .path()
-                    .app_config_dir()
-                    .ok()
-                    .and_then(|directory| {
-                        std::fs::read(directory.join(app.handle().filename())).ok()
-                    })
-                    .and_then(|contents| {
-                        serde_json::from_slice::<serde_json::Value>(&contents).ok()
-                    })
-                    .is_some_and(|state| state.get("main").is_some());
-
                 if is_autostart || is_media_initial_file {
                     let _ = main_window.hide();
                 } else {
-                    if saved_state_exists {
-                        let _ = main_window.restore_state(StateFlags::all());
-                    } else {
-                        let _ = main_window.maximize();
-                    }
                     let _ = main_window.show();
+                    let _ = main_window.unminimize();
+                    let _ = main_window.maximize();
                     let _ = main_window.set_focus();
                 }
             }
@@ -212,6 +211,7 @@ pub fn run() {
                             if let Some(w) = app.get_webview_window("main") {
                                 let _ = w.unminimize();
                                 let _ = w.show();
+                                let _ = w.maximize();
                                 let _ = w.set_focus();
                             }
                         }
@@ -219,6 +219,7 @@ pub fn run() {
                             if let Some(w) = app.get_webview_window("main") {
                                 let _ = w.unminimize();
                                 let _ = w.show();
+                                let _ = w.maximize();
                                 let _ = w.set_focus();
                                 let _ = w.emit("prisma://navigate", "settings");
                             }
@@ -230,23 +231,25 @@ pub fn run() {
                     }
                 })
                 .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        let app = tray.app_handle();
-                        if let Some(w) = app.get_webview_window("main") {
-                            let is_visible = w.is_visible().unwrap_or(false);
-                            if is_visible {
-                                let _ = w.set_focus();
-                            } else {
+                    match event {
+                        TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        }
+                        | TrayIconEvent::DoubleClick {
+                            button: MouseButton::Left,
+                            ..
+                        } => {
+                            let app = tray.app_handle();
+                            if let Some(w) = app.get_webview_window("main") {
                                 let _ = w.unminimize();
                                 let _ = w.show();
+                                let _ = w.maximize();
                                 let _ = w.set_focus();
                             }
                         }
+                        _ => {}
                     }
                 })
                 .build(app)?;
@@ -258,10 +261,10 @@ pub fn run() {
                 if let WindowEvent::CloseRequested { api, .. } = event {
                     if is_minimize_to_tray_enabled() {
                         api.prevent_close();
-                        let _ = window.app_handle().save_window_state(StateFlags::all());
+                        let _ = window.app_handle().save_window_state(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED);
                         let _ = window.hide();
                     } else {
-                        let _ = window.app_handle().save_window_state(StateFlags::all());
+                        let _ = window.app_handle().save_window_state(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED);
                     }
                 }
             } else if window.label() == "quicklook" {
@@ -353,7 +356,22 @@ pub fn run() {
             get_minimize_to_tray,
             synapse_get_status,
             synapse_set_downloads_dir,
-            synapse_get_downloads_dir
+            synapse_get_downloads_dir,
+            custom_libraries_get_all,
+            custom_libraries_save,
+            custom_libraries_toggle_active,
+            custom_libraries_delete,
+            custom_libraries_add_folder,
+            custom_libraries_remove_folder,
+            custom_libraries_add_excluded_folder,
+            custom_libraries_remove_excluded_folder,
+            custom_libraries_get_folders,
+            custom_libraries_get_excluded_folders,
+            custom_libraries_scan_items,
+            custom_libraries_get_thumbnail,
+            custom_libraries_read_text_file,
+            custom_libraries_save_text_file,
+            custom_libraries_open_file
         ])
         .run(tauri::generate_context!())
         .expect("Prisma no pudo iniciar el runtime de Tauri");

@@ -61,6 +61,7 @@ interface VisualLibraryProps {
   onOpenFolders: () => void;
   confirmDeletion: boolean;
   onRefresh: () => void | Promise<void>;
+  searchQuery?: string;
 }
 
 export function VisualLibrary({
@@ -76,6 +77,7 @@ export function VisualLibrary({
   onOpenFolders,
   confirmDeletion,
   onRefresh,
+  searchQuery = "",
 }: VisualLibraryProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(() => sessionVisualState[kind].viewMode);
   const [currentFolderPath, setCurrentFolderPath] = useState<string>(() => sessionVisualState[kind].folderPath);
@@ -88,6 +90,8 @@ export function VisualLibrary({
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
   const [editingImageItem, setEditingImageItem] = useState<VisualLibraryItem | null>(null);
   const [activeImageSessionList, setActiveImageSessionList] = useState<VisualLibraryItem[] | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
   const favorites = useFavorites();
   const mediaRename = useMediaRename({ onRefresh });
   const mediaDelete = useMediaDelete({
@@ -106,6 +110,18 @@ export function VisualLibrary({
 
   const isImage = kind === "image";
   const label = isImage ? "Imágenes" : "Vídeos";
+
+  const handleManualRefresh = async () => {
+    if (isRefreshing || loading) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 450);
+    }
+  };
 
   // Cerrar menú de ordenación al hacer click fuera
   useEffect(() => {
@@ -129,7 +145,13 @@ export function VisualLibrary({
     if (typeof selection === "string") await onAdd(selection);
   };
 
-  const nonExcludedItems = items.filter((it) => !it.isExcluded);
+  const nonExcludedItems = items
+    .filter((it) => !it.isExcluded)
+    .filter((it) => {
+      if (!searchQuery?.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      return it.title.toLowerCase().includes(q) || it.relativeFolder.toLowerCase().includes(q);
+    });
 
   // Hash determinista para ordenación aleatoria pero estable
   const hashString = (str: string, seed: number) => {
@@ -366,6 +388,18 @@ export function VisualLibrary({
         </div>
 
         <div className="visual-controls-right">
+          {/* Botón de Recargar compacto (solo icono) al lado del filtro */}
+          <button
+            className={`media-icon-refresh-btn ${isRefreshing || loading ? "is-refreshing" : ""}`}
+            disabled={isRefreshing || loading}
+            onClick={() => void handleManualRefresh()}
+            title={`Recargar ${label.toLowerCase()} desde el disco`}
+            aria-label={`Recargar ${label.toLowerCase()}`}
+            type="button"
+          >
+            <Icon name="refresh" className={isRefreshing || loading ? "spinning-icon" : ""} />
+          </button>
+
           {/* Selector de Ordenación Material 3 Expressive */}
           <div className="visual-sort-container" ref={sortMenuRef}>
             <button

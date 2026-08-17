@@ -140,3 +140,25 @@
   font-size: 0.64rem;
   line-height: 1.2;
 }
+
+.sidebar-navigation {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--primary) 30%, transparent) transparent;
+}
+
+.sidebar-navigation::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-navigation::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-navigation::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 25%, transparent);
+  border-radius: 9999px;
+}
+
+.sidebar-navigation::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}

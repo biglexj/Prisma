@@ -50,6 +50,7 @@ interface MusicLibraryProps {
   onOpenFolders: () => void;
   confirmDeletion: boolean;
   onRefresh: () => void | Promise<void>;
+  searchQuery?: string;
 }
 
 function toQueueItem(item: MusicLibraryItem): MusicQueueItem {
@@ -79,6 +80,7 @@ export function MusicLibrary({
   onOpenFolders,
   confirmDeletion,
   onRefresh,
+  searchQuery = "",
 }: MusicLibraryProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(() => sessionMusicState.viewMode);
   const [currentFolderPath, setCurrentFolderPath] = useState<string>(() => sessionMusicState.folderPath);
@@ -93,6 +95,20 @@ export function MusicLibrary({
     confirmDeletion,
     onRefresh,
   });
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleManualRefresh = async () => {
+    if (isRefreshing || loading) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 400);
+    }
+  };
 
   // Cerrar menú de ordenación al hacer clic fuera
   useEffect(() => {
@@ -118,7 +134,13 @@ export function MusicLibrary({
     }
   };
 
-  const nonExcludedItems = items.filter((it) => !it.isExcluded);
+  const nonExcludedItems = items
+    .filter((it) => !it.isExcluded)
+    .filter((it) => {
+      if (!searchQuery?.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      return it.title.toLowerCase().includes(q) || it.relativeFolder.toLowerCase().includes(q);
+    });
 
   // Hash determinista para ordenación aleatoria pero estable
   const hashString = (str: string, seed: number) => {
@@ -368,6 +390,18 @@ export function MusicLibrary({
         </div>
 
         <div className="music-controls-right">
+          {/* Botón de Recargar compacto (solo icono) al lado del filtro */}
+          <button
+            className={`media-icon-refresh-btn ${isRefreshing || loading ? "is-refreshing" : ""}`}
+            disabled={isRefreshing || loading}
+            onClick={() => void handleManualRefresh()}
+            title="Recargar música desde el disco"
+            aria-label="Recargar biblioteca de música"
+            type="button"
+          >
+            <Icon name="refresh" className={isRefreshing || loading ? "spinning-icon" : ""} />
+          </button>
+
           {/* Selector de Ordenación Material 3 Expressive para Música */}
           <div className="music-sort-container" ref={sortMenuRef}>
             <button

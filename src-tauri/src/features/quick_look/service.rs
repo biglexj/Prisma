@@ -102,9 +102,12 @@ impl QuickLookState {
         let _ = self.app_handle.emit("quicklook://preview", &payload);
 
         if let Some(window) = self.app_handle.get_webview_window("quicklook") {
-            ql_log!("Abriendo ventana quicklook...");
-            let _ = window.set_size(tauri::LogicalSize::new(target_w, target_h));
-            let _ = window.center();
+            ql_log!("Abriendo ventana quicklook con tamaño: {}x{}", target_w, target_h);
+            let is_max = window.is_maximized().unwrap_or(false);
+            if !is_max {
+                let _ = window.set_size(tauri::LogicalSize::new(target_w, target_h));
+                let _ = window.center();
+            }
             let _ = window.emit("quicklook://preview", &payload);
             let _ = window.show();
             let _ = window.unminimize();
@@ -302,6 +305,26 @@ fn resolve_media_size(media_type: QuickLookMediaType, path: &Path) -> (f64, f64)
                 (800.0, 560.0)
             }
         }
-        QuickLookMediaType::Video => (850.0, 520.0),
+        QuickLookMediaType::Video => {
+            if let Some((nw, nh)) = super::model::get_video_dimensions(path) {
+                let max_w = 1280.0;
+                let max_h = 820.0;
+                let header_h = 48.0;
+                let max_content_h = max_h - header_h;
+
+                let scale = (max_w / nw as f64).min(max_content_h / nh as f64).min(1.0);
+                let fitted_w = ((nw as f64 * scale).round() as f64).max(360.0);
+                let fitted_h = ((nh as f64 * scale).round() as f64).max(220.0);
+
+                (fitted_w, fitted_h + header_h)
+            } else {
+                (850.0, 520.0)
+            }
+        }
+        QuickLookMediaType::Pdf => (840.0, 720.0),
+        QuickLookMediaType::Text | QuickLookMediaType::Markdown => (760.0, 560.0),
+        QuickLookMediaType::Folder => (600.0, 420.0),
+        QuickLookMediaType::Project => (820.0, 580.0),
+        QuickLookMediaType::Generic => (560.0, 380.0),
     }
 }

@@ -32,17 +32,37 @@
   color: var(--primary);
 }
 
+.library-sources-grid,
 .library-sources-three-columns {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
+}
+
+.library-sources-grid.is-three-cols {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.library-sources-grid.is-four-cols {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+@media (min-width: 1200px) {
+  .library-sources-grid.is-four-cols {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .library-sources-grid.is-three-cols {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
 }
 
 .folder-manager.is-embedded {
   border: 1px solid var(--outline-variant);
   border-radius: 28px;
-  padding: 24px;
+  padding: 20px;
   background: var(--surface-bright);
 }
 
@@ -51,11 +71,15 @@
 }
 
 .folder-manager.is-embedded .folder-manager-heading h1 {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
 }
 
 .folder-manager.is-embedded .folder-manager-heading p {
   font-size: 0.68rem;
+}
+
+.modular-source-manager header div svg {
+  color: var(--primary);
 }
 
 .library-excluded-heading {
@@ -71,7 +95,8 @@
   color: var(--error, #ba1a1a);
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 800px) {
+  .library-sources-grid,
   .library-sources-three-columns {
     grid-template-columns: 1fr;
   }

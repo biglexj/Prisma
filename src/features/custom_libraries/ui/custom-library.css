@@ -1,0 +1,430 @@
+/* ══════════════════════════════════════════════════════════════════
+   Prisma — Estilos para Bibliotecas Modulares (Material 3 Expressive)
+   ══════════════════════════════════════════════════════════════════ */
+
+.custom-library {
+  min-height: 100%;
+  width: 100%;
+  animation: custom-fade-in 0.2s ease-out;
+}
+
+@keyframes custom-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.custom-library-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-top: clamp(14px, 2vw, 24px);
+  margin-bottom: 18px;
+}
+
+.custom-heading-actions {
+  display: flex;
+  gap: 9px;
+}
+
+/* ── Barra de Control Flotante Sticky ── */
+.custom-controls-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: clamp(8px, 1.2cqi, 14px);
+  margin-bottom: 14px;
+  margin-inline: calc(-1 * clamp(18px, 3vw, 38px));
+  padding: 10px clamp(18px, 3vw, 38px);
+  background: color-mix(in srgb, var(--surface, #120c0e) 85%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.06));
+}
+
+@media (max-width: 900px) {
+  .custom-library-heading {
+    padding-top: 15px;
+  }
+
+  .custom-controls-bar {
+    margin-inline: -15px;
+    padding-inline: 15px;
+  }
+}
+
+.custom-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.custom-summary > span {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 7px;
+  border-radius: 20px;
+  padding: 0 14px;
+  color: var(--on-surface-variant);
+  background: var(--surface-container);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.custom-summary > span strong {
+  color: var(--on-surface);
+  font-weight: 800;
+}
+
+.custom-summary i.is-ready {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success, #178958);
+}
+
+.custom-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Ordenación ── */
+.custom-sort-container {
+  position: relative;
+}
+
+.custom-sort-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 22px;
+  padding: 8px 14px;
+  background: var(--surface-container);
+  color: var(--on-surface);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+  user-select: none;
+}
+
+.custom-sort-trigger:hover {
+  background: var(--surface-container-high);
+}
+
+.custom-sort-trigger.is-open {
+  background: var(--surface-container-highest);
+  color: var(--primary);
+}
+
+.custom-sort-trigger svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.custom-sort-trigger .sort-chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 180ms ease;
+  opacity: 0.7;
+}
+
+.custom-sort-trigger.is-open .sort-chevron {
+  transform: rotate(180deg);
+}
+
+.custom-sort-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  border-radius: 16px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  padding: 8px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.custom-sort-section-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  padding: 6px 10px 2px;
+  letter-spacing: 0.5px;
+}
+
+.custom-sort-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--on-surface);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+  text-align: left;
+}
+
+.custom-sort-item:hover {
+  background: var(--surface-container-highest);
+}
+
+.custom-sort-item.is-selected {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.custom-sort-divider {
+  height: 1px;
+  background: var(--outline-variant);
+  margin: 4px 0;
+}
+
+/* ── Pestañas de Vista ── */
+.custom-view-mode-tabs {
+  display: flex;
+  gap: 4px;
+  border-radius: 28px;
+  padding: 5px;
+  background: var(--surface-container);
+  border: none;
+}
+
+.custom-view-mode-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 22px;
+  padding: 8px 18px;
+  color: var(--on-surface-variant);
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.custom-view-mode-tabs button svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.custom-view-mode-tabs button.is-active {
+  color: var(--on-primary);
+  background: var(--primary);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 32%, transparent);
+}
+
+.custom-view-mode-tabs button:hover:not(.is-active) {
+  color: var(--on-surface);
+  background: var(--surface-container-high);
+}
+
+/* ── Grid de Archivos ── */
+.custom-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.custom-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  cursor: pointer;
+  overflow: hidden;
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms cubic-bezier(0.2, 0, 0, 1), box-shadow 180ms ease;
+  user-select: none;
+}
+
+.custom-card:hover {
+  background: var(--surface-container-high);
+  border-color: var(--primary);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+.custom-card-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: color-mix(in srgb, var(--surface-container-highest) 60%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.custom-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 240ms ease;
+}
+
+.custom-card:hover .custom-card-preview img {
+  transform: scale(1.04);
+}
+
+.custom-card-fallback-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+}
+
+.custom-card-fallback-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.custom-card-ext-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 80%, black);
+  backdrop-filter: blur(12px);
+  color: var(--primary);
+  border: 1px solid var(--outline-variant);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.custom-card-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.custom-card-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.custom-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--on-surface-variant);
+}
+
+/* ── Carpetas y Árbol ── */
+.custom-folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.custom-folder-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.custom-folder-card:hover {
+  background: var(--surface-container-high);
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.custom-folder-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--surface-container-highest);
+  color: var(--primary);
+}
+
+.custom-folder-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.custom-folder-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.custom-folder-info strong {
+  font-size: 0.88rem;
+  color: var(--on-surface);
+}
+
+.custom-folder-info span {
+  font-size: 0.74rem;
+  color: var(--on-surface-variant);
+}
+
+.custom-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 20px;
+  border: 1px dashed var(--outline-variant);
+  border-radius: 24px;
+  gap: 12px;
+}
+
+.custom-empty-state svg {
+  width: 48px;
+  height: 48px;
+  color: var(--on-surface-variant);
+  opacity: 0.6;
+}

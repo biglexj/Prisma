@@ -24,6 +24,8 @@ import { PlaylistsView } from "../features/collections/ui/PlaylistsView";
 import { AboutView } from "./ui/AboutView";
 import { SynapseToast, type SynapseReceivedFile } from "./ui/SynapseToast";
 import { addToHistory } from "../shared/useHistory";
+import { CustomLibraryView } from "../features/custom_libraries/ui/CustomLibraryView";
+import { useCustomLibraries } from "../features/custom_libraries/hooks/useCustomLibraries";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
 import "../features/visual_library/ui/video-player.css";
@@ -51,6 +53,7 @@ export function App() {
   const [videoReturnView, setVideoReturnView] = useState<AppView>("videos");
   const [activeInitialImagePath, setActiveInitialImagePath] = useState<string | null>(null);
   const [isPip, setIsPip] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [synapseToastFile, setSynapseToastFile] = useState<SynapseReceivedFile | null>(null);
   const { theme, setTheme } = useTheme();
   const { confirmDeletion } = useSystemSettings();
@@ -58,6 +61,7 @@ export function App() {
   const library = useMusicLibrary();
   const imageLibrary = useVisualLibrary("image");
   const videoLibrary = useVisualLibrary("video");
+  const { libraries: customLibrariesList } = useCustomLibraries();
 
   const playMusicItem = useCallback((path: string, navigate = true, initialTime?: number) => {
     addToHistory(path, "music");
@@ -137,6 +141,9 @@ export function App() {
     const lower = filePath.toLowerCase();
     const isAudio = /\.(mp3|flac|wav|aac|m4a|ogg|opus|wma|m3u|m3u8)$/.test(lower);
     const isVideo = /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v)$/.test(lower);
+    const isImage = /\.(png|jpe?g|webp|gif|bmp|ico|svg|avif|tiff?)$/.test(lower);
+    const isDocumentOrProject = /\.(pdf|md|markdown|epub|mobi|cbz|cbr|kra|krz|ora|af|afphoto|afdesign|afpub|psd|psb|ai|blend|drp)$/.test(lower);
+
     if (isAudio) {
       if (document.pictureInPictureElement) {
         void document.exitPictureInPicture().catch(() => {});
@@ -152,6 +159,17 @@ export function App() {
       }
       setActiveInitialImagePath(null);
       playVideoItem(filePath, undefined, initialTime);
+    } else if (isImage) {
+      if (document.pictureInPictureElement) {
+        void document.exitPictureInPicture().catch(() => {});
+      }
+      setActiveVideoPath(null);
+      setActiveVideoSessionItems([]);
+      setIsPip(false);
+      setActiveInitialImagePath(filePath);
+      setActiveView("images");
+    } else if (isDocumentOrProject) {
+      void invoke("quick_look_show_file", { path: filePath }).catch(() => {});
     } else {
       if (document.pictureInPictureElement) {
         void document.exitPictureInPicture().catch(() => {});
@@ -230,12 +248,131 @@ export function App() {
       }
     });
 
+    const unlistenRemotePromise = listen<{ command: string; value?: number }>("prisma://remote-command", (event) => {
+      const { command, value } = event.payload || {};
+      const videoEl = document.querySelector<HTMLVideoElement>("video.video-player-media, video");
+
+      switch (command) {
+        case "play_pause": {
+          if (activeView === "video_player") {
+            window.dispatchEvent(new CustomEvent("prisma-video-toggle-play"));
+          } else {
+            void playback.toggle();
+          }
+          break;
+        }
+        case "seek_backward": {
+          if (activeView === "video_player") {
+            window.dispatchEvent(new CustomEvent("prisma-video-seek", { detail: { delta: -10 } }));
+          } else {
+            const current = playback.snapshot.positionSeconds ?? 0;
+            void playback.seek(Math.max(0, current - 10));
+          }
+          break;
+        }
+        case "seek_forward": {
+          if (activeView === "video_player") {
+            window.dispatchEvent(new CustomEvent("prisma-video-seek", { detail: { delta: 10 } }));
+          } else {
+            const current = playback.snapshot.positionSeconds ?? 0;
+            void playback.seek(current + 10);
+          }
+          break;
+        }
+        case "previous": {
+          if (activeView === "video_player") {
+            window.dispatchEvent(new CustomEvent("prisma-video-prev"));
+          } else if (activeView === "images") {
+            window.dispatchEvent(new CustomEvent("prisma-gallery-prev"));
+          } else {
+            playback.previous();
+          }
+          break;
+        }
+        case "next": {
+          if (activeView === "video_player") {
+            window.dispatchEvent(new CustomEvent("prisma-video-next"));
+          } else if (activeView === "images") {
+            window.dispatchEvent(new CustomEvent("prisma-gallery-next"));
+          } else {
+            playback.next();
+          }
+          break;
+        }
+        case "shuffle": {
+          if (activeView === "video_player") {
+            window.dispatchEvent(new CustomEvent("prisma-video-shuffle"));
+          } else {
+            window.dispatchEvent(new CustomEvent("prisma-playback-shuffle"));
+          }
+          break;
+        }
+        case "volume_up": {
+          if (activeView === "video_player") {
+            window.dispatchEvent(new CustomEvent("prisma-video-volume", { detail: { delta: 5 } }));
+          } else {
+            const currentVol = playback.snapshot.volume ?? 70;
+            void playback.setVolume(Math.min(100, currentVol + 5));
+          }
+          break;
+        }
+        case "volume_down": {
+          if (activeView === "video_player") {
+            window.dispatchEvent(new CustomEvent("prisma-video-volume", { detail: { delta: -5 } }));
+          } else {
+            const currentVol = playback.snapshot.volume ?? 70;
+            void playback.setVolume(Math.max(0, currentVol - 5));
+          }
+          break;
+        }
+        case "toggle_mute": {
+          if (activeView === "video_player") {
+            window.dispatchEvent(new CustomEvent("prisma-video-mute"));
+          } else {
+            void playback.toggleMute?.();
+          }
+          break;
+        }
+        case "toggle_subtitles": {
+          window.dispatchEvent(new CustomEvent("prisma-video-toggle-subtitles"));
+          break;
+        }
+        case "toggle_audio_track": {
+          window.dispatchEvent(new CustomEvent("prisma-video-toggle-audio-track"));
+          break;
+        }
+        case "fullscreen": {
+          if (activeView === "video_player") {
+            window.dispatchEvent(new CustomEvent("prisma-video-fullscreen"));
+          } else if (document.fullscreenElement) {
+            void document.exitFullscreen().catch(() => {});
+          } else {
+            void document.documentElement.requestFullscreen().catch(() => {});
+          }
+          break;
+        }
+        case "escape": {
+          if (document.fullscreenElement) {
+            void document.exitFullscreen().catch(() => {});
+          } else if (activeView === "video_player") {
+            setActiveView(videoReturnView);
+          }
+          break;
+        }
+        case "quick_look": {
+          void invoke("quick_look_toggle").catch(() => {});
+          break;
+        }
+      }
+    });
+
     return () => {
       unlistenPromise.then((unlisten) => unlisten());
       unlistenFileReceivedPromise.then((unlisten) => unlisten());
       unlistenNavigatePromise.then((unlisten) => unlisten());
+      unlistenRemotePromise.then((unlisten) => unlisten());
     };
-  }, [handleOpenFile, library, imageLibrary, videoLibrary]);
+  }, [handleOpenFile, library, imageLibrary, videoLibrary, activeView, playback, videoReturnView]);
 
   // Coordinación de reproducción entre QuickLook y la aplicación principal
   const wasPlayingBeforeQuickLookRef = useRef<boolean>(false);
@@ -289,14 +426,26 @@ export function App() {
           activeView={activeView}
           backend={playback.capabilities?.backend ?? "Conectando…"}
           enabled={playback.enabled}
-          onNavigate={setActiveView}
+          onNavigate={(view) => {
+            setActiveView(view);
+          }}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
         />
       ) : null}
 
       <div className="studio-workspace">
         {activeView !== "video_player" ? (
           <header className="workspace-header">
-            <div><span className="workspace-kicker">PRISMA</span><strong>{VIEW_TITLES[activeView]}</strong></div>
+            <div>
+              <span className="workspace-kicker">PRISMA</span>
+              <strong>
+                {VIEW_TITLES[activeView] ||
+                  (activeView.startsWith("custom_")
+                    ? customLibrariesList.find((l) => l.id === activeView.replace("custom_", ""))?.label ?? ""
+                    : "")}
+              </strong>
+            </div>
             <span className={`connection-pill ${playback.enabled ? "is-ready" : ""}`}>
               <i /> {playback.enabled ? "Motor listo" : "Comprobando motor"}
             </span>
@@ -360,6 +509,7 @@ export function App() {
               }}
               confirmDeletion={confirmDeletion}
               onRefresh={() => library.refresh()}
+              searchQuery={searchQuery}
             />
           ) : null}
 
@@ -377,6 +527,7 @@ export function App() {
               onOpenVideo={playVideoItem}
               confirmDeletion={confirmDeletion}
               onRefresh={() => imageLibrary.refresh()}
+              searchQuery={searchQuery}
             />
           ) : null}
 
@@ -392,8 +543,24 @@ export function App() {
               onOpenVideo={playVideoItem}
               confirmDeletion={confirmDeletion}
               onRefresh={() => videoLibrary.refresh()}
+              searchQuery={searchQuery}
             />
           ) : null}
+
+          {activeView.startsWith("custom_") ? (() => {
+            const customId = activeView.replace("custom_", "");
+            const def = customLibrariesList.find((l) => l.id === customId);
+            if (!def) return null;
+            return (
+              <CustomLibraryView
+                confirmDeletion={confirmDeletion}
+                definition={def}
+                key={def.id}
+                onOpenFolders={() => setActiveView("folders")}
+                searchQuery={searchQuery}
+              />
+            );
+          })() : null}
 
           {activeView === "player" ? (
             <>

@@ -239,26 +239,48 @@ pub mod windows_hook {
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
 
-        // Verificar si la ventana activa es Explorador o Escritorio
+        // Comprobar la ventana en primer plano
+        let fg = unsafe { GetForegroundWindow() };
+        let mut pid = 0u32;
+        if !fg.0.is_null() {
+            unsafe { GetWindowThreadProcessId(fg, Some(&mut pid)) };
+        }
+        let my_pid = unsafe { windows::Win32::System::Threading::GetCurrentProcessId() };
+        let is_quicklook_window = pid != 0 && pid == my_pid;
+
         let explorer_focused = unsafe { is_explorer_or_desktop_focused() };
-        ql_log!("Explorer/Desktop focused: {}", explorer_focused);
-        if !explorer_focused {
+        ql_log!(
+            "Space check: explorer_focused={}, is_quicklook_window={}, preview_active={}",
+            explorer_focused, is_quicklook_window, preview_active
+        );
+
+        // Si la previsualización está activa, se puede cerrar desde Explorer O desde la propia ventana de QuickLook.
+        // Si está cerrada, SOLO se abre desde Explorer o Escritorio.
+        let can_trigger = if preview_active {
+            explorer_focused || is_quicklook_window
+        } else {
+            explorer_focused
+        };
+
+        if !can_trigger {
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
 
-        // Verificar si el foco está en un cuadro de texto (renombrar archivo, caja de búsqueda, etc.)
-        let text_edit = unsafe { is_text_edit_focused() };
-        ql_log!("Text edit focused: {}", text_edit);
-        if text_edit {
-            return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
+        // Si el foco está en Explorer y dentro de un cuadro de texto (ej. renombrar archivo, barra de búsqueda), ignorar
+        if explorer_focused && !is_quicklook_window {
+            let text_edit = unsafe { is_text_edit_focused() };
+            ql_log!("Text edit focused: {}", text_edit);
+            if text_edit {
+                return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
+            }
         }
 
-        // Es atajo válido en Explorador/Escritorio: activar Quick Look
+        // Es atajo válido: activar/cerrar Quick Look
         ql_log!("Firing Toggle callback!");
         if let Ok(guard) = GLOBAL_CALLBACK.lock() {
             if let Some(ref cb) = *guard {
                 cb(TriggerEvent::Toggle);
-                return LRESULT(1); // Suprimir la pulsación en Explorer
+                return LRESULT(1); // Suprimir la pulsación
             }
         }
 

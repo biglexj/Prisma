@@ -9,6 +9,8 @@ const DONATION_DIRECT_URL = "https://www.biglexj.com/donaciones";
 const BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/biglexj";
 const GITHUB_URL = "https://github.com/biglexj";
 const PROJECT_REPO_URL = "https://github.com/biglexj/Prisma";
+const SUPER_GALLERY_URL = "https://www.biglexj.com/desarrollo/lienzo-gallery";
+const MORE_APPS_URL = "https://www.biglexj.com/desarrollo";
 
 export function AboutView() {
   useScrollRestoration("view:about");
@@ -39,52 +41,53 @@ export function AboutView() {
     <section className="about-view-page">
       {/* ── Tarjeta Hero Principal ── */}
       <div className="about-hero-card">
-        <div className="about-hero-brand">
-          <div className="about-app-icon-wrap">
-            <img src={appIcon} alt="Prisma Logo" className="about-app-icon" />
+        <div className="about-hero-content">
+          <div className="about-hero-brand">
+            <div className="about-app-icon-wrap">
+              <img src={appIcon} alt="Prisma Logo" className="about-app-icon" />
+            </div>
+            <div className="about-hero-text">
+              <div className="about-title-row">
+                <h2>Prisma</h2>
+                <span className="about-version-badge">v0.0.1</span>
+                <span className="about-release-tag">Official Release</span>
+              </div>
+              <p className="about-tagline">
+                Estación y reproductor multimedia local-first diseñada bajo el lenguaje Material 3 Expressive para Windows.
+              </p>
+              <div className="about-meta-chips">
+                <span className="about-chip">Licencia MIT</span>
+                <span className="about-chip">Autor: biglexj (2026)</span>
+                <span className="about-chip">Local-First</span>
+                <span className="about-chip">Audio • Vídeo • Imágenes</span>
+              </div>
+            </div>
           </div>
-          <div className="about-hero-text">
-            <div className="about-title-row">
-              <h2>Prisma</h2>
-              <span className="about-version-badge">v0.0.1</span>
-              <span className="about-release-tag">Official Release</span>
+
+          {/* Acciones Rápidas de Actualización (Columna Derecha Apilada) */}
+          <div className="about-update-banner">
+            <div className="about-update-info">
+              <Icon name="sparkles" />
+              <div>
+                <strong>Estado de Versión</strong>
+                <p>Prisma v0.0.1 (64-bit Windows)</p>
+              </div>
             </div>
-            <p className="about-tagline">
-              Estación y reproductor multimedia local-first diseñada bajo el lenguaje Material 3 Expressive para Windows.
-            </p>
-            <div className="about-meta-chips">
-              <span className="about-chip">Licencia MIT</span>
-              <span className="about-chip">Autor: biglexj (2026)</span>
-              <span className="about-chip">Local-First</span>
-              <span className="about-chip">Audio • Vídeo • Imágenes</span>
-            </div>
+            <button
+              className="filled-button about-check-update-btn"
+              disabled={checkingUpdate}
+              onClick={handleCheckUpdates}
+            >
+              <Icon name="refresh" className={checkingUpdate ? "spinning-icon" : ""} />
+              <span>{checkingUpdate ? "Buscando versión…" : "Buscar actualizaciones"}</span>
+            </button>
+            {updateStatus && (
+              <div className="about-update-toast" role="status">
+                <span>{updateStatus}</span>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Acciones Rápidas de Actualización */}
-        <div className="about-update-banner">
-          <div className="about-update-info">
-            <Icon name="sparkles" />
-            <div>
-              <strong>Estado de Versión</strong>
-              <p>Prisma v0.0.1 (64-bit Windows)</p>
-            </div>
-          </div>
-          <button
-            className="filled-button about-check-update-btn"
-            disabled={checkingUpdate}
-            onClick={handleCheckUpdates}
-          >
-            <Icon name="refresh" className={checkingUpdate ? "spinning-icon" : ""} />
-            <span>{checkingUpdate ? "Buscando versión…" : "Buscar actualizaciones"}</span>
-          </button>
-        </div>
-
-        {updateStatus && (
-          <div className="about-update-toast" role="status">
-            <span>{updateStatus}</span>
-          </div>
-        )}
       </div>
 
       {/* ── Cuadrícula de Secciones: Donaciones, Ecosistema y Atribuciones ── */}
@@ -142,15 +145,26 @@ export function AboutView() {
             </div>
             <div>
               <h3>Ecosistema biglexj</h3>
-              <p>Código fuente, actualizaciones y proyectos relacionados.</p>
+              <p>Código fuente, proyectos relacionados y más apps.</p>
             </div>
           </div>
 
           <p className="about-card-description">
-            Diseñado como parte del ecosistema unificado de aplicaciones creadas por <strong>biglexj</strong>, compartiendo estándares de alto rendimiento, privacidad y estética Material 3.
+            Prisma forma parte del ecosistema unificado de <strong>biglexj</strong>, en sinergia con Super Gallery para Android — compartiendo biblioteca visual, estética Material 3 y estándares de alto rendimiento.
           </p>
 
           <div className="about-ecosystem-links">
+            <button
+              className="about-link-row"
+              onClick={() => openExternal(SUPER_GALLERY_URL)}
+            >
+              <div className="about-link-left">
+                <Icon name="sparkles" />
+                <span>Super Gallery — App compañera para Android</span>
+              </div>
+              <Icon name="external-link" />
+            </button>
+
             <button
               className="about-link-row"
               onClick={() => openExternal(GITHUB_URL)}
@@ -169,6 +183,17 @@ export function AboutView() {
               <div className="about-link-left">
                 <Icon name="folder" />
                 <span>Repositorio oficial de Prisma</span>
+              </div>
+              <Icon name="external-link" />
+            </button>
+
+            <button
+              className="about-link-row"
+              onClick={() => openExternal(MORE_APPS_URL)}
+            >
+              <div className="about-link-left">
+                <Icon name="layout" />
+                <span>Más aplicaciones del ecosistema</span>
               </div>
               <Icon name="external-link" />
             </button>

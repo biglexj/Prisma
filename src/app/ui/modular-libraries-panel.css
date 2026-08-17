@@ -1,0 +1,441 @@
+/* ══════════════════════════════════════════════════════════════════
+   Prisma — Panel de Bibliotecas Modulares (Material 3 Expressive)
+   ══════════════════════════════════════════════════════════════════ */
+
+.modular-libraries-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.modular-header-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 24px;
+  border-radius: 20px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  flex-wrap: wrap;
+}
+
+.modular-header-text h2 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  margin-bottom: 4px;
+}
+
+.modular-header-text p {
+  font-size: 0.84rem;
+  color: var(--on-surface-variant);
+  max-width: 680px;
+  line-height: 1.4;
+}
+
+.modular-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px 24px;
+  border-radius: 20px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--primary);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.modular-create-form h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.modular-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.modular-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modular-field label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modular-field input {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface);
+  color: var(--on-surface);
+  font-size: 0.86rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+
+.modular-field input:focus {
+  border-color: var(--primary);
+}
+
+.modular-icon-selector-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modular-icon-selector-section label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modular-icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modular-icon-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface);
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.modular-icon-option:hover {
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+  transform: translateY(-1px);
+}
+
+.modular-icon-option.is-selected {
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
+}
+
+.modular-icon-option svg {
+  width: 18px;
+  height: 18px;
+}
+
+.modular-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+/* ── Grid de Módulos (Hasta 4 por fila) ── */
+.modular-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+@media (min-width: 1200px) {
+  .modular-cards-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.modular-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  position: relative;
+}
+
+.modular-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.modular-card.is-active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary-container) 12%, var(--surface-container));
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.modular-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.modular-card-icon-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modular-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.modular-card-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.modular-card-icon-title h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.modular-card-tag {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+}
+
+.modular-card-tag.is-active-tag {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* ── Switch Toggle M3 para Módulos ── */
+.modular-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.modular-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.modular-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--surface-container-highest, #36343b);
+  border: 1px solid var(--outline, #938f99);
+  border-radius: 22px;
+  transition: 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.modular-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--outline, #938f99);
+  border-radius: 50%;
+  transition: 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.modular-toggle-switch input:checked + .modular-slider {
+  background-color: var(--primary, #d0bcff);
+  border-color: var(--primary, #d0bcff);
+}
+
+.modular-toggle-switch input:checked + .modular-slider:before {
+  transform: translateX(16px);
+  background-color: var(--on-primary, #381e72);
+}
+
+.modular-card-desc {
+  font-size: 0.76rem;
+  color: var(--on-surface-variant);
+  line-height: 1.35;
+  cursor: pointer;
+  margin: 0;
+}
+
+.modular-card-exts-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.modular-ext-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+}
+
+.modular-folders-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--outline-variant);
+}
+
+.modular-folders-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+}
+
+.modular-add-folder-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 140ms ease;
+}
+
+.modular-add-folder-btn:hover {
+  background: var(--surface-container-high);
+}
+
+.modular-add-folder-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.modular-folders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.modular-folder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 0.76rem;
+  color: var(--on-surface);
+}
+
+.modular-folder-row svg {
+  width: 14px;
+  height: 14px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.modular-folder-path {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modular-remove-folder-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.modular-remove-folder-btn:hover {
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+}
+
+.modular-remove-folder-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.modular-no-folders {
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--surface-container-low);
+  font-size: 0.74rem;
+  color: var(--on-surface-variant);
+  text-align: center;
+}
+
+.modular-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
+.modular-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--error);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 140ms ease;
+}
+
+.modular-delete-btn:hover {
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+}
+
+.modular-delete-btn svg {
+  width: 14px;
+  height: 14px;
+}

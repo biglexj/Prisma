@@ -62,3 +62,11 @@ pub struct SynapseFileReceivedEvent {
     pub media_type: String,
     pub size_bytes: u64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SynapseRemoteCommandPayload {
+    pub command: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<f64>,
+}

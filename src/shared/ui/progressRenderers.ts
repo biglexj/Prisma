@@ -39,31 +39,51 @@ export interface RenderContext {
 }
 
 /**
- * 1. ONDULADA (Wavy) - Onda senoidal suave con amortiguación en extremos
+ * 1. ONDULADA (Wavy) - Onda senoidal suave con flujo armónico continuo
  */
 export function renderWavy(rc: RenderContext) {
-  const { ctx, width, centerY, progressX, isPlaying, state, primaryColor, trackColor, thumbColor } = rc;
+  const { ctx, width, centerY, progressX, state, primaryColor, trackColor, thumbColor } = rc;
 
   const strokeWidth = 4;
   ctx.lineWidth = strokeWidth;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  // Inactivo
+  const wavelength = 32;
+  const currentAmp = state.currentAmp;
+
+  // 1. Lado Inactivo (derecha): Ondulación sutil que se desvanece suavemente hacia la línea recta (estilo Supergalería)
   if (progressX < width) {
     ctx.beginPath();
     ctx.strokeStyle = trackColor;
-    ctx.moveTo(progressX, centerY);
-    ctx.lineTo(width, centerY);
+
+    if (currentAmp > 0.1) {
+      const fadeDistance = 48; // distancia de desvanecimiento suave de la onda inactiva
+      const fadeEnd = Math.min(progressX + fadeDistance, width);
+      const baseWaveAmp = currentAmp * 0.45; // ondulación sutil
+
+      ctx.moveTo(progressX, centerY);
+      for (let x = progressX; x <= fadeEnd; x += 1.5) {
+        const fadeFactor = 1 - (x - progressX) / fadeDistance;
+        const angle = (x / wavelength) * (2 * Math.PI) - state.phase;
+        const y = centerY + Math.sin(angle) * baseWaveAmp * fadeFactor;
+        ctx.lineTo(x, y);
+      }
+      if (fadeEnd < width) {
+        ctx.lineTo(width, centerY);
+      }
+    } else {
+      ctx.moveTo(progressX, centerY);
+      ctx.lineTo(width, centerY);
+    }
     ctx.stroke();
   }
 
-  // Activo
+  // 2. Lado Activo (izquierda): Onda continua con color primario
   if (progressX > 0) {
     ctx.beginPath();
     ctx.strokeStyle = primaryColor;
 
-    const wavelength = 32;
     ctx.moveTo(0, centerY);
 
     const step = 1.5;
@@ -73,7 +93,7 @@ export function renderWavy(rc: RenderContext) {
       const envelope = Math.min(startDamping, endDamping);
 
       const angle = (x / wavelength) * (2 * Math.PI) - state.phase;
-      const y = centerY + Math.sin(angle) * state.currentAmp * envelope;
+      const y = centerY + Math.sin(angle) * currentAmp * envelope;
       ctx.lineTo(x, y);
     }
 
@@ -81,7 +101,7 @@ export function renderWavy(rc: RenderContext) {
     ctx.stroke();
   }
 
-  // Thumb
+  // 3. Thumb / Indicador vertical
   drawCapsuleThumb(ctx, progressX, centerY, 4.5, 16, 2.25, thumbColor, width);
 }
 
@@ -212,21 +232,29 @@ export function renderFluid(rc: RenderContext) {
     ctx.stroke();
   }
 
-  // Activo: Tubo líquido continuo
+  // Activo: Tubo líquido continuo con pulsación orgánica
   if (progressX > 0) {
-    ctx.beginPath();
+    ctx.save();
     ctx.strokeStyle = primaryColor;
-    ctx.lineWidth = 5;
     ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    ctx.beginPath();
     ctx.moveTo(0, centerY);
-    ctx.lineTo(progressX, centerY);
+    for (let x = 0; x <= progressX; x += 3) {
+      const pulse = isPlaying ? Math.sin(x / 20 - state.phase * 2) * 1.2 : 0;
+      ctx.lineTo(x, centerY + pulse);
+    }
+    ctx.lineWidth = 5;
     ctx.stroke();
+    ctx.restore();
   }
 
-  // Thumb: Gota con efecto elástico de estiramiento según velocidad
+  // Thumb: Gota con efecto elástico de estiramiento según velocidad e inercia
   const vel = Math.abs(state.fluidVelocity);
-  const scaleX = 1 + Math.min(vel * 0.04, 0.7);
-  const scaleY = 1 / Math.sqrt(scaleX);
+  const breath = isPlaying ? Math.sin(state.phase * 3) * 0.15 : 0;
+  const scaleX = 1 + Math.min(vel * 0.04, 0.7) + breath;
+  const scaleY = 1 / Math.sqrt(Math.max(scaleX, 0.5));
 
   const radius = 6.5;
   const rx = radius * scaleX;
@@ -269,7 +297,7 @@ export function renderHelix(rc: RenderContext) {
   // Activo: Dos cadenas entrelazadas
   if (progressX > 0) {
     const wavelength = 36;
-    const maxAmp = 6.5 * (isPlaying ? 1 : 0.3);
+    const maxAmp = 6.5 * (isPlaying ? 1 : 0.4);
 
     // Peldaños de enlace cuántico cada 14px
     ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
@@ -416,7 +444,7 @@ export function renderParticles(rc: RenderContext) {
     ctx.stroke();
 
     // Generar nuevas partículas en la posición del thumb
-    if (isPlaying && state.particles.length < 35 && Math.random() < 0.6) {
+    if (isPlaying && state.particles.length < 35 && Math.random() < 0.65) {
       state.particles.push({
         x: progressX,
         y: centerY + (Math.random() - 0.5) * 4,
@@ -535,7 +563,7 @@ export function renderVinylTape(rc: RenderContext) {
  * 9. CUERDA ELÁSTICA TENSADA (Elastic String) - Oscilador armónico acústico
  */
 export function renderElasticString(rc: RenderContext) {
-  const { ctx, width, centerY, progressX, state, primaryColor, trackColor, thumbColor } = rc;
+  const { ctx, width, centerY, progressX, isPlaying, state, primaryColor, trackColor, thumbColor } = rc;
 
   // Inactivo: Cuerda en reposo
   if (progressX < width) {
@@ -550,13 +578,14 @@ export function renderElasticString(rc: RenderContext) {
 
   // Activo: Cuerda armónica vibrante
   if (progressX > 0) {
-    const amp = state.elasticAmp;
+    const continuousVib = isPlaying ? Math.sin(state.phase * 5) * 2.8 : 0;
+    const amp = state.elasticAmp + continuousVib;
 
     // Estela de vibración acústica semi-transparente
-    if (amp > 0.5) {
+    if (Math.abs(amp) > 0.4) {
       ctx.save();
       ctx.strokeStyle = primaryColor;
-      ctx.globalAlpha = 0.3;
+      ctx.globalAlpha = 0.25;
       ctx.lineWidth = 1.5;
 
       ctx.beginPath();

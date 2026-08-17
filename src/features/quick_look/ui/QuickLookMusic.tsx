@@ -240,6 +240,9 @@ export function QuickLookMusic({ payload, onPaletteChange, onTimeUpdate }: Quick
             onSeek={handleSeek}
             className="quicklook-seek-bar"
             ariaLabel="Progreso de audio"
+            activeColor="var(--primary)"
+            inactiveColor="var(--outline-variant)"
+            thumbColor="#ffffff"
           />
           <span className="quicklook-time-text">{formatTime(duration)}</span>
         </div>
