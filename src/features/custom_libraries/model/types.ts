@@ -18,6 +18,7 @@ export interface CustomLibraryItem {
   relativeFolder: string;
   sizeBytes: number;
   modifiedTimestamp: number;
+  isExcluded?: boolean;
 }
 
 export interface CustomLibraryFolderSource {

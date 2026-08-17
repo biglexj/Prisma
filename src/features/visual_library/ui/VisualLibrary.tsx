@@ -147,13 +147,13 @@ export function VisualLibrary({
     if (typeof selection === "string") await onAdd(selection);
   };
 
-  const nonExcludedItems = items
-    .filter((it) => !it.isExcluded)
-    .filter((it) => {
-      if (!searchQuery?.trim()) return true;
-      const q = searchQuery.toLowerCase().trim();
-      return it.title.toLowerCase().includes(q) || it.relativeFolder.toLowerCase().includes(q);
-    });
+  const allMatchingItems = items.filter((it) => {
+    if (!searchQuery?.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return it.title.toLowerCase().includes(q) || it.relativeFolder.toLowerCase().includes(q);
+  });
+
+  const nonExcludedItems = allMatchingItems.filter((it) => !it.isExcluded);
 
   // Hash determinista para ordenación aleatoria pero estable
   const hashString = (str: string, seed: number) => {
@@ -183,12 +183,12 @@ export function VisualLibrary({
     });
   };
 
-  // En la línea de tiempo: los bloques de tiempo se agrupan, y dentro de cada día se ordenan los elementos según sortField/sortDirection
+  // En la línea de tiempo: solo se muestran elementos que NO han sido ocultados del tiempo
   const visibleItems = nonExcludedItems.slice(0, VISIBLE_ITEM_LIMIT);
   const timelineSections = groupByTimeline(visibleItems, sortItemList);
 
-  // Árbol jerárquico y colecciones (Solo con carpetas y elementos NO excluidos)
-  const treeLevel = resolveTreeLevel(nonExcludedItems, currentFolderPath, favorites.favorites, {
+  // Árbol jerárquico y colecciones: muestran toda la estructura de carpetas y subcarpetas
+  const treeLevel = resolveTreeLevel(allMatchingItems, currentFolderPath, favorites.favorites, {
     allName: isImage ? "Todas las imágenes" : "Todos los vídeos",
     mediaType: isImage ? "image" : "video",
   });
@@ -198,11 +198,11 @@ export function VisualLibrary({
 
   const isInsideFolder = currentFolderPath !== "";
 
-  // Active list for current view (Nunca incluye carpetas excluidas u ocultas)
+  // Active list for current view
   const currentActiveList = activeImageSessionList ?? (
     isInsideFolder
       ? (sortedDirectItems.length > 0 ? sortedDirectItems : sortItemList(treeLevel.allRecursiveItems))
-      : nonExcludedItems
+      : (viewMode === "timeline" ? nonExcludedItems : allMatchingItems)
   );
 
   const handleSelectImage = (item: VisualLibraryItem, queueList?: VisualLibraryItem[]) => {
@@ -761,7 +761,7 @@ export function VisualLibrary({
       ) : (
         /* ── 3. Vista en Árbol Expandible (Lienzo Style) ── */
         <MediaTreeView
-          items={nonExcludedItems}
+          items={allMatchingItems}
           mediaType={isImage ? "image" : "video"}
           onPlayFolder={!isImage ? (folderItems) => handlePlayFolderVideos(folderItems) : undefined}
           onPlayItem={(item, list) => {

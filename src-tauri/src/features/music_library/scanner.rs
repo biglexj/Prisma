@@ -35,11 +35,6 @@ pub fn scan_music_folder(
     let mut items = Vec::new();
 
     while let Some(directory) = pending.pop() {
-        let is_dir_excluded = is_path_excluded(&directory, excluded_paths);
-        if is_dir_excluded {
-            continue;
-        }
-
         let entries = match fs::read_dir(&directory) {
             Ok(entries) => entries,
             Err(_) if directory != canonical_root => continue,
@@ -59,7 +54,7 @@ pub fn scan_music_folder(
             }
             if file_type.is_dir() {
                 let dir_name = entry.file_name().to_string_lossy().into_owned();
-                if !is_ignored_directory_name(&dir_name) && !is_path_excluded(&path, excluded_paths) {
+                if !is_ignored_directory_name(&dir_name) {
                     pending.push(path);
                 }
                 continue;

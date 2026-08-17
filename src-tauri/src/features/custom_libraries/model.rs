@@ -25,6 +25,7 @@ pub struct CustomLibraryItem {
     pub relative_folder: String,
     pub size_bytes: u64,
     pub modified_timestamp: u64,
+    pub is_excluded: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

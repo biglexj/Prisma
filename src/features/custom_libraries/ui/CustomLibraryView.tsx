@@ -334,6 +334,11 @@ export function CustomLibraryView({
     return list;
   }, [items, searchQuery, sortField, sortDirection, randomSeed]);
 
+  // Solo para la vista de Tiempo se excluyen las carpetas ocultas
+  const timelineItems = useMemo(() => {
+    return displayedItems.filter((it) => !it.isExcluded);
+  }, [displayedItems]);
+
   // Colecciones por carpetas
   const folderCollections = useMemo(() => {
     const map = new Map<string, CustomLibraryItem[]>();
@@ -660,7 +665,7 @@ export function CustomLibraryView({
         <>
           {viewMode === "timeline" ? (
             <div className="custom-grid">
-              {displayedItems.map((item) => (
+              {timelineItems.map((item) => (
                 <CustomThumbnailItem
                   item={item}
                   key={item.path}

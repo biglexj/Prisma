@@ -60,9 +60,7 @@ export function ImageViewer({
   const imgRef = useRef<HTMLImageElement | null>(null);
   const favorites = useFavorites();
 
-  const activeList = (itemsList.length > 0 ? itemsList : [currentItem]).filter(
-    (it) => !it.isExcluded
-  );
+  const activeList = itemsList.length > 0 ? itemsList : [currentItem];
   const currentIndex = activeList.findIndex((it) => it.path === currentItem.path);
 
   const mediaDelete = useMediaDelete({

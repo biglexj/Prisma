@@ -136,13 +136,13 @@ export function MusicLibrary({
     }
   };
 
-  const nonExcludedItems = items
-    .filter((it) => !it.isExcluded)
-    .filter((it) => {
-      if (!searchQuery?.trim()) return true;
-      const q = searchQuery.toLowerCase().trim();
-      return it.title.toLowerCase().includes(q) || it.relativeFolder.toLowerCase().includes(q);
-    });
+  const allMatchingItems = items.filter((it) => {
+    if (!searchQuery?.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return it.title.toLowerCase().includes(q) || it.relativeFolder.toLowerCase().includes(q);
+  });
+
+  const nonExcludedItems = allMatchingItems.filter((it) => !it.isExcluded);
 
   // Hash determinista para ordenación aleatoria pero estable
   const hashString = (str: string, seed: number) => {
@@ -230,8 +230,8 @@ export function MusicLibrary({
     return albumGroups.find((g) => g.folderKey === selectedAlbumKey) || null;
   }, [albumGroups, selectedAlbumKey]);
 
-  // Árbol jerárquico y colecciones (Solo con carpetas y elementos NO excluidos)
-  const treeLevel = resolveTreeLevel(nonExcludedItems, currentFolderPath, favorites.favorites, {
+  // Árbol jerárquico y colecciones: muestran toda la estructura de carpetas
+  const treeLevel = resolveTreeLevel(allMatchingItems, currentFolderPath, favorites.favorites, {
     allName: "Todas las canciones",
     mediaType: "music",
   });
@@ -241,13 +241,13 @@ export function MusicLibrary({
   const isInsideFolder = currentFolderPath !== "";
 
   const handlePlayAll = () => {
-    if (nonExcludedItems.length === 0) return;
-    const queueItems = nonExcludedItems.map(toQueueItem);
+    const listToPlay = viewMode === "timeline" ? nonExcludedItems : (isInsideFolder ? treeLevel.allRecursiveItems : allMatchingItems);
+    if (listToPlay.length === 0) return;
+    const queueItems = listToPlay.map(toQueueItem);
     if (onPlayFolder) {
-      // Crear una cola propia para la línea de tiempo (no sobrescribir la cola por defecto)
-      onPlayFolder("Línea de tiempo", queueItems, 0);
+      onPlayFolder(viewMode === "timeline" ? "Línea de tiempo" : "Biblioteca de música", queueItems, 0);
     } else {
-      onPlay(nonExcludedItems[0].path);
+      onPlay(listToPlay[0].path);
     }
   };
 
@@ -850,7 +850,7 @@ export function MusicLibrary({
       ) : (
         /* ── 3. Vista en Árbol Expandible ── */
         <MediaTreeView
-          items={nonExcludedItems}
+          items={allMatchingItems}
           mediaType="music"
           onAddFolderToQueue={onAddToQueue ? (folderItems) => onAddToQueue(folderItems.map(toQueueItem)) : undefined}
           onAddToQueue={onAddToQueue ? (item) => onAddToQueue([toQueueItem(item)]) : undefined}

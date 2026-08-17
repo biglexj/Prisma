@@ -366,13 +366,6 @@ fn scan_dir_recursive(
         return;
     }
 
-    // Si la carpeta actual está en la lista de exclusiones, ignorarla
-    for excluded in excluded_paths {
-        if current_dir.starts_with(excluded) {
-            return;
-        }
-    }
-
     let entries = match fs::read_dir(current_dir) {
         Ok(e) => e,
         Err(_) => return,
@@ -396,17 +389,10 @@ fn scan_dir_recursive(
             if is_ignored_dir_name(&name_str) {
                 continue;
             }
-            let is_excluded = excluded_paths.iter().any(|ex| path.starts_with(ex));
-            if !is_excluded {
-                scan_dir_recursive(&path, root_dir, extensions, excluded_paths, items, depth + 1, max_depth);
-            }
+            scan_dir_recursive(&path, root_dir, extensions, excluded_paths, items, depth + 1, max_depth);
         } else if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
             if matches_ext(ext, extensions) {
                 let is_excluded = excluded_paths.iter().any(|ex| path.starts_with(ex));
-                if is_excluded {
-                    continue;
-                }
-
                 let name = file_name.to_string_lossy().to_string();
                 let metadata = entry.metadata().ok();
                 let size_bytes = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
@@ -430,6 +416,7 @@ fn scan_dir_recursive(
                     relative_folder,
                     size_bytes,
                     modified_timestamp,
+                    is_excluded,
                 });
             }
         }

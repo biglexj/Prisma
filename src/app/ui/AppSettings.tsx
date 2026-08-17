@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { LibrarySources } from "./LibrarySources";
 import { ModularLibrariesPanel } from "./ModularLibrariesPanel";
 import { SynapseSettingsPanel } from "./SynapseSettingsPanel";
@@ -13,7 +13,6 @@ import {
 } from "../useSystemSettings";
 import { MediaProgressBar } from "../../shared/ui/MediaProgressBar";
 import { Icon } from "../../shared/ui/Icon";
-import { useScrollRestoration } from "../../shared/useScrollRestoration";
 import "./app-settings.css";
 
 interface AppSettingsProps {
@@ -139,7 +138,13 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
   const [demoPlaying, setDemoPlaying] = useState(true);
   const [demoPosition, setDemoPosition] = useState(72);
 
-  useScrollRestoration(`view:settings:${activeTab}`);
+  // En Configuración siempre se inicia desde arriba y no se recuerda el scroll
+  useLayoutEffect(() => {
+    const container = document.querySelector(".studio-content") as HTMLElement | null;
+    if (container) {
+      container.scrollTop = 0;
+    }
+  }, [activeTab]);
   const {
     quickLookShortcut,
     autostart,

@@ -81,9 +81,9 @@ export function MediaTreeView<T extends MediaTreeItem>({
     });
   };
 
-  // Construcción de la estructura de árbol jerárquico (Excluye completamente archivos/carpetas ocultas)
+  // Construcción de la estructura de árbol jerárquico (Muestra todas las carpetas registradas)
   const rootNodes = useMemo(() => {
-    const validItems = items.filter((it) => !(it as { isExcluded?: boolean }).isExcluded);
+    const validItems = items;
     const favItems = validItems.filter((it) => favorites.isFavorite(it.path));
 
     const favNode: TreeNode<T> = {
