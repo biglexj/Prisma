@@ -8,7 +8,7 @@ interface GalleryDlViewProps {
   onNavigate: (view: AppView) => void;
 }
 
-type DirectoryStructure = "Flat" | "SiteSubdirectory" | "SiteAndUser";
+type DirectoryStructure = "Flat" | "CollectionOnly" | "AuthorCollection" | "Default";
 
 interface DropdownOption<T extends string> {
   id: T;
@@ -17,9 +17,10 @@ interface DropdownOption<T extends string> {
 }
 
 const STRUCTURE_OPTIONS: DropdownOption<DirectoryStructure>[] = [
-  { id: "Flat", label: "Estructura Plana (Carpeta Única)", icon: "folder" },
-  { id: "SiteSubdirectory", label: "Subcarpeta por Sitio / Dominio", icon: "layers" },
-  { id: "SiteAndUser", label: "Subcarpeta por Sitio y Artista", icon: "image" },
+  { id: "Flat", label: "Sin Subcarpetas", icon: "folder" },
+  { id: "CollectionOnly", label: "Solo Carpeta de Colección", icon: "layers" },
+  { id: "AuthorCollection", label: "Autor / Colección", icon: "image" },
+  { id: "Default", label: "Estructura Completa", icon: "folder-open" },
 ];
 
 interface GalleryDropdownProps<T extends string> {
@@ -103,7 +104,7 @@ function GalleryDropdown<T extends string>({
 
 export function GalleryDlView({ onNavigate }: GalleryDlViewProps) {
   const [url, setUrl] = useState("");
-  const [structure, setStructure] = useState<DirectoryStructure>("Flat");
+  const [structure, setStructure] = useState<DirectoryStructure>("CollectionOnly");
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
   const [isLaunching, setIsLaunching] = useState(false);
 

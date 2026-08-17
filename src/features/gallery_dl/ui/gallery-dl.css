@@ -27,13 +27,27 @@
   display: inline-block;
 }
 
-.gallery-dl-icon-badge svg {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  min-height: 28px;
-  max-width: 28px;
-  max-height: 28px;
+.gallery-dl-icon-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: var(--surface-container-high, #f1e8e8);
+  border: 1px solid var(--outline-variant, #eadadd);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.gallery-dl-icon-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
 }
 
 .card-header-simple svg {
@@ -77,20 +91,6 @@
   gap: 18px;
 }
 
-.gallery-dl-icon-badge {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #059669, #0284c7);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26px;
-  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.25);
-  flex-shrink: 0;
-}
-
 .gallery-dl-title-row {
   display: flex;
   align-items: center;
@@ -113,8 +113,8 @@
   letter-spacing: 0.06em;
   padding: 4px 10px;
   border-radius: 999px;
-  background: var(--surface-container-highest, #ebe1e2);
-  color: #059669;
+  background: var(--primary-container, #ffd9df);
+  color: var(--on-primary-container, #3f0012);
   border: 1px solid var(--outline-variant, #eadadd);
 }
 
@@ -147,9 +147,9 @@
 }
 
 .gallery-dl-btn.primary {
-  background: linear-gradient(135deg, #059669, #0284c7);
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25);
+  background: var(--primary, #c90045);
+  color: var(--on-primary, #ffffff);
+  box-shadow: 0 4px 14px rgba(201, 0, 69, 0.25);
 }
 
 .gallery-dl-btn.primary:hover:not(:disabled) {
@@ -220,7 +220,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #059669;
+  color: var(--primary, #c90045);
   font-size: 18px;
   margin-bottom: 6px;
 }
@@ -277,8 +277,8 @@
 }
 
 .input-with-icon input:focus {
-  border-color: #059669;
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+  border-color: var(--primary, #c90045);
+  box-shadow: 0 0 0 3px var(--primary-container, #ffd9df);
 }
 
 .input-with-icon input::placeholder {
@@ -319,12 +319,12 @@
 }
 
 .gallery-dl-inline-select-pill:focus-visible {
-  border-color: #059669;
-  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+  border-color: var(--primary, #c90045);
+  box-shadow: 0 0 0 3px var(--primary-container, #ffd9df);
 }
 
 .gallery-dl-inline-select-pill svg {
-  color: #059669;
+  color: var(--primary, #c90045);
   flex-shrink: 0;
   pointer-events: none;
 }
@@ -397,8 +397,8 @@
 }
 
 .gallery-dl-dropdown-item.is-selected {
-  background: rgba(5, 150, 105, 0.12);
-  color: #059669;
+  background: var(--primary-container, #ffd9df);
+  color: var(--on-primary-container, #3f0012);
   font-weight: 600;
 }
 
@@ -410,14 +410,14 @@
 }
 
 .gallery-dl-item-content svg {
-  color: #059669;
+  color: var(--primary, #c90045);
   font-size: 15px;
 }
 
 .gallery-dl-check-icon {
   width: 14px;
   height: 14px;
-  color: #059669;
+  color: var(--primary, #c90045);
   flex-shrink: 0;
 }
 
@@ -446,9 +446,9 @@
 }
 
 .gallery-dl-status-bar.is-info {
-  background: rgba(2, 132, 199, 0.12);
-  border: 1px solid rgba(2, 132, 199, 0.25);
-  color: #0284c7;
+  background: var(--primary-container, #ffd9df);
+  border: 1px solid var(--outline-variant, #eadadd);
+  color: var(--on-primary-container, #3f0012);
 }
 
 .status-close-btn {
@@ -490,7 +490,7 @@
 
 .bridge-action-tile:hover {
   background: var(--surface-container-high, #f1e8e8);
-  border-color: #059669;
+  border-color: var(--primary, #c90045);
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 }
@@ -500,7 +500,7 @@
   height: 42px;
   border-radius: 12px;
   background: var(--surface-container-highest, #ebe1e2);
-  color: #059669;
+  color: var(--primary, #c90045);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -551,7 +551,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #059669;
+  color: var(--primary, #c90045);
   display: inline-block;
   margin-bottom: 6px;
 }
