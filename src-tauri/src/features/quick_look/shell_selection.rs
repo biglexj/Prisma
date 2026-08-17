@@ -80,7 +80,7 @@ pub mod windows_impl {
                 let rclass_str = String::from_utf16_lossy(&root_class[..rlen as usize]);
                 ql_log!("Root HWND: {:?}, Class: '{}'", root, rclass_str);
                 if rclass_str == "CabinetWClass" || rclass_str == "ExploreWClass" {
-                    if let Some(p) = unsafe { get_selection_from_explorer(root) } {
+                    if let Some(p) = unsafe { get_selection_from_explorer(fg) } {
                         return Some(p);
                     }
                 } else if rclass_str == "Progman" || rclass_str == "WorkerW" {
@@ -91,15 +91,7 @@ pub mod windows_impl {
             }
         }
 
-        // Si QuickLook está activo y tiene el foco (Tauri Window), buscar la selección activa en segundo plano
-        if let Some(p) = unsafe { get_selection_from_explorer(HWND::default()) } {
-            return Some(p);
-        }
-        if let Some(p) = unsafe { get_selection_from_desktop() } {
-            return Some(p);
-        }
-
-        ql_log!("No se encontró selección activa en Explorer ni Desktop");
+        ql_log!("No se encontró selección activa en ventana en primer plano");
         None
     }
 
@@ -135,6 +127,13 @@ pub mod windows_impl {
             HWND::default()
         };
 
+        // Encontrar la pestaña superior (Z-order) dentro de la ventana de Explorer
+        let top_tab = if !target_root.0.is_null() {
+            unsafe { FindWindowExW(target_root, None, w!("ShellTabWindowClass"), None).unwrap_or_default() }
+        } else {
+            HWND::default()
+        };
+
         // Obtener el hilo y el control enfocado de la ventana objetivo
         let mut thread_pid = 0u32;
         let target_for_thread = if !target_hwnd.0.is_null() {
@@ -155,7 +154,7 @@ pub mod windows_impl {
         gui_info.cbSize = std::mem::size_of::<GUITHREADINFO>() as u32;
         let has_gui = thread_id != 0 && unsafe { GetGUIThreadInfo(thread_id, &mut gui_info) }.is_ok();
         let focused_hwnd = if has_gui { gui_info.hwndFocus } else { HWND::default() };
-        ql_log!("Thread ID: {}, Focused HWND: {:?}", thread_id, focused_hwnd);
+        ql_log!("Thread ID: {}, Focused HWND: {:?}, Top Tab: {:?}", thread_id, focused_hwnd, top_tab);
 
         let mut candidates: Vec<ExplorerTabCandidate> = Vec::new();
 
@@ -203,14 +202,19 @@ pub mod windows_impl {
                 }
             }
 
-            // 2. Coincidencia con target_hwnd
+            // 2. Coincidencia con la pestaña activa en la cima de Z-order de Windows 11
+            if top_tab != HWND::default() && window_hwnd == top_tab {
+                score += 8000;
+            }
+
+            // 3. Coincidencia con target_hwnd
             if !target_hwnd.0.is_null() {
                 if window_hwnd == target_hwnd || is_child_window(window_hwnd, target_hwnd) {
                     score += 5000;
                 }
             }
 
-            // 3. Área visible de la ventana/pestaña
+            // 4. Área visible de la ventana/pestaña
             let mut rc = RECT::default();
             if unsafe { GetWindowRect(window_hwnd, &mut rc) }.is_ok() {
                 let w = rc.right - rc.left;
@@ -220,7 +224,7 @@ pub mod windows_impl {
                 }
             }
 
-            // 4. Si la ventana es visible
+            // 5. Si la ventana es visible
             if is_visible {
                 score += 500;
             }

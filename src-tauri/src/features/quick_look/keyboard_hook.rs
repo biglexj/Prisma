@@ -287,7 +287,7 @@ pub mod windows_hook {
         unsafe { CallNextHookEx(None, n_code, w_param, l_param) }
     }
 
-    unsafe fn is_explorer_or_desktop_focused() -> bool {
+    pub unsafe fn is_explorer_or_desktop_focused() -> bool {
         let fg = unsafe { GetForegroundWindow() };
         if fg.0.is_null() {
             return false;

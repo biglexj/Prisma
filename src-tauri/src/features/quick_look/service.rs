@@ -128,9 +128,14 @@ impl QuickLookState {
         let state = self.clone();
         std::thread::spawn(move || {
             while is_preview_open() {
-                std::thread::sleep(std::time::Duration::from_millis(120));
+                std::thread::sleep(std::time::Duration::from_millis(150));
                 if !is_preview_open() {
                     break;
+                }
+
+                // Solo verificar cambios si el foco activo del usuario está en el Explorador o Escritorio
+                if !unsafe { super::keyboard_hook::is_explorer_or_desktop_focused() } {
+                    continue;
                 }
 
                 let selected_path = match get_active_selection() {
