@@ -474,7 +474,28 @@ export function ImageViewer({
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+
+    // Integración de Mando a Distancia LAN (Super Gallery)
+    const onRemotePrev = () => handlePreviousImage();
+    const onRemoteNext = () => handleNextImage();
+    const onRemoteFullscreen = () => toggleFullscreen();
+    const onRemoteEscape = () => closeViewer();
+    const onRemoteSlideshow = () => setIsSlideshowActive((prev) => !prev);
+
+    window.addEventListener("prisma-gallery-prev", onRemotePrev);
+    window.addEventListener("prisma-gallery-next", onRemoteNext);
+    window.addEventListener("prisma-gallery-fullscreen", onRemoteFullscreen);
+    window.addEventListener("prisma-gallery-escape", onRemoteEscape);
+    window.addEventListener("prisma-gallery-slideshow", onRemoteSlideshow);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("prisma-gallery-prev", onRemotePrev);
+      window.removeEventListener("prisma-gallery-next", onRemoteNext);
+      window.removeEventListener("prisma-gallery-fullscreen", onRemoteFullscreen);
+      window.removeEventListener("prisma-gallery-escape", onRemoteEscape);
+      window.removeEventListener("prisma-gallery-slideshow", onRemoteSlideshow);
+    };
   }, [
     currentIndex,
     activeList,

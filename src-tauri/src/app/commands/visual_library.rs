@@ -182,6 +182,34 @@ pub async fn open_in_file_manager(path: String) -> Result<(), String> {
     show_in_file_manager(path).await
 }
 
+#[tauri::command]
+pub async fn open_external_url(url: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean_url = url.trim().to_string();
+        if !clean_url.starts_with("http://") && !clean_url.starts_with("https://") && !clean_url.starts_with("mailto:") {
+            return Err("URL no válida o protocolo no permitido".to_string());
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::process::Command;
+            Command::new("rundll32")
+                .args(["url.dll,FileProtocolHandler", &clean_url])
+                .spawn()
+                .map_err(|e| format!("Error al abrir URL externa: {e}"))?;
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = &clean_url;
+        }
+
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Error en runtime al abrir URL: {e}"))?
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SubtitleTrackMeta {
     pub label: String,

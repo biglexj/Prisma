@@ -41,53 +41,54 @@ export function AboutView() {
     <section className="about-view-page">
       {/* ── Tarjeta Hero Principal ── */}
       <div className="about-hero-card">
-        <div className="about-hero-content">
-          <div className="about-hero-brand">
-            <div className="about-app-icon-wrap">
-              <img src={appIcon} alt="Prisma Logo" className="about-app-icon" />
-            </div>
-            <div className="about-hero-text">
-              <div className="about-title-row">
-                <h2>Prisma</h2>
-                <span className="about-version-badge">v0.0.1</span>
-                <span className="about-release-tag">Official Release</span>
-              </div>
-              <p className="about-tagline">
-                Estación y reproductor multimedia local-first diseñada bajo el lenguaje Material 3 Expressive para Windows.
-              </p>
-              <div className="about-meta-chips">
-                <span className="about-chip">Licencia MIT</span>
-                <span className="about-chip">Autor: biglexj (2026)</span>
-                <span className="about-chip">Local-First</span>
-                <span className="about-chip">Audio • Vídeo • Imágenes</span>
-              </div>
-            </div>
+        <div className="about-hero-brand">
+          <div className="about-app-icon-wrap">
+            <img src={appIcon} alt="Prisma Logo" className="about-app-icon" />
           </div>
-
-          {/* Acciones Rápidas de Actualización (Columna Derecha Apilada) */}
-          <div className="about-update-banner">
-            <div className="about-update-info">
-              <Icon name="sparkles" />
-              <div>
-                <strong>Estado de Versión</strong>
-                <p>Prisma v0.0.1 (64-bit Windows)</p>
-              </div>
+          <div className="about-hero-text">
+            <div className="about-title-row">
+              <h2>Prisma</h2>
+              <span className="about-version-badge">v0.0.1</span>
+              <span className="about-release-tag">Official Release</span>
             </div>
-            <button
-              className="filled-button about-check-update-btn"
-              disabled={checkingUpdate}
-              onClick={handleCheckUpdates}
-            >
-              <Icon name="refresh" className={checkingUpdate ? "spinning-icon" : ""} />
-              <span>{checkingUpdate ? "Buscando versión…" : "Buscar actualizaciones"}</span>
-            </button>
-            {updateStatus && (
-              <div className="about-update-toast" role="status">
-                <span>{updateStatus}</span>
-              </div>
-            )}
+            <p className="about-tagline">
+              Estación y reproductor multimedia local-first diseñada bajo el lenguaje Material 3 Expressive para Windows.
+            </p>
+            <div className="about-meta-chips">
+              <span className="about-chip">Licencia MIT</span>
+              <span className="about-chip">Autor: biglexj (2026)</span>
+              <span className="about-chip">Local-First</span>
+              <span className="about-chip">Audio • Vídeo • Imágenes</span>
+            </div>
           </div>
         </div>
+
+        {/* Banner de Actualizaciones Horizontal y Espacioso */}
+        <div className="about-update-banner">
+          <div className="about-update-info">
+            <div className="about-update-icon-bubble">
+              <Icon name="sparkles" />
+            </div>
+            <div className="about-update-text">
+              <strong>Estado de Versión</strong>
+              <p>Prisma v0.0.1 (64-bit Windows) • Canal Oficial</p>
+            </div>
+          </div>
+          <button
+            className="filled-button about-check-update-btn"
+            disabled={checkingUpdate}
+            onClick={handleCheckUpdates}
+          >
+            <Icon name="refresh" className={checkingUpdate ? "spinning-icon" : ""} />
+            <span>{checkingUpdate ? "Buscando versión…" : "Buscar actualizaciones"}</span>
+          </button>
+        </div>
+
+        {updateStatus && (
+          <div className="about-update-toast" role="status">
+            <span>{updateStatus}</span>
+          </div>
+        )}
       </div>
 
       {/* ── Cuadrícula de Secciones: Donaciones, Ecosistema y Atribuciones ── */}

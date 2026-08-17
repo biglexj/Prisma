@@ -40,7 +40,7 @@ use app::commands::synapse::{
     synapse_get_downloads_dir, synapse_get_status, synapse_set_downloads_dir,
 };
 use app::commands::visual_library::{
-    open_in_file_manager, show_in_file_manager, video_extract_audio_track, video_get_audio_tracks, video_get_subtitles, video_read_subtitle_vtt,
+    open_external_url, open_in_file_manager, show_in_file_manager, video_extract_audio_track, video_get_audio_tracks, video_get_subtitles, video_read_subtitle_vtt,
     visual_library_add_excluded_folder, visual_library_add_folder,
     visual_library_image_preview, visual_library_list_excluded_folders,
     visual_library_list_folders, visual_library_list_items,
@@ -310,6 +310,7 @@ pub fn run() {
             media_save_image,
             show_in_file_manager,
             open_in_file_manager,
+            open_external_url,
             video_get_subtitles,
             video_read_subtitle_vtt,
             video_get_audio_tracks,

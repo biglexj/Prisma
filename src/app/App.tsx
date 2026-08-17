@@ -280,21 +280,17 @@ export function App() {
           break;
         }
         case "previous": {
-          if (activeView === "video_player") {
-            window.dispatchEvent(new CustomEvent("prisma-video-prev"));
-          } else if (activeView === "images") {
-            window.dispatchEvent(new CustomEvent("prisma-gallery-prev"));
-          } else {
+          window.dispatchEvent(new CustomEvent("prisma-video-prev"));
+          window.dispatchEvent(new CustomEvent("prisma-gallery-prev"));
+          if (activeView !== "video_player" && activeView !== "images") {
             playback.previous();
           }
           break;
         }
         case "next": {
-          if (activeView === "video_player") {
-            window.dispatchEvent(new CustomEvent("prisma-video-next"));
-          } else if (activeView === "images") {
-            window.dispatchEvent(new CustomEvent("prisma-gallery-next"));
-          } else {
+          window.dispatchEvent(new CustomEvent("prisma-video-next"));
+          window.dispatchEvent(new CustomEvent("prisma-gallery-next"));
+          if (activeView !== "video_player" && activeView !== "images") {
             playback.next();
           }
           break;
@@ -344,6 +340,8 @@ export function App() {
         case "fullscreen": {
           if (activeView === "video_player") {
             window.dispatchEvent(new CustomEvent("prisma-video-fullscreen"));
+          } else if (activeView === "images") {
+            window.dispatchEvent(new CustomEvent("prisma-gallery-fullscreen"));
           } else if (document.fullscreenElement) {
             void document.exitFullscreen().catch(() => {});
           } else {
@@ -352,6 +350,7 @@ export function App() {
           break;
         }
         case "escape": {
+          window.dispatchEvent(new CustomEvent("prisma-gallery-escape"));
           if (document.fullscreenElement) {
             void document.exitFullscreen().catch(() => {});
           } else if (activeView === "video_player") {
