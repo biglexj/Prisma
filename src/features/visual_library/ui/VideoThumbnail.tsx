@@ -10,6 +10,7 @@ interface VideoThumbnailProps {
   title: string;
   className?: string;
   eager?: boolean;
+  fit?: "cover" | "contain";
   onLoadDimensions?: (width: number, height: number) => void;
 }
 
@@ -27,6 +28,7 @@ export function VideoThumbnail({
   title,
   className,
   eager = false,
+  fit = "cover",
   onLoadDimensions,
 }: VideoThumbnailProps) {
   const [thumbSrc, setThumbSrc] = useState<string | null>(() => {
@@ -177,6 +179,7 @@ export function VideoThumbnail({
           className="video-thumbnail-media"
           decoding="async"
           src={thumbSrc}
+          style={{ objectFit: fit }}
         />
       ) : failed ? (
         <span className="video-thumbnail-fallback">

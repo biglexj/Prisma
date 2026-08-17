@@ -27,6 +27,15 @@ interface TreeNode<T> {
   children: TreeNode<T>[];
 }
 
+export interface TreeFolderData<T> {
+  id: string;
+  name: string;
+  displayName: string;
+  directItems: T[];
+  allRecursiveItems: T[];
+  isVirtual?: boolean;
+}
+
 interface MediaTreeViewProps<T extends MediaTreeItem> {
   items: T[];
   mediaType: "music" | "image" | "video";
@@ -36,6 +45,7 @@ interface MediaTreeViewProps<T extends MediaTreeItem> {
   onAddFolderToQueue?: (items: T[]) => void;
   onCreatePlaylistFromFolder?: (items: T[], folderName: string) => void;
   onOpenItemMenu?: (event: React.MouseEvent, item: T) => void;
+  onOpenFolderMenu?: (event: React.MouseEvent, folder: TreeFolderData<T>) => void;
   onDeleteRequest?: (item: T) => void;
 }
 
@@ -57,6 +67,7 @@ export function MediaTreeView<T extends MediaTreeItem>({
   onAddFolderToQueue,
   onCreatePlaylistFromFolder,
   onOpenItemMenu,
+  onOpenFolderMenu,
   onDeleteRequest,
 }: MediaTreeViewProps<T>) {
   const favorites = useFavorites();
@@ -239,6 +250,20 @@ export function MediaTreeView<T extends MediaTreeItem>({
           <div
             className={`media-tree-row is-directory ${isFav ? "is-fav-virtual" : ""} ${isAll ? "is-all-virtual" : ""} ${isStorageRoot ? "is-storage-root" : ""}`}
             onClick={() => toggleExpand(node.path)}
+            onContextMenu={(e) => {
+              if (onOpenFolderMenu) {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenFolderMenu(e, {
+                  id: node.path,
+                  name: node.name,
+                  displayName: node.name,
+                  directItems: node.directItems,
+                  allRecursiveItems: node.allRecursiveItems,
+                  isVirtual: !!node.isVirtual,
+                });
+              }
+            }}
             style={{ paddingLeft: `${indentPx + 12}px` }}
           >
             <span className="media-tree-chevron">
@@ -352,9 +377,9 @@ export function MediaTreeView<T extends MediaTreeItem>({
           {mediaType === "music" ? (
             <MusicArtwork alt={file.title} className="media-tree-thumb-media" path={file.path} />
           ) : mediaType === "image" ? (
-            <VisualThumbnail alt={file.title} className="media-tree-thumb-media" path={file.path} />
+            <VisualThumbnail alt={file.title} className="media-tree-thumb-media" fit="contain" path={file.path} />
           ) : (
-            <VideoThumbnail className="media-tree-thumb-media" path={file.path} title={file.title} />
+            <VideoThumbnail className="media-tree-thumb-media" fit="contain" path={file.path} title={file.title} />
           )}
         </span>
 

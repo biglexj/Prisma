@@ -358,24 +358,38 @@
 
 .media-tree-file-thumb {
   position: relative;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
   border-radius: 8px;
-  border: 1px solid var(--outline-variant, #eadadd);
-  background: var(--surface-container-high, #f1e8e8);
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container);
   overflow: hidden;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dark .media-tree-file-thumb {
-  border-color: var(--outline-variant, #3f2d30);
-  background: var(--surface-container-high, #2d2023);
+  border-color: var(--outline-variant);
+  background: var(--surface-container);
 }
 
 .media-tree-thumb-media {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-tree-thumb-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain !important;
+  border-radius: 6px;
 }
 
 .media-tree-file-info {
