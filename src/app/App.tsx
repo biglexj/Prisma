@@ -24,11 +24,13 @@ import { PlaylistsView } from "../features/collections/ui/PlaylistsView";
 import { playlistsRead } from "../features/collections/tauri/client";
 import { AboutView } from "./ui/AboutView";
 import { SynapseToast, type SynapseReceivedFile } from "./ui/SynapseToast";
+import { SendToSuperGalleryModal } from "./ui/SendToSuperGalleryModal";
 import { addToHistory } from "../shared/useHistory";
 import { CustomLibraryView } from "../features/custom_libraries/ui/CustomLibraryView";
 import { useCustomLibraries } from "../features/custom_libraries/hooks/useCustomLibraries";
 import { PrismaConvertView } from "../features/converter/ui/PrismaConvertView";
 import { LunaFetchView } from "../features/luna_fetch/ui/LunaFetchView";
+import { GalleryDlView } from "../features/gallery_dl/ui/GalleryDlView";
 import { Icon, type IconName } from "../shared/ui/Icon";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
@@ -49,6 +51,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   playlists: "Listas de reproducción",
   converter: "Convertidor Prisma",
   luna_fetch: "Luna Fetch",
+  gallery_dl: "Gallery-DL",
 };
 
 export function App() {
@@ -61,6 +64,7 @@ export function App() {
   const [isPip, setIsPip] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [synapseToastFile, setSynapseToastFile] = useState<SynapseReceivedFile | null>(null);
+  const [sendModalFile, setSendModalFile] = useState<{ path: string; title?: string } | null>(null);
   const { theme, setTheme } = useTheme();
   const { confirmDeletion, sidebarDensity } = useSystemSettings();
   const playback = usePlaybackController();
@@ -501,10 +505,22 @@ export function App() {
         e.preventDefault();
       }
     };
+
+    const handleSendToSuperGallery = (e: Event) => {
+      const customEvent = e as CustomEvent<{ path: string; title?: string }>;
+      if (customEvent.detail?.path) {
+        setSendModalFile({
+          path: customEvent.detail.path,
+          title: customEvent.detail.title,
+        });
+      }
+    };
+    window.addEventListener("prisma-send-to-supergallery", handleSendToSuperGallery);
     window.addEventListener("contextmenu", handleGlobalContextMenu);
 
     return () => {
       window.removeEventListener("prisma-open-converter", handleOpenConverter);
+      window.removeEventListener("prisma-send-to-supergallery", handleSendToSuperGallery);
       window.removeEventListener("contextmenu", handleGlobalContextMenu);
       unlistenPromise.then((unlisten) => unlisten());
       unlistenFileReceivedPromise.then((unlisten) => unlisten());
@@ -909,6 +925,7 @@ export function App() {
           ) : null}
           {activeView === "converter" ? <PrismaConvertView /> : null}
           {activeView === "luna_fetch" ? <LunaFetchView onNavigate={setActiveView} /> : null}
+          {activeView === "gallery_dl" ? <GalleryDlView onNavigate={setActiveView} /> : null}
         </main>
       </div>
 
@@ -916,6 +933,13 @@ export function App() {
         file={synapseToastFile}
         onClose={() => setSynapseToastFile(null)}
         onOpenFile={handleOpenFile}
+      />
+
+      <SendToSuperGalleryModal
+        filePath={sendModalFile?.path ?? null}
+        fileTitle={sendModalFile?.title}
+        isOpen={Boolean(sendModalFile)}
+        onClose={() => setSendModalFile(null)}
       />
     </div>
   );

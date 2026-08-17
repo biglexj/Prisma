@@ -54,6 +54,7 @@ const collectionItems: SidebarItem[] = [
 const toolItems: SidebarItem[] = [
   { icon: "sliders", label: "Conversor", view: "converter" },
   { icon: "download", label: "Luna Fetch", view: "luna_fetch" },
+  { icon: "layers", label: "Gallery-DL", view: "gallery_dl" },
 ];
 
 export function AppSidebar({

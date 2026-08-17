@@ -1418,6 +1418,24 @@ export function VideoPlayer({
             </button>
 
             <button
+              aria-label="Enviar a Super Galería (Móvil)"
+              className="video-icon-btn"
+              disabled={!path}
+              onClick={() => {
+                if (path) {
+                  window.dispatchEvent(
+                    new CustomEvent("prisma-send-to-supergallery", {
+                      detail: { path, title }
+                    })
+                  );
+                }
+              }}
+              title="Enviar vídeo a Super Galería (Móvil)"
+            >
+              <Icon name="smartphone" />
+            </button>
+
+            <button
               aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               className="video-icon-btn"
               onClick={toggleFullscreen}

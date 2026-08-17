@@ -406,6 +406,18 @@ export function ImageViewer({
         },
       },
       {
+        id: "send-to-mobile",
+        label: "Enviar a Super Galería (Móvil)",
+        icon: "smartphone" as const,
+        onSelect: () => {
+          window.dispatchEvent(
+            new CustomEvent("prisma-send-to-supergallery", {
+              detail: { path: target.item.path, title: target.item.title },
+            })
+          );
+        },
+      },
+      {
         id: "favorite",
         label: isFav ? "Quitar de favoritos" : "Añadir a favoritos",
         icon: "heart" as const,
@@ -643,6 +655,20 @@ export function ImageViewer({
           >
             <Icon name="folder" />
             <span>Ubicación</span>
+          </button>
+          <button
+            className="image-viewer-top-btn"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent("prisma-send-to-supergallery", {
+                  detail: { path: currentItem.path, title: currentItem.title },
+                })
+              );
+            }}
+            title="Enviar foto a Super Galería (Móvil)"
+          >
+            <Icon name="smartphone" />
+            <span>Móvil</span>
           </button>
           <button
             aria-label={favorites.isFavorite(currentItem.path) ? "Quitar de favoritos" : "Añadir a favoritos"}

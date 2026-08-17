@@ -383,6 +383,18 @@ export function VisualLibrary({
         },
       },
       {
+        id: "send-to-mobile",
+        label: "Enviar a Super Galería (Móvil)",
+        icon: "smartphone" as const,
+        onSelect: () => {
+          window.dispatchEvent(
+            new CustomEvent("prisma-send-to-supergallery", {
+              detail: { path: target.item.path, title: target.item.title },
+            })
+          );
+        },
+      },
+      {
         id: "favorite",
         label: isFav ? "Quitar de favoritos" : "Añadir a favoritos",
         icon: "heart" as const,

@@ -42,7 +42,8 @@ use app::commands::quick_look::{
     quick_look_start_dragging, quick_look_toggle, quick_look_toggle_maximize, set_minimize_to_tray,
 };
 use app::commands::synapse::{
-    launch_luna_fetch, synapse_get_downloads_dir, synapse_get_status, synapse_set_downloads_dir,
+    launch_gallery_dl, launch_luna_fetch, synapse_get_discovered_devices, synapse_get_downloads_dir,
+    synapse_get_status, synapse_send_file_to_device, synapse_set_downloads_dir,
     synapse_update_playback,
 };
 use app::commands::tags::{
@@ -161,6 +162,8 @@ pub fn run() {
             app.manage(synapse_state);
             let beacon_service = features::synapse::SynapseBeaconService::start();
             app.manage(beacon_service);
+            let discovery_service = features::synapse::SynapseDiscoveryService::start();
+            app.manage(discovery_service);
             let synapse_server = features::synapse::SynapseServer::start(app.handle().clone());
             app.manage(synapse_server);
 
@@ -370,7 +373,10 @@ pub fn run() {
             synapse_set_downloads_dir,
             synapse_get_downloads_dir,
             synapse_update_playback,
+            synapse_get_discovered_devices,
+            synapse_send_file_to_device,
             launch_luna_fetch,
+            launch_gallery_dl,
             custom_libraries_get_all,
             custom_libraries_save,
             custom_libraries_toggle_active,

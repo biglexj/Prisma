@@ -364,7 +364,26 @@ export function PlaybackPreview({
               }}
               title="Abrir ubicación de la canción en el explorador"
               aria-label="Abrir ubicación en el explorador"
-            ><Icon name="folder-open" /></button>
+            >
+              <Icon name="folder-open" />
+            </button>
+            <button
+              disabled={!hasMedia}
+              onClick={() => {
+                if (snapshot.path) {
+                  window.dispatchEvent(
+                    new CustomEvent("prisma-send-to-supergallery", {
+                      detail: { path: snapshot.path, title: trackTitle }
+                    })
+                  );
+                }
+              }}
+              title="Enviar a Super Galería (Móvil)"
+              aria-label="Enviar a Super Galería"
+              style={{ fontSize: "0.78rem" }}
+            >
+              <Icon name="smartphone" />
+            </button>
             <button
               disabled={!hasMedia}
               onClick={() => setTagEditorOpen(true)}
