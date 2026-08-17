@@ -44,6 +44,15 @@ pub fn synapse_get_downloads_dir(state: State<'_, SynapseState>) -> String {
 }
 
 #[tauri::command]
+pub fn synapse_update_playback(
+    status: crate::features::synapse::SynapsePlaybackStatus,
+    state: State<'_, SynapseState>,
+) -> Result<(), String> {
+    state.set_playback_status(status);
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn launch_luna_fetch(url: Option<String>) -> Result<bool, String> {
     tauri::async_runtime::spawn_blocking(move || {
         #[cfg(target_os = "windows")]

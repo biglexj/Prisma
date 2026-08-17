@@ -76,3 +76,17 @@ pub struct SynapseRemoteCommandPayload {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SynapsePlaybackStatus {
+    pub is_playing: bool,
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    pub position_ms: u64,
+    pub duration_ms: u64,
+    pub is_video: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub artwork_url: Option<String>,
+}

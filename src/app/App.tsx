@@ -513,6 +513,41 @@ export function App() {
     };
   }, [handleOpenFile, library, imageLibrary, videoLibrary, activeView, playback, videoReturnView]);
 
+  // ── Sincronización en tiempo real del estado de reproducción hacia Synapse (Mando a Distancia) ──
+  useEffect(() => {
+    const isVideo = activeView === "video_player";
+    const currentTrack = playback.queue.currentItem;
+    const isPlaying = isVideo ? true : (!playback.snapshot.paused && !!currentTrack);
+    const title = isVideo
+      ? activeVideoPath?.replace(/.*[/\\]/, "") || "Vídeo"
+      : currentTrack?.title || "";
+    const artist = isVideo ? "" : currentTrack?.artist || "";
+    const album = isVideo ? "" : (currentTrack as { album?: string })?.album || "";
+    const positionMs = Math.round((playback.snapshot.positionSeconds || 0) * 1000);
+    const durationMs = Math.round(
+      ((playback.snapshot.durationSeconds || currentTrack?.durationSeconds) || 0) * 1000
+    );
+
+    const status = {
+      isPlaying,
+      title,
+      artist,
+      album,
+      positionMs,
+      durationMs,
+      isVideo,
+      artworkUrl: (currentTrack as { coverUrl?: string } | null)?.coverUrl || null,
+    };
+    void invoke("synapse_update_playback", { status }).catch(() => {});
+  }, [
+    playback.snapshot.paused,
+    playback.snapshot.positionSeconds,
+    playback.snapshot.durationSeconds,
+    playback.queue.currentItem,
+    activeView,
+    activeVideoPath,
+  ]);
+
   // Coordinación de reproducción entre QuickLook y la aplicación principal
   const wasPlayingBeforeQuickLookRef = useRef<boolean>(false);
   const wasVideoPlayingBeforeQuickLookRef = useRef<boolean>(false);

@@ -152,6 +152,16 @@ fn handle_client(stream: TcpStream, app: AppHandle) {
             send_http_response(reader.get_mut(), 200, "application/json", &json);
         }
 
+        // ── GET /api/v1/synapse/playback (Estado de Reproducción Actual) ──
+        ("GET", "/api/v1/synapse/playback") | ("GET", "/playback") => {
+            let status = app
+                .try_state::<super::config::SynapseState>()
+                .map(|s| s.get_playback_status())
+                .unwrap_or_default();
+            let json = serde_json::to_vec(&status).unwrap_or_default();
+            send_http_response(reader.get_mut(), 200, "application/json", &json);
+        }
+
         // ── POST /api/v1/synapse/handoff (Continuidad Multimedia) ──
         ("POST", "/api/v1/synapse/handoff") | ("POST", "/handoff") => {
             let mut body = vec![0u8; content_length];

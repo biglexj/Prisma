@@ -43,6 +43,7 @@ use app::commands::quick_look::{
 };
 use app::commands::synapse::{
     launch_luna_fetch, synapse_get_downloads_dir, synapse_get_status, synapse_set_downloads_dir,
+    synapse_update_playback,
 };
 use app::commands::tags::{
     audio_batch_write_tags, audio_read_tags, audio_save_lyrics, audio_write_tags,
@@ -368,6 +369,7 @@ pub fn run() {
             synapse_get_status,
             synapse_set_downloads_dir,
             synapse_get_downloads_dir,
+            synapse_update_playback,
             launch_luna_fetch,
             custom_libraries_get_all,
             custom_libraries_save,

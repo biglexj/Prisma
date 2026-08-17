@@ -1,4 +1,6 @@
-/* ── Luna Fetch Hub — Material 3 Expressive ── */
+/* ══════════════════════════════════════════════════════════════════
+   LUNA FETCH HUB — MATERIAL 3 EXPRESSIVE (MODO CLARO Y OSCURO HOMOGÉNEO)
+   ══════════════════════════════════════════════════════════════════ */
 
 .luna-fetch-view {
   display: flex;
@@ -8,8 +10,8 @@
   overflow-y: auto;
   padding: 24px;
   gap: 24px;
-  background: var(--color-surface, #121214);
-  color: var(--color-text, #f0f0f2);
+  background: transparent;
+  color: var(--on-surface, #22191b);
   box-sizing: border-box;
 }
 
@@ -52,14 +54,13 @@
   max-height: 22px;
 }
 
-
 /* ── Header ── */
 .luna-fetch-header {
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(147, 51, 234, 0.12), rgba(59, 130, 246, 0.12));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  background: var(--surface-container, #f7eeee);
+  border: 1px solid var(--outline-variant, #eadadd);
   padding: 24px 28px;
-  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
 .luna-fetch-header-content {
@@ -79,14 +80,14 @@
 .luna-fetch-icon-badge {
   width: 56px;
   height: 56px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #a855f7, #3b82f6);
+  border-radius: 18px;
+  background: linear-gradient(135deg, #0284c7, #4f46e5);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 26px;
-  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.25);
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.25);
   flex-shrink: 0;
 }
 
@@ -98,9 +99,10 @@
 }
 
 .luna-fetch-title-row h1 {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  color: var(--on-surface, #22191b);
   margin: 0;
 }
 
@@ -111,14 +113,14 @@
   letter-spacing: 0.06em;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(168, 85, 247, 0.2);
-  color: #c084fc;
-  border: 1px solid rgba(168, 85, 247, 0.35);
+  background: var(--surface-container-highest, #ebe1e2);
+  color: var(--primary, #c90045);
+  border: 1px solid var(--outline-variant, #eadadd);
 }
 
 .luna-fetch-subtitle {
-  font-size: 14px;
-  color: var(--color-text-secondary, #a1a1aa);
+  font-size: 13.5px;
+  color: var(--on-surface-variant, #6a595d);
   margin: 0;
   line-height: 1.4;
 }
@@ -145,51 +147,52 @@
 }
 
 .luna-fetch-btn.primary {
-  background: linear-gradient(135deg, #a855f7, #6366f1);
-  color: #ffffff;
-  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.3);
+  background: var(--primary, #c90045);
+  color: var(--on-primary, #ffffff);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
 }
 
 .luna-fetch-btn.primary:hover:not(:disabled) {
-  filter: brightness(1.1);
+  filter: brightness(1.08);
   transform: translateY(-1px);
 }
 
 .luna-fetch-btn.primary:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
   transform: none;
 }
 
 .luna-fetch-btn.secondary {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--surface-container-high, #f1e8e8);
+  color: var(--on-surface, #22191b);
+  border: 1px solid var(--outline-variant, #eadadd);
 }
 
 .luna-fetch-btn.secondary:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--surface-container-highest, #ebe1e2);
 }
 
 .luna-fetch-btn.outline {
   background: transparent;
-  color: var(--color-text-secondary, #a1a1aa);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--on-surface-variant, #6a595d);
+  border: 1px solid var(--outline-variant, #eadadd);
 }
 
 .luna-fetch-btn.outline:hover {
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--on-surface, #22191b);
+  background: var(--surface-container-low, #fdf2f2);
+  border-color: var(--outline, #9e898d);
 }
 
 .luna-fetch-btn.subtle {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--color-text-secondary, #d4d4d8);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-container-high, #f1e8e8);
+  color: var(--on-surface, #22191b);
+  border: 1px solid var(--outline-variant, #eadadd);
 }
 
 .luna-fetch-btn.subtle:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-container-highest, #ebe1e2);
 }
 
 /* ── Body ── */
@@ -201,22 +204,23 @@
 
 /* ── Tarjetas ── */
 .luna-fetch-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 18px;
+  background: var(--surface-container, #f7eeee);
+  border: 1px solid var(--outline-variant, #eadadd);
+  border-radius: 20px;
   padding: 24px;
-  transition: border-color 0.2s;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .luna-fetch-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--outline, #9e898d);
 }
 
 .card-header-simple {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #c084fc;
+  color: var(--primary, #c90045);
   font-size: 18px;
   margin-bottom: 6px;
 }
@@ -224,13 +228,13 @@
 .card-header-simple h2 {
   font-size: 17px;
   font-weight: 600;
-  color: var(--color-text, #ffffff);
+  color: var(--on-surface, #22191b);
   margin: 0;
 }
 
 .card-description {
   font-size: 13px;
-  color: var(--color-text-secondary, #a1a1aa);
+  color: var(--on-surface-variant, #6a595d);
   margin: 0 0 18px 0;
   line-height: 1.45;
 }
@@ -255,7 +259,7 @@
   position: absolute;
   left: 14px;
   font-size: 16px;
-  color: var(--color-text-secondary, #71717a);
+  color: var(--on-surface-variant, #6a595d);
   pointer-events: none;
 }
 
@@ -263,9 +267,9 @@
   width: 100%;
   padding: 12px 16px 12px 42px;
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: var(--surface-container-low, #fdf2f2);
+  border: 1px solid var(--outline-variant, #eadadd);
+  color: var(--on-surface, #22191b);
   font-size: 13.5px;
   outline: none;
   font-family: inherit;
@@ -273,12 +277,13 @@
 }
 
 .input-with-icon input:focus {
-  border-color: #a855f7;
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+  border-color: var(--primary, #c90045);
+  box-shadow: 0 0 0 3px var(--primary-container, #ffd9df);
 }
 
 .input-with-icon input::placeholder {
-  color: #71717a;
+  color: var(--on-surface-variant, #6a595d);
+  opacity: 0.7;
 }
 
 /* ── Status Bar ── */
@@ -294,21 +299,21 @@
 }
 
 .luna-fetch-status-bar.is-success {
-  background: rgba(34, 197, 94, 0.15);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #4ade80;
+  background: rgba(23, 137, 88, 0.12);
+  border: 1px solid rgba(23, 137, 88, 0.25);
+  color: var(--success, #178958);
 }
 
 .luna-fetch-status-bar.is-error {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  background: rgba(186, 26, 26, 0.12);
+  border: 1px solid rgba(186, 26, 26, 0.25);
+  color: var(--error, #ba1a1a);
 }
 
 .luna-fetch-status-bar.is-info {
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: #60a5fa;
+  background: rgba(2, 132, 199, 0.12);
+  border: 1px solid rgba(2, 132, 199, 0.25);
+  color: #0284c7;
 }
 
 .status-close-btn {
@@ -334,9 +339,9 @@
 }
 
 .bridge-action-tile {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  background: var(--surface-container-low, #fdf2f2);
+  border: 1px solid var(--outline-variant, #eadadd);
+  border-radius: 16px;
   padding: 16px;
   display: flex;
   align-items: center;
@@ -349,17 +354,18 @@
 }
 
 .bridge-action-tile:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(168, 85, 247, 0.4);
+  background: var(--surface-container-high, #f1e8e8);
+  border-color: var(--primary, #c90045);
   transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 }
 
 .tile-icon {
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: rgba(168, 85, 247, 0.15);
-  color: #c084fc;
+  background: var(--surface-container-highest, #ebe1e2);
+  color: var(--primary, #c90045);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -376,12 +382,12 @@
 .tile-info strong {
   font-size: 14px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--on-surface, #22191b);
 }
 
 .tile-info span {
   font-size: 11.5px;
-  color: var(--color-text-secondary, #a1a1aa);
+  color: var(--on-surface-variant, #6a595d);
   line-height: 1.35;
 }
 
@@ -393,15 +399,16 @@
 }
 
 .feature-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  background: var(--surface-container, #f7eeee);
+  border: 1px solid var(--outline-variant, #eadadd);
+  border-radius: 18px;
   padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
   transition: border-color 0.2s;
 }
 
 .feature-card:hover {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--outline, #9e898d);
 }
 
 .feature-badge {
@@ -409,7 +416,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #a855f7;
+  color: var(--primary, #c90045);
   display: inline-block;
   margin-bottom: 6px;
 }
@@ -417,13 +424,13 @@
 .feature-card h3 {
   font-size: 15px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--on-surface, #22191b);
   margin: 0 0 6px 0;
 }
 
 .feature-card p {
   font-size: 12.5px;
-  color: var(--color-text-secondary, #a1a1aa);
+  color: var(--on-surface-variant, #6a595d);
   margin: 0;
   line-height: 1.45;
 }

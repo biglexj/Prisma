@@ -2,6 +2,8 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 
+use super::model::SynapsePlaybackStatus;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SynapseConfigData {
@@ -24,6 +26,7 @@ impl Default for SynapseConfigData {
 pub struct SynapseState {
     config_file: PathBuf,
     data: Arc<Mutex<SynapseConfigData>>,
+    playback_status: Arc<Mutex<SynapsePlaybackStatus>>,
 }
 
 impl SynapseState {
@@ -41,6 +44,20 @@ impl SynapseState {
         Self {
             config_file,
             data: Arc::new(Mutex::new(data)),
+            playback_status: Arc::new(Mutex::new(SynapsePlaybackStatus::default())),
+        }
+    }
+
+    pub fn get_playback_status(&self) -> SynapsePlaybackStatus {
+        self.playback_status
+            .lock()
+            .map(|g| g.clone())
+            .unwrap_or_default()
+    }
+
+    pub fn set_playback_status(&self, status: SynapsePlaybackStatus) {
+        if let Ok(mut g) = self.playback_status.lock() {
+            *g = status;
         }
     }
 
