@@ -239,9 +239,13 @@
   line-height: 1.45;
 }
 
-/* ── Selectores Inline (Formato y Calidad) ── */
-.luna-inline-select-pill {
+/* ── Selectores Inline Personalizados (Formato y Calidad) ── */
+.luna-custom-select-container {
   position: relative;
+  display: inline-flex;
+}
+
+.luna-inline-select-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -254,14 +258,20 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 42px;
   box-sizing: border-box;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  user-select: none;
 }
 
-.luna-inline-select-pill:hover {
+.luna-inline-select-pill:hover,
+.luna-inline-select-pill.is-open {
   background: var(--surface-container-highest, #ebe1e2);
   border-color: var(--outline, #9e898d);
 }
 
-.luna-inline-select-pill:focus-within {
+.luna-inline-select-pill:focus-visible {
   border-color: var(--primary, #c90045);
   box-shadow: 0 0 0 3px var(--primary-container, #ffd9df);
 }
@@ -272,6 +282,13 @@
   pointer-events: none;
 }
 
+.luna-select-value {
+  color: var(--on-surface, #22191b);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .luna-inline-select-pill .select-chevron-icon {
   color: var(--on-surface-variant, #6a595d);
   width: 14px;
@@ -279,28 +296,93 @@
   min-width: 14px;
   min-height: 14px;
   margin-left: 2px;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.luna-inline-select-pill select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
+.luna-inline-select-pill .select-chevron-icon.is-rotated {
+  transform: rotate(180deg);
+}
+
+/* ── Menú Desplegable Personalizado ── */
+.luna-custom-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  min-width: 100%;
+  box-sizing: border-box;
+  z-index: 120;
+  background: var(--surface-container, #f7eeee);
+  border: 1px solid var(--outline-variant, #eadadd);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: dropdownPop 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.luna-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
   background: transparent;
   border: none;
+  outline: none;
   color: var(--on-surface, #22191b);
   font-size: 13px;
-  font-weight: 600;
-  outline: none;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  padding-right: 2px;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.luna-inline-select-pill select option {
-  background: var(--surface-container, #f7eeee);
+.luna-dropdown-item:hover {
+  background: var(--surface-container-high, #f1e8e8);
   color: var(--on-surface, #22191b);
-  font-size: 13px;
-  padding: 6px 10px;
+}
+
+.luna-dropdown-item.is-selected {
+  background: var(--primary-container, #ffd9df);
+  color: var(--on-primary-container, #3f0012);
+  font-weight: 600;
+}
+
+.luna-item-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.luna-item-content svg {
+  color: var(--primary, #c90045);
+  font-size: 15px;
+}
+
+.luna-check-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--primary, #c90045);
+  flex-shrink: 0;
+}
+
+@keyframes dropdownPop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* ── Input Group ── */

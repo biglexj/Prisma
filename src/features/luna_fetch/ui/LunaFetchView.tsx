@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Icon } from "../../../shared/ui/Icon";
+import { Icon, type IconName } from "../../../shared/ui/Icon";
 import type { AppView } from "../../../app/ui/AppSidebar";
 import "./luna-fetch.css";
 
@@ -10,29 +10,114 @@ interface LunaFetchViewProps {
 
 type MediaFormat = "video_mp4" | "video_webm" | "audio_mp3" | "audio_m4a";
 
-const FORMAT_OPTIONS: { id: MediaFormat; label: string; isAudio: boolean; short: string }[] = [
-  { id: "video_mp4", label: "Video MP4", isAudio: false, short: "MP4" },
-  { id: "video_webm", label: "Video WebM", isAudio: false, short: "WebM" },
-  { id: "audio_mp3", label: "Audio MP3", isAudio: true, short: "MP3" },
-  { id: "audio_m4a", label: "Audio M4A", isAudio: true, short: "M4A" },
+interface DropdownOption<T extends string> {
+  id: T;
+  label: string;
+  icon?: IconName;
+}
+
+const FORMAT_OPTIONS: DropdownOption<MediaFormat>[] = [
+  { id: "video_mp4", label: "Video MP4", icon: "video" },
+  { id: "video_webm", label: "Video WebM", icon: "video" },
+  { id: "audio_mp3", label: "Audio MP3", icon: "music" },
+  { id: "audio_m4a", label: "Audio M4A", icon: "music" },
 ];
 
-const VIDEO_QUALITIES = [
+const VIDEO_QUALITIES: DropdownOption<string>[] = [
   { id: "1080p", label: "1080p · Full HD" },
   { id: "2160p", label: "2160p · 4K Ultra HD" },
   { id: "1440p", label: "1440p · 2K Quad HD" },
   { id: "720p", label: "720p · HD" },
   { id: "480p", label: "480p · SD" },
-  { id: "best", label: "Mejor calidad disponible" },
+  { id: "best", label: "Mejor disponible" },
 ];
 
-const AUDIO_QUALITIES = [
+const AUDIO_QUALITIES: DropdownOption<string>[] = [
   { id: "320k", label: "320 kbps · Máxima" },
   { id: "256k", label: "256 kbps · Alta" },
   { id: "192k", label: "192 kbps · Estándar" },
   { id: "128k", label: "128 kbps · Media" },
-  { id: "best", label: "Mejor calidad disponible" },
+  { id: "best", label: "Mejor disponible" },
 ];
+
+interface LunaDropdownProps<T extends string> {
+  value: T;
+  options: DropdownOption<T>[];
+  onChange: (val: T) => void;
+  leadingIcon: IconName;
+  title: string;
+}
+
+function LunaDropdown<T extends string>({
+  value,
+  options,
+  onChange,
+  leadingIcon,
+  title,
+}: LunaDropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const currentOption = options.find((o) => o.id === value) || options[0];
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="luna-custom-select-container" ref={containerRef}>
+      <button
+        type="button"
+        className={`luna-inline-select-pill ${isOpen ? "is-open" : ""}`}
+        onClick={() => setIsOpen(!isOpen)}
+        title={title}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <Icon name={currentOption.icon || leadingIcon} />
+        <span className="luna-select-value">{currentOption.label}</span>
+        <Icon name="chevron-down" className={`select-chevron-icon ${isOpen ? "is-rotated" : ""}`} />
+      </button>
+
+      {isOpen && (
+        <div className="luna-custom-dropdown-menu" role="listbox">
+          {options.map((opt) => {
+            const isSelected = opt.id === value;
+            return (
+              <button
+                type="button"
+                key={opt.id}
+                role="option"
+                aria-selected={isSelected}
+                className={`luna-dropdown-item ${isSelected ? "is-selected" : ""}`}
+                onClick={() => {
+                  onChange(opt.id);
+                  setIsOpen(false);
+                }}
+              >
+                <div className="luna-item-content">
+                  {opt.icon && <Icon name={opt.icon} />}
+                  <span className="luna-item-label">{opt.label}</span>
+                </div>
+                {isSelected && <Icon name="check" className="luna-check-icon" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
   const [url, setUrl] = useState("");
@@ -41,16 +126,15 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
   const [isLaunching, setIsLaunching] = useState(false);
 
-  const selectedFormatObj = FORMAT_OPTIONS.find((f) => f.id === format) || FORMAT_OPTIONS[0];
-  const isAudio = selectedFormatObj.isAudio;
+  const isAudio = format.startsWith("audio_");
   const qualityList = isAudio ? AUDIO_QUALITIES : VIDEO_QUALITIES;
 
   const handleFormatChange = (newFormat: MediaFormat) => {
     setFormat(newFormat);
-    const targetObj = FORMAT_OPTIONS.find((f) => f.id === newFormat);
-    if (targetObj?.isAudio && !isAudio) {
+    const newIsAudio = newFormat.startsWith("audio_");
+    if (newIsAudio && !isAudio) {
       setQuality("320k");
-    } else if (!targetObj?.isAudio && isAudio) {
+    } else if (!newIsAudio && isAudio) {
       setQuality("1080p");
     }
   };
@@ -73,16 +157,17 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
     setIsLaunching(true);
     const targetUrl = customUrl !== undefined ? customUrl : url;
     try {
+      const formatShort = format.replace("video_", "").replace("audio_", "");
       const launched = await invoke<boolean>("launch_luna_fetch", {
         url: targetUrl.trim() ? targetUrl.trim() : null,
-        format: format.replace("video_", "").replace("audio_", ""),
+        format: formatShort,
         quality: quality,
       });
 
       if (launched) {
         setStatusMessage({
           text: targetUrl.trim()
-            ? `¡Enlace enviado a Luna Fetch (${selectedFormatObj.short} · ${quality}) con éxito!`
+            ? `¡Enlace enviado a Luna Fetch (${formatShort.toUpperCase()} · ${quality}) con éxito!`
             : "¡Luna Fetch iniciado en el escritorio!",
           type: "success",
         });
@@ -116,6 +201,8 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
       console.error(err);
     }
   };
+
+  const formatButtonLabel = format.replace("video_", "").replace("audio_", "").toUpperCase();
 
   return (
     <div className="luna-fetch-view">
@@ -160,7 +247,7 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
       </header>
 
       <div className="luna-fetch-body">
-        {/* ── Caja de Descarga Rápida con Parámetros ── */}
+        {/* ── Caja de Descarga Rápida con Parámetros Inline ── */}
         <section className="luna-fetch-card input-hero-card">
           <div className="card-header-simple">
             <Icon name="link" />
@@ -195,39 +282,23 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
               <span>Pegar</span>
             </button>
 
-            {/* Selector inline: Formato */}
-            <div className="luna-inline-select-pill" title="Seleccionar formato">
-              <Icon name={isAudio ? "music" : "video"} />
-              <select
-                aria-label="Formato de descarga"
-                value={format}
-                onChange={(e) => handleFormatChange(e.target.value as MediaFormat)}
-              >
-                {FORMAT_OPTIONS.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <Icon name="chevron-down" className="select-chevron-icon" />
-            </div>
+            {/* Selector Rediseñado: Formato */}
+            <LunaDropdown
+              value={format}
+              options={FORMAT_OPTIONS}
+              onChange={handleFormatChange}
+              leadingIcon={isAudio ? "music" : "video"}
+              title="Formato de descarga"
+            />
 
-            {/* Selector inline: Calidad */}
-            <div className="luna-inline-select-pill" title="Seleccionar calidad">
-              <Icon name="sliders" />
-              <select
-                aria-label="Calidad de descarga"
-                value={quality}
-                onChange={(e) => setQuality(e.target.value)}
-              >
-                {qualityList.map((q) => (
-                  <option key={q.id} value={q.id}>
-                    {q.label}
-                  </option>
-                ))}
-              </select>
-              <Icon name="chevron-down" className="select-chevron-icon" />
-            </div>
+            {/* Selector Rediseñado: Calidad */}
+            <LunaDropdown
+              value={quality}
+              options={qualityList}
+              onChange={setQuality}
+              leadingIcon="sliders"
+              title="Calidad de descarga"
+            />
 
             <button
               className="luna-fetch-btn primary"
@@ -236,7 +307,7 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
               type="button"
             >
               <Icon name="download" />
-              <span>Descargar {selectedFormatObj.short}</span>
+              <span>Descargar {formatButtonLabel}</span>
             </button>
           </div>
 
