@@ -466,9 +466,9 @@
 }
 
 .luna-fetch-status-bar.is-info {
-  background: rgba(2, 132, 199, 0.12);
-  border: 1px solid rgba(2, 132, 199, 0.25);
-  color: #0284c7;
+  background: var(--primary-container, #ffd9df);
+  border: 1px solid var(--outline-variant, #eadadd);
+  color: var(--on-primary-container, #3f0012);
 }
 
 .status-close-btn {
