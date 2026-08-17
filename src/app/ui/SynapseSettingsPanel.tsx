@@ -275,13 +275,13 @@ export function SynapseSettingsPanel() {
                   <img src={app.iconPath} alt={app.name} />
                 </div>
                 <div className="eco-app-titles">
+                  <strong>{app.name}</strong>
                   <div className="eco-badges-row">
                     <span className="eco-badge">{app.category}</span>
                     <span className={`eco-status-pill is-${app.statusBadge}`}>
                       {app.statusText}
                     </span>
                   </div>
-                  <strong>{app.name}</strong>
                 </div>
               </div>
 

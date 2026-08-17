@@ -146,12 +146,12 @@
 }
 
 .eco-app-icon-wrap {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
   background: var(--surface-container-high, #f1e8e8);
   border: 1px solid var(--outline-variant);
-  padding: 5px;
+  padding: 6px;
   box-sizing: border-box;
   flex-shrink: 0;
   display: flex;
@@ -163,7 +163,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .eco-app-titles {
@@ -175,31 +175,33 @@
 .eco-badges-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
 .synapse-eco-card .eco-badge {
   display: inline-block;
   width: fit-content;
-  padding: 2px 8px;
-  border-radius: 8px;
-  font-size: 0.68rem;
-  font-weight: 750;
+  padding: 1.5px 6px;
+  border-radius: 6px;
+  font-size: 0.64rem;
+  font-weight: 700;
   color: var(--on-surface-variant);
   background: var(--surface-container-highest, #ebe1e2);
   border: 1px solid var(--outline-variant);
+  line-height: 1.2;
 }
 
 .synapse-eco-card .eco-status-pill {
   display: inline-block;
   width: fit-content;
-  padding: 2px 8px;
-  border-radius: 8px;
-  font-size: 0.66rem;
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-size: 0.58rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  line-height: 1.2;
 }
 
 .synapse-eco-card .eco-status-pill.is-active {
