@@ -53,17 +53,31 @@ pub fn synapse_update_playback(
 }
 
 #[tauri::command]
-pub async fn launch_luna_fetch(url: Option<String>) -> Result<bool, String> {
+pub async fn launch_luna_fetch(
+    url: Option<String>,
+    format: Option<String>,
+    quality: Option<String>,
+) -> Result<bool, String> {
     tauri::async_runtime::spawn_blocking(move || {
         #[cfg(target_os = "windows")]
         {
             use std::process::Command;
 
-            // 1. Si se envía una URL, intentar lanzar vía protocolo lunafetch://
+            // 1. Si se envía una URL, intentar lanzar vía protocolo lunafetch:// con parámetros
             if let Some(ref target_url) = url {
                 let trimmed = target_url.trim();
                 if !trimmed.is_empty() {
-                    let proto = format!("lunafetch://download?url={}", trimmed);
+                    let mut proto = format!("lunafetch://download?url={}", trimmed);
+                    if let Some(ref fmt) = format {
+                        if !fmt.trim().is_empty() {
+                            proto.push_str(&format!("&format={}", fmt.trim()));
+                        }
+                    }
+                    if let Some(ref q) = quality {
+                        if !q.trim().is_empty() {
+                            proto.push_str(&format!("&quality={}", q.trim()));
+                        }
+                    }
                     if let Ok(mut child) = Command::new("cmd").args(["/C", "start", "", &proto]).spawn() {
                         let _ = child.wait();
                         return Ok(true);
@@ -92,6 +106,16 @@ pub async fn launch_luna_fetch(url: Option<String>) -> Result<bool, String> {
                             cmd.arg(u.trim());
                         }
                     }
+                    if let Some(ref fmt) = format {
+                        if !fmt.trim().is_empty() {
+                            cmd.args(["--format", fmt.trim()]);
+                        }
+                    }
+                    if let Some(ref q) = quality {
+                        if !q.trim().is_empty() {
+                            cmd.args(["--quality", q.trim()]);
+                        }
+                    }
                     if let Ok(_) = cmd.spawn() {
                         return Ok(true);
                     }
@@ -108,7 +132,7 @@ pub async fn launch_luna_fetch(url: Option<String>) -> Result<bool, String> {
         }
         #[cfg(not(target_os = "windows"))]
         {
-            let _ = url;
+            let _ = (url, format, quality);
             Ok(false)
         }
     })

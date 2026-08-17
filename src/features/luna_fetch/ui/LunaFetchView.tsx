@@ -8,10 +8,52 @@ interface LunaFetchViewProps {
   onNavigate: (view: AppView) => void;
 }
 
+type MediaFormat = "video_mp4" | "video_webm" | "audio_mp3" | "audio_m4a";
+
+const FORMAT_OPTIONS: { id: MediaFormat; label: string; isAudio: boolean; short: string }[] = [
+  { id: "video_mp4", label: "Video MP4", isAudio: false, short: "MP4" },
+  { id: "video_webm", label: "Video WebM", isAudio: false, short: "WebM" },
+  { id: "audio_mp3", label: "Audio MP3", isAudio: true, short: "MP3" },
+  { id: "audio_m4a", label: "Audio M4A", isAudio: true, short: "M4A" },
+];
+
+const VIDEO_QUALITIES = [
+  { id: "1080p", label: "1080p · Full HD" },
+  { id: "2160p", label: "2160p · 4K Ultra HD" },
+  { id: "1440p", label: "1440p · 2K Quad HD" },
+  { id: "720p", label: "720p · HD" },
+  { id: "480p", label: "480p · SD" },
+  { id: "best", label: "Mejor calidad disponible" },
+];
+
+const AUDIO_QUALITIES = [
+  { id: "320k", label: "320 kbps · Máxima" },
+  { id: "256k", label: "256 kbps · Alta" },
+  { id: "192k", label: "192 kbps · Estándar" },
+  { id: "128k", label: "128 kbps · Media" },
+  { id: "best", label: "Mejor calidad disponible" },
+];
+
 export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
   const [url, setUrl] = useState("");
+  const [format, setFormat] = useState<MediaFormat>("video_mp4");
+  const [quality, setQuality] = useState<string>("1080p");
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null);
   const [isLaunching, setIsLaunching] = useState(false);
+
+  const selectedFormatObj = FORMAT_OPTIONS.find((f) => f.id === format) || FORMAT_OPTIONS[0];
+  const isAudio = selectedFormatObj.isAudio;
+  const qualityList = isAudio ? AUDIO_QUALITIES : VIDEO_QUALITIES;
+
+  const handleFormatChange = (newFormat: MediaFormat) => {
+    setFormat(newFormat);
+    const targetObj = FORMAT_OPTIONS.find((f) => f.id === newFormat);
+    if (targetObj?.isAudio && !isAudio) {
+      setQuality("320k");
+    } else if (!targetObj?.isAudio && isAudio) {
+      setQuality("1080p");
+    }
+  };
 
   const handlePaste = async () => {
     try {
@@ -33,12 +75,14 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
     try {
       const launched = await invoke<boolean>("launch_luna_fetch", {
         url: targetUrl.trim() ? targetUrl.trim() : null,
+        format: format.replace("video_", "").replace("audio_", ""),
+        quality: quality,
       });
 
       if (launched) {
         setStatusMessage({
           text: targetUrl.trim()
-            ? "¡Enlace enviado a Luna Fetch con éxito!"
+            ? `¡Enlace enviado a Luna Fetch (${selectedFormatObj.short} · ${quality}) con éxito!`
             : "¡Luna Fetch iniciado en el escritorio!",
           type: "success",
         });
@@ -46,7 +90,6 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
           setUrl("");
         }
       } else {
-        // Si no se pudo lanzar directamente, ofrecer enlace de descarga oficial
         setStatusMessage({
           text: "Abriendo la página oficial de Luna Fetch para su instalación...",
           type: "info",
@@ -117,22 +160,59 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
       </header>
 
       <div className="luna-fetch-body">
-        {/* ── Caja de Descarga Rápida ── */}
+        {/* ── Caja de Descarga Rápida con Parámetros ── */}
         <section className="luna-fetch-card input-hero-card">
           <div className="card-header-simple">
             <Icon name="link" />
             <h2>Descarga Rápida de Medios</h2>
           </div>
           <p className="card-description">
-            Introduce el enlace de un vídeo o pista de audio (YouTube, SoundCloud, Vimeo, etc.) para procesarlo al instante en Luna Fetch.
+            Introduce el enlace de un vídeo o pista de audio (YouTube, SoundCloud, Vimeo, TikTok, etc.) y selecciona el formato y calidad deseados para enviarlos a Luna Fetch.
           </p>
+
+          {/* Fila de Parámetros: Formato y Calidad */}
+          <div className="luna-params-row">
+            <div className="luna-param-box">
+              <span className="luna-param-label">Formato</span>
+              <div className="luna-param-select-wrap">
+                <Icon name={isAudio ? "music" : "video"} />
+                <select
+                  value={format}
+                  onChange={(e) => handleFormatChange(e.target.value as MediaFormat)}
+                >
+                  {FORMAT_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="luna-param-box">
+              <span className="luna-param-label">Calidad</span>
+              <div className="luna-param-select-wrap">
+                <Icon name="sliders" />
+                <select
+                  value={quality}
+                  onChange={(e) => setQuality(e.target.value)}
+                >
+                  {qualityList.map((q) => (
+                    <option key={q.id} value={q.id}>
+                      {q.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
 
           <div className="luna-fetch-input-group">
             <div className="input-with-icon">
               <Icon name="search" />
               <input
                 type="url"
-                placeholder="Pega aquí el enlace del vídeo o audio (ej. https://...)"
+                placeholder="Pega acá la URL (YouTube, TikTok, SoundCloud, Instagram...)"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onKeyDown={(e) => {
@@ -158,7 +238,7 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
               type="button"
             >
               <Icon name="download" />
-              <span>Descargar con Luna Fetch</span>
+              <span>Descargar {selectedFormatObj.short}</span>
             </button>
           </div>
 
