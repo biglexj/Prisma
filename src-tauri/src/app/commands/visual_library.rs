@@ -183,6 +183,29 @@ pub async fn open_in_file_manager(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn open_path_with_default_app(path: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean_path = path.trim_start_matches(r"\\?\").trim_start_matches(r"\\?\UNC\").to_string();
+        #[cfg(target_os = "windows")]
+        {
+            use std::process::Command;
+            let win_path = clean_path.replace('/', "\\");
+            Command::new("cmd")
+                .args(["/C", "start", "", &win_path])
+                .spawn()
+                .map_err(|e| format!("Error al abrir archivo con la aplicación predeterminada: {e}"))?;
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = clean_path;
+        }
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Error en runtime al abrir archivo: {e}"))?
+}
+
+#[tauri::command]
 pub async fn open_external_url(url: String) -> Result<(), String> {
     tauri::async_runtime::spawn_blocking(move || {
         let clean_url = url.trim().to_string();

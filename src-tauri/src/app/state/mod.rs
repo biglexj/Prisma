@@ -50,10 +50,10 @@ impl PlaybackProbeState {
     }
 
     pub fn load(&self, path: &str) -> Result<PlaybackSnapshot, String> {
-        let session = build_folder_session(path.as_ref())?;
+        let session = build_folder_session(path.as_ref()).ok();
         let mut runtime = self.lock_runtime()?;
         let snapshot = runtime.backend.load(path)?;
-        runtime.session = Some(session);
+        runtime.session = session;
         Ok(attach_session(snapshot, runtime.session.as_ref()))
     }
 

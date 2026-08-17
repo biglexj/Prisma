@@ -22,6 +22,11 @@ use app::commands::playlists::{
     playlists_relink_item, playlists_remove_item, playlists_save_from_items,
     playlists_toggle_hidden,
 };
+use app::commands::converter::{
+    converter_convert_image, converter_extract_video_audio, converter_get_status,
+    converter_process_batch_item, converter_scan_folder, converter_transcode_audio,
+    converter_transcode_video,
+};
 use app::commands::custom_libraries::{
     custom_libraries_add_excluded_folder, custom_libraries_add_folder, custom_libraries_delete,
     custom_libraries_get_all, custom_libraries_get_excluded_folders, custom_libraries_get_folders,
@@ -39,8 +44,12 @@ use app::commands::quick_look::{
 use app::commands::synapse::{
     synapse_get_downloads_dir, synapse_get_status, synapse_set_downloads_dir,
 };
+use app::commands::tags::{
+    audio_batch_write_tags, audio_read_tags, audio_save_lyrics, audio_write_tags,
+    image_read_exif,
+};
 use app::commands::visual_library::{
-    open_external_url, open_in_file_manager, show_in_file_manager, video_extract_audio_track, video_get_audio_tracks, video_get_subtitles, video_read_subtitle_vtt,
+    open_external_url, open_in_file_manager, open_path_with_default_app, show_in_file_manager, video_extract_audio_track, video_get_audio_tracks, video_get_subtitles, video_read_subtitle_vtt,
     visual_library_add_excluded_folder, visual_library_add_folder,
     visual_library_image_preview, visual_library_list_excluded_folders,
     visual_library_list_folders, visual_library_list_items,
@@ -52,7 +61,7 @@ use features::quick_look::QuickLookState;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager, WindowEvent};
-use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt};
+use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -310,6 +319,7 @@ pub fn run() {
             media_save_image,
             show_in_file_manager,
             open_in_file_manager,
+            open_path_with_default_app,
             open_external_url,
             video_get_subtitles,
             video_read_subtitle_vtt,
@@ -372,7 +382,19 @@ pub fn run() {
             custom_libraries_get_thumbnail,
             custom_libraries_read_text_file,
             custom_libraries_save_text_file,
-            custom_libraries_open_file
+            custom_libraries_open_file,
+            converter_get_status,
+            converter_convert_image,
+            converter_extract_video_audio,
+            converter_transcode_video,
+            converter_transcode_audio,
+            converter_process_batch_item,
+            converter_scan_folder,
+            audio_read_tags,
+            audio_write_tags,
+            audio_batch_write_tags,
+            audio_save_lyrics,
+            image_read_exif,
         ])
         .run(tauri::generate_context!())
         .expect("Prisma no pudo iniciar el runtime de Tauri");

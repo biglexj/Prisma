@@ -393,6 +393,19 @@ export function ImageViewer({
           }),
       },
       {
+        id: "convert",
+        label: "Convertir formato",
+        icon: "refresh" as const,
+        onSelect: () => {
+          window.dispatchEvent(
+            new CustomEvent("prisma-open-converter", {
+              detail: { path: target.item.path, mode: "image" },
+            })
+          );
+          closeViewer();
+        },
+      },
+      {
         id: "favorite",
         label: isFav ? "Quitar de favoritos" : "Añadir a favoritos",
         icon: "heart" as const,
@@ -577,13 +590,25 @@ export function ImageViewer({
           </button>
           <button
             className="image-viewer-top-btn"
-            onClick={() => {
-              invoke("show_in_file_manager", { path: currentItem.path }).catch(() => {});
-            }}
-            title="Mostrar en explorador de archivos"
+            onClick={() =>
+              mediaRename.requestRename({
+                path: currentItem.path,
+                title: currentItem.title,
+                kind: "image",
+              })
+            }
+            title="Renombrar imagen (F2)"
           >
-            <Icon name="folder" />
-            <span>Ubicación</span>
+            <Icon name="edit" />
+            <span>Renombrar</span>
+          </button>
+          <button
+            className={`image-viewer-top-btn image-viewer-slideshow-btn ${isSlideshowActive ? "is-active" : ""}`}
+            onClick={() => setIsSlideshowActive(!isSlideshowActive)}
+            title={isSlideshowActive ? "Detener presentación" : "Iniciar presentación automática"}
+          >
+            <Icon name={isSlideshowActive ? "pause" : "play"} />
+            <span>{isSlideshowActive ? "Pausar" : "Presentación"}</span>
           </button>
         </div>
 
@@ -594,6 +619,31 @@ export function ImageViewer({
         </div>
 
         <div className="image-viewer-top-right">
+          <button
+            className="image-viewer-top-btn"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent("prisma-open-converter", {
+                  detail: { path: currentItem.path, mode: "image" },
+                })
+              );
+              closeViewer();
+            }}
+            title="Convertir imagen en Convertidor Prisma"
+          >
+            <Icon name="refresh" />
+            <span>Convertir</span>
+          </button>
+          <button
+            className="image-viewer-top-btn"
+            onClick={() => {
+              invoke("show_in_file_manager", { path: currentItem.path }).catch(() => {});
+            }}
+            title="Mostrar en explorador de archivos"
+          >
+            <Icon name="folder" />
+            <span>Ubicación</span>
+          </button>
           <button
             aria-label={favorites.isFavorite(currentItem.path) ? "Quitar de favoritos" : "Añadir a favoritos"}
             className={`image-viewer-top-btn is-icon-only image-viewer-fav-btn ${favorites.isFavorite(currentItem.path) ? "is-favorite" : ""}`}
@@ -615,14 +665,6 @@ export function ImageViewer({
             title="Mover a la papelera (Supr)"
           >
             <Icon name="trash" />
-          </button>
-          <button
-            className={`image-viewer-top-btn image-viewer-slideshow-btn ${isSlideshowActive ? "is-active" : ""}`}
-            onClick={() => setIsSlideshowActive(!isSlideshowActive)}
-            title={isSlideshowActive ? "Detener presentación" : "Iniciar presentación automática"}
-          >
-            <Icon name={isSlideshowActive ? "pause" : "play"} />
-            <span>{isSlideshowActive ? "Pausar" : "Presentación"}</span>
           </button>
           <button
             aria-label={isFullscreen ? "Salir de pantalla completa (F)" : "Pantalla completa (F)"}

@@ -166,6 +166,169 @@
   font-size: 0.64rem;
 }
 
+/* ── Densidad de la Barra Lateral ── */
+.density-options-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1100px) {
+  .density-options-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 580px) {
+  .density-options-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.density-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1.5px solid var(--outline-variant);
+  border-radius: 18px;
+  padding: 14px;
+  background: var(--surface-container);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 140ms ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.density-card:hover {
+  border-color: var(--outline);
+  background: var(--surface-container-high);
+  transform: translateY(-2px);
+}
+
+.density-card.is-selected {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 9%, var(--surface-bright));
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.density-preview {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  height: 52px;
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: var(--surface-container-highest);
+  transition: background-color 160ms ease;
+}
+
+.density-card.is-selected .density-preview {
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface-container-highest));
+}
+
+.density-preview-compact {
+  gap: 4px;
+}
+
+.density-preview-compact .density-preview-bar {
+  height: 5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--on-surface-variant) 40%, transparent);
+}
+
+.density-preview-compact .bar-1 { width: 85%; }
+.density-preview-compact .bar-2 { width: 62%; background: var(--primary); }
+.density-preview-compact .bar-3 { width: 74%; }
+
+.density-preview-standard {
+  gap: 5.5px;
+}
+
+.density-preview-standard .density-preview-bar {
+  height: 6.5px;
+  border-radius: 3.5px;
+  background: color-mix(in srgb, var(--on-surface-variant) 40%, transparent);
+}
+
+.density-preview-standard .bar-1 { width: 85%; }
+.density-preview-standard .bar-2 { width: 62%; background: var(--primary); }
+.density-preview-standard .bar-3 { width: 74%; }
+
+.density-preview-intermediate {
+  gap: 7px;
+}
+
+.density-preview-intermediate .density-preview-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--on-surface-variant) 40%, transparent);
+}
+
+.density-preview-intermediate .bar-1 { width: 85%; }
+.density-preview-intermediate .bar-2 { width: 62%; background: var(--primary); }
+.density-preview-intermediate .bar-3 { width: 74%; }
+
+.density-preview-comfortable {
+  gap: 8.5px;
+}
+
+.density-preview-comfortable .density-preview-bar {
+  height: 9.5px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--on-surface-variant) 40%, transparent);
+}
+
+.density-preview-comfortable .bar-1 { width: 85%; }
+.density-preview-comfortable .bar-2 { width: 62%; background: var(--primary); }
+.density-preview-comfortable .bar-3 { width: 74%; }
+
+.density-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.density-card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+}
+
+.density-card strong {
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.density-badge {
+  display: inline-block;
+  font-size: 0.58rem;
+  font-weight: 850;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.density-card.is-selected .density-badge {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.density-card small {
+  color: var(--on-surface-variant);
+  font-size: 0.64rem;
+  line-height: 1.35;
+}
+
 /* ── Demo en vivo de barra de progreso ── */
 .progress-demo-card {
   background: var(--surface-container);

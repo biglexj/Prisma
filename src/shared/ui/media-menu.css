@@ -91,10 +91,11 @@
 
 .media-dialog-card {
   width: min(420px, 100%);
-  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--outline-variant);
   border-radius: 20px;
   padding: 26px 24px 22px;
-  background: var(--surface-container-high, #f1e8e8);
+  background: var(--surface-container-high);
+  color: var(--on-surface);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
   text-align: center;
   animation: media-dialog-pop 180ms ease;
@@ -113,8 +114,8 @@
   height: 54px;
   margin-bottom: 14px;
   border-radius: 50%;
-  color: var(--on-surface-variant, #6f5c61);
-  background: var(--surface-container, #f9efef);
+  color: var(--on-surface-variant);
+  background: var(--surface-container);
 }
 
 .media-dialog-icon svg {
@@ -123,19 +124,19 @@
 }
 
 .media-dialog-icon.is-danger {
-  color: var(--error, #ba1a1a);
-  background: color-mix(in srgb, var(--error, #ba1a1a) 14%, transparent);
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 14%, transparent);
 }
 
 .media-dialog-card h3 {
   margin: 0 0 8px;
-  color: var(--on-surface, #1a0e11);
+  color: var(--on-surface);
   font-size: 1.05rem;
 }
 
 .media-dialog-message {
   margin: 0 0 22px;
-  color: var(--on-surface-variant, #6f5c61);
+  color: var(--on-surface-variant);
   font-size: 0.86rem;
   line-height: 1.5;
 }
@@ -144,7 +145,7 @@
   display: inline-block;
   max-width: 100%;
   overflow: hidden;
-  color: var(--on-surface, #1a0e11);
+  color: var(--on-surface);
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: bottom;
@@ -171,18 +172,19 @@
 }
 
 .media-dialog-cancel {
-  color: var(--on-surface-variant, #6f5c61);
-  background: var(--surface-container-highest, #24181b);
+  color: var(--on-surface);
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant) !important;
 }
 
 .media-dialog-cancel:hover {
-  background: var(--surface-container-high, #f1e8e8);
+  background: var(--active-pressed);
 }
 
 .media-dialog-confirm {
-  color: var(--on-primary, #ffffff);
-  background: var(--primary, #c90045);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--primary, #c90045) 35%, transparent);
+  color: var(--on-primary);
+  background: var(--primary);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
 .media-dialog-confirm:hover {
@@ -191,8 +193,8 @@
 
 .media-dialog-confirm.is-danger {
   color: var(--on-error, #ffffff);
-  background: var(--error, #ba1a1a);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--error, #ba1a1a) 35%, transparent);
+  background: var(--error);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--error) 35%, transparent);
 }
 
 .media-dialog-confirm.is-danger:hover {
@@ -211,34 +213,42 @@
   display: flex;
   align-items: center;
   width: 100%;
-  border: 1.5px solid var(--outline, rgba(255, 255, 255, 0.15));
+  border: 1.5px solid var(--outline-variant);
   border-radius: 12px;
-  background: var(--surface-container-lowest, #140d0e);
+  background: var(--surface-container);
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .media-rename-input-wrap:focus-within {
-  border-color: var(--primary, #ffb2b9);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary, #ffb2b9) 20%, transparent);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
 }
 
 .media-rename-input {
   flex: 1;
-  border: none;
+  border: none !important;
   background: transparent;
   padding: 12px 14px;
-  color: var(--on-surface, #ffffff);
+  color: var(--on-surface);
   font-size: 0.92rem;
   font-family: inherit;
-  outline: none;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.media-rename-input:focus,
+.media-rename-input:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .media-rename-ext-badge {
   padding: 4px 10px;
   margin-right: 8px;
   border-radius: 8px;
-  background: var(--surface-container-high, #2b1f22);
-  color: var(--on-surface-variant, #b59b9e);
+  background: var(--surface-container-highest);
+  color: var(--on-surface-variant);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -249,7 +259,7 @@
   margin-top: -6px;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--error, #ff898b);
+  color: var(--error);
   text-align: left;
   padding-left: 4px;
 }

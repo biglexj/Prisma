@@ -1,14 +1,19 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatTime } from "../formatters";
 import { Icon } from "../../../../shared/ui/Icon";
 import { useTrackLyrics } from "../../useTrackLyrics";
+import { LyricsEditorModal } from "./LyricsEditorModal";
 import "./lyrics-preview.css";
 
 interface LyricsPreviewProps {
   path: string | null;
   title: string;
+  artist?: string;
+  album?: string;
   positionSeconds: number;
   durationSeconds: number;
+  isPlaying?: boolean;
+  onTogglePlay?: () => void;
   onSeek: (seconds: number) => void;
   onBackToCover?: () => void;
 }
@@ -16,14 +21,20 @@ interface LyricsPreviewProps {
 export function LyricsPreview({
   path,
   title,
+  artist,
+  album,
   positionSeconds,
+  durationSeconds,
+  isPlaying,
+  onTogglePlay,
   onSeek,
   onBackToCover,
 }: LyricsPreviewProps) {
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const activeLineRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const { lyrics, loading } = useTrackLyrics(path);
+  const { lyrics, loading, updateLyrics, refetch } = useTrackLyrics(path);
 
   const activeIndex = useMemo(() => {
     if (!lyrics || !lyrics.isSynced || lyrics.lines.length === 0) return 0;
@@ -58,17 +69,55 @@ export function LyricsPreview({
           </span>
           <h2>{title}</h2>
         </div>
-        {onBackToCover ? (
-          <button
-            className="lyrics-view-album-btn"
-            onClick={onBackToCover}
-            title="Volver a la carátula del álbum"
-          >
-            <Icon name="disc" />
-            <span>Ver álbum</span>
-          </button>
-        ) : null}
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          {path ? (
+            <button
+              className="lyrics-view-album-btn"
+              onClick={() => setIsEditorOpen(true)}
+              title="Buscar online o editar letras (.lrc)"
+              type="button"
+            >
+              <Icon name="edit" />
+              <span>Editar letras</span>
+            </button>
+          ) : null}
+          {onBackToCover ? (
+            <button
+              className="lyrics-view-album-btn"
+              onClick={onBackToCover}
+              title="Volver a la carátula del álbum"
+              type="button"
+            >
+              <Icon name="disc" />
+              <span>Ver álbum</span>
+            </button>
+          ) : null}
+        </div>
       </header>
+
+      {path ? (
+        <LyricsEditorModal
+          path={path}
+          title={title}
+          artist={artist}
+          album={album}
+          durationSeconds={durationSeconds}
+          currentPlaybackPosition={positionSeconds}
+          isPlaying={isPlaying}
+          onTogglePlay={onTogglePlay}
+          onSeek={onSeek}
+          initialLyrics={lyrics?.raw || ""}
+          isOpen={isEditorOpen}
+          onClose={() => setIsEditorOpen(false)}
+          onSaved={(savedLrc) => {
+            if (savedLrc) {
+              updateLyrics(savedLrc);
+            } else {
+              refetch();
+            }
+          }}
+        />
+      ) : null}
 
       {loading ? (
         <div className="lyrics-empty-state">

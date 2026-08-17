@@ -8,6 +8,8 @@ use crate::features::folder_session::{
     MediaFamily, classify_path, clean_path, compare_naturally, is_ignored_directory_name, is_path_excluded,
 };
 
+use lofty::{file::TaggedFileExt, tag::Accessor};
+
 use super::{MusicFolderScan, MusicFolderSource, MusicLibraryItem};
 
 pub fn scan_music_folder(
@@ -77,11 +79,40 @@ pub fn scan_music_folder(
                 .unwrap_or_default()
                 .as_millis();
 
-            let title = path
+            let mut title = path
                 .file_stem()
                 .and_then(|name| name.to_str())
                 .unwrap_or("Pista sin nombre")
                 .to_owned();
+
+            let mut artist = None;
+            let mut album = None;
+
+            if let Ok(probe) = lofty::probe::Probe::open(&path) {
+                if let Ok(tagged_file) = probe
+                    .options(lofty::config::ParseOptions::new().read_properties(false))
+                    .read()
+                {
+                    if let Some(tag) = tagged_file.primary_tag().or_else(|| tagged_file.first_tag()) {
+                        if let Some(t) = tag.title().as_deref() {
+                            if !t.trim().is_empty() {
+                                title = t.trim().to_string();
+                            }
+                        }
+                        if let Some(a) = tag.artist().as_deref() {
+                            if !a.trim().is_empty() {
+                                artist = Some(a.trim().to_string());
+                            }
+                        }
+                        if let Some(alb) = tag.album().as_deref() {
+                            if !alb.trim().is_empty() {
+                                album = Some(alb.trim().to_string());
+                            }
+                        }
+                    }
+                }
+            }
+
             let relative_folder = path
                 .parent()
                 .and_then(|parent| parent.strip_prefix(&canonical_root).ok())
@@ -97,6 +128,8 @@ pub fn scan_music_folder(
             items.push(MusicLibraryItem {
                 path: clean_path(&path),
                 title,
+                artist,
+                album,
                 source_path: source_path.clone(),
                 relative_folder,
                 modified_at_millis,

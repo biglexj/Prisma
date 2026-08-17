@@ -20,6 +20,7 @@ import { VisualThumbnail } from "./VisualThumbnail";
 import { VideoThumbnail } from "./VideoThumbnail";
 import { ImageViewer } from "./ImageViewer";
 import { ImageEditor } from "./editor/ImageEditor";
+import { ExifDetailsModal } from "./components/ExifDetailsModal";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
 import "./visual-library.css";
 
@@ -90,6 +91,7 @@ export function VisualLibrary({
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
   const [editingImageItem, setEditingImageItem] = useState<VisualLibraryItem | null>(null);
   const [activeImageSessionList, setActiveImageSessionList] = useState<VisualLibraryItem[] | null>(null);
+  const [exifViewingPath, setExifViewingPath] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const favorites = useFavorites();
@@ -239,6 +241,86 @@ export function VisualLibrary({
     });
   };
 
+  const [folderMenu, setFolderMenu] = useState<{
+    x: number;
+    y: number;
+    folder: HierarchicalFolder<VisualLibraryItem>;
+  } | null>(null);
+
+  const handleFolderContextMenu = (event: React.MouseEvent, folder: HierarchicalFolder<VisualLibraryItem>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setFolderMenu({
+      x: event.clientX,
+      y: event.clientY,
+      folder,
+    });
+  };
+
+  const buildFolderMenuItems = () => {
+    if (!folderMenu) return [];
+    const folder = folderMenu.folder;
+    const itemsCount = folder.allRecursiveItems.length;
+    const firstItem = folder.allRecursiveItems[0];
+    const isVirtual = folder.isVirtual;
+
+    const menuItems = [];
+
+    // 1. Convertir carpeta completa en Convertidor Prisma
+    if (itemsCount > 0) {
+      menuItems.push({
+        id: "convert-folder",
+        label: isImage
+          ? `Convertir ${itemsCount} ${itemsCount === 1 ? "imagen" : "imágenes"} en Convertidor Prisma`
+          : `Convertir ${itemsCount} ${itemsCount === 1 ? "vídeo" : "vídeos"} en Convertidor Prisma`,
+        icon: "refresh" as const,
+        onSelect: () => {
+          const paths = folder.allRecursiveItems.map((it) => it.path);
+          window.dispatchEvent(
+            new CustomEvent("prisma-open-converter", {
+              detail: {
+                paths,
+                mode: isImage ? "image" : "video_to_audio",
+              },
+            })
+          );
+        },
+      });
+    }
+
+    // 2. Abrir carpeta
+    menuItems.push({
+      id: "open-folder",
+      label: "Abrir y explorar álbum",
+      icon: "folder-open" as const,
+      onSelect: () => handleNavigateFolder(folder.id),
+    });
+
+    // 3. Reproducir vídeos si corresponde
+    if (!isImage && itemsCount > 0) {
+      menuItems.push({
+        id: "play-folder-videos",
+        label: "Reproducir vídeos en cola",
+        icon: "play" as const,
+        onSelect: () => handlePlayFolderVideos(folder.allRecursiveItems),
+      });
+    }
+
+    // 4. Mostrar en el explorador de archivos si no es virtual
+    if (!isVirtual && firstItem) {
+      menuItems.push({
+        id: "show-in-explorer",
+        label: "Mostrar en explorador de archivos",
+        icon: "folder" as const,
+        onSelect: () => {
+          void invoke("show_in_file_manager", { path: firstItem.path }).catch(() => {});
+        },
+      });
+    }
+
+    return menuItems;
+  };
+
   const buildMenuItems = () => {
     const target = mediaDelete.menu;
     if (!target) return [];
@@ -246,23 +328,31 @@ export function VisualLibrary({
     const menuItems = [];
 
     if (isImage) {
-      menuItems.push({
-        id: "edit",
-        label: "Editar imagen",
-        icon: "crop" as const,
-        onSelect: () => {
-          const found = items.find((it) => it.path === target.item.path) || {
-            path: target.item.path,
-            title: target.item.title,
-            sourcePath: "",
-            relativeFolder: "",
-            kind: "image" as const,
-            modifiedAtMillis: Date.now(),
-            sizeBytes: 0,
-          };
-          setEditingImageItem(found);
+      menuItems.push(
+        {
+          id: "edit",
+          label: "Editar imagen",
+          icon: "crop" as const,
+          onSelect: () => {
+            const found = items.find((it) => it.path === target.item.path) || {
+              path: target.item.path,
+              title: target.item.title,
+              sourcePath: "",
+              relativeFolder: "",
+              kind: "image" as const,
+              modifiedAtMillis: Date.now(),
+              sizeBytes: 0,
+            };
+            setEditingImageItem(found);
+          },
         },
-      });
+        {
+          id: "exif",
+          label: "Detalles / EXIF",
+          icon: "info" as const,
+          onSelect: () => setExifViewingPath(target.item.path),
+        }
+      );
     }
 
     menuItems.push(
@@ -276,6 +366,21 @@ export function VisualLibrary({
             title: target.item.title,
             kind: isImage ? "image" : "video",
           }),
+      },
+      {
+        id: "convert",
+        label: isImage ? "Convertir imagen" : "Convertir / Extraer audio",
+        icon: "refresh" as const,
+        onSelect: () => {
+          window.dispatchEvent(
+            new CustomEvent("prisma-open-converter", {
+              detail: {
+                path: target.item.path,
+                mode: isImage ? "image" : "video_to_audio",
+              },
+            })
+          );
+        },
       },
       {
         id: "favorite",
@@ -607,6 +712,7 @@ export function VisualLibrary({
                     folder={folder}
                     isImage={isImage}
                     key={folder.id}
+                    onContextMenu={(event) => handleFolderContextMenu(event, folder)}
                     onOpen={() => handleNavigateFolder(folder.id)}
                     onPlayVideo={!isImage ? () => handlePlayFolderVideos(folder.allRecursiveItems) : undefined}
                   />
@@ -685,6 +791,15 @@ export function VisualLibrary({
         />
       ) : null}
 
+      {folderMenu ? (
+        <ContextMenu
+          items={buildFolderMenuItems()}
+          onClose={() => setFolderMenu(null)}
+          x={folderMenu.x}
+          y={folderMenu.y}
+        />
+      ) : null}
+
       {mediaDelete.pendingDelete ? (
         <ConfirmDialog
           cancelLabel="Cancelar"
@@ -727,6 +842,14 @@ export function VisualLibrary({
           currentTitle={mediaRename.pendingRename.title}
           onConfirm={mediaRename.confirmRename}
           onCancel={mediaRename.cancelRename}
+        />
+      )}
+
+      {exifViewingPath && (
+        <ExifDetailsModal
+          path={exifViewingPath}
+          isOpen={Boolean(exifViewingPath)}
+          onClose={() => setExifViewingPath(null)}
         />
       )}
     </section>
@@ -844,6 +967,7 @@ function VisualCard({
 interface VisualFolderCardProps {
   folder: HierarchicalFolder<VisualLibraryItem>;
   isImage: boolean;
+  onContextMenu?: (event: React.MouseEvent) => void;
   onOpen: () => void;
   onPlayVideo?: () => void;
 }
@@ -851,6 +975,7 @@ interface VisualFolderCardProps {
 function VisualFolderCard({
   folder,
   isImage,
+  onContextMenu,
   onOpen,
   onPlayVideo,
 }: VisualFolderCardProps) {
@@ -862,6 +987,7 @@ function VisualFolderCard({
     <div
       className={`folder-collection-card ${isFavorites ? "is-virtual-favorites" : ""} ${isAll ? "is-virtual-all" : ""}`}
       onClick={onOpen}
+      onContextMenu={onContextMenu}
       title={folder.displayName}
     >
       <div className="folder-collection-cover-frame">

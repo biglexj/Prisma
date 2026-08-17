@@ -18,6 +18,7 @@ import { MusicArtwork } from "./MusicArtwork";
 import { parseTrackInfo } from "../model/trackInfo";
 import { playlistsSaveFromItems } from "../../collections/tauri/client";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
+import { TagEditorModal } from "../../tags/ui/TagEditorModal";
 import "./music-library.css";
 
 const VISIBLE_ITEM_LIMIT = 400;
@@ -87,6 +88,7 @@ export function MusicLibrary({
   const [sortField, setSortField] = useState<MusicSortField>(() => sessionMusicState.sortField);
   const [sortDirection, setSortDirection] = useState<MusicSortDirection>(() => sessionMusicState.sortDirection);
   const [randomSeed, setRandomSeed] = useState(1);
+  const [editingTagPaths, setEditingTagPaths] = useState<string[] | null>(null);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
@@ -173,33 +175,60 @@ export function MusicLibrary({
   const sortedNonExcludedItems = sortItemList(nonExcludedItems);
   const visibleItems = sortedNonExcludedItems.slice(0, VISIBLE_ITEM_LIMIT);
 
-  // Agrupar las canciones visibles por álbum (carpeta) para que el timeline muestre
-  // UNA tarjeta por álbum y no repita la misma carátula por cada canción.
+  const [selectedAlbumKey, setSelectedAlbumKey] = useState<string | null>(null);
+
+  // Agrupar las canciones visibles por álbum (Metadata Tag `album`, fallback a carpeta)
   const albumGroups = useMemo(() => {
-    const map = new Map<string, MusicLibraryItem[]>();
+    const map = new Map<
+      string,
+      {
+        folderKey: string;
+        displayName: string;
+        artist?: string;
+        representative: MusicLibraryItem;
+        items: MusicLibraryItem[];
+      }
+    >();
+
     for (const item of visibleItems) {
-      const key = item.relativeFolder || "Carpeta principal";
-      const list = map.get(key);
-      if (list) list.push(item);
-      else map.set(key, [item]);
+      const parsed = parseTrackInfo(item.title);
+      const albumTag = item.album?.trim();
+      const folderFallback = item.relativeFolder?.trim() || "Álbum desconocido";
+      const albumName = albumTag || folderFallback;
+      const key = albumTag ? `tag:${albumTag.toLowerCase()}` : `folder:${folderFallback.toLowerCase()}`;
+      const trackArtist = item.artist?.trim() || parsed.artist;
+
+      const existing = map.get(key);
+      if (existing) {
+        existing.items.push(item);
+        if (!existing.artist && trackArtist) {
+          existing.artist = trackArtist;
+        }
+      } else {
+        map.set(key, {
+          folderKey: key,
+          displayName: albumName,
+          artist: trackArtist,
+          representative: item,
+          items: [item],
+        });
+      }
     }
-    const groups: { folderKey: string; displayName: string; representative: MusicLibraryItem; items: MusicLibraryItem[] }[] = [];
-    for (const [key, itemsInAlbum] of map.entries()) {
-      const lastSeg = key.split(/[\\/]/).filter(Boolean).pop() || key;
-      groups.push({
-        folderKey: key,
-        displayName: lastSeg,
-        representative: itemsInAlbum[0],
-        items: itemsInAlbum,
-      });
-    }
+
+    const groups = Array.from(map.values());
     groups.sort((a, b) => {
       const aTime = Math.max(0, ...a.items.map((it) => it.modifiedAtMillis ?? 0));
       const bTime = Math.max(0, ...b.items.map((it) => it.modifiedAtMillis ?? 0));
       return bTime - aTime;
     });
+
     return groups;
   }, [visibleItems]);
+
+  const selectedAlbum = useMemo(() => {
+    if (!selectedAlbumKey) return null;
+    return albumGroups.find((g) => g.folderKey === selectedAlbumKey) || null;
+  }, [albumGroups, selectedAlbumKey]);
 
   // Árbol jerárquico y colecciones (Solo con carpetas y elementos NO excluidos)
   const treeLevel = resolveTreeLevel(nonExcludedItems, currentFolderPath, favorites.favorites, {
@@ -298,6 +327,94 @@ export function MusicLibrary({
     });
   };
 
+  const [folderMenu, setFolderMenu] = useState<{
+    x: number;
+    y: number;
+    folder: HierarchicalFolder<MusicLibraryItem>;
+  } | null>(null);
+
+  const handleFolderContextMenu = (event: React.MouseEvent, folder: HierarchicalFolder<MusicLibraryItem>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setFolderMenu({
+      x: event.clientX,
+      y: event.clientY,
+      folder,
+    });
+  };
+
+  const buildFolderMenuItems = () => {
+    if (!folderMenu) return [];
+    const folder = folderMenu.folder;
+    const itemsCount = folder.allRecursiveItems.length;
+    const firstItem = folder.allRecursiveItems[0];
+    const isVirtual = folder.isVirtual;
+
+    const menuItems = [];
+
+    // 1. Convertir carpeta / álbum completo en Convertidor Prisma
+    if (itemsCount > 0) {
+      menuItems.push({
+        id: "convert-folder",
+        label: `Convertir ${itemsCount} ${itemsCount === 1 ? "canción" : "canciones"} en Convertidor Prisma`,
+        icon: "refresh" as const,
+        onSelect: () => {
+          const paths = folder.allRecursiveItems.map((it) => it.path);
+          window.dispatchEvent(
+            new CustomEvent("prisma-open-converter", {
+              detail: {
+                paths,
+                mode: "audio_transcode",
+              },
+            })
+          );
+        },
+      });
+    }
+
+    // 2. Reproducir
+    if (itemsCount > 0) {
+      menuItems.push({
+        id: "play-folder",
+        label: "Reproducir carpeta",
+        icon: "play" as const,
+        onSelect: () => handlePlayFolder(folder.allRecursiveItems, folder.displayName),
+      });
+    }
+
+    // 3. Añadir a la cola
+    if (onAddToQueue && itemsCount > 0) {
+      menuItems.push({
+        id: "queue-folder",
+        label: "Añadir a la cola de reproducción",
+        icon: "queue" as const,
+        onSelect: () => handleAddFolderToQueue(folder.allRecursiveItems),
+      });
+    }
+
+    // 4. Abrir carpeta
+    menuItems.push({
+      id: "open-folder",
+      label: "Abrir y explorar álbum",
+      icon: "folder-open" as const,
+      onSelect: () => handleNavigateFolder(folder.id),
+    });
+
+    // 5. Mostrar en explorador si no es virtual
+    if (!isVirtual && firstItem) {
+      menuItems.push({
+        id: "show-in-explorer",
+        label: "Mostrar en explorador de archivos",
+        icon: "folder" as const,
+        onSelect: () => {
+          void invoke("show_in_file_manager", { path: firstItem.path }).catch(() => {});
+        },
+      });
+    }
+
+    return menuItems;
+  };
+
   const buildMenuItems = () => {
     const target = mediaDelete.menu;
     if (!target) return [];
@@ -308,6 +425,27 @@ export function MusicLibrary({
         label: isFav ? "Quitar de favoritos" : "Añadir a favoritos",
         icon: "heart" as const,
         onSelect: () => favorites.toggleFavorite(target.item.path),
+      },
+      {
+        id: "edit-tags",
+        label: "Editar etiquetas / Tags",
+        icon: "edit" as const,
+        onSelect: () => setEditingTagPaths([target.item.path]),
+      },
+      {
+        id: "convert",
+        label: "Convertir en Convertidor Prisma",
+        icon: "refresh" as const,
+        onSelect: () => {
+          window.dispatchEvent(
+            new CustomEvent("prisma-open-converter", {
+              detail: {
+                path: target.item.path,
+                mode: "audio_transcode",
+              },
+            })
+          );
+        },
       },
       {
         id: "show",
@@ -330,6 +468,7 @@ export function MusicLibrary({
   const handleSwitchMode = (mode: ViewMode) => {
     setViewMode(mode);
     sessionMusicState.viewMode = mode;
+    setSelectedAlbumKey(null);
   };
 
   const handleNavigateFolder = (path: string) => {
@@ -556,25 +695,106 @@ export function MusicLibrary({
           </button>
         </div>
       ) : viewMode === "timeline" ? (
-        /* ── 1. Cuadrícula de Álbumes (agrupados por carpeta) ── */
+        /* ── 1. Cuadrícula de Álbumes (agrupados por metadata tag de Álbum con fallback) ── */
         <div className="music-bento-container" aria-busy={loading}>
-          <div className="music-auto-grid">
-            {albumGroups.map((album) => (
-              <MusicAlbumCard
-                albumName={album.displayName}
-                isFavorite={favorites.isFavorite(album.representative.path)}
-                isPlaying={isPlaying && album.items.some((it) => it.path === currentPlayingPath)}
-                item={album.representative}
-                key={album.folderKey}
-                onAddToQueue={onAddToQueue ? () => onAddToQueue(album.items.map(toQueueItem)) : undefined}
-                onClick={() => handlePlayFolder(album.items, album.folderKey)}
-                onContextMenu={(event) => handleCardContextMenu(event, album.representative)}
-                onDeleteRequest={() => handleCardDeleteRequest(album.representative)}
-                onToggleFavorite={() => favorites.toggleFavorite(album.representative.path)}
-                songCount={album.items.length}
-              />
-            ))}
-          </div>
+          {selectedAlbum ? (
+            <div className="music-album-detail-view">
+              <header className="music-album-detail-header">
+                <button
+                  className="tonal-button is-compact"
+                  onClick={() => setSelectedAlbumKey(null)}
+                  title="Volver a la lista de todos los álbumes"
+                  type="button"
+                >
+                  <Icon name="chevron-left" />
+                  <span>Volver a Álbumes</span>
+                </button>
+
+                <div className="music-album-detail-banner">
+                  <div className="music-album-detail-cover">
+                    <MusicArtwork
+                      alt={selectedAlbum.displayName}
+                      className="music-album-detail-img"
+                      path={selectedAlbum.representative.path}
+                    />
+                  </div>
+                  <div className="music-album-detail-meta">
+                    <span className="preview-kicker">ÁLBUM</span>
+                    <h2>{selectedAlbum.displayName}</h2>
+                    {selectedAlbum.artist ? (
+                      <p className="music-album-detail-artist">
+                        <Icon name="music" />
+                        <span>{selectedAlbum.artist}</span>
+                      </p>
+                    ) : null}
+                    <div className="music-album-detail-stats">
+                      <span>
+                        {selectedAlbum.items.length}{" "}
+                        {selectedAlbum.items.length === 1 ? "canción" : "canciones"}
+                      </span>
+                    </div>
+
+                    <div className="music-album-detail-actions">
+                      <button
+                        className="filled-button is-primary"
+                        onClick={() => handlePlayFolder(selectedAlbum.items, selectedAlbum.displayName)}
+                        type="button"
+                      >
+                        <Icon name="play" />
+                        <span>Reproducir álbum</span>
+                      </button>
+                      {onAddToQueue ? (
+                        <button
+                          className="tonal-button"
+                          onClick={() => onAddToQueue(selectedAlbum.items.map(toQueueItem))}
+                          type="button"
+                        >
+                          <Icon name="queue" />
+                          <span>Añadir a la cola</span>
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </header>
+
+              <div className="music-auto-grid">
+                {selectedAlbum.items.map((item) => (
+                  <MusicCard
+                    isFavorite={favorites.isFavorite(item.path)}
+                    isPlaying={isPlaying && currentPlayingPath === item.path}
+                    item={item}
+                    key={item.path}
+                    onAddToQueue={onAddToQueue ? () => onAddToQueue([toQueueItem(item)]) : undefined}
+                    onClick={() => onPlay(item.path)}
+                    onContextMenu={(event) => handleCardContextMenu(event, item)}
+                    onDeleteRequest={() => handleCardDeleteRequest(item)}
+                    onToggleFavorite={() => favorites.toggleFavorite(item.path)}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="music-auto-grid">
+              {albumGroups.map((album) => (
+                <MusicAlbumCard
+                  albumName={album.displayName}
+                  artistName={album.artist}
+                  isFavorite={favorites.isFavorite(album.representative.path)}
+                  isPlaying={isPlaying && album.items.some((it) => it.path === currentPlayingPath)}
+                  item={album.representative}
+                  key={album.folderKey}
+                  onAddToQueue={onAddToQueue ? () => onAddToQueue(album.items.map(toQueueItem)) : undefined}
+                  onContextMenu={(event) => handleCardContextMenu(event, album.representative)}
+                  onDeleteRequest={() => handleCardDeleteRequest(album.representative)}
+                  onOpenAlbum={() => setSelectedAlbumKey(album.folderKey)}
+                  onPlayAlbum={() => handlePlayFolder(album.items, album.displayName)}
+                  onToggleFavorite={() => favorites.toggleFavorite(album.representative.path)}
+                  songCount={album.items.length}
+                />
+              ))}
+            </div>
+          )}
         </div>
       ) : viewMode === "folders" ? (
         /* ── 2. Vista de Colecciones de Carpetas como Álbumes ── */
@@ -597,6 +817,7 @@ export function MusicLibrary({
                   <MusicFolderCard
                     folder={folder}
                     key={folder.id}
+                    onContextMenu={(event) => handleFolderContextMenu(event, folder)}
                     onOpen={() => handleNavigateFolder(folder.id)}
                     onPlay={() => handlePlayFolder(folder.allRecursiveItems, folder.displayName)}
                   />
@@ -659,6 +880,15 @@ export function MusicLibrary({
         />
       ) : null}
 
+      {folderMenu ? (
+        <ContextMenu
+          items={buildFolderMenuItems()}
+          onClose={() => setFolderMenu(null)}
+          x={folderMenu.x}
+          y={folderMenu.y}
+        />
+      ) : null}
+
       {mediaDelete.pendingDelete ? (
         <ConfirmDialog
           cancelLabel="Cancelar"
@@ -675,6 +905,13 @@ export function MusicLibrary({
           title="Mover canción a la papelera"
         />
       ) : null}
+
+      <TagEditorModal
+        paths={editingTagPaths || []}
+        isOpen={Boolean(editingTagPaths && editingTagPaths.length > 0)}
+        onClose={() => setEditingTagPaths(null)}
+        onSaved={() => onRefresh && onRefresh()}
+      />
     </section>
   );
 }
@@ -778,23 +1015,40 @@ function MusicCard({ item, isFavorite, isPlaying, onClick, onAddToQueue, onToggl
 interface MusicAlbumCardProps {
   item: MusicLibraryItem;
   albumName: string;
+  artistName?: string;
   songCount: number;
   isFavorite: boolean;
   isPlaying?: boolean;
-  onClick: () => void;
+  onOpenAlbum: () => void;
+  onPlayAlbum: () => void;
   onAddToQueue?: () => void;
   onToggleFavorite?: () => void;
   onContextMenu?: (event: React.MouseEvent) => void;
   onDeleteRequest?: () => void;
 }
 
-function MusicAlbumCard({ item, albumName, songCount, isFavorite, isPlaying, onClick, onAddToQueue, onToggleFavorite, onContextMenu, onDeleteRequest }: MusicAlbumCardProps) {
-  const { artist } = parseTrackInfo(item.title);
+function MusicAlbumCard({
+  item,
+  albumName,
+  artistName,
+  songCount,
+  isFavorite,
+  isPlaying,
+  onOpenAlbum,
+  onPlayAlbum,
+  onAddToQueue,
+  onToggleFavorite,
+  onContextMenu,
+  onDeleteRequest,
+}: MusicAlbumCardProps) {
+  const parsed = parseTrackInfo(item.title);
+  const displayArtist = artistName || item.artist || parsed.artist;
+
   return (
     <div className="music-media-card-wrapper">
       <button
         className="music-media-card"
-        onClick={onClick}
+        onClick={onOpenAlbum}
         onContextMenu={onContextMenu}
         onKeyDown={(event) => {
           if (
@@ -809,7 +1063,11 @@ function MusicAlbumCard({ item, albumName, songCount, isFavorite, isPlaying, onC
             onDeleteRequest();
           }
         }}
-        title={artist ? `${artist} — ${albumName} (${songCount} ${songCount === 1 ? "canción" : "canciones"})` : `${albumName} (${songCount} ${songCount === 1 ? "canción" : "canciones"})`}
+        title={
+          displayArtist
+            ? `${displayArtist} — ${albumName} (${songCount} ${songCount === 1 ? "canción" : "canciones"})`
+            : `${albumName} (${songCount} ${songCount === 1 ? "canción" : "canciones"})`
+        }
       >
         <span className={`music-media-frame ${isPlaying ? "is-now-playing" : ""}`}>
           <MusicArtwork alt={albumName} className="music-card-artwork" path={item.path} />
@@ -821,16 +1079,25 @@ function MusicAlbumCard({ item, albumName, songCount, isFavorite, isPlaying, onC
           ) : null}
 
           <span className="music-hover-overlay">
-            <i className="music-play-badge">
+            <span
+              className="music-play-badge"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlayAlbum();
+              }}
+              role="button"
+              tabIndex={0}
+              title="Reproducir álbum directamente"
+            >
               <Icon name="play" />
-            </i>
+            </span>
             <div className="music-hover-info">
               <strong className="music-hover-title" title={albumName}>
                 {albumName}
               </strong>
-              {artist ? (
-                <span className="music-hover-artist" title={artist}>
-                  {artist}
+              {displayArtist ? (
+                <span className="music-hover-artist" title={displayArtist}>
+                  {displayArtist}
                 </span>
               ) : null}
             </div>
@@ -871,11 +1138,12 @@ function MusicAlbumCard({ item, albumName, songCount, isFavorite, isPlaying, onC
 
 interface MusicFolderCardProps {
   folder: HierarchicalFolder<MusicLibraryItem>;
+  onContextMenu?: (event: React.MouseEvent) => void;
   onOpen: () => void;
   onPlay: () => void;
 }
 
-function MusicFolderCard({ folder, onOpen, onPlay }: MusicFolderCardProps) {
+function MusicFolderCard({ folder, onContextMenu, onOpen, onPlay }: MusicFolderCardProps) {
   const isFavorites = folder.isVirtual && folder.virtualType === "favorites";
   const isAll = folder.isVirtual && folder.virtualType === "all";
   const firstCoverItem = folder.allRecursiveItems[0];
@@ -884,6 +1152,7 @@ function MusicFolderCard({ folder, onOpen, onPlay }: MusicFolderCardProps) {
     <div
       className={`music-folder-card ${isFavorites ? "is-virtual-favorites" : ""} ${isAll ? "is-virtual-all" : ""}`}
       onClick={onOpen}
+      onContextMenu={onContextMenu}
       title={`Carpeta ${folder.displayName}`}
     >
       <div className="music-folder-cover-frame">

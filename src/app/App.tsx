@@ -21,11 +21,14 @@ import { parseTrackInfo } from "../features/music_library/model/trackInfo";
 import { FavoritesView } from "../features/collections/ui/FavoritesView";
 import { HistoryView } from "../features/collections/ui/HistoryView";
 import { PlaylistsView } from "../features/collections/ui/PlaylistsView";
+import { playlistsRead } from "../features/collections/tauri/client";
 import { AboutView } from "./ui/AboutView";
 import { SynapseToast, type SynapseReceivedFile } from "./ui/SynapseToast";
 import { addToHistory } from "../shared/useHistory";
 import { CustomLibraryView } from "../features/custom_libraries/ui/CustomLibraryView";
 import { useCustomLibraries } from "../features/custom_libraries/hooks/useCustomLibraries";
+import { PrismaConvertView } from "../features/converter/ui/PrismaConvertView";
+import { Icon, type IconName } from "../shared/ui/Icon";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
 import "../features/visual_library/ui/video-player.css";
@@ -43,6 +46,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   favorites: "Favoritos",
   history: "Historial",
   playlists: "Listas de reproducción",
+  converter: "Convertidor Prisma",
 };
 
 export function App() {
@@ -56,7 +60,7 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [synapseToastFile, setSynapseToastFile] = useState<SynapseReceivedFile | null>(null);
   const { theme, setTheme } = useTheme();
-  const { confirmDeletion } = useSystemSettings();
+  const { confirmDeletion, sidebarDensity } = useSystemSettings();
   const playback = usePlaybackController();
   const library = useMusicLibrary();
   const imageLibrary = useVisualLibrary("image");
@@ -139,12 +143,46 @@ export function App() {
 
   const handleOpenFile = useCallback((filePath: string, initialTime?: number) => {
     const lower = filePath.toLowerCase();
-    const isAudio = /\.(mp3|flac|wav|aac|m4a|ogg|opus|wma|m3u|m3u8)$/.test(lower);
+    const isPlaylist = /\.(m3u|m3u8|pls|xspf)$/i.test(lower);
+    const isAudio = /\.(mp3|flac|wav|aac|m4a|ogg|opus|wma)$/.test(lower);
     const isVideo = /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v)$/.test(lower);
     const isImage = /\.(png|jpe?g|webp|gif|bmp|ico|svg|avif|tiff?)$/.test(lower);
     const isDocumentOrProject = /\.(pdf|md|markdown|epub|mobi|cbz|cbr|kra|krz|ora|af|afphoto|afdesign|afpub|psd|psb|ai|blend|drp)$/.test(lower);
 
-    if (isAudio) {
+    if (isPlaylist) {
+      if (document.pictureInPictureElement) {
+        void document.exitPictureInPicture().catch(() => {});
+      }
+      setActiveVideoPath(null);
+      setActiveVideoSessionItems([]);
+      setIsPip(false);
+      setActiveInitialImagePath(null);
+
+      playlistsRead(filePath)
+        .then((items) => {
+          const availableItems = items.filter((it) => it.isAvailable !== false);
+          if (availableItems.length > 0) {
+            const playlistName = filePath.replace(/\\/g, "/").split("/").pop()?.replace(/\.[^/.]+$/, "") || "Lista de reproducción";
+            const queueItems = availableItems.map((it) => {
+              const { title, artist } = parseTrackInfo(it.title || it.path);
+              return {
+                id: it.path,
+                path: it.path,
+                title,
+                artist: artist || null,
+                durationSeconds: it.durationSecs > 0 ? it.durationSecs : undefined,
+              };
+            });
+            setActiveView("player");
+            playback.playQueue(queueItems, 0, playlistName);
+          } else {
+            playMusicItem(filePath, true, initialTime);
+          }
+        })
+        .catch(() => {
+          playMusicItem(filePath, true, initialTime);
+        });
+    } else if (isAudio) {
       if (document.pictureInPictureElement) {
         void document.exitPictureInPicture().catch(() => {});
       }
@@ -437,7 +475,35 @@ export function App() {
       }
     });
 
+    const handleOpenConverter = (e: Event) => {
+      const customEvent = e as CustomEvent<{ path?: string; paths?: string[]; mode?: string }>;
+      setActiveView("converter");
+      if (customEvent.detail?.path || customEvent.detail?.paths) {
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent("prisma-converter-add-file", { detail: customEvent.detail })
+          );
+        }, 120);
+      }
+    };
+    window.addEventListener("prisma-open-converter", handleOpenConverter);
+
+    const handleGlobalContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isEditable =
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable);
+      if (!isEditable) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("contextmenu", handleGlobalContextMenu);
+
     return () => {
+      window.removeEventListener("prisma-open-converter", handleOpenConverter);
+      window.removeEventListener("contextmenu", handleGlobalContextMenu);
       unlistenPromise.then((unlisten) => unlisten());
       unlistenFileReceivedPromise.then((unlisten) => unlisten());
       unlistenNavigatePromise.then((unlisten) => unlisten());
@@ -490,40 +556,84 @@ export function App() {
     };
   }, [playback.snapshot.paused, playback.snapshot.path, playback.toggle]);
 
-  return (
-    <div className={`studio-shell ${activeView === "video_player" ? "is-cinema-mode" : ""}`}>
-      {activeView !== "video_player" ? (
-        <AppSidebar
-          activeView={activeView}
-          backend={playback.capabilities?.backend ?? "Conectando…"}
-          enabled={playback.enabled}
-          onNavigate={(view) => {
-            setActiveView(view);
-          }}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-        />
-      ) : null}
+    const activeCustomLib = customLibrariesList.find((l) => `custom_${l.id}` === activeView);
+    const searchPlaceholder =
+      activeView === "images"
+        ? "Buscar en tus imágenes…"
+        : activeView === "videos"
+        ? "Buscar en tus vídeos…"
+        : activeView === "music"
+        ? "Buscar en tu música…"
+        : activeCustomLib
+        ? `Buscar en ${activeCustomLib.label}…`
+        : "Buscar en Prisma…";
 
-      <div className="studio-workspace">
+    const searchIcon: IconName =
+      activeView === "images"
+        ? "image"
+        : activeView === "videos"
+        ? "video"
+        : activeView === "music"
+        ? "music"
+        : activeCustomLib
+        ? (activeCustomLib.icon as IconName) || "folder"
+        : "search";
+
+    return (
+      <div
+        className={`studio-shell ${activeView === "video_player" ? "is-cinema-mode" : ""}`}
+        data-sidebar-density={sidebarDensity}
+      >
         {activeView !== "video_player" ? (
-          <header className="workspace-header">
-            <div>
-              <span className="workspace-kicker">PRISMA</span>
-              <strong>
-                {VIEW_TITLES[activeView] ||
-                  (activeView.startsWith("custom_")
-                    ? customLibrariesList.find((l) => l.id === activeView.replace("custom_", ""))?.label ?? ""
-                    : "")}
-              </strong>
-            </div>
-            <span className={`connection-pill ${playback.enabled ? "is-ready" : ""}`}>
-              <i /> {playback.enabled ? "Motor listo" : "Comprobando motor"}
-            </span>
-          </header>
+          <AppSidebar
+            activeView={activeView}
+            backend={playback.capabilities?.backend ?? "Conectando…"}
+            enabled={playback.enabled}
+            density={sidebarDensity}
+            onNavigate={(view) => {
+              setActiveView(view);
+            }}
+          />
         ) : null}
 
-        <main className={`studio-content ${activeView === "video_player" ? "is-cinema-mode" : ""}`}>
+        <div className="studio-workspace">
+          {activeView !== "video_player" ? (
+            <header className="workspace-header">
+              <div className="workspace-header-title">
+                <span className="workspace-kicker">PRISMA</span>
+                <strong>
+                  {VIEW_TITLES[activeView] ||
+                    (activeView.startsWith("custom_")
+                      ? customLibrariesList.find((l) => l.id === activeView.replace("custom_", ""))?.label ?? ""
+                      : "")}
+                </strong>
+              </div>
+
+              <div className="workspace-header-actions">
+                <div className="header-search">
+                  <Icon name={searchIcon} />
+                  <input
+                    aria-label="Buscar"
+                    placeholder={searchPlaceholder}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery ? (
+                    <button
+                      aria-label="Limpiar búsqueda"
+                      className="header-search-clear"
+                      onClick={() => setSearchQuery("")}
+                      type="button"
+                    >
+                      <Icon name="x" />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </header>
+          ) : null}
+
+          <main className={`studio-content ${activeView === "video_player" ? "is-cinema-mode" : ""}`}>
           {activeView === "home" ? (
             <HomeDashboard
               error={library.error ?? imageLibrary.error ?? videoLibrary.error}
@@ -760,6 +870,7 @@ export function App() {
               onPlayVideo={playVideoItem}
             />
           ) : null}
+          {activeView === "converter" ? <PrismaConvertView /> : null}
         </main>
       </div>
 

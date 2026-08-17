@@ -355,6 +355,76 @@ export function CustomLibraryView({
     return folderCollections.find((c) => c.folderPath === currentFolderPath) || null;
   }, [folderCollections, currentFolderPath]);
 
+  const [folderMenu, setFolderMenu] = useState<{
+    x: number;
+    y: number;
+    col: { folderPath: string; folderName: string; items: CustomLibraryItem[] };
+  } | null>(null);
+
+  const handleFolderContextMenu = (
+    e: React.MouseEvent,
+    col: { folderPath: string; folderName: string; items: CustomLibraryItem[] }
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFolderMenu({
+      x: e.clientX,
+      y: e.clientY,
+      col,
+    });
+  };
+
+  const buildFolderMenuItems = () => {
+    if (!folderMenu) return [];
+    const col = folderMenu.col;
+    const itemsCount = col.items.length;
+    const firstItem = col.items[0];
+
+    const menuItems = [];
+
+    // 1. Convertir
+    if (itemsCount > 0) {
+      menuItems.push({
+        id: "convert-folder",
+        label: `Convertir ${itemsCount} ${itemsCount === 1 ? "archivo" : "archivos"} en Convertidor Prisma`,
+        icon: "refresh" as const,
+        onSelect: () => {
+          const paths = col.items.map((it) => it.path);
+          window.dispatchEvent(
+            new CustomEvent("prisma-open-converter", {
+              detail: {
+                paths,
+                mode: "image",
+              },
+            })
+          );
+        },
+      });
+    }
+
+    // 2. Abrir carpeta
+    menuItems.push({
+      id: "open-folder",
+      label: "Abrir y explorar carpeta",
+      icon: "folder-open" as const,
+      onSelect: () => setCurrentFolderPath(col.folderPath),
+    });
+
+    // 3. Mostrar en explorador
+    if (firstItem) {
+      menuItems.push({
+        id: "show-in-explorer",
+        label: "Mostrar en explorador de archivos",
+        icon: "folder" as const,
+        onSelect: () => {
+          void invoke("show_in_file_manager", { path: firstItem.path }).catch(() => {});
+        },
+      });
+    }
+
+    return menuItems;
+  };
+
   const buildMenuItems = () => {
     const target = mediaDelete.menu;
     if (!target) return [];
@@ -364,6 +434,21 @@ export function CustomLibraryView({
         label: `Abrir con ${definition.externalAppCommand || "aplicación predeterminada"}`,
         icon: "external-link" as const,
         onSelect: () => void customLibrariesOpenFile(target.item.path, definition.externalAppCommand),
+      },
+      {
+        id: "convert",
+        label: "Convertir en Convertidor Prisma",
+        icon: "refresh" as const,
+        onSelect: () => {
+          window.dispatchEvent(
+            new CustomEvent("prisma-open-converter", {
+              detail: {
+                path: target.item.path,
+                mode: "image",
+              },
+            })
+          );
+        },
       },
       {
         id: "show",
@@ -626,6 +711,7 @@ export function CustomLibraryView({
                     className="custom-folder-card"
                     key={col.folderPath}
                     onClick={() => setCurrentFolderPath(col.folderPath)}
+                    onContextMenu={(e) => handleFolderContextMenu(e, col)}
                     title={col.folderName}
                   >
                     <div className="custom-folder-icon">
@@ -667,6 +753,15 @@ export function CustomLibraryView({
           onClose={mediaDelete.closeMenu}
           x={mediaDelete.menu.x}
           y={mediaDelete.menu.y}
+        />
+      ) : null}
+
+      {folderMenu ? (
+        <ContextMenu
+          items={buildFolderMenuItems()}
+          onClose={() => setFolderMenu(null)}
+          x={folderMenu.x}
+          y={folderMenu.y}
         />
       ) : null}
 

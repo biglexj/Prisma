@@ -157,13 +157,21 @@ pub mod windows_impl {
                 Err(_) => continue,
             };
 
+            // En Windows 11 con pestañas, descartar pestañas en segundo plano (no visibles)
+            let is_visible = unsafe { IsWindowVisible(window_hwnd).as_bool() };
+            if !is_visible {
+                ql_log!("Explorer window #{}: hwnd={:?} es pestaña inactiva en segundo plano, omitiendo", i, window_hwnd);
+                continue;
+            }
+
             let window_root = unsafe { GetAncestor(window_hwnd, GA_ROOT) };
 
             let matches_target = window_hwnd == target_hwnd
                 || (target_tab != HWND::default() && window_hwnd == target_tab)
                 || (root_tab != HWND::default() && window_hwnd == root_tab)
                 || (target_root != HWND::default() && target_root == window_root)
-                || is_child_window(target_hwnd, window_hwnd);
+                || is_child_window(target_hwnd, window_hwnd)
+                || is_child_window(window_hwnd, target_hwnd);
 
             ql_log!(
                 "Explorer window #{}: hwnd={:?}, root={:?}, matches={}",
@@ -196,9 +204,8 @@ pub mod windows_impl {
             }
         }
 
-        // Si la coincidencia estricta de HWND falló (típico en tabs de Windows 11),
-        // intentar leer la primera ventana de Explorer activa que tenga un ítem seleccionado
-        ql_log!("Intentando fallback sobre todas las ventanas de Explorer...");
+        // Si la coincidencia estricta de HWND falló, intentar con la ventana visible activa
+        ql_log!("Intentando fallback sobre ventanas de Explorer visibles...");
         for i in 0..count {
             let var_index = VARIANT::from(i);
             let dispatch: IDispatch = match unsafe { shell_windows.Item(&var_index) } {
@@ -218,6 +225,13 @@ pub mod windows_impl {
                     Err(_) => continue,
                 },
             };
+            let window_hwnd = match unsafe { browser.GetWindow() } {
+                Ok(h) => h,
+                Err(_) => continue,
+            };
+            if !unsafe { IsWindowVisible(window_hwnd).as_bool() } {
+                continue;
+            }
             if let Ok(shell_view) = unsafe { browser.QueryActiveShellView() } {
                 if let Ok(folder_view) = shell_view.cast::<IFolderView>() {
                     if let Some(path) = unsafe { get_selection_from_folder_view(&folder_view) } {

@@ -67,7 +67,7 @@ impl SynapseServer {
     }
 }
 
-fn handle_client(mut stream: TcpStream, app: AppHandle) {
+fn handle_client(stream: TcpStream, app: AppHandle) {
     let _ = stream.set_read_timeout(Some(Duration::from_secs(60)));
     let _ = stream.set_write_timeout(Some(Duration::from_secs(60)));
 

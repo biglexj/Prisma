@@ -5,7 +5,12 @@ import { SynapseSettingsPanel } from "./SynapseSettingsPanel";
 import type { useMusicLibrary } from "../../features/music_library/useMusicLibrary";
 import type { useVisualLibrary } from "../../features/visual_library/useVisualLibrary";
 import type { ThemeMode } from "../useTheme";
-import { useSystemSettings, type QuickLookShortcutMode, type ProgressBarStyle } from "../useSystemSettings";
+import {
+  useSystemSettings,
+  type QuickLookShortcutMode,
+  type ProgressBarStyle,
+  type SidebarDensity,
+} from "../useSystemSettings";
 import { MediaProgressBar } from "../../shared/ui/MediaProgressBar";
 import { Icon } from "../../shared/ui/Icon";
 import { useScrollRestoration } from "../../shared/useScrollRestoration";
@@ -26,6 +31,38 @@ const THEMES: { mode: ThemeMode; label: string; desc: string; previewClass: stri
   { mode: "light", label: "Claro", desc: "Interfaz luminosa", previewClass: "light-preview" },
   { mode: "dark", label: "Oscuro", desc: "Interfaz oscura", previewClass: "dark-preview" },
   { mode: "system", label: "Automático", desc: "Sigue al sistema", previewClass: "system-preview" },
+];
+
+const SIDEBAR_DENSITY_OPTIONS: {
+  id: SidebarDensity;
+  label: string;
+  badge: string;
+  desc: string;
+}[] = [
+  {
+    id: "compact",
+    label: "Compacta",
+    badge: "34px · Ultra delgada",
+    desc: "Aprovechamiento vertical máximo. Ideal para tener todas tus bibliotecas y colecciones activas en pantalla sin scroll.",
+  },
+  {
+    id: "standard",
+    label: "Estándar",
+    badge: "38px · Fina y limpia",
+    desc: "Diseño refinado de Material 3 con proporciones delgadas y navegación ágil.",
+  },
+  {
+    id: "intermediate",
+    label: "Intermedia",
+    badge: "42px · Equilibrada",
+    desc: "Punto medio armónico con altura de 42px que combina ligereza y comodidad visual.",
+  },
+  {
+    id: "comfortable",
+    label: "Cómoda",
+    badge: "46px · Espaciosa",
+    desc: "Separación generosa y área de toque amplia recomendada para pantallas táctiles o paneles 4K.",
+  },
 ];
 
 const PROGRESS_BAR_OPTIONS: { id: ProgressBarStyle; label: string; desc: string; previewClass: string }[] = [
@@ -109,11 +146,13 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
     minimizeToTray,
     confirmDeletion,
     progressBarStyle,
+    sidebarDensity,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
     setConfirmDeletion,
     setProgressBarStyle,
+    setSidebarDensity,
   } = useSystemSettings();
 
   // Animación del temporizador de demostración en vivo
@@ -305,6 +344,38 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
                       <div className={`theme-preview ${previewClass}`} />
                       <strong>{label}</strong>
                       <small>{desc}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Densidad de la Barra Lateral ── */}
+              <div className="settings-card">
+                <h3>Densidad de la Barra Lateral</h3>
+                <p>
+                  Ajusta la altura y el grosor de los elementos de navegación para optimizar el espacio vertical según tu pantalla y bibliotecas activas.
+                </p>
+                <div className="density-options-grid">
+                  {SIDEBAR_DENSITY_OPTIONS.map(({ id, label, badge, desc }) => (
+                    <button
+                      key={id}
+                      className={`density-card${sidebarDensity === id ? " is-selected" : ""}`}
+                      onClick={() => setSidebarDensity(id)}
+                      aria-pressed={sidebarDensity === id}
+                      type="button"
+                    >
+                      <div className={`density-preview density-preview-${id}`}>
+                        <div className="density-preview-bar bar-1" />
+                        <div className="density-preview-bar bar-2" />
+                        <div className="density-preview-bar bar-3" />
+                      </div>
+                      <div className="density-card-info">
+                        <div className="density-card-header">
+                          <strong>{label}</strong>
+                          <span className="density-badge">{badge}</span>
+                        </div>
+                        <small>{desc}</small>
+                      </div>
                     </button>
                   ))}
                 </div>

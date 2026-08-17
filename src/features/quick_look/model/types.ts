@@ -5,8 +5,11 @@ export type QuickLookMediaType =
   | "pdf"
   | "text"
   | "markdown"
+  | "html"
+  | "lyrics"
   | "folder"
   | "project"
+  | "playlist"
   | "generic";
 
 export interface QuickLookPayload {

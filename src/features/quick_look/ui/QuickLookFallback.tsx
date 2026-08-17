@@ -8,7 +8,7 @@ interface QuickLookFallbackProps {
 
 export function QuickLookFallback({ payload }: QuickLookFallbackProps) {
   const handleOpenDefault = () => {
-    void invoke("open_in_file_manager", { path: payload.path });
+    void invoke("open_path_with_default_app", { path: payload.path });
   };
 
   const ext = payload.extension ? `.${payload.extension.toUpperCase()}` : "ARCHIVO";

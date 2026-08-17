@@ -15,6 +15,9 @@ import { QuickLookMarkdown } from "./QuickLookMarkdown";
 import { QuickLookText } from "./QuickLookText";
 import { QuickLookFolder } from "./QuickLookFolder";
 import { QuickLookProject } from "./QuickLookProject";
+import { QuickLookPlaylist } from "./QuickLookPlaylist";
+import { QuickLookLyrics } from "./QuickLookLyrics";
+import { QuickLookHtml } from "./QuickLookHtml";
 import { QuickLookFallback } from "./QuickLookFallback";
 import "./quick-look.css";
 
@@ -203,6 +206,10 @@ export function QuickLookWindow() {
                 />
               ) : payload.mediaType === "pdf" ? (
                 <QuickLookPdf key={payload.path} payload={payload} />
+              ) : payload.mediaType === "html" ? (
+                <QuickLookHtml key={payload.path} payload={payload} />
+              ) : payload.mediaType === "lyrics" ? (
+                <QuickLookLyrics key={payload.path} payload={payload} />
               ) : payload.mediaType === "markdown" ? (
                 <QuickLookMarkdown key={payload.path} payload={payload} />
               ) : payload.mediaType === "text" ? (
@@ -211,6 +218,8 @@ export function QuickLookWindow() {
                 <QuickLookFolder key={payload.path} payload={payload} />
               ) : payload.mediaType === "project" ? (
                 <QuickLookProject key={payload.path} payload={payload} />
+              ) : payload.mediaType === "playlist" ? (
+                <QuickLookPlaylist key={payload.path} payload={payload} />
               ) : (
                 <QuickLookFallback key={payload.path} payload={payload} />
               )}

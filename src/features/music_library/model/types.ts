@@ -8,6 +8,8 @@ export interface MusicFolderSource {
 export interface MusicLibraryItem {
   path: string;
   title: string;
+  artist?: string;
+  album?: string;
   sourcePath: string;
   relativeFolder: string;
   modifiedAtMillis?: number;

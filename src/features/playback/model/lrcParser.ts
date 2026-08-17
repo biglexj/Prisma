@@ -10,6 +10,7 @@ export interface ParsedLyrics {
   title?: string;
   artist?: string;
   album?: string;
+  raw?: string;
 }
 
 /**
@@ -87,5 +88,6 @@ export function parseLrc(rawLrc: string): ParsedLyrics {
     title,
     artist,
     album,
+    raw: rawLrc,
   };
 }

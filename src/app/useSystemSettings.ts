@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 
 export type QuickLookShortcutMode = "space" | "alt_space" | "shift_space" | "disabled";
+export type SidebarDensity = "compact" | "standard" | "intermediate" | "comfortable";
 export type ProgressBarStyle =
   | "wavy"
   | "classic"
@@ -21,6 +22,7 @@ interface SystemSettings {
   minimizeToTray: boolean;
   confirmDeletion: boolean;
   progressBarStyle: ProgressBarStyle;
+  sidebarDensity: SidebarDensity;
 }
 
 const STORAGE_KEY = "prisma.system-settings.v1";
@@ -33,6 +35,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   minimizeToTray: true,
   confirmDeletion: true,
   progressBarStyle: "wavy",
+  sidebarDensity: "standard",
 };
 
 function loadStoredSettings(): SystemSettings {
@@ -81,6 +84,7 @@ export function useSystemSettings() {
               minimizeToTray: stored.minimizeToTray ?? prev.minimizeToTray,
               confirmDeletion: stored.confirmDeletion ?? prev.confirmDeletion,
               progressBarStyle: stored.progressBarStyle ?? prev.progressBarStyle,
+              sidebarDensity: stored.sidebarDensity ?? prev.sidebarDensity,
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
             return synced;
@@ -180,6 +184,15 @@ export function useSystemSettings() {
     });
   }, []);
 
+  const setSidebarDensity = useCallback((density: SidebarDensity) => {
+    setSettings((prev) => {
+      const next = { ...prev, sidebarDensity: density };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, []);
+
   return {
     isLoaded,
     quickLookShortcut: settings.quickLookShortcut,
@@ -187,10 +200,12 @@ export function useSystemSettings() {
     minimizeToTray: settings.minimizeToTray,
     confirmDeletion: settings.confirmDeletion,
     progressBarStyle: settings.progressBarStyle,
+    sidebarDensity: settings.sidebarDensity,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
     setConfirmDeletion,
     setProgressBarStyle,
+    setSidebarDensity,
   };
 }

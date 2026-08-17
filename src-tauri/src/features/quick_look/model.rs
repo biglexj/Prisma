@@ -10,8 +10,11 @@ pub enum QuickLookMediaType {
     Pdf,
     Text,
     Markdown,
+    Html,
     Folder,
     Project,
+    Playlist,
+    Lyrics,
     Generic,
 }
 
@@ -24,9 +27,15 @@ impl QuickLookMediaType {
             "jpg" | "jpeg" | "png" | "webp" | "gif" | "bmp" | "svg" | "ico" => Self::Image,
             "pdf" => Self::Pdf,
             "md" | "markdown" => Self::Markdown,
-            "txt" | "json" | "csv" | "xml" | "yaml" | "yml" | "toml" | "rs" | "ts" | "tsx"
-            | "js" | "jsx" | "py" | "c" | "cpp" | "h" | "cs" | "css" | "html" | "sql" | "sh"
-            | "bat" | "ps1" | "ini" | "log" => Self::Text,
+            "html" | "htm" | "xhtml" => Self::Html,
+            "m3u" | "m3u8" | "pls" | "xspf" => Self::Playlist,
+            "lrc" | "srt" | "vtt" | "ass" | "ssa" | "sub" => Self::Lyrics,
+            "txt" | "json" | "jsonc" | "json5" | "csv" | "tsv" | "xml" | "yaml" | "yml"
+            | "toml" | "rs" | "ts" | "tsx" | "js" | "jsx" | "py" | "c" | "cpp" | "h" | "hpp"
+            | "cs" | "css" | "scss" | "sass" | "less" | "sql" | "sh" | "bash" | "zsh"
+            | "bat" | "cmd" | "ps1" | "ini" | "cfg" | "conf" | "properties" | "env"
+            | "log" | "diff" | "patch" | "lock" | "dockerfile" | "graphql" | "proto"
+            | "vue" | "svelte" | "gitignore" => Self::Text,
             "kra" | "krz" | "ora" | "psd" | "psb" | "af" | "afphoto" | "afdesign" | "afpub"
             | "aftemplate" | "drp" | "dra" | "blend" => Self::Project,
             _ => Self::Generic,
@@ -36,6 +45,10 @@ impl QuickLookMediaType {
     pub fn from_path(path: &Path) -> Option<Self> {
         if path.is_dir() {
             return Some(Self::Folder);
+        }
+        let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if file_name.starts_with('.') && !file_name.is_empty() {
+            return Some(Self::Text);
         }
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         Some(Self::from_extension(ext))
@@ -105,14 +118,30 @@ impl QuickLookPayload {
             (None, None)
         };
 
-        let (folder_items_count, folder_preview_items) = if media_type == QuickLookMediaType::Folder {
+        let (folder_items_count, folder_preview_items, playlist_duration) = if media_type == QuickLookMediaType::Folder {
             let (_, count, items) = inspect_folder(path);
-            (Some(count), Some(items))
+            (Some(count), Some(items), None)
+        } else if media_type == QuickLookMediaType::Playlist {
+            if let Ok(items) = crate::infrastructure::playlists::parse_m3u(path) {
+                let count = items.len();
+                let preview: Vec<String> = items.iter().take(15).map(|it| it.title.clone()).collect();
+                let total_dur: f64 = items.iter().map(|it| it.duration_secs as f64).sum();
+                let dur = if total_dur > 0.0 { Some(total_dur) } else { None };
+                (Some(count), Some(preview), dur)
+            } else {
+                (Some(0), Some(Vec::new()), None)
+            }
         } else {
-            (None, None)
+            (None, None, None)
         };
 
-        let text_content = if media_type == QuickLookMediaType::Text || media_type == QuickLookMediaType::Markdown {
+        let duration_seconds = duration_seconds.or(playlist_duration);
+
+        let text_content = if media_type == QuickLookMediaType::Text
+            || media_type == QuickLookMediaType::Markdown
+            || media_type == QuickLookMediaType::Lyrics
+            || media_type == QuickLookMediaType::Html
+        {
             read_text_preview(path)
         } else {
             None

@@ -13,6 +13,7 @@ import { PlaybackQueuePanel } from "./PlaybackQueuePanel";
 import { parseTrackInfo } from "../../../music_library/model/trackInfo";
 import { useScrollRestoration } from "../../../../shared/useScrollRestoration";
 import { MediaProgressBar } from "../../../../shared/ui/MediaProgressBar";
+import { TagEditorModal } from "../../../tags/ui/TagEditorModal";
 import "./album-adaptive.css";
 import "./playback-queue.css";
 import { cleanPath, formatSession, formatTime, mediaTitle } from "../formatters";
@@ -51,6 +52,7 @@ export function PlaybackPreview({
   onSwitchQueue,
 }: PlaybackPreviewProps) {
   const [viewMode, setViewMode] = useState<"cover" | "lyrics" | "queue">("cover");
+  const [tagEditorOpen, setTagEditorOpen] = useState(false);
   useScrollRestoration(`view:player:${viewMode}`);
   const currentQueueItem = queueState?.queue.items[queueState.queue.currentIndex];
   const effectivePath = snapshot.path || currentQueueItem?.path || null;
@@ -111,13 +113,71 @@ export function PlaybackPreview({
     };
     window.addEventListener("prisma-music-tab", handleSetTab as EventListener);
     window.addEventListener("prisma-music-toggle-lyrics", handleToggleLyrics);
-    window.addEventListener("prisma-music-toggle-queue", handleToggleQueue);
     return () => {
       window.removeEventListener("prisma-music-tab", handleSetTab as EventListener);
       window.removeEventListener("prisma-music-toggle-lyrics", handleToggleLyrics);
       window.removeEventListener("prisma-music-toggle-queue", handleToggleQueue);
     };
   }, []);
+
+  // Atajos de teclado interactivos para música (n: siguiente, p: anterior, Espacio: play/pause, Flechas, l, q, m)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || document.querySelector(".lyrics-sync-backdrop, .tag-editor-backdrop")) {
+        return;
+      }
+
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      if (key === "n") {
+        e.preventDefault();
+        onNext();
+      } else if (key === "p") {
+        e.preventDefault();
+        onPrevious();
+      } else if (e.code === "Space" || e.key === " ") {
+        e.preventDefault();
+        onToggle();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        onSeek(Math.min(duration, position + 5));
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        onSeek(Math.max(0, position - 5));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        onVolume(Math.min(100, (snapshot.volume ?? 70) + 5));
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        onVolume(Math.max(0, (snapshot.volume ?? 70) - 5));
+      } else if (key === "l") {
+        e.preventDefault();
+        setViewMode((prev) => (prev === "lyrics" ? "cover" : "lyrics"));
+      } else if (key === "q") {
+        e.preventDefault();
+        setViewMode((prev) => (prev === "queue" ? "cover" : "queue"));
+      } else if (key === "m") {
+        e.preventDefault();
+        const currentVol = snapshot.volume ?? 70;
+        onVolume(currentVol > 0 ? 0 : 70);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [duration, onNext, onPrevious, onSeek, onToggle, onVolume, position, snapshot.volume]);
 
   return (
     <section className={`preview-screen ${palette ? "has-album-palette" : ""}`} id="studio-home" style={adaptiveStyle}>
@@ -163,8 +223,11 @@ export function PlaybackPreview({
           <LyricsPreview
             path={effectivePath}
             title={trackTitle}
+            artist={trackArtist}
             positionSeconds={position}
             durationSeconds={duration}
+            isPlaying={!snapshot.paused}
+            onTogglePlay={onToggle}
             onSeek={onSeek}
             onBackToCover={() => setViewMode("cover")}
           />
@@ -303,12 +366,13 @@ export function PlaybackPreview({
               aria-label="Abrir ubicación en el explorador"
             ><Icon name="folder-open" /></button>
             <button
-              className={viewMode === "queue" ? "is-active" : ""}
-              onClick={() => setViewMode(viewMode === "queue" ? "cover" : "queue")}
-              title="Ver cola de reproducción"
-              aria-label="Cola"
+              disabled={!hasMedia}
+              onClick={() => setTagEditorOpen(true)}
+              title="Editar etiquetas de la canción"
+              aria-label="Editar etiquetas"
+              style={{ fontSize: "0.78rem" }}
             >
-              <Icon name="queue" />
+              <Icon name="edit" />
             </button>
           </div>
 
@@ -320,6 +384,14 @@ export function PlaybackPreview({
           {snapshot.path ? <p className="preview-path" title={cleanPath(snapshot.path)}>{cleanPath(snapshot.path)}</p> : null}
         </div>
       </div>
+      {tagEditorOpen && snapshot.path ? (
+        <TagEditorModal
+          paths={[snapshot.path]}
+          isOpen={tagEditorOpen}
+          onClose={() => setTagEditorOpen(false)}
+          onSaved={() => setTagEditorOpen(false)}
+        />
+      ) : null}
     </section>
   );
 }

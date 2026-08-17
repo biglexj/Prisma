@@ -19,7 +19,6 @@
   }
 
   .music-sidebar .brand-lockup,
-  .music-sidebar .sidebar-search,
   .music-sidebar .sidebar-engine,
   .music-sidebar .sidebar-section-title,
   .music-sidebar .sidebar-item:disabled {
@@ -70,21 +69,21 @@
 
 .sidebar-footer {
   margin-top: auto;
-  padding: 12px;
+  padding: 8px 10px;
   border-top: 1px solid var(--outline-variant);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
 }
 
 .sidebar-settings-button {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   border: 1px solid var(--outline-variant);
-  border-radius: 16px;
-  padding: 10px 12px;
+  border-radius: 12px;
+  padding: 6px 10px;
   color: var(--on-surface);
   background: var(--surface-container);
   cursor: pointer;
@@ -105,12 +104,18 @@
 
 .sidebar-settings-icon {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 9px;
   color: var(--primary);
   background: color-mix(in srgb, var(--primary) 15%, transparent);
+  flex-shrink: 0;
+}
+
+.sidebar-settings-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .sidebar-settings-button.is-active .sidebar-settings-icon {
@@ -129,7 +134,7 @@
 
 .sidebar-settings-button .sidebar-copy strong {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -137,8 +142,259 @@
 .sidebar-settings-button .sidebar-copy span {
   display: block;
   color: var(--on-surface-variant);
-  font-size: 0.64rem;
+  font-size: 0.60rem;
   line-height: 1.2;
+}
+
+/* ── Variaciones de Densidad de Barra Lateral ────────────────────────────────────── */
+
+/* Densidad Compacta (34px · Ultra delgada) */
+.music-sidebar[data-density="compact"],
+.music-sidebar.density-compact {
+  /* Marca / Cabecera compacta */
+}
+.music-sidebar[data-density="compact"] .brand-lockup,
+.music-sidebar.density-compact .brand-lockup {
+  padding: 0 12px;
+  gap: 9px;
+}
+.music-sidebar[data-density="compact"] .brand-mark,
+.music-sidebar.density-compact .brand-mark {
+  width: 28px;
+  height: 28px;
+}
+.music-sidebar[data-density="compact"] .brand-lockup strong,
+.music-sidebar.density-compact .brand-lockup strong {
+  font-size: 0.90rem;
+}
+.music-sidebar[data-density="compact"] .brand-lockup span,
+.music-sidebar.density-compact .brand-lockup span {
+  font-size: 0.60rem;
+}
+
+.music-sidebar[data-density="compact"] .sidebar-navigation,
+.music-sidebar.density-compact .sidebar-navigation {
+  padding: 3px 8px 8px;
+}
+.music-sidebar[data-density="compact"] .sidebar-section,
+.music-sidebar.density-compact .sidebar-section {
+  padding: 4px 0;
+  gap: 2px;
+}
+.music-sidebar[data-density="compact"] .sidebar-section-title,
+.music-sidebar.density-compact .sidebar-section-title {
+  margin: 0 6px 2px;
+  font-size: 0.50rem;
+  letter-spacing: 0.14em;
+}
+.music-sidebar[data-density="compact"] .sidebar-item,
+.music-sidebar.density-compact .sidebar-item {
+  min-height: 32px;
+  padding: 4px 8px;
+  gap: 8px;
+  border-radius: 9px;
+}
+.music-sidebar[data-density="compact"] .sidebar-item svg,
+.music-sidebar.density-compact .sidebar-item svg {
+  width: 16px;
+  height: 16px;
+}
+.music-sidebar[data-density="compact"] .sidebar-item span,
+.music-sidebar.density-compact .sidebar-item span {
+  font-size: 0.72rem;
+}
+.music-sidebar[data-density="compact"] .sidebar-footer,
+.music-sidebar.density-compact .sidebar-footer {
+  padding: 5px 7px;
+  gap: 4px;
+}
+.music-sidebar[data-density="compact"] .sidebar-settings-button,
+.music-sidebar.density-compact .sidebar-settings-button {
+  padding: 5px 8px;
+  border-radius: 9px;
+  gap: 8px;
+}
+.music-sidebar[data-density="compact"] .sidebar-settings-icon,
+.music-sidebar.density-compact .sidebar-settings-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+.music-sidebar[data-density="compact"] .sidebar-settings-icon svg,
+.music-sidebar.density-compact .sidebar-settings-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.music-sidebar[data-density="compact"] .sidebar-settings-button .sidebar-copy strong,
+.music-sidebar.density-compact .sidebar-settings-button .sidebar-copy strong {
+  font-size: 0.72rem;
+}
+.music-sidebar[data-density="compact"] .sidebar-settings-button .sidebar-copy span,
+.music-sidebar.density-compact .sidebar-settings-button .sidebar-copy span {
+  font-size: 0.56rem;
+}
+
+/* Densidad Intermedia (42px · Equilibrada) */
+.music-sidebar[data-density="intermediate"] .brand-lockup,
+.music-sidebar.density-intermediate .brand-lockup {
+  padding: 0 16px;
+  gap: 11px;
+}
+.music-sidebar[data-density="intermediate"] .brand-mark,
+.music-sidebar.density-intermediate .brand-mark {
+  width: 34px;
+  height: 34px;
+}
+.music-sidebar[data-density="intermediate"] .brand-lockup strong,
+.music-sidebar.density-intermediate .brand-lockup strong {
+  font-size: 1.0rem;
+}
+.music-sidebar[data-density="intermediate"] .brand-lockup span,
+.music-sidebar.density-intermediate .brand-lockup span {
+  font-size: 0.65rem;
+}
+
+.music-sidebar[data-density="intermediate"] .sidebar-navigation,
+.music-sidebar.density-intermediate .sidebar-navigation {
+  padding: 6px 11px 12px;
+}
+.music-sidebar[data-density="intermediate"] .sidebar-section,
+.music-sidebar.density-intermediate .sidebar-section {
+  padding: 7px 0;
+  gap: 3px;
+}
+.music-sidebar[data-density="intermediate"] .sidebar-section-title,
+.music-sidebar.density-intermediate .sidebar-section-title {
+  margin: 0 8px 3px;
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+}
+.music-sidebar[data-density="intermediate"] .sidebar-item,
+.music-sidebar.density-intermediate .sidebar-item {
+  min-height: 42px;
+  padding: 7px 11px;
+  gap: 11px;
+  border-radius: 13px;
+}
+.music-sidebar[data-density="intermediate"] .sidebar-item svg,
+.music-sidebar.density-intermediate .sidebar-item svg {
+  width: 19px;
+  height: 19px;
+}
+.music-sidebar[data-density="intermediate"] .sidebar-item span,
+.music-sidebar.density-intermediate .sidebar-item span {
+  font-size: 0.77rem;
+}
+.music-sidebar[data-density="intermediate"] .sidebar-footer,
+.music-sidebar.density-intermediate .sidebar-footer {
+  padding: 9px 11px;
+  gap: 6px;
+}
+.music-sidebar[data-density="intermediate"] .sidebar-settings-button,
+.music-sidebar.density-intermediate .sidebar-settings-button {
+  padding: 8px 11px;
+  border-radius: 13px;
+  gap: 11px;
+}
+.music-sidebar[data-density="intermediate"] .sidebar-settings-icon,
+.music-sidebar.density-intermediate .sidebar-settings-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+.music-sidebar[data-density="intermediate"] .sidebar-settings-icon svg,
+.music-sidebar.density-intermediate .sidebar-settings-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.music-sidebar[data-density="intermediate"] .sidebar-settings-button .sidebar-copy strong,
+.music-sidebar.density-intermediate .sidebar-settings-button .sidebar-copy strong {
+  font-size: 0.78rem;
+}
+.music-sidebar[data-density="intermediate"] .sidebar-settings-button .sidebar-copy span,
+.music-sidebar.density-intermediate .sidebar-settings-button .sidebar-copy span {
+  font-size: 0.62rem;
+}
+
+/* Densidad Cómoda (46px · Espaciosa) */
+.music-sidebar[data-density="comfortable"] .brand-lockup,
+.music-sidebar.density-comfortable .brand-lockup {
+  padding: 0 18px;
+  gap: 12px;
+}
+.music-sidebar[data-density="comfortable"] .brand-mark,
+.music-sidebar.density-comfortable .brand-mark {
+  width: 38px;
+  height: 38px;
+}
+.music-sidebar[data-density="comfortable"] .brand-lockup strong,
+.music-sidebar.density-comfortable .brand-lockup strong {
+  font-size: 1.05rem;
+}
+.music-sidebar[data-density="comfortable"] .brand-lockup span,
+.music-sidebar.density-comfortable .brand-lockup span {
+  font-size: 0.68rem;
+}
+
+.music-sidebar[data-density="comfortable"] .sidebar-navigation,
+.music-sidebar.density-comfortable .sidebar-navigation {
+  padding: 8px 12px 16px;
+}
+.music-sidebar[data-density="comfortable"] .sidebar-section,
+.music-sidebar.density-comfortable .sidebar-section {
+  padding: 10px 0;
+  gap: 4px;
+}
+.music-sidebar[data-density="comfortable"] .sidebar-section-title,
+.music-sidebar.density-comfortable .sidebar-section-title {
+  margin: 0 10px 5px;
+  font-size: 0.58rem;
+}
+.music-sidebar[data-density="comfortable"] .sidebar-item,
+.music-sidebar.density-comfortable .sidebar-item {
+  min-height: 46px;
+  padding: 8px 12px;
+  gap: 12px;
+  border-radius: 14px;
+}
+.music-sidebar[data-density="comfortable"] .sidebar-item svg,
+.music-sidebar.density-comfortable .sidebar-item svg {
+  width: 21px;
+  height: 21px;
+}
+.music-sidebar[data-density="comfortable"] .sidebar-item span,
+.music-sidebar.density-comfortable .sidebar-item span {
+  font-size: 0.78rem;
+}
+.music-sidebar[data-density="comfortable"] .sidebar-footer,
+.music-sidebar.density-comfortable .sidebar-footer {
+  padding: 12px;
+  gap: 8px;
+}
+.music-sidebar[data-density="comfortable"] .sidebar-settings-button,
+.music-sidebar.density-comfortable .sidebar-settings-button {
+  padding: 10px 12px;
+  border-radius: 16px;
+  gap: 12px;
+}
+.music-sidebar[data-density="comfortable"] .sidebar-settings-icon,
+.music-sidebar.density-comfortable .sidebar-settings-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+.music-sidebar[data-density="comfortable"] .sidebar-settings-icon svg,
+.music-sidebar.density-comfortable .sidebar-settings-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.music-sidebar[data-density="comfortable"] .sidebar-settings-button .sidebar-copy strong,
+.music-sidebar.density-comfortable .sidebar-settings-button .sidebar-copy strong {
+  font-size: 0.80rem;
+}
+.music-sidebar[data-density="comfortable"] .sidebar-settings-button .sidebar-copy span,
+.music-sidebar.density-comfortable .sidebar-settings-button .sidebar-copy span {
+  font-size: 0.64rem;
 }
 
 .sidebar-navigation {

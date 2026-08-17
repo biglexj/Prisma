@@ -1,4 +1,4 @@
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import type { QuickLookPayload } from "../model/types";
 
@@ -8,7 +8,7 @@ interface QuickLookProjectProps {
 
 export function QuickLookProject({ payload }: QuickLookProjectProps) {
   const handleOpenDefault = () => {
-    void invoke("open_in_file_manager", { path: payload.path });
+    void invoke("open_path_with_default_app", { path: payload.path });
   };
 
   const previewUrl = payload.projectPreviewUrl;

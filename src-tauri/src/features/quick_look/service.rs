@@ -323,8 +323,11 @@ fn resolve_media_size(media_type: QuickLookMediaType, path: &Path) -> (f64, f64)
         }
         QuickLookMediaType::Pdf => (840.0, 720.0),
         QuickLookMediaType::Text | QuickLookMediaType::Markdown => (760.0, 560.0),
+        QuickLookMediaType::Html => (920.0, 650.0),
+        QuickLookMediaType::Lyrics => (680.0, 540.0),
         QuickLookMediaType::Folder => (600.0, 420.0),
         QuickLookMediaType::Project => (820.0, 580.0),
+        QuickLookMediaType::Playlist => (680.0, 520.0),
         QuickLookMediaType::Generic => (560.0, 380.0),
     }
 }

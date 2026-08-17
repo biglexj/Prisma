@@ -14,6 +14,8 @@ pub struct MusicFolderSource {
 pub struct MusicLibraryItem {
     pub path: String,
     pub title: String,
+    pub artist: Option<String>,
+    pub album: Option<String>,
     pub source_path: String,
     pub relative_folder: String,
     pub modified_at_millis: u128,
