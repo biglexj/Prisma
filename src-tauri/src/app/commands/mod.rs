@@ -9,5 +9,6 @@ pub mod quick_look;
 pub mod synapse;
 pub mod tags;
 pub mod visual_library;
+pub mod wallpapers;
 
 

@@ -58,6 +58,7 @@ use app::commands::visual_library::{
     visual_library_remove_excluded_folder, visual_library_remove_folder,
     visual_library_rescan_folder,
 };
+use app::commands::wallpapers::wallpaper_set_desktop;
 use app::state::{FavoritesState, InitialFileState, MusicLibraryState, PlaybackProbeState, VisualLibraryState};
 use features::quick_look::QuickLookState;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
@@ -404,6 +405,7 @@ pub fn run() {
             audio_batch_write_tags,
             audio_save_lyrics,
             image_read_exif,
+            wallpaper_set_desktop,
         ])
         .run(tauri::generate_context!())
         .expect("Prisma no pudo iniciar el runtime de Tauri");

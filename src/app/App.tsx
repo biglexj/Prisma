@@ -31,6 +31,7 @@ import { useCustomLibraries } from "../features/custom_libraries/hooks/useCustom
 import { PrismaConvertView } from "../features/converter/ui/PrismaConvertView";
 import { LunaFetchView } from "../features/luna_fetch/ui/LunaFetchView";
 import { GalleryDlView } from "../features/gallery_dl/ui/GalleryDlView";
+import { WallpapersView } from "../features/wallpapers/ui/WallpapersView";
 import { Icon, type IconName } from "../shared/ui/Icon";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
@@ -52,6 +53,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   converter: "Convertidor Prisma",
   luna_fetch: "Luna Fetch",
   gallery_dl: "Gallery-DL",
+  wallpapers: "Wallpapers Aurora",
 };
 
 export function App() {
@@ -931,6 +933,7 @@ export function App() {
           {activeView === "converter" ? <PrismaConvertView /> : null}
           {activeView === "luna_fetch" ? <LunaFetchView onNavigate={setActiveView} /> : null}
           {activeView === "gallery_dl" ? <GalleryDlView onNavigate={setActiveView} /> : null}
+          {activeView === "wallpapers" ? <WallpapersView /> : null}
         </main>
       </div>
 
