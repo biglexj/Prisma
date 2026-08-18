@@ -850,7 +850,7 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
                           onChange={() => setAuroraServerUrl("https://www.biglexj.com")}
                         />
                         <div>
-                          <strong>🟢 Servidor Oficial (Producción)</strong>
+                          <strong>🟢 Servidor Oficial</strong>
                           <p style={{ margin: "2px 0 0", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
                             https://www.biglexj.com
                           </p>
@@ -858,28 +858,9 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
                       </label>
 
                       <label
-                        className={`density-option-card ${auroraServerUrl === "https://preview.biglexj.com" ? "is-selected" : ""}`}
-                        onClick={() => setAuroraServerUrl("https://preview.biglexj.com")}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <input
-                          type="radio"
-                          name="aurora-server"
-                          checked={auroraServerUrl === "https://preview.biglexj.com"}
-                          onChange={() => setAuroraServerUrl("https://preview.biglexj.com")}
-                        />
-                        <div>
-                          <strong>🟡 Servidor Preview (Desarrollo)</strong>
-                          <p style={{ margin: "2px 0 0", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
-                            https://preview.biglexj.com
-                          </p>
-                        </div>
-                      </label>
-
-                      <label
-                        className={`density-option-card ${auroraServerUrl !== "https://www.biglexj.com" && auroraServerUrl !== "https://preview.biglexj.com" ? "is-selected" : ""}`}
+                        className={`density-option-card ${auroraServerUrl !== "https://www.biglexj.com" ? "is-selected" : ""}`}
                         onClick={() => {
-                          if (auroraServerUrl === "https://www.biglexj.com" || auroraServerUrl === "https://preview.biglexj.com") {
+                          if (auroraServerUrl === "https://www.biglexj.com") {
                             setAuroraServerUrl("http://localhost:4321");
                           }
                         }}
@@ -888,12 +869,15 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
                         <input
                           type="radio"
                           name="aurora-server"
-                          checked={auroraServerUrl !== "https://www.biglexj.com" && auroraServerUrl !== "https://preview.biglexj.com"}
+                          checked={auroraServerUrl !== "https://www.biglexj.com"}
                           onChange={() => {}}
                         />
                         <div style={{ flex: 1 }}>
                           <strong>🔵 Servidor Personalizado / LAN</strong>
-                          {auroraServerUrl !== "https://www.biglexj.com" && auroraServerUrl !== "https://preview.biglexj.com" && (
+                          <p style={{ margin: "2px 0 0", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
+                            Para pruebas en red local con Astro (ej. http://localhost:4321)
+                          </p>
+                          {auroraServerUrl !== "https://www.biglexj.com" && (
                             <input
                               type="text"
                               className="settings-input"

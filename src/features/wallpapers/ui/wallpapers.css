@@ -1,12 +1,13 @@
 .wallpapers-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  padding: 24px 32px;
-  overflow-y: auto;
+  min-height: 100%;
+  width: 100%;
+  padding: clamp(14px, 2vw, 24px) 0;
   gap: 20px;
-  background: var(--surface, #1b1216);
-  color: var(--on-surface, #f0dde0);
+  background: transparent;
+  color: var(--on-surface);
+  box-sizing: border-box;
 }
 
 .wallpapers-header {

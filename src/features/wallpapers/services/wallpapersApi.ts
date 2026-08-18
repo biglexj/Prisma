@@ -45,21 +45,6 @@ export async function fetchAuroraWallpapers(options: WallpaperFilterOptions = {}
       return await res.json();
     }
 
-    // Si devuelve 404 en producción, intentar preview como fallback automático
-    if (res.status === 404 && primaryUrl.includes("www.biglexj.com")) {
-      const fallbackRes = await fetch(`https://preview.biglexj.com/api/v1/wallpapers${queryStr}`, {
-        method: "GET",
-        headers,
-      });
-      if (fallbackRes.ok) {
-        return await fallbackRes.json();
-      }
-    }
-
-    if (res.status === 401) {
-      throw new Error(`El servidor (${primaryUrl}) respondió con código 401. El despliegue de la API se encuentra en progreso.`);
-    }
-
     throw new Error(`Error HTTP ${res.status} al consultar catálogo`);
   } catch (err: any) {
     throw err;
