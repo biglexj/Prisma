@@ -1,6 +1,6 @@
 import { Icon, type IconName } from "../../shared/ui/Icon";
 import { useCustomLibraries } from "../../features/custom_libraries/hooks/useCustomLibraries";
-import type { SidebarDensity } from "../useSystemSettings";
+import { useSystemSettings, type SidebarDensity } from "../useSystemSettings";
 import appIcon from "../../../icon/icon.png";
 import "./app-sidebar.css";
 
@@ -51,13 +51,6 @@ const collectionItems: SidebarItem[] = [
   { icon: "list-music", label: "Listas de reproducción", view: "playlists" },
 ];
 
-const toolItems: SidebarItem[] = [
-  { icon: "sliders", label: "Conversor", view: "converter" },
-  { icon: "download", label: "Luna Fetch", view: "luna_fetch" },
-  { icon: "layers", label: "Gallery-DL", view: "gallery_dl" },
-  { icon: "sparkles", label: "Wallpapers Aurora", view: "wallpapers" },
-];
-
 export function AppSidebar({
   activeView,
   backend,
@@ -66,6 +59,7 @@ export function AppSidebar({
   density = "standard",
 }: AppSidebarProps) {
   const { activeLibraries } = useCustomLibraries();
+  const { auroraOnlineServicesEnabled } = useSystemSettings();
 
   const dynamicLibraryItems: SidebarItem[] = [
     ...libraryItems,
@@ -74,6 +68,15 @@ export function AppSidebar({
       label: lib.label,
       view: `custom_${lib.id}` as AppView,
     })),
+  ];
+
+  const dynamicToolItems: SidebarItem[] = [
+    { icon: "sliders", label: "Conversor", view: "converter" },
+    { icon: "download", label: "Luna Fetch", view: "luna_fetch" },
+    { icon: "layers", label: "Gallery-DL", view: "gallery_dl" },
+    ...(auroraOnlineServicesEnabled
+      ? [{ icon: "sparkles" as IconName, label: "Wallpapers Aurora", view: "wallpapers" }]
+      : []),
   ];
 
   return (
@@ -92,7 +95,7 @@ export function AppSidebar({
         <SidebarSection title="PRINCIPAL" items={principalItems} activeView={activeView} onNavigate={onNavigate} />
         <SidebarSection title="BIBLIOTECA" items={dynamicLibraryItems} activeView={activeView} onNavigate={onNavigate} />
         <SidebarSection title="COLECCIONES" items={collectionItems} activeView={activeView} onNavigate={onNavigate} />
-        <SidebarSection title="HERRAMIENTAS" items={toolItems} activeView={activeView} onNavigate={onNavigate} />
+        <SidebarSection title="HERRAMIENTAS" items={dynamicToolItems} activeView={activeView} onNavigate={onNavigate} />
       </nav>
 
       <footer className="sidebar-footer">

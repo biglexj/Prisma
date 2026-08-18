@@ -68,12 +68,18 @@ export function App() {
   const [synapseToastFile, setSynapseToastFile] = useState<SynapseReceivedFile | null>(null);
   const [sendModalFile, setSendModalFile] = useState<{ path: string; title?: string } | null>(null);
   const { theme, setTheme } = useTheme();
-  const { confirmDeletion, sidebarDensity } = useSystemSettings();
+  const { confirmDeletion, sidebarDensity, auroraOnlineServicesEnabled } = useSystemSettings();
   const playback = usePlaybackController();
   const library = useMusicLibrary();
   const imageLibrary = useVisualLibrary("image");
   const videoLibrary = useVisualLibrary("video");
   const { libraries: customLibrariesList } = useCustomLibraries();
+
+  useEffect(() => {
+    if (activeView === "wallpapers" && !auroraOnlineServicesEnabled) {
+      setActiveView("home");
+    }
+  }, [activeView, auroraOnlineServicesEnabled]);
 
   const playMusicItem = useCallback((path: string, navigate = true, initialTime?: number) => {
     addToHistory(path, "music");
