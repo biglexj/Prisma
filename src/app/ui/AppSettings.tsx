@@ -24,7 +24,7 @@ interface AppSettingsProps {
   onThemeChange: (mode: ThemeMode) => void;
 }
 
-type SettingsTab = "general" | "folders" | "libraries" | "progress" | "synapse" | "shortcuts";
+type SettingsTab = "general" | "folders" | "libraries" | "progress" | "synapse" | "shortcuts" | "aurora";
 
 const THEMES: { mode: ThemeMode; label: string; desc: string; previewClass: string }[] = [
   { mode: "light", label: "Claro", desc: "Interfaz luminosa", previewClass: "light-preview" },
@@ -152,12 +152,16 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
     confirmDeletion,
     progressBarStyle,
     sidebarDensity,
+    auroraOnlineServicesEnabled,
+    auroraServerUrl,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
     setConfirmDeletion,
     setProgressBarStyle,
     setSidebarDensity,
+    setAuroraOnlineServicesEnabled,
+    setAuroraServerUrl,
   } = useSystemSettings();
 
   // Animación del temporizador de demostración en vivo
@@ -209,6 +213,13 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
           >
             <Icon name="synapse" />
             <span>Aurora Synapse</span>
+          </button>
+          <button
+            className={activeTab === "aurora" ? "is-active" : ""}
+            onClick={() => setActiveTab("aurora")}
+          >
+            <Icon name="sparkles" />
+            <span>Servicios Online</span>
           </button>
           <button
             className={activeTab === "shortcuts" ? "is-active" : ""}
@@ -786,6 +797,133 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════════════
+            PESTAÑA 7: SERVICIOS ONLINE (ECOSISTEMA AURORA)
+        ══════════════════════════════════════════════════════════════════════════ */}
+        {activeTab === "aurora" && (
+          <div className="settings-panel">
+            <div className="settings-cards-grid">
+              {/* ── Switch Principal ── */}
+              <div className="settings-card">
+                <div className="settings-card-header-row">
+                  <div>
+                    <h3>Servicios Online del Ecosistema Aurora</h3>
+                    <p>
+                      Habilita la integración en la nube con Aurora para explorar el catálogo de Wallpapers en alta fidelidad, sincronización de favoritos y biblioteca musical.
+                    </p>
+                  </div>
+                  <label className="toggle-switch">
+                    <input
+                      type="checkbox"
+                      checked={auroraOnlineServicesEnabled}
+                      onChange={(e) => setAuroraOnlineServicesEnabled(e.target.checked)}
+                      aria-label="Habilitar Servicios Online de Aurora"
+                    />
+                    <span className="toggle-slider" />
+                  </label>
+                </div>
+              </div>
+
+              {auroraOnlineServicesEnabled && (
+                <>
+                  {/* ── Servidor de Aurora ── */}
+                  <div className="settings-card">
+                    <h4 className="settings-subheading">Servidor de Aurora Cloud</h4>
+                    <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "16px" }}>
+                      Selecciona el entorno de Aurora para la consulta de catálogos y sincronización en la nube:
+                    </p>
+
+                    <div style={{ display: "grid", gap: "10px" }}>
+                      <label
+                        className={`density-option-card ${auroraServerUrl === "https://www.biglexj.com" ? "is-selected" : ""}`}
+                        onClick={() => setAuroraServerUrl("https://www.biglexj.com")}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <input
+                          type="radio"
+                          name="aurora-server"
+                          checked={auroraServerUrl === "https://www.biglexj.com"}
+                          onChange={() => setAuroraServerUrl("https://www.biglexj.com")}
+                        />
+                        <div>
+                          <strong>🟢 Servidor Oficial (Producción)</strong>
+                          <p style={{ margin: "2px 0 0", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
+                            https://www.biglexj.com
+                          </p>
+                        </div>
+                      </label>
+
+                      <label
+                        className={`density-option-card ${auroraServerUrl === "https://preview.biglexj.com" ? "is-selected" : ""}`}
+                        onClick={() => setAuroraServerUrl("https://preview.biglexj.com")}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <input
+                          type="radio"
+                          name="aurora-server"
+                          checked={auroraServerUrl === "https://preview.biglexj.com"}
+                          onChange={() => setAuroraServerUrl("https://preview.biglexj.com")}
+                        />
+                        <div>
+                          <strong>🟡 Servidor Preview (Desarrollo)</strong>
+                          <p style={{ margin: "2px 0 0", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
+                            https://preview.biglexj.com
+                          </p>
+                        </div>
+                      </label>
+
+                      <label
+                        className={`density-option-card ${auroraServerUrl !== "https://www.biglexj.com" && auroraServerUrl !== "https://preview.biglexj.com" ? "is-selected" : ""}`}
+                        onClick={() => {
+                          if (auroraServerUrl === "https://www.biglexj.com" || auroraServerUrl === "https://preview.biglexj.com") {
+                            setAuroraServerUrl("http://localhost:4321");
+                          }
+                        }}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <input
+                          type="radio"
+                          name="aurora-server"
+                          checked={auroraServerUrl !== "https://www.biglexj.com" && auroraServerUrl !== "https://preview.biglexj.com"}
+                          onChange={() => {}}
+                        />
+                        <div style={{ flex: 1 }}>
+                          <strong>🔵 Servidor Personalizado / LAN</strong>
+                          {auroraServerUrl !== "https://www.biglexj.com" && auroraServerUrl !== "https://preview.biglexj.com" && (
+                            <input
+                              type="text"
+                              className="settings-input"
+                              value={auroraServerUrl}
+                              onChange={(e) => setAuroraServerUrl(e.target.value)}
+                              placeholder="http://localhost:4321"
+                              style={{ marginTop: "8px", width: "100%" }}
+                            />
+                          )}
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* ── Música Online ── */}
+                  <div className="settings-card">
+                    <div className="settings-card-header-row">
+                      <div>
+                        <h3>Música Online (Aurora Cloud Music)</h3>
+                        <p>
+                          Streaming musical en alta fidelidad y sincronización de listas personales. (Próximamente disponible para usuarios autenticados).
+                        </p>
+                      </div>
+                      <span style={{ background: "rgba(99, 102, 241, 0.2)", color: "#818cf8", padding: "4px 10px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: "bold" }}>
+                        Próximamente
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

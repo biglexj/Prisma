@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import type { AuroraWallpaper } from "../model/types";
 import { fetchAuroraWallpapers, setWindowsWallpaper, downloadWallpaperHd, toggleAuroraFavorite } from "../services/wallpapersApi";
+import { useSystemSettings } from "../../../app/useSystemSettings";
 import { Icon } from "../../../shared/ui/Icon";
 import "./wallpapers.css";
 
 export function WallpapersView() {
+  const { auroraOnlineServicesEnabled, setAuroraOnlineServicesEnabled, auroraServerUrl } = useSystemSettings();
   const [wallpapers, setWallpapers] = useState<AuroraWallpaper[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +21,10 @@ export function WallpapersView() {
   const [isApplying, setIsApplying] = useState(false);
 
   const loadData = useCallback(async () => {
+    if (!auroraOnlineServicesEnabled) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -36,7 +42,7 @@ export function WallpapersView() {
     } finally {
       setLoading(false);
     }
-  }, [selectedRatio, selectedCategory, selectedSort, searchQuery]);
+  }, [auroraOnlineServicesEnabled, selectedRatio, selectedCategory, selectedSort, searchQuery]);
 
   useEffect(() => {
     loadData();
@@ -193,14 +199,30 @@ export function WallpapersView() {
       )}
 
       {/* Grid de Wallpapers */}
-      {loading && wallpapers.length === 0 ? (
+      {!auroraOnlineServicesEnabled ? (
+        <div style={{ textAlign: "center", padding: "80px 20px", maxWidth: "480px", margin: "0 auto" }}>
+          <div style={{ fontSize: "3rem", marginBottom: "16px" }}>☁️</div>
+          <h2 style={{ fontSize: "1.25rem", marginBottom: "8px", fontWeight: "600" }}>Servicios Online Desactivados</h2>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: "1.5", marginBottom: "24px" }}>
+            Los servicios online de Aurora se encuentran desactivados. Habilítalos para explorar y descargar el catálogo de wallpapers en alta fidelidad.
+          </p>
+          <button
+            className="wallpaper-btn wallpaper-btn-primary"
+            onClick={() => setAuroraOnlineServicesEnabled(true)}
+            style={{ margin: "0 auto" }}
+          >
+            <Icon name="sparkles" />
+            Habilitar Servicios Online
+          </button>
+        </div>
+      ) : loading && wallpapers.length === 0 ? (
         <div style={{ display: "flex", justifyContent: "center", padding: "60px 0" }}>
           <p style={{ color: "var(--text-secondary)" }}>Cargando catálogo de Aurora...</p>
         </div>
       ) : error ? (
-        <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <p style={{ color: "#ef4444" }}>{error}</p>
-          <button className="wallpaper-btn wallpaper-btn-secondary" onClick={loadData} style={{ margin: "16px auto" }}>
+        <div style={{ textAlign: "center", padding: "60px 20px", maxWidth: "480px", margin: "0 auto" }}>
+          <p style={{ color: "#ef4444", marginBottom: "16px" }}>{error}</p>
+          <button className="wallpaper-btn wallpaper-btn-secondary" onClick={loadData} style={{ margin: "0 auto" }}>
             Reintentar
           </button>
         </div>

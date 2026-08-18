@@ -1,7 +1,18 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { AuroraWallpaper, AuroraWallpapersResponse, WallpaperFilterOptions } from "../model/types";
 
-const BASE_URL = "https://www.biglexj.com";
+function getAuroraServerUrl(): string {
+  try {
+    const raw = localStorage.getItem("prisma.system-settings.v1");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.auroraServerUrl) {
+        return parsed.auroraServerUrl.replace(/\/$/, "");
+      }
+    }
+  } catch {}
+  return "https://www.biglexj.com";
+}
 
 export async function fetchAuroraWallpapers(options: WallpaperFilterOptions = {}): Promise<AuroraWallpapersResponse> {
   const params = new URLSearchParams();
@@ -21,16 +32,38 @@ export async function fetchAuroraWallpapers(options: WallpaperFilterOptions = {}
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${BASE_URL}/api/v1/wallpapers?${params.toString()}`, {
-    method: "GET",
-    headers,
-  });
+  const primaryUrl = getAuroraServerUrl();
+  const queryStr = params.toString() ? `?${params.toString()}` : "";
 
-  if (!res.ok) {
-    throw new Error(`Error ${res.status} al consultar catálogo de wallpapers`);
+  try {
+    const res = await fetch(`${primaryUrl}/api/v1/wallpapers${queryStr}`, {
+      method: "GET",
+      headers,
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+
+    // Si devuelve 404 en producción, intentar preview como fallback automático
+    if (res.status === 404 && primaryUrl.includes("www.biglexj.com")) {
+      const fallbackRes = await fetch(`https://preview.biglexj.com/api/v1/wallpapers${queryStr}`, {
+        method: "GET",
+        headers,
+      });
+      if (fallbackRes.ok) {
+        return await fallbackRes.json();
+      }
+    }
+
+    if (res.status === 401) {
+      throw new Error(`El servidor (${primaryUrl}) respondió con código 401. El despliegue de la API se encuentra en progreso.`);
+    }
+
+    throw new Error(`Error HTTP ${res.status} al consultar catálogo`);
+  } catch (err: any) {
+    throw err;
   }
-
-  return res.json();
 }
 
 export async function toggleAuroraFavorite(wallpaperId: string, currentFavorite: boolean): Promise<boolean> {
@@ -39,7 +72,8 @@ export async function toggleAuroraFavorite(wallpaperId: string, currentFavorite:
     throw new Error("Inicia sesión en Aurora Blog para sincronizar favoritos");
   }
 
-  const res = await fetch(`${BASE_URL}/api/v1/wallpapers/favorite`, {
+  const serverUrl = getAuroraServerUrl();
+  const res = await fetch(`${serverUrl}/api/v1/wallpapers/favorite`, {
     method: currentFavorite ? "DELETE" : "POST",
     headers: {
       "Content-Type": "application/json",

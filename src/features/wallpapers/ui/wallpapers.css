@@ -5,8 +5,8 @@
   padding: 24px 32px;
   overflow-y: auto;
   gap: 20px;
-  background: var(--bg-surface, #0f172a);
-  color: var(--text-primary, #f8fafc);
+  background: var(--surface, #1b1216);
+  color: var(--on-surface, #f0dde0);
 }
 
 .wallpapers-header {
@@ -32,15 +32,15 @@
   font-weight: 700;
   padding: 4px 8px;
   border-radius: 6px;
-  background: linear-gradient(135deg, var(--accent-color, #6366f1), #8b5cf6);
-  color: white;
+  background: var(--primary-container, #8f003a);
+  color: var(--on-primary-container, #ffd9df);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .wallpapers-subtitle {
   font-size: 0.9rem;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--on-surface-variant, #cfb9bc);
   margin-top: 4px;
 }
 
@@ -48,8 +48,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--surface-container, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.12));
   border-radius: 20px;
   padding: 8px 16px;
   width: 280px;
@@ -74,9 +74,9 @@
 }
 
 .wallpaper-filter-chip {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-secondary, #cbd5e1);
+  background: var(--surface-container, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.1));
+  color: var(--on-surface-variant, #cfb9bc);
   padding: 6px 14px;
   border-radius: 18px;
   font-size: 0.85rem;
@@ -90,16 +90,16 @@
 }
 
 .wallpaper-filter-chip:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--surface-container-high, rgba(255, 255, 255, 0.1));
+  color: var(--on-surface, #f0dde0);
 }
 
 .wallpaper-filter-chip.is-active {
-  background: var(--accent-color, #6366f1);
-  border-color: var(--accent-color, #6366f1);
-  color: white;
+  background: var(--primary, #ffb1c0);
+  border-color: transparent;
+  color: var(--on-primary, #650025);
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 12px rgba(201, 0, 69, 0.25);
 }
 
 .wallpapers-grid {
@@ -202,8 +202,8 @@
 }
 
 .wallpaper-modal-content {
-  background: #1e293b;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--surface-container, #241a1c);
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.12));
   border-radius: 20px;
   max-width: 960px;
   width: 100%;
@@ -238,14 +238,14 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
-  background: #1e293b;
+  background: var(--surface-container, #241a1c);
 }
 
 .wallpaper-modal-info h2 {
   font-size: 1.35rem;
   font-weight: 700;
   margin: 0;
-  color: white;
+  color: var(--on-surface, #f0dde0);
 }
 
 .wallpaper-modal-tags {
@@ -274,21 +274,22 @@
 }
 
 .wallpaper-btn-primary {
-  background: var(--accent-color, #6366f1);
-  color: white;
+  background: var(--primary, #ffb1c0);
+  color: var(--on-primary, #650025);
 }
 
 .wallpaper-btn-primary:hover {
-  background: #4f46e5;
+  background: var(--primary, #ffb1c0);
+  opacity: 0.92;
   transform: translateY(-1px);
 }
 
 .wallpaper-btn-secondary {
-  background: rgba(255, 255, 255, 0.08);
-  color: #f1f5f9;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--surface-container-high, rgba(255, 255, 255, 0.08));
+  color: var(--on-surface, #f0dde0);
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.12));
 }
 
 .wallpaper-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--surface-container-highest, rgba(255, 255, 255, 0.14));
 }

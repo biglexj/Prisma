@@ -23,6 +23,8 @@ interface SystemSettings {
   confirmDeletion: boolean;
   progressBarStyle: ProgressBarStyle;
   sidebarDensity: SidebarDensity;
+  auroraOnlineServicesEnabled: boolean;
+  auroraServerUrl: string;
 }
 
 const STORAGE_KEY = "prisma.system-settings.v1";
@@ -36,6 +38,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
   confirmDeletion: true,
   progressBarStyle: "wavy",
   sidebarDensity: "standard",
+  auroraOnlineServicesEnabled: false,
+  auroraServerUrl: "https://www.biglexj.com",
 };
 
 function loadStoredSettings(): SystemSettings {
@@ -85,6 +89,8 @@ export function useSystemSettings() {
               confirmDeletion: stored.confirmDeletion ?? prev.confirmDeletion,
               progressBarStyle: stored.progressBarStyle ?? prev.progressBarStyle,
               sidebarDensity: stored.sidebarDensity ?? prev.sidebarDensity,
+              auroraOnlineServicesEnabled: stored.auroraOnlineServicesEnabled ?? prev.auroraOnlineServicesEnabled,
+              auroraServerUrl: stored.auroraServerUrl ?? prev.auroraServerUrl,
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
             return synced;
@@ -193,6 +199,24 @@ export function useSystemSettings() {
     });
   }, []);
 
+  const setAuroraOnlineServicesEnabled = useCallback((enabled: boolean) => {
+    setSettings((prev) => {
+      const next = { ...prev, auroraOnlineServicesEnabled: enabled };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, []);
+
+  const setAuroraServerUrl = useCallback((url: string) => {
+    setSettings((prev) => {
+      const next = { ...prev, auroraServerUrl: url };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, []);
+
   return {
     isLoaded,
     quickLookShortcut: settings.quickLookShortcut,
@@ -201,11 +225,15 @@ export function useSystemSettings() {
     confirmDeletion: settings.confirmDeletion,
     progressBarStyle: settings.progressBarStyle,
     sidebarDensity: settings.sidebarDensity,
+    auroraOnlineServicesEnabled: settings.auroraOnlineServicesEnabled,
+    auroraServerUrl: settings.auroraServerUrl,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
     setConfirmDeletion,
     setProgressBarStyle,
     setSidebarDensity,
+    setAuroraOnlineServicesEnabled,
+    setAuroraServerUrl,
   };
 }
