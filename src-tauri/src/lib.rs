@@ -37,8 +37,9 @@ use app::commands::custom_libraries::{
 use app::commands::media::{media_delete_items, media_rename_item, media_save_image};
 use app::commands::quick_look::{
     autostart_get_status, autostart_set, get_minimize_to_tray, is_minimize_to_tray_enabled,
-    quick_look_get_current, quick_look_get_shortcut, quick_look_hide, quick_look_is_maximized,
-    quick_look_open_in_main, quick_look_set_shortcut, quick_look_set_size, quick_look_show_file,
+    quick_look_get_current, quick_look_get_detached_payload, quick_look_get_shortcut,
+    quick_look_hide, quick_look_is_maximized, quick_look_open_detached, quick_look_open_in_main,
+    quick_look_set_shortcut, quick_look_set_size, quick_look_show_file,
     quick_look_start_dragging, quick_look_toggle, quick_look_toggle_maximize, set_minimize_to_tray,
 };
 use app::commands::synapse::{
@@ -296,6 +297,15 @@ pub fn run() {
                     }
                     _ => {}
                 }
+            } else if window
+                .label()
+                .starts_with(features::quick_look::DETACHED_LABEL_PREFIX)
+            {
+                if matches!(event, WindowEvent::Destroyed) {
+                    if let Some(state) = window.app_handle().try_state::<QuickLookState>() {
+                        state.remove_detached(window.label());
+                    }
+                }
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -358,7 +368,9 @@ pub fn run() {
             quick_look_toggle,
             quick_look_hide,
             quick_look_open_in_main,
+            quick_look_open_detached,
             quick_look_get_current,
+            quick_look_get_detached_payload,
             quick_look_show_file,
             quick_look_set_shortcut,
             quick_look_get_shortcut,

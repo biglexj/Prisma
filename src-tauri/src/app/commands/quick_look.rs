@@ -35,6 +35,22 @@ pub fn quick_look_get_current(state: State<'_, QuickLookState>) -> Option<QuickL
 }
 
 #[tauri::command]
+pub fn quick_look_open_detached(
+    state: State<'_, QuickLookState>,
+    path: String,
+) -> Result<String, String> {
+    state.open_detached(&path)
+}
+
+#[tauri::command]
+pub fn quick_look_get_detached_payload(
+    state: State<'_, QuickLookState>,
+    label: String,
+) -> Option<QuickLookPayload> {
+    state.get_detached_payload(&label)
+}
+
+#[tauri::command]
 pub fn quick_look_show_file(path: String, state: State<'_, QuickLookState>) -> bool {
     state.show_file_path(std::path::Path::new(&path))
 }
@@ -70,28 +86,20 @@ pub fn get_minimize_to_tray() -> bool {
 }
 
 #[tauri::command]
-pub fn quick_look_toggle_maximize(app: tauri::AppHandle) -> Result<bool, String> {
-    use tauri::Manager;
-    if let Some(win) = app.get_webview_window("quicklook") {
-        let is_max = win.is_maximized().map_err(|e| e.to_string())?;
-        if is_max {
-            win.unmaximize().map_err(|e| e.to_string())?;
-            Ok(false)
-        } else {
-            win.maximize().map_err(|e| e.to_string())?;
-            Ok(true)
-        }
+pub fn quick_look_toggle_maximize(window: tauri::WebviewWindow) -> Result<bool, String> {
+    let is_max = window.is_maximized().map_err(|e| e.to_string())?;
+    if is_max {
+        window.unmaximize().map_err(|e| e.to_string())?;
+        Ok(false)
     } else {
-        Err("Ventana de QuickLook no encontrada".to_string())
+        window.maximize().map_err(|e| e.to_string())?;
+        Ok(true)
     }
 }
 
 #[tauri::command]
-pub fn quick_look_is_maximized(app: tauri::AppHandle) -> bool {
-    use tauri::Manager;
-    app.get_webview_window("quicklook")
-        .and_then(|w| w.is_maximized().ok())
-        .unwrap_or(false)
+pub fn quick_look_is_maximized(window: tauri::WebviewWindow) -> bool {
+    window.is_maximized().ok().unwrap_or(false)
 }
 
 #[tauri::command]
@@ -100,12 +108,13 @@ pub fn quick_look_start_dragging(window: tauri::WebviewWindow) -> Result<(), Str
 }
 
 #[tauri::command]
-pub fn quick_look_set_size(app: tauri::AppHandle, width: f64, height: f64) -> Result<(), String> {
-    use tauri::Manager;
-    if let Some(win) = app.get_webview_window("quicklook") {
-        if !win.is_maximized().unwrap_or(false) {
-            let _ = win.set_size(tauri::LogicalSize::new(width, height));
-            let _ = win.center();
+pub fn quick_look_set_size(window: tauri::WebviewWindow, width: f64, height: f64) -> Result<(), String> {
+    if !window.is_maximized().unwrap_or(false) {
+        let _ = window.set_size(tauri::LogicalSize::new(width, height));
+        // Solo recentrar la vista previa principal; las instancias desacopladas
+        // conservan su posición para permitir compararlas lado a lado.
+        if window.label() == "quicklook" {
+            let _ = window.center();
         }
     }
     Ok(())

@@ -23,15 +23,22 @@ import "./quick-look.css";
 
 export function QuickLookWindow() {
   useTheme();
+  const windowLabel = getCurrentWebviewWindow().label;
+  const isDetached = windowLabel !== "quicklook";
   const [payload, setPayload] = useState<QuickLookPayload | null>(null);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [paletteStyle, setPaletteStyle] = useState<CSSProperties | undefined>(undefined);
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
+    let resolved = false;
     const refreshCurrent = () => {
-      quickLookClient.getCurrent().then((res) => {
+      const request = isDetached
+        ? quickLookClient.getDetachedPayload(windowLabel)
+        : quickLookClient.getCurrent();
+      request.then((res) => {
         if (res) {
+          resolved = true;
           setPayload(res);
           setImageDimensions(null);
         }
@@ -40,23 +47,43 @@ export function QuickLookWindow() {
 
     refreshCurrent();
 
-    const startupIntervalId = window.setInterval(refreshCurrent, 200);
+    // La ventana principal ya está cargada (oculta) y solo necesita un refresco
+    // breve. Las instancias desacopladas se crean en frío, así que consultan su
+    // payload hasta recibirlo (máx. 10 s) por si el montaje tarda más que el emit.
+    const startupIntervalId = window.setInterval(() => {
+      if (isDetached && resolved) {
+        window.clearInterval(startupIntervalId);
+        return;
+      }
+      refreshCurrent();
+    }, 200);
     const startupTimeoutId = window.setTimeout(() => {
       window.clearInterval(startupIntervalId);
-    }, 1200);
+    }, isDetached ? 10000 : 1200);
 
-    const unlistenGlobalPreviewPromise = listen<QuickLookPayload>("quicklook://preview", (event) => {
-      if (event.payload) {
-        setPayload(event.payload);
+    const cleanupFns: (() => void)[] = [];
+
+    // Las instancias desacopladas no reaccionan a los eventos globales del
+    // Quick Look principal: conservan su propio archivo para poder comparar.
+    if (!isDetached) {
+      const unlistenGlobalPreviewPromise = listen<QuickLookPayload>("quicklook://preview", (event) => {
+        if (event.payload) {
+          setPayload(event.payload);
+          setImageDimensions(null);
+        }
+      });
+
+      const unlistenGlobalHidePromise = listen("quicklook://hide", () => {
+        setPayload(null);
         setImageDimensions(null);
-      }
-    });
+        setPaletteStyle(undefined);
+      });
 
-    const unlistenGlobalHidePromise = listen("quicklook://hide", () => {
-      setPayload(null);
-      setImageDimensions(null);
-      setPaletteStyle(undefined);
-    });
+      cleanupFns.push(() => {
+        unlistenGlobalPreviewPromise.then((unlisten) => unlisten());
+        unlistenGlobalHidePromise.then((unlisten) => unlisten());
+      });
+    }
 
     const unlistenWindowPreviewPromise = getCurrentWebviewWindow().listen<QuickLookPayload>(
       "quicklook://preview",
@@ -67,6 +94,9 @@ export function QuickLookWindow() {
         }
       }
     );
+    cleanupFns.push(() => {
+      unlistenWindowPreviewPromise.then((unlisten) => unlisten());
+    });
 
     const handleFocus = () => refreshCurrent();
     const handleVisibility = () => {
@@ -79,18 +109,18 @@ export function QuickLookWindow() {
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
-      unlistenGlobalPreviewPromise.then((unlisten) => unlisten());
-      unlistenGlobalHidePromise.then((unlisten) => unlisten());
-      unlistenWindowPreviewPromise.then((unlisten) => unlisten());
+      cleanupFns.forEach((fn) => fn());
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, []);
+  }, [isDetached, windowLabel]);
 
-  // Atajos locales de teclado (Esc y Espacio para cerrar la vista previa)
+  // Atajos locales de teclado (Esc cierra siempre; Espacio solo la vista previa principal)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" || e.code === "Space" || e.key === " ") {
+      const isCloseKey =
+        e.key === "Escape" || (!isDetached && (e.code === "Space" || e.key === " "));
+      if (isCloseKey) {
         e.preventDefault();
         e.stopPropagation();
         handleClose();
@@ -101,7 +131,7 @@ export function QuickLookWindow() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [isDetached]);
 
   // Seguimiento en tiempo real del estado de maximizado / tamaño de ventana
   useEffect(() => {
@@ -149,6 +179,14 @@ export function QuickLookWindow() {
   const handleOpenInMain = () => {
     if (!payload) return;
     void quickLookClient.openInMain(payload.path, playbackTimeRef.current);
+    if (isDetached) {
+      handleClose();
+    }
+  };
+
+  const handleOpenDetached = () => {
+    if (!payload) return;
+    void quickLookClient.openDetached(payload.path).catch(() => {});
   };
 
   const handleClose = () => {
@@ -156,6 +194,12 @@ export function QuickLookWindow() {
     setPaletteStyle(undefined);
     setIsMaximized(false);
     playbackTimeRef.current = 0;
+    if (isDetached) {
+      try {
+        void getCurrentWebviewWindow().close();
+      } catch {}
+      return;
+    }
     try {
       void getCurrentWebviewWindow().hide();
     } catch {}
@@ -174,6 +218,7 @@ export function QuickLookWindow() {
               imageDimensions={imageDimensions}
               isMaximized={isMaximized}
               onClose={handleClose}
+              onOpenDetached={handleOpenDetached}
               onOpenInMain={handleOpenInMain}
               onToggleMaximize={handleToggleMaximize}
               payload={payload}

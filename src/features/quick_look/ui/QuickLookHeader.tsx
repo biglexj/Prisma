@@ -8,6 +8,7 @@ interface QuickLookHeaderProps {
   isMaximized?: boolean;
   onToggleMaximize?: () => void;
   onOpenInMain: () => void;
+  onOpenDetached?: () => void;
   onClose: () => void;
 }
 
@@ -17,6 +18,7 @@ export function QuickLookHeader({
   isMaximized = false,
   onToggleMaximize,
   onOpenInMain,
+  onOpenDetached,
   onClose,
 }: QuickLookHeaderProps) {
   const iconName =
@@ -88,6 +90,21 @@ export function QuickLookHeader({
           <Icon name="external-link" />
           <span>Abrir en Prisma</span>
         </button>
+
+        {onOpenDetached && (
+          <button
+            type="button"
+            className="quicklook-btn-open quicklook-btn-detach"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenDetached();
+            }}
+            title="Abrir en otra instancia para comparar imágenes o vídeos"
+          >
+            <Icon name="copy" />
+            <span>Abrir en otra instancia</span>
+          </button>
+        )}
 
         {onToggleMaximize && (
           <button

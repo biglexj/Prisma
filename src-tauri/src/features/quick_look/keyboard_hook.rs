@@ -311,29 +311,32 @@ pub mod windows_hook {
         let mut pid = 0u32;
         unsafe { GetWindowThreadProcessId(fg, Some(&mut pid)) };
         if pid != 0 {
-            if let Ok(handle) = windows::Win32::System::Threading::OpenProcess(
-                windows::Win32::System::Threading::PROCESS_QUERY_LIMITED_INFORMATION,
-                false,
-                pid,
-            ) {
+            if let Ok(handle) = unsafe {
+                windows::Win32::System::Threading::OpenProcess(
+                    windows::Win32::System::Threading::PROCESS_QUERY_LIMITED_INFORMATION,
+                    false,
+                    pid,
+                )
+            } {
                 let mut path_buf = [0u16; 1024];
                 let mut size = path_buf.len() as u32;
-                if windows::Win32::System::Threading::QueryFullProcessImageNameW(
-                    handle,
-                    windows::Win32::System::Threading::PROCESS_NAME_FORMAT(0),
-                    windows::core::PWSTR(path_buf.as_mut_ptr()),
-                    &mut size,
-                )
-                .is_ok()
-                {
+                let query_res = unsafe {
+                    windows::Win32::System::Threading::QueryFullProcessImageNameW(
+                        handle,
+                        windows::Win32::System::Threading::PROCESS_NAME_FORMAT(0),
+                        windows::core::PWSTR(path_buf.as_mut_ptr()),
+                        &mut size,
+                    )
+                };
+                if query_res.is_ok() {
                     let full_path = String::from_utf16_lossy(&path_buf[..size as usize]).to_lowercase();
-                    let _ = windows::Win32::Foundation::CloseHandle(handle);
+                    let _ = unsafe { windows::Win32::Foundation::CloseHandle(handle) };
                     if full_path.ends_with("explorer.exe") {
                         ql_log!("is_explorer_or_desktop_focused: ventana confirmada de explorer.exe (pid={})", pid);
                         return true;
                     }
                 } else {
-                    let _ = windows::Win32::Foundation::CloseHandle(handle);
+                    let _ = unsafe { windows::Win32::Foundation::CloseHandle(handle) };
                 }
             }
         }

@@ -259,6 +259,34 @@
   box-shadow: 0 2px 8px rgba(255, 177, 192, 0.35);
 }
 
+.quicklook-btn-detach {
+  background: var(--secondary-container, #f5dedf);
+  border-color: var(--outline-variant, #eadadd);
+  color: var(--on-secondary-container, #4a3538);
+}
+
+.dark .quicklook-btn-detach,
+[data-theme="dark"] .quicklook-btn-detach {
+  background: var(--secondary-container, #5c3f44);
+  border-color: var(--outline-variant, #3f2d30);
+  color: var(--on-secondary-container, #f0dde0);
+}
+
+.quicklook-btn-detach:hover {
+  background: var(--on-surface-variant, #6a595d);
+  color: var(--surface, #fff8f8);
+  border-color: var(--on-surface-variant, #6a595d);
+  box-shadow: 0 2px 8px rgba(60, 40, 45, 0.28);
+}
+
+.dark .quicklook-btn-detach:hover,
+[data-theme="dark"] .quicklook-btn-detach:hover {
+  background: var(--on-surface-variant, #cfb9bc);
+  color: var(--surface, #1d1315);
+  border-color: var(--on-surface-variant, #cfb9bc);
+  box-shadow: 0 2px 8px rgba(207, 185, 188, 0.28);
+}
+
 .quicklook-btn-icon-action {
   width: 28px;
   height: 28px;

@@ -84,13 +84,18 @@ export function QuickLookMusic({ payload, onPaletteChange, onTimeUpdate }: Quick
         .catch(() => setIsPlaying(false));
     }
 
-    // Detener audio al cerrar/ocultar la ventana Quick Look
-    const unlistenHide = listen("quicklook://hide", () => {
-      audio.pause();
-      audio.currentTime = 0;
-      setIsPlaying(false);
-      setPosition(0);
-    });
+    // Detener audio al cerrar/ocultar la ventana Quick Look.
+    // Las instancias desacopladas no reaccionan al hide global: se pausan al
+    // cerrar su propia ventana (cleanup) para poder comparar en paralelo.
+    const isPrimary = getCurrentWebviewWindow().label === "quicklook";
+    const unlistenHide = isPrimary
+      ? listen("quicklook://hide", () => {
+          audio.pause();
+          audio.currentTime = 0;
+          setIsPlaying(false);
+          setPosition(0);
+        })
+      : Promise.resolve(() => {});
 
     return () => {
       audio.pause();

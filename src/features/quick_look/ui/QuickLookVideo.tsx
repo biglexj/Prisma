@@ -1,5 +1,6 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import { formatTime } from "../../playback/ui/formatters";
@@ -46,13 +47,18 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate }: Quic
         .catch(() => setIsPlaying(false));
     }
 
-    // Detener vídeo al cerrar/ocultar la ventana Quick Look (X o click fuera)
-    const unlistenHide = listen("quicklook://hide", () => {
-      video.pause();
-      video.currentTime = 0;
-      setIsPlaying(false);
-      setPosition(0);
-    });
+    // Detener vídeo al cerrar/ocultar la ventana Quick Look (X o click fuera).
+    // Las instancias desacopladas no reaccionan al hide global: se pausan al
+    // cerrar su propia ventana (cleanup) para poder comparar en paralelo.
+    const isPrimary = getCurrentWebviewWindow().label === "quicklook";
+    const unlistenHide = isPrimary
+      ? listen("quicklook://hide", () => {
+          video.pause();
+          video.currentTime = 0;
+          setIsPlaying(false);
+          setPosition(0);
+        })
+      : Promise.resolve(() => {});
 
     return () => {
       video.pause();

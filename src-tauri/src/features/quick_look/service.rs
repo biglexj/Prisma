@@ -1,8 +1,10 @@
+use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 macro_rules! ql_log {
     ($($arg:tt)*) => {{
@@ -19,11 +21,16 @@ use super::keyboard_hook::{is_preview_open, set_preview_open, start_hook, Trigge
 use super::model::{QuickLookMediaType, QuickLookPayload};
 use super::shell_selection::get_active_selection;
 
+pub const DETACHED_LABEL_PREFIX: &str = "quicklook-extra";
+const MAX_DETACHED_INSTANCES: u32 = 10;
+
 #[derive(Clone)]
 pub struct QuickLookState {
     app_handle: AppHandle,
     current_path: Arc<Mutex<Option<String>>>,
     last_shown: Arc<Mutex<Option<Instant>>>,
+    detached_payloads: Arc<Mutex<HashMap<String, QuickLookPayload>>>,
+    detached_counter: Arc<AtomicU32>,
 }
 
 impl QuickLookState {
@@ -32,6 +39,8 @@ impl QuickLookState {
             app_handle,
             current_path: Arc::new(Mutex::new(None)),
             last_shown: Arc::new(Mutex::new(None)),
+            detached_payloads: Arc::new(Mutex::new(HashMap::new())),
+            detached_counter: Arc::new(AtomicU32::new(0)),
         }
     }
 
@@ -281,6 +290,90 @@ impl QuickLookState {
         let path = std::path::Path::new(&path_str);
         let media_type = QuickLookMediaType::from_path(path)?;
         Some(QuickLookPayload::new(path_str, media_type))
+    }
+
+    pub fn open_detached(&self, path: &str) -> Result<String, String> {
+        let file_path = Path::new(path);
+        if !file_path.is_file() {
+            return Err("El archivo ya no existe".to_string());
+        }
+
+        let media_type = QuickLookMediaType::from_path(file_path)
+            .ok_or_else(|| "Tipo de archivo no soportado".to_string())?;
+
+        let payload = QuickLookPayload::new(path.to_string(), media_type);
+        let (target_w, target_h) = resolve_media_size(media_type, file_path);
+
+        let open_count = self.detached_payloads.lock().unwrap().len() as u32;
+        if open_count >= MAX_DETACHED_INSTANCES {
+            return Err(format!(
+                "Solo puedes abrir {MAX_DETACHED_INSTANCES} instancias a la vez"
+            ));
+        }
+
+        let label = loop {
+            let n = self.detached_counter.fetch_add(1, Ordering::SeqCst) + 1;
+            let candidate = format!("{DETACHED_LABEL_PREFIX}-{n}");
+            let already_tracked = self
+                .detached_payloads
+                .lock()
+                .unwrap()
+                .contains_key(&candidate);
+            if !already_tracked && self.app_handle.get_webview_window(&candidate).is_none() {
+                break candidate;
+            }
+        };
+
+        let mut builder = WebviewWindowBuilder::new(
+            &self.app_handle,
+            &label,
+            WebviewUrl::App("index.html#quicklook".into()),
+        )
+        .title(format!("Prisma · {}", payload.file_name))
+        .inner_size(target_w, target_h)
+        .min_inner_size(320.0, 240.0)
+        .decorations(false)
+        .transparent(true)
+        .resizable(true)
+        .always_on_top(false)
+        .skip_taskbar(false)
+        .visible(false);
+
+        if let Some(base) = self.app_handle.get_webview_window("quicklook") {
+            if let Ok(pos) = base.outer_position() {
+                let scale = base.scale_factor().unwrap_or(1.0);
+                let logical = pos.to_logical::<f64>(scale);
+                let offset = 56.0 * (open_count + 1) as f64;
+                builder = builder.position(logical.x + offset, logical.y + offset * 0.75);
+            }
+        }
+
+        let window = builder.build().map_err(|e| e.to_string())?;
+
+        self.detached_payloads
+            .lock()
+            .unwrap()
+            .insert(label.clone(), payload.clone());
+
+        let _ = window.emit("quicklook://preview", &payload);
+        let _ = window.show();
+        let _ = window.set_focus();
+
+        ql_log!("Instancia desacoplada creada: {} para {:?}", label, path);
+
+        Ok(label)
+    }
+
+    pub fn get_detached_payload(&self, label: &str) -> Option<QuickLookPayload> {
+        self.detached_payloads
+            .lock()
+            .unwrap()
+            .get(label)
+            .cloned()
+    }
+
+    pub fn remove_detached(&self, label: &str) {
+        self.detached_payloads.lock().unwrap().remove(label);
     }
 }
 

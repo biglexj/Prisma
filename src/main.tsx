@@ -7,7 +7,7 @@ import "./app/styles.css";
 
 const isQuickLook =
   window.location.hash === "#quicklook" ||
-  getCurrentWebviewWindow().label === "quicklook";
+  getCurrentWebviewWindow().label.startsWith("quicklook");
 
 if (isQuickLook) {
   document.documentElement.classList.add("is-quicklook");
