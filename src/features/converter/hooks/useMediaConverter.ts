@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type {
   AudioTranscodeOptions,
   BatchRenameRules,
@@ -12,11 +13,24 @@ import type {
 } from "../model/types";
 import { converterClient } from "../tauri/client";
 
+const IMAGE_EXTS = [
+  "jpg", "jpeg", "png", "webp", "avif", "bmp", "tiff", "tif", "gif", "svg", "ico",
+  "heic", "heif", "tga", "dds", "psd", "kra", "afphoto", "raw", "cr2", "nef", "arw",
+];
+const VIDEO_EXTS = [
+  "mp4", "mkv", "webm", "avi", "mov", "wmv", "flv", "ts", "m4v", "mpg", "mpeg", "3gp",
+  "vob", "ogv",
+];
+const AUDIO_EXTS = [
+  "mp3", "flac", "wav", "ogg", "aac", "m4a", "opus", "wma", "aiff", "alac", "mid",
+];
+
 export function useMediaConverter() {
   const [status, setStatus] = useState<FFmpegStatus | null>(null);
   const [mode, setMode] = useState<ConversionMode>("image");
   const [queue, setQueue] = useState<ConversionQueueItem[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   const [customOutputFolder, setCustomOutputFolder] = useState<string | null>(null);
 
@@ -174,6 +188,83 @@ export function useMediaConverter() {
     [calculateOutputFilename, customOutputFolder, getTargetExtension, mode]
   );
 
+  const handleIncomingPaths = useCallback(
+    async (paths: string[]) => {
+      const filesToAdd: string[] = [];
+      let detectedMode: ConversionMode | null = null;
+
+      for (const p of paths) {
+        // 1. Intentar escanear si la ruta es una carpeta
+        try {
+          const scanned = await converterClient.scanFolder(p, mode);
+          if (scanned && scanned.length > 0) {
+            filesToAdd.push(...scanned);
+            continue;
+          }
+        } catch {
+          // No es carpeta válida, continúa como archivo individual
+        }
+
+        // 2. Comprobar archivo individual y detección de modo sugerido
+        const ext = p.split(".").pop()?.toLowerCase() || "";
+        const isImage = IMAGE_EXTS.includes(ext);
+        const isVideo = VIDEO_EXTS.includes(ext);
+        const isAudio = AUDIO_EXTS.includes(ext);
+
+        if (queue.length === 0 && !detectedMode) {
+          if (isImage && mode !== "image") {
+            detectedMode = "image";
+          } else if (isVideo && mode !== "video_to_audio" && mode !== "video_transcode") {
+            detectedMode = "video_to_audio";
+          } else if (isAudio && mode !== "audio_transcode") {
+            detectedMode = "audio_transcode";
+          }
+        }
+
+        filesToAdd.push(p);
+      }
+
+      if (detectedMode) {
+        setMode(detectedMode);
+      }
+
+      if (filesToAdd.length > 0) {
+        addFilesToQueue(filesToAdd);
+      }
+    },
+    [addFilesToQueue, mode, queue.length]
+  );
+
+  // Escucha nativa de Drag & Drop de Tauri v2
+  useEffect(() => {
+    let unlistenPromise: Promise<() => void> | undefined;
+
+    try {
+      const appWindow = getCurrentWebviewWindow();
+      unlistenPromise = appWindow.onDragDropEvent((event) => {
+        if (event.payload.type === "over" || event.payload.type === "enter") {
+          setIsDraggingOver(true);
+        } else if (event.payload.type === "drop") {
+          setIsDraggingOver(false);
+          const droppedPaths = event.payload.paths;
+          if (droppedPaths && droppedPaths.length > 0) {
+            void handleIncomingPaths(droppedPaths);
+          }
+        } else {
+          setIsDraggingOver(false);
+        }
+      });
+    } catch (err) {
+      console.warn("No se pudo iniciar listener de DragDrop en Tauri:", err);
+    }
+
+    return () => {
+      if (unlistenPromise) {
+        unlistenPromise.then((unlisten) => unlisten()).catch(() => {});
+      }
+    };
+  }, [handleIncomingPaths]);
+
   useEffect(() => {
     const handleAddFile = async (e: Event) => {
       const customEvent = e as CustomEvent<{
@@ -187,7 +278,7 @@ export function useMediaConverter() {
         setMode(customEvent.detail.mode);
       }
       if (customEvent.detail?.paths && customEvent.detail.paths.length > 0) {
-        addFilesToQueue(customEvent.detail.paths);
+        void handleIncomingPaths(customEvent.detail.paths);
       } else if (customEvent.detail?.path) {
         if (customEvent.detail.isFolder) {
           try {
@@ -199,13 +290,13 @@ export function useMediaConverter() {
             console.error("Error al escanear carpeta para el conversor:", err);
           }
         } else {
-          addFilesToQueue([customEvent.detail.path]);
+          void handleIncomingPaths([customEvent.detail.path]);
         }
       }
     };
     window.addEventListener("prisma-converter-add-file", handleAddFile);
     return () => window.removeEventListener("prisma-converter-add-file", handleAddFile);
-  }, [addFilesToQueue, mode]);
+  }, [addFilesToQueue, handleIncomingPaths, mode]);
 
   const pickFiles = async () => {
     try {
@@ -362,6 +453,8 @@ export function useMediaConverter() {
     renameRules,
     setRenameRules,
     addFilesToQueue,
+    handleIncomingPaths,
+    isDraggingOver,
     pickFiles,
     pickFolder,
     pickOutputFolder,

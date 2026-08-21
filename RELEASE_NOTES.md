@@ -14,6 +14,19 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.0.2] - 2026-08-20
+
+### Resumen
+Actualización **Prisma v1.0.2** enfocada en la nueva **Suite de Comparativa de Imágenes Multimodal** integrada al visor y a QuickLook, compatibilidad con instancias y ventanas desacopladas en paralelo, modo desarrollo aislado con bypass de bloqueo, rediseño adaptable de fondos de pantalla en **Bento Grid** denso de 12 columnas, expansión de la **Suite Musical Online** (Música, Instrumentales y Karaokes) con prueba de servidor en vivo y estabilización de alto rendimiento en las barras de progreso sin layout thrashing.
+
+### Detalles
+- **Suite de Comparativa de Imágenes Multimodal**: Nueva herramienta de comparación visual accesible directamente desde el visor de fotos (botón dedicado o atajo `C`) y desde la previsualización de QuickLook. Incorpora selector modal de archivos con búsqueda en tiempo real y 4 modos de inspección: Cortina Deslizante (*Split Slider* con tirador interactivo), Lado a Lado simétrico, Alternancia Rápida (*Flicker* A/B para detección de microdiferencias a 60 Hz) y Mapa de Diferencia/Relieve matemático con zoom sincronizado hasta 500%.
+- **Ventanas Desacopladas de Quick Look y Concurrencia**: Capacidad de desacoplar múltiples previsualizaciones en ventanas independientes para comparar imágenes, vídeos o documentos en paralelo sin interrumpir el flujo principal de exploración, junto con comandos de cierre seguro de ventana nativos.
+- **Modo Desarrollo Aislado y Concurrencia de Instancias**: Soporte para ejecución concurrente en entornos de desarrollo sin conflicto con la versión estable instalada mediante perfiles de almacenamiento aislados y bypass dinámico del bloqueo de instancia única.
+- **Bento Grid Adaptativo para Wallpapers Aurora**: Reestructuración completa de la galería de fondos de pantalla hacia una cuadrícula Bento de 12 columnas densa sin espacios vacíos residuales, empaquetado inteligente por proporciones (16:9, 21:9, 9:16 y 1:1), tarjetas con desenfoque de cristal y botón flotante de favoritos.
+- **Suite de Servicios Online y Música Aurora Cloud**: Rediseño ergonómico de la pestaña de Aurora en Configuración con panel de test de conexión en vivo (medición de latencia y ping), chips de acceso rápido e integración de la Suite Musical en 3 áreas especializadas: Explorar Música (Audio HD), Pistas Instrumentales (Off-Vocal) y Karaokes con letras dinámicas (LRC / Sing), además de interruptor granular para el catálogo de Wallpapers.
+- **Estabilización de Barras de Progreso y Rendimiento**: Migración del motor de canvas en `MediaProgressBar` hacia `ResizeObserver`, erradicando el cálculo continuo de layout por cuadro, asegurando un área de interacción inmutable de 28px y eliminando por completo cualquier parpadeo u oscilación de altura al interactuar con el puntero en vídeos y música.
+
 ## [1.0.1] - 2026-08-17
 
 ### Resumen

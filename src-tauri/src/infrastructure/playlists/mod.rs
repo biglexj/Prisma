@@ -831,6 +831,7 @@ fn resolve_path(raw: &str, base_dir: &PathBuf) -> PathBuf {
     direct
 }
 
+#[allow(dead_code)]
 fn make_relative(target: &Path, base: &Path) -> String {
     let target_str = target.to_string_lossy().replace('/', "\\");
     let base_str = base.to_string_lossy().replace('/', "\\");

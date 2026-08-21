@@ -9,6 +9,7 @@ interface QuickLookHeaderProps {
   onToggleMaximize?: () => void;
   onOpenInMain: () => void;
   onOpenDetached?: () => void;
+  onCompare?: () => void;
   onClose: () => void;
 }
 
@@ -19,6 +20,7 @@ export function QuickLookHeader({
   onToggleMaximize,
   onOpenInMain,
   onOpenDetached,
+  onCompare,
   onClose,
 }: QuickLookHeaderProps) {
   const iconName =
@@ -90,6 +92,21 @@ export function QuickLookHeader({
           <Icon name="external-link" />
           <span>Abrir en Prisma</span>
         </button>
+
+        {onCompare && payload.mediaType === "image" && (
+          <button
+            type="button"
+            className="quicklook-btn-open quicklook-btn-compare"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCompare();
+            }}
+            title="Comparar esta imagen con otra (Lado a lado, cortinilla, cuadrícula)"
+          >
+            <Icon name="compare" />
+            <span>Comparar</span>
+          </button>
+        )}
 
         {onOpenDetached && (
           <button

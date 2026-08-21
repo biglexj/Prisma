@@ -758,49 +758,553 @@
   line-height: 1.4;
 }
 
-/* ── Material 3 Expressive Toggle Switch ── */
+/* ── Material 3 Expressive Toggle Switch (Perfeccionado) ── */
 .toggle-switch {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
-  width: 48px;
-  height: 28px;
+  width: 52px;
+  height: 30px;
   cursor: pointer;
+  user-select: none;
 }
 
 .toggle-switch input {
+  position: absolute;
+  opacity: 0;
   width: 0;
   height: 0;
-  opacity: 0;
+  margin: 0;
+  pointer-events: none;
 }
 
 .toggle-slider {
   position: absolute;
   inset: 0;
-  border-radius: 28px;
-  background: var(--outline-variant);
-  transition: background-color 200ms ease;
+  border-radius: 999px;
+  background: var(--surface-container-highest);
+  border: 2px solid var(--outline);
+  transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
 }
 
 .toggle-slider::before {
   position: absolute;
-  top: 4px;
+  top: 50%;
   left: 4px;
-  width: 20px;
-  height: 20px;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--surface-bright);
+  background: var(--outline);
   content: "";
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), background-color 200ms ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggle-switch:hover .toggle-slider {
+  border-color: var(--on-surface-variant);
+}
+
+.toggle-switch:hover .toggle-slider::before {
+  background: var(--on-surface-variant);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
 }
 
 .toggle-switch input:checked + .toggle-slider {
   background: var(--primary);
+  border-color: var(--primary);
 }
 
 .toggle-switch input:checked + .toggle-slider::before {
-  transform: translateX(20px);
+  left: calc(100% - 24px);
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
   background: var(--on-primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-switch:hover input:checked + .toggle-slider {
+  filter: brightness(1.08);
+}
+
+.toggle-switch:hover input:checked + .toggle-slider::before {
+  background: #ffffff;
+}
+
+.toggle-switch input:focus-visible + .toggle-slider {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SERVICIOS ONLINE (ECOSISTEMA AURORA) & REDISEÑO ENTRADA TEST
+══════════════════════════════════════════════════════════════════════════ */
+.aurora-settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.aurora-hero-card {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 14%, var(--surface-bright)), var(--surface-container));
+  border: 1.5px solid color-mix(in srgb, var(--primary) 28%, var(--outline-variant));
+  border-radius: 24px;
+}
+
+.aurora-hero-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.aurora-hero-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--primary);
+  color: var(--on-primary);
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+.aurora-hero-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.aurora-columns-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .aurora-columns-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.aurora-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.aurora-server-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.aurora-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.aurora-card-header svg {
+  width: 22px;
+  height: 22px;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.aurora-server-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.aurora-env-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border: 1.5px solid var(--outline-variant);
+  border-radius: 18px;
+  padding: 16px;
+  background: var(--surface-container);
+  cursor: pointer;
+  transition: all 180ms ease;
+  user-select: none;
+}
+
+.aurora-env-card:hover {
+  border-color: var(--outline);
+  background: var(--surface-container-high);
+}
+
+.aurora-env-card.is-selected {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface-container));
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.aurora-env-radio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--outline);
+  margin-top: 2px;
+  flex-shrink: 0;
+  transition: border-color 160ms ease;
+}
+
+.aurora-env-card.is-selected .aurora-env-radio {
+  border-color: var(--primary);
+}
+
+.aurora-radio-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: transparent;
+  transition: all 160ms ease;
+}
+
+.aurora-radio-dot.is-active {
+  background: var(--primary);
+  transform: scale(1);
+}
+
+.aurora-env-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aurora-env-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.aurora-env-title strong {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--on-surface);
+}
+
+.aurora-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.aurora-status-pill.is-prod {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.aurora-status-pill.is-dev {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.aurora-env-url {
+  font-size: 0.74rem;
+  color: var(--on-surface-variant);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ── Rediseño de Entrada de Test de Servidor Personalizado ── */
+.aurora-input-group {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.aurora-input-box {
+  display: flex;
+  align-items: center;
+  background: var(--surface-bright);
+  border: 1.5px solid var(--outline-variant);
+  border-radius: 14px;
+  padding: 4px 6px 4px 14px;
+  transition: all 180ms ease;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.aurora-input-box:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent), inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.aurora-input-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--on-surface-variant);
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.aurora-input-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.aurora-server-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--on-surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  padding: 8px 0;
+}
+
+.aurora-server-input::placeholder {
+  color: var(--outline);
+}
+
+.aurora-test-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 140ms ease;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.aurora-test-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.aurora-test-btn:active {
+  transform: translateY(1px);
+}
+
+.aurora-test-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.aurora-test-btn.is-loading svg {
+  animation: spin 1s linear infinite;
+}
+
+.aurora-chips-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.aurora-chips-label {
+  font-size: 0.68rem;
+  color: var(--on-surface-variant);
+  margin-right: 2px;
+}
+
+.aurora-chip {
+  border: 1px solid var(--outline-variant);
+  border-radius: 8px;
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.aurora-chip:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 15%, var(--surface-container-highest));
+  color: var(--primary);
+}
+
+.aurora-test-feedback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  animation: fadeIn 200ms ease;
+}
+
+.aurora-test-feedback svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.aurora-test-feedback.is-testing {
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+  border: 1px solid var(--outline-variant);
+}
+
+.aurora-test-feedback.is-testing svg {
+  animation: spin 1s linear infinite;
+}
+
+.aurora-test-feedback.is-success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.28);
+}
+
+.aurora-test-feedback.is-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
+.aurora-upcoming-badge {
+  background: rgba(99, 102, 241, 0.18);
+  color: #a5b4fc;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.aurora-active-badge {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+/* ── Suite Musical de Aurora Cloud (Música, Instrumentales, Karaokes) ── */
+.aurora-music-suite-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.aurora-music-suite-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.aurora-music-suite-title-row svg {
+  width: 22px;
+  height: 22px;
+  color: var(--primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.aurora-music-services-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.aurora-music-service-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  transition: all 160ms ease;
+}
+
+.aurora-music-service-item:hover {
+  background: var(--surface-container-high);
+  border-color: var(--outline);
+}
+
+.aurora-music-service-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.aurora-music-service-icon.is-music {
+  background: rgba(99, 102, 241, 0.16);
+  color: #818cf8;
+}
+
+.aurora-music-service-icon.is-instrumental {
+  background: rgba(234, 179, 8, 0.16);
+  color: #facc15;
+}
+
+.aurora-music-service-icon.is-karaoke {
+  background: rgba(236, 72, 153, 0.16);
+  color: #f472b6;
+}
+
+.aurora-music-service-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.aurora-music-service-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aurora-music-service-info strong {
+  font-size: 0.86rem;
+  font-weight: 750;
+  color: var(--on-surface);
+}
+
+.aurora-music-service-info p {
+  margin: 0;
+  font-size: 0.73rem;
+  color: var(--on-surface-variant);
+  line-height: 1.3;
+}
+
+.aurora-service-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--surface-container-highest);
+  color: var(--on-surface-variant);
+  border: 1px solid var(--outline-variant);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 

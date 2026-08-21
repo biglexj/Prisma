@@ -354,16 +354,16 @@ mod tests {
 
     #[test]
     fn test_media_type_detection() {
-        assert_eq!(QuickLookMediaType::from_extension("mp3"), Some(QuickLookMediaType::Audio));
-        assert_eq!(QuickLookMediaType::from_extension("FLAC"), Some(QuickLookMediaType::Audio));
-        assert_eq!(QuickLookMediaType::from_extension("wav"), Some(QuickLookMediaType::Audio));
-        assert_eq!(QuickLookMediaType::from_extension("mp4"), Some(QuickLookMediaType::Video));
-        assert_eq!(QuickLookMediaType::from_extension("MKV"), Some(QuickLookMediaType::Video));
-        assert_eq!(QuickLookMediaType::from_extension("jpg"), Some(QuickLookMediaType::Image));
-        assert_eq!(QuickLookMediaType::from_extension("PNG"), Some(QuickLookMediaType::Image));
-        assert_eq!(QuickLookMediaType::from_extension("pdf"), None);
-        assert_eq!(QuickLookMediaType::from_extension("docx"), None);
-        assert_eq!(QuickLookMediaType::from_extension("exe"), None);
+        assert_eq!(QuickLookMediaType::from_extension("mp3"), QuickLookMediaType::Audio);
+        assert_eq!(QuickLookMediaType::from_extension("FLAC"), QuickLookMediaType::Audio);
+        assert_eq!(QuickLookMediaType::from_extension("wav"), QuickLookMediaType::Audio);
+        assert_eq!(QuickLookMediaType::from_extension("mp4"), QuickLookMediaType::Video);
+        assert_eq!(QuickLookMediaType::from_extension("MKV"), QuickLookMediaType::Video);
+        assert_eq!(QuickLookMediaType::from_extension("jpg"), QuickLookMediaType::Image);
+        assert_eq!(QuickLookMediaType::from_extension("PNG"), QuickLookMediaType::Image);
+        assert_eq!(QuickLookMediaType::from_extension("pdf"), QuickLookMediaType::Pdf);
+        assert_eq!(QuickLookMediaType::from_extension("docx"), QuickLookMediaType::Generic);
+        assert_eq!(QuickLookMediaType::from_extension("exe"), QuickLookMediaType::Generic);
     }
 
     #[test]

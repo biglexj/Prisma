@@ -17,6 +17,7 @@
   color: #ffffff;
   box-shadow: none;
   user-select: none;
+  cursor: default;
 }
 
 .video-player-screen.is-fullscreen-mode {
@@ -411,6 +412,11 @@
   cursor: none !important;
 }
 
+.video-player-screen.controls-hidden:has(.video-playlist-sidebar),
+.video-player-screen.controls-hidden:has(.video-popover-menu) {
+  cursor: default !important;
+}
+
 .video-player-screen.controls-hidden .video-player-header {
   opacity: 0 !important;
   transform: translateY(-100%) !important;
@@ -426,6 +432,13 @@
 /* Barra de Progreso / Seek Bar */
 .video-seek-bar {
   margin-top: 0 !important;
+  width: 100%;
+}
+
+.video-seek-bar .media-progress-bar-root {
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
 }
 
 /* Fila de Botones de Control: Centro absoluto al 50% */

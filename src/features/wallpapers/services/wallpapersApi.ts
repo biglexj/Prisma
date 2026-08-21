@@ -24,37 +24,34 @@ export async function fetchAuroraWallpapers(options: WallpaperFilterOptions = {}
   if (options.query) params.set("q", options.query);
   if (options.nsfw) params.set("nsfw", "true");
 
-  const token = localStorage.getItem("aurora_access_token");
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-  };
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
   const primaryUrl = getAuroraServerUrl();
   const queryStr = params.toString() ? `?${params.toString()}` : "";
 
+  // 1. Intentar con el servidor configurado (GET limpio sin headers innecesarios para evitar OPTIONS preflight)
   try {
-    const res = await fetch(`${primaryUrl}/api/v1/wallpapers${queryStr}`, {
-      method: "GET",
-      headers,
-    });
-
+    const res = await fetch(`${primaryUrl}/api/v1/wallpapers${queryStr}`);
     if (res.ok) {
       return await res.json();
     }
-
-    throw new Error(`Error HTTP ${res.status} al consultar catálogo`);
-  } catch (err: any) {
-    throw err;
+    throw new Error(`Servidor respondió con código HTTP ${res.status}`);
+  } catch (err: unknown) {
+    // 2. Si el servidor configurado era personalizado/LAN y falló, intentar con el servidor oficial como respaldo
+    if (primaryUrl !== "https://www.biglexj.com") {
+      try {
+        const fallbackRes = await fetch(`https://www.biglexj.com/api/v1/wallpapers${queryStr}`);
+        if (fallbackRes.ok) {
+          return await fallbackRes.json();
+        }
+      } catch {}
+    }
+    throw err instanceof Error ? err : new Error("Error al consultar el catálogo de Aurora");
   }
 }
 
 export async function toggleAuroraFavorite(wallpaperId: string, currentFavorite: boolean): Promise<boolean> {
   const token = localStorage.getItem("aurora_access_token");
-  if (!token) {
-    throw new Error("Inicia sesión en Aurora Blog para sincronizar favoritos");
+  if (!token || token === "null" || token === "undefined") {
+    throw new Error("Inicia sesión en Aurora para sincronizar favoritos");
   }
 
   const serverUrl = getAuroraServerUrl();
@@ -75,32 +72,33 @@ export async function toggleAuroraFavorite(wallpaperId: string, currentFavorite:
 }
 
 export async function setWindowsWallpaper(wallpaper: AuroraWallpaper): Promise<{ success: boolean; path: string }> {
-  // 1. Descargar la imagen
+  // 1. Descargar la imagen en alta definición
   const response = await fetch(wallpaper.src);
   if (!response.ok) {
     throw new Error("No se pudo descargar la imagen en alta definición");
   }
   const blob = await response.blob();
   const arrayBuffer = await blob.arrayBuffer();
-  const base64 = btoa(
-    new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-  );
+  const uint8 = new Uint8Array(arrayBuffer);
+  
+  // Convertir a base64 de manera segura
+  let binary = "";
+  const len = uint8.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(uint8[i]);
+  }
+  const base64 = btoa(binary);
 
-  // 2. Guardar en disco temporal o de imágenes
-  const cleanTitle = wallpaper.title.replace(/[^a-zA-Z0-9_\- ]/g, "").trim() || wallpaper.slug;
-  const fileName = `Aurora_${cleanTitle}_${Date.now()}.png`;
+  const cleanTitle = (wallpaper.title || wallpaper.slug || "Wallpaper")
+    .replace(/[^a-zA-Z0-9_\- ]/g, "")
+    .trim();
+  const ext = wallpaper.src.split("?")[0]?.split(".").pop() || "png";
+  const fileName = `Aurora_${cleanTitle}_${Date.now()}.${ext}`;
 
-  // Usar media_save_image de Prisma
-  const saveResult = await invoke<{ savedPath: string }>("media_save_image", {
-    sourcePath: fileName,
+  // 2. Guardar en disco (Pictures/Prisma Wallpapers) y aplicar como fondo de Windows en Rust
+  return await invoke<{ success: boolean; path: string }>("wallpaper_save_and_apply", {
     imageBase64: base64,
-    overwrite: false,
-    customFileName: fileName,
-  });
-
-  // 3. Invocar wallpaper_set_desktop con la ruta absoluta guardada
-  return await invoke<{ success: boolean; path: string }>("wallpaper_set_desktop", {
-    imagePath: saveResult.savedPath,
+    fileName,
   });
 }
 
@@ -114,7 +112,10 @@ export async function downloadWallpaperHd(wallpaper: AuroraWallpaper): Promise<v
   const a = document.createElement("a");
   a.href = url;
   const ext = wallpaper.src.split("?")[0]?.split(".").pop() || "png";
-  a.download = `Aurora_${wallpaper.slug || "wallpaper"}.${ext}`;
+  const cleanTitle = (wallpaper.title || wallpaper.slug || "wallpaper")
+    .replace(/[^a-zA-Z0-9_\- ]/g, "")
+    .trim();
+  a.download = `Aurora_${cleanTitle}.${ext}`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

@@ -119,3 +119,21 @@ pub fn quick_look_set_size(window: tauri::WebviewWindow, width: f64, height: f64
     }
     Ok(())
 }
+
+#[tauri::command]
+pub fn quick_look_close_window(
+    window: tauri::WebviewWindow,
+    state: State<'_, QuickLookState>,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+    if label == "quicklook" {
+        state.hide();
+    } else {
+        if label.starts_with(crate::features::quick_look::DETACHED_LABEL_PREFIX) {
+            state.remove_detached(&label);
+        }
+        let _ = window.destroy();
+    }
+    Ok(())
+}
+

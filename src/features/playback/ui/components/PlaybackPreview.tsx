@@ -9,6 +9,7 @@ import { VideoThumbnail } from "../../../visual_library/ui/VideoThumbnail";
 import { useFavorites } from "../../../../shared/useFavorites";
 import { useAlbumPalette } from "../useAlbumPalette";
 import { LyricsPreview } from "./LyricsPreview";
+import { FullscreenLyrics } from "./FullscreenLyrics";
 import { PlaybackQueuePanel } from "./PlaybackQueuePanel";
 import { parseTrackInfo } from "../../../music_library/model/trackInfo";
 import { useScrollRestoration } from "../../../../shared/useScrollRestoration";
@@ -52,6 +53,7 @@ export function PlaybackPreview({
   onSwitchQueue,
 }: PlaybackPreviewProps) {
   const [viewMode, setViewMode] = useState<"cover" | "lyrics" | "queue">("cover");
+  const [isFullscreenLyrics, setIsFullscreenLyrics] = useState(false);
   const [tagEditorOpen, setTagEditorOpen] = useState(false);
   useScrollRestoration(`view:player:${viewMode}`);
   const currentQueueItem = queueState?.queue.items[queueState.queue.currentIndex];
@@ -103,6 +105,7 @@ export function PlaybackPreview({
     const handleSetTab = (e: CustomEvent<{ tab: "cover" | "lyrics" | "queue" }>) => {
       if (e.detail?.tab) {
         setViewMode(e.detail.tab);
+        setIsFullscreenLyrics(false);
       }
     };
     const handleToggleLyrics = () => {
@@ -110,13 +113,22 @@ export function PlaybackPreview({
     };
     const handleToggleQueue = () => {
       setViewMode((prev) => (prev === "queue" ? "cover" : "queue"));
+      setIsFullscreenLyrics(false);
     };
+    const handleToggleFullscreenLyrics = () => {
+      setIsFullscreenLyrics((prev) => !prev);
+    };
+
     window.addEventListener("prisma-music-tab", handleSetTab as EventListener);
     window.addEventListener("prisma-music-toggle-lyrics", handleToggleLyrics);
+    window.addEventListener("prisma-music-toggle-queue", handleToggleQueue);
+    window.addEventListener("prisma-music-toggle-fullscreen-lyrics", handleToggleFullscreenLyrics);
+
     return () => {
       window.removeEventListener("prisma-music-tab", handleSetTab as EventListener);
       window.removeEventListener("prisma-music-toggle-lyrics", handleToggleLyrics);
       window.removeEventListener("prisma-music-toggle-queue", handleToggleQueue);
+      window.removeEventListener("prisma-music-toggle-fullscreen-lyrics", handleToggleFullscreenLyrics);
     };
   }, []);
 
@@ -224,12 +236,14 @@ export function PlaybackPreview({
             path={effectivePath}
             title={trackTitle}
             artist={trackArtist}
+            album={snapshot.trackAlbum ?? undefined}
             positionSeconds={position}
             durationSeconds={duration}
             isPlaying={!snapshot.paused}
             onTogglePlay={onToggle}
             onSeek={onSeek}
             onBackToCover={() => setViewMode("cover")}
+            onOpenFullscreen={() => setIsFullscreenLyrics(true)}
           />
         ) : (
           <div
@@ -409,6 +423,33 @@ export function PlaybackPreview({
           isOpen={tagEditorOpen}
           onClose={() => setTagEditorOpen(false)}
           onSaved={() => setTagEditorOpen(false)}
+        />
+      ) : null}
+
+      {isFullscreenLyrics && hasEffectiveMedia ? (
+        <FullscreenLyrics
+          path={effectivePath}
+          title={trackTitle}
+          artist={trackArtist}
+          album={snapshot.trackAlbum ?? undefined}
+          positionSeconds={position}
+          durationSeconds={duration}
+          isPlaying={!snapshot.paused && hasMedia}
+          volume={snapshot.volume ?? 70}
+          artwork={artwork}
+          palette={palette}
+          queueCount={queueCount}
+          currentIndex={queueState?.queue.currentIndex ?? 0}
+          shuffleMode={queueState?.shuffleMode ?? false}
+          repeatMode={queueState?.repeatMode ?? "off"}
+          onTogglePlay={hasMedia ? onToggle : currentQueueItem ? () => onSelectQueueIndex?.(queueState?.queue.currentIndex ?? 0) : onToggle}
+          onSeek={onSeek}
+          onPrevious={onPrevious}
+          onNext={onNext}
+          onVolume={onVolume}
+          onToggleShuffle={queueState?.toggleShuffle}
+          onToggleRepeat={queueState?.toggleRepeat}
+          onClose={() => setIsFullscreenLyrics(false)}
         />
       ) : null}
     </section>

@@ -105,46 +105,149 @@
 
 .wallpapers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-auto-flow: dense;
+  grid-auto-rows: 100px;
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+@media (max-width: 1350px) {
+  .wallpapers-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-auto-rows: 95px;
+    gap: 14px;
+  }
+}
+
+@media (max-width: 900px) {
+  .wallpapers-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: 90px;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 540px) {
+  .wallpapers-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 85px;
+    gap: 10px;
+  }
 }
 
 .wallpaper-card {
   position: relative;
-  border-radius: 16px;
+  border-radius: 20px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  aspect-ratio: 16 / 10;
+  background: var(--surface-container, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.08));
   cursor: pointer;
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s ease, border-color 0.2s ease;
+  height: 100%;
+  width: 100%;
 }
 
 .wallpaper-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
-  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
-.wallpaper-card.is-vertical {
-  aspect-ratio: 9 / 14;
+/* ── Bento Grid Spans Adaptables (12 Columnas Desktop) ── */
+.wallpaper-card.is-landscape-16-9 {
+  grid-column: span 4;
+  grid-row: span 2;
+}
+
+.wallpaper-card.is-ultrawide-21-9 {
+  grid-column: span 6;
+  grid-row: span 2;
+}
+
+.wallpaper-card.is-vertical-9-16 {
+  grid-column: span 2;
+  grid-row: span 4;
+}
+
+.wallpaper-card.is-square-1-1 {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+/* Adaptabilidad a 8 Columnas (1350px) */
+@media (max-width: 1350px) {
+  .wallpaper-card.is-landscape-16-9 {
+    grid-column: span 4;
+    grid-row: span 2;
+  }
+  .wallpaper-card.is-ultrawide-21-9 {
+    grid-column: span 4;
+    grid-row: span 2;
+  }
+  .wallpaper-card.is-vertical-9-16 {
+    grid-column: span 2;
+    grid-row: span 4;
+  }
+  .wallpaper-card.is-square-1-1 {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+}
+
+/* Adaptabilidad a 4 Columnas (900px) */
+@media (max-width: 900px) {
+  .wallpaper-card.is-landscape-16-9 {
+    grid-column: span 4;
+    grid-row: span 2;
+  }
+  .wallpaper-card.is-ultrawide-21-9 {
+    grid-column: span 4;
+    grid-row: span 2;
+  }
+  .wallpaper-card.is-vertical-9-16 {
+    grid-column: span 2;
+    grid-row: span 4;
+  }
+  .wallpaper-card.is-square-1-1 {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+}
+
+/* Adaptabilidad a 2 Columnas (540px) */
+@media (max-width: 540px) {
+  .wallpaper-card.is-landscape-16-9,
+  .wallpaper-card.is-ultrawide-21-9 {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+  .wallpaper-card.is-vertical-9-16 {
+    grid-column: span 1;
+    grid-row: span 3;
+  }
+  .wallpaper-card.is-square-1-1 {
+    grid-column: span 1;
+    grid-row: span 2;
+  }
 }
 
 .wallpaper-card img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.4s ease;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  display: block;
 }
 
 .wallpaper-card:hover img {
-  transform: scale(1.04);
+  transform: scale(1.05);
 }
 
 .wallpaper-card-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.2) 40%, transparent 70%);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.25) 45%, transparent 75%);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -157,27 +260,78 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 
 .wallpaper-card-pill {
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
   padding: 3px 8px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: white;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  letter-spacing: 0.02em;
+}
+
+.wallpaper-card-fav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: white;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: all 0.2s ease;
+}
+
+.wallpaper-card:hover .wallpaper-card-fav-btn {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.wallpaper-card-fav-btn.is-fav {
+  opacity: 1;
+  background: white;
+  color: #f43f5e;
+  border-color: transparent;
+}
+
+.wallpaper-card-fav-btn:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.9);
+  color: #f43f5e;
+}
+
+.wallpaper-card-fav-btn svg {
+  width: 15px;
+  height: 15px;
 }
 
 .wallpaper-card-bottom {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .wallpaper-card-title {
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.88rem;
+  font-weight: 750;
   color: white;
   white-space: nowrap;
   overflow: hidden;
@@ -185,8 +339,8 @@
 }
 
 .wallpaper-card-meta {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.72);
 }
 
 /* Modal de Detalle */
@@ -272,6 +426,7 @@
   gap: 8px;
   border: none;
   transition: all 0.2s ease;
+  user-select: none;
 }
 
 .wallpaper-btn-primary {
@@ -293,4 +448,80 @@
 
 .wallpaper-btn-secondary:hover {
   background: var(--surface-container-highest, rgba(255, 255, 255, 0.14));
+}
+
+.wallpaper-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Simulación de Escritorio ── */
+.desktop-simulation-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.12);
+  animation: fadeInSim 0.25s ease forwards;
+}
+
+@keyframes fadeInSim {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.desktop-sim-widget {
+  align-self: flex-start;
+  background: rgba(14, 10, 12, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 16px 24px;
+  border-radius: 18px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.desktop-sim-time {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.desktop-sim-date {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.desktop-sim-taskbar {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(14, 10, 12, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 6px 18px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.desktop-sim-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  display: grid;
+  place-items: center;
+  color: white;
+  font-size: 0.8rem;
 }

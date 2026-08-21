@@ -77,6 +77,9 @@ export function MediaProgressBar({
     elasticPhase: 0,
   });
 
+  // Tamaño en memoria para evitar layout thrashing y parpadeos en 60/120 FPS
+  const sizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 28 });
+
   // Renderizado continuo en Canvas a 60/120 FPS
   useEffect(() => {
     if (effectiveMode === "classic") return;
@@ -91,10 +94,31 @@ export function MediaProgressBar({
     let animationFrameId: number | null = null;
     animStateRef.current.lastTime = performance.now();
 
+    const updateCanvasDimensions = () => {
+      const w = container.clientWidth || Math.round(container.getBoundingClientRect().width);
+      const h = container.clientHeight || 28;
+      if (w > 0 && h > 0) {
+        sizeRef.current = { width: w, height: h };
+        const dpr = window.devicePixelRatio || 1;
+        const displayWidth = Math.floor(w * dpr);
+        const displayHeight = Math.floor(h * dpr);
+
+        if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+          canvas.width = displayWidth;
+          canvas.height = displayHeight;
+        }
+      }
+    };
+
+    updateCanvasDimensions();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateCanvasDimensions();
+    });
+    resizeObserver.observe(container);
+
     const render = () => {
-      const rect = container.getBoundingClientRect();
-      const width = rect.width;
-      const height = rect.height || 28;
+      const { width, height } = sizeRef.current;
 
       if (width <= 0 || height <= 0) {
         animationFrameId = requestAnimationFrame(render);
@@ -102,14 +126,6 @@ export function MediaProgressBar({
       }
 
       const dpr = window.devicePixelRatio || 1;
-      const displayWidth = Math.floor(width * dpr);
-      const displayHeight = Math.floor(height * dpr);
-
-      if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-        canvas.width = displayWidth;
-        canvas.height = displayHeight;
-      }
-
       const now = performance.now();
       const delta = Math.min((now - animStateRef.current.lastTime) / 1000, 0.1);
       animStateRef.current.lastTime = now;
@@ -173,6 +189,7 @@ export function MediaProgressBar({
     render();
 
     return () => {
+      resizeObserver.disconnect();
       if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
       }

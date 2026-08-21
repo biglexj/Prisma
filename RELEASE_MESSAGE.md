@@ -1,20 +1,17 @@
-# 🚀 Prisma v1.0.1 — Ecosistema Luna Fetch & Gallery-DL, Convertidor por Lotes y Gestión Avanzada
+# 🚀 Prisma v1.0.2 — Suite de Comparativa de Imágenes, Bento Grid y Modo Desarrollo Aislado
 
-Llega **Prisma v1.0.1**, una potente actualización que expande las herramientas del ecosistema con hubs dedicados para **Luna Fetch** y **Gallery-DL GUI**, sinergia activa con **Super Gallery** en **Aurora Synapse**, el nuevo **Convertidor Prisma** por lotes con soporte de carpetas completas, experiencia musical con agrupación por álbumes, aislamiento selectivo de carpetas ocultas solo para la línea de tiempo, miniaturas íntegras en la vista de árbol y detección de alta precisión en **Prisma Quick Look** para Windows 11 con pestañas.
+Llega **Prisma v1.0.2**, una importante actualización que introduce la nueva **Suite de Comparativa de Imágenes Multimodal** integrada al visor y a QuickLook, soporte para **instancias y ventanas desacopladas en paralelo**, **modo desarrollo aislado** para programar sin bloqueos, rediseño adaptable de fondos de pantalla en **Bento Grid de 12 columnas**, expansión de la **Suite Musical Aurora Cloud** (Música, Instrumentales y Karaokes) con test de ping en tiempo real, y **estabilización de alto rendimiento en las barras de progreso** sin parpadeos ni recálculos continuos de layout.
 
 ---
 
 ### ✨ Novedades Destacadas
 
-- 🌙 **Centro de Descargas Luna Fetch**: Acceso directo desde la barra de herramientas a Luna Fetch con analizador de URLs, selectores inline de formato/calidad y apertura automática de contenidos en Prisma.
-- 🖼️ **Descargador Masivo Gallery-DL GUI**: Integración para descarga masiva de álbumes, perfiles de arte y colecciones completas (+100 sitios) con 4 estructuras de carpetas y conexión al visor de imágenes de Prisma.
-- 🌐 **Panel Aurora Synapse & Sinergia Super Gallery**: Catálogo enriquecido de aplicaciones vinculadas con sinergia activa para Super Gallery, iconos oficiales en alta fidelidad y accesos directos a repositorios o descargas.
-- 🔄 **Convertidor Prisma por Lotes**: Conversión masiva y optimización de imágenes con soporte de archivos o carpetas completas, ajustes de redimensión y calidad, y acceso rápido con clic derecho desde el menú contextual en álbumes y en el árbol jerárquico.
-- 📁 **Aislamiento Selectivo de Carpetas Ocultas**: Las carpetas excluidas se ocultan estrictamente en la Línea de Tiempo, permaneciendo 100% accesibles y navegables en las vistas de Carpetas y Árbol.
-- 🌲 **Miniaturas Sin Recorte y Acciones en el Árbol**: Proporción original para imágenes y vídeos en el árbol jerárquico, sumando menús contextuales completos en carpetas para conversión, reproducción y encolado.
-- 🎵 **Música por Álbum y Vista Detallada**: Agrupación automática por etiquetas ID3 de álbum con vista dedicada de pistas, carátula, estadísticas y doble interacción en tarjetas.
-- 👁️ **Prisma Quick Look Perfeccionado**: Detección jerárquica de la pestaña activa en Windows 11 Explorer, eliminación de parpadeos en segundo plano y auto-cierre al abrir con la aplicación predeterminada.
-- ☀️ **Modo Claro, Scroll y Densidad**: Selector de densidad a 42px, vista de configuración con inicio desde arriba y tokens de alto contraste en diálogos y convertidor.
+- 🔍 **Suite de Comparativa de Imágenes Multimodal**: Inspecciona y contrasta fotografías con 4 modos visuales: Cortina Deslizante (*Split Slider*), Lado a Lado simétrico, Alternancia Rápida (*Flicker* a 60 Hz para notar microdiferencias) y Mapa de Diferencia matemática, con zoom sincronizado hasta el 500% y atajo rápido (`C`).
+- 🪟 **Ventanas Desacopladas en Quick Look**: Desacopla múltiples visores flotantes para mantener abiertas comparaciones de imágenes, vídeos o documentos de forma simultánea.
+- ⚡ **Modo Desarrollo Aislado y Concurrencia**: Bypass inteligente de bloqueo para ejecutar Prisma en modo desarrollo concurrentemente con la versión oficial instalada mediante perfiles de datos aislados (`dev_profile/`).
+- 🍱 **Bento Grid Adaptativo para Wallpapers Aurora**: Cuadrícula de 12 columnas densa que empaqueta armoniosamente fondos 16:9, 21:9, 9:16 y 1:1 eliminando huecos negros residuales, con botones flotantes de favoritos y tarjetas de cristal esmerilado.
+- ☁️ **Suite Musical Aurora Cloud & Test de Servidor**: Panel de configuración con medición de latencia/ping en vivo y catálogo dividido en 3 vertientes: Explorar Música (Audio HD), Pistas Instrumentales (Off-Vocal) y Karaokes con letras dinámicas (LRC / Sing).
+- 🎯 **Barras de Progreso Ultra-Estables (Zero Layout Thrashing)**: Migración del motor de canvas a `ResizeObserver`, garantizando una altura inmutable de 28px y eliminando al 100% los saltos de altura y parpadeos al pasar el cursor.
 
 ---
 

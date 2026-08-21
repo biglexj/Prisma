@@ -1217,6 +1217,13 @@ input[type="range"] {
 
 .video-seek-bar {
   margin-top: 0 !important;
+  width: 100%;
+}
+
+.video-seek-bar .media-progress-bar-root {
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
 }
 
 .video-controls-row {

@@ -128,6 +128,15 @@ export function VideoPlayer({
     setSelectedTrackIdx(0);
     setPosition(0);
     setVideoError(false);
+
+    // Mantener cursor y controles visibles de forma fluida al cambiar de vídeo/pista
+    setShowControls(true);
+    if (controlsTimeoutRef.current) {
+      window.clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsTimeoutRef.current = window.setTimeout(() => {
+      setShowControls(false);
+    }, 3500);
   }, [path]);
 
   // Auto-detect current index in video list
@@ -553,9 +562,15 @@ export function VideoPlayer({
   }, [showAudioMenu, showSubMenu]);
 
   const handleNext = () => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = window.setTimeout(() => {
+      setShowControls(false);
+    }, 3500);
+
     if (repeatMode === "one" && videoRef.current) {
       videoRef.current.currentTime = 0;
-      void videoRef.current.play();
+      void videoRef.current.play().catch(() => {});
       return;
     }
     if (hasNext && onSelectVideo) {
@@ -566,6 +581,12 @@ export function VideoPlayer({
   };
 
   const handlePrevious = () => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = window.setTimeout(() => {
+      setShowControls(false);
+    }, 3500);
+
     if (position > 3 && videoRef.current) {
       videoRef.current.currentTime = 0;
       return;
@@ -690,15 +711,15 @@ export function VideoPlayer({
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
     }
-    if (!paused && !showAudioMenu && !showSubMenu) {
+    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist) {
       controlsTimeoutRef.current = window.setTimeout(() => {
         setShowControls(false);
-      }, 3000);
+      }, 3500);
     }
   };
 
   const handleMouseLeave = () => {
-    if (!paused && !showAudioMenu && !showSubMenu) {
+    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist) {
       if (controlsTimeoutRef.current) {
         window.clearTimeout(controlsTimeoutRef.current);
       }
@@ -707,16 +728,16 @@ export function VideoPlayer({
   };
 
   useEffect(() => {
-    if (showAudioMenu || showSubMenu || paused) {
+    if (showAudioMenu || showSubMenu || showPlaylist || paused) {
       setShowControls(true);
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
     } else {
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
       controlsTimeoutRef.current = window.setTimeout(() => {
         setShowControls(false);
-      }, 3000);
+      }, 3500);
     }
-  }, [showAudioMenu, showSubMenu, paused]);
+  }, [showAudioMenu, showSubMenu, showPlaylist, paused]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -1064,7 +1085,9 @@ export function VideoPlayer({
                     video.currentTime = initialTime;
                     setPosition(initialTime);
                   }
-                  void video.play().catch(() => {});
+                  if (video.paused && !paused) {
+                    void video.play().catch(() => {});
+                  }
 
                   // Si PiP estaba activo (ej. reemplazo de vídeo desde la galería), solicitar PiP de inmediato
                   if (isPipActiveRef.current && document.pictureInPictureEnabled) {

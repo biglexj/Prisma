@@ -49,6 +49,7 @@ pub struct AudioTranscodeOptions {
     pub channels: Option<u32>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConversionJob {
     pub id: String,

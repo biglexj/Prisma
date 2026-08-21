@@ -37,9 +37,9 @@ use app::commands::custom_libraries::{
 use app::commands::media::{media_delete_items, media_rename_item, media_save_image};
 use app::commands::quick_look::{
     autostart_get_status, autostart_set, get_minimize_to_tray, is_minimize_to_tray_enabled,
-    quick_look_get_current, quick_look_get_detached_payload, quick_look_get_shortcut,
-    quick_look_hide, quick_look_is_maximized, quick_look_open_detached, quick_look_open_in_main,
-    quick_look_set_shortcut, quick_look_set_size, quick_look_show_file,
+    quick_look_close_window, quick_look_get_current, quick_look_get_detached_payload,
+    quick_look_get_shortcut, quick_look_hide, quick_look_is_maximized, quick_look_open_detached,
+    quick_look_open_in_main, quick_look_set_shortcut, quick_look_set_size, quick_look_show_file,
     quick_look_start_dragging, quick_look_toggle, quick_look_toggle_maximize, set_minimize_to_tray,
 };
 use app::commands::synapse::{
@@ -59,7 +59,7 @@ use app::commands::visual_library::{
     visual_library_remove_excluded_folder, visual_library_remove_folder,
     visual_library_rescan_folder,
 };
-use app::commands::wallpapers::wallpaper_set_desktop;
+use app::commands::wallpapers::{wallpaper_save_and_apply, wallpaper_set_desktop};
 use app::state::{FavoritesState, InitialFileState, MusicLibraryState, PlaybackProbeState, VisualLibraryState};
 use features::quick_look::QuickLookState;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
@@ -95,9 +95,15 @@ pub fn run() {
     };
 
     let is_autostart = std::env::args().any(|a| a == "--autostart");
+    let is_dev_mode = cfg!(debug_assertions)
+        || std::env::args().any(|a| a == "--dev" || a == "--multi-instance" || a == "-d")
+        || std::env::var("PRISMA_DEV").is_ok()
+        || std::env::var("PRISMA_MULTI_INSTANCE").is_ok();
 
-    tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+    let mut builder = tauri::Builder::default();
+
+    if !is_dev_mode {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             let maybe_arg = args.into_iter().skip(1).find(|arg| !arg.starts_with('-'));
 
             if let Some(arg_str) = maybe_arg {
@@ -144,11 +150,14 @@ pub fn run() {
                 let _ = w.show();
                 let _ = w.set_focus();
             }
-        }))
+        }));
+    }
+
+    builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
-                .with_filename(".window-state-v2.json")
+                .with_filename(if is_dev_mode { ".window-state-dev.json" } else { ".window-state-v2.json" })
                 .skip_initial_state("main")
                 .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
                 .build(),
@@ -156,7 +165,11 @@ pub fn run() {
         .manage(PlaybackProbeState::new())
         .manage(InitialFileState(std::sync::Mutex::new(initial_file_for_main)))
         .setup(move |app| {
-            let data_directory = app.path().app_data_dir()?;
+            let mut data_directory = app.path().app_data_dir()?;
+            if is_dev_mode {
+                data_directory = data_directory.join("dev_profile");
+                let _ = std::fs::create_dir_all(&data_directory);
+            }
 
             // ── Registro de esquema prisma:// y servicios de Aurora Synapse ──
             features::synapse::register_windows_deep_link();
@@ -195,6 +208,9 @@ pub fn run() {
             app.manage(quick_look_state);
 
             if let Some(main_window) = app.get_webview_window("main") {
+                if is_dev_mode {
+                    let _ = main_window.set_title("Prisma (Dev) · Multimedia local");
+                }
                 if is_autostart || is_media_initial_file {
                     let _ = main_window.hide();
                 } else {
@@ -365,6 +381,7 @@ pub fn run() {
             favorites_get_all,
             favorites_toggle,
             favorites_is_favorite,
+            quick_look_close_window,
             quick_look_toggle,
             quick_look_hide,
             quick_look_open_in_main,
@@ -418,6 +435,7 @@ pub fn run() {
             audio_save_lyrics,
             image_read_exif,
             wallpaper_set_desktop,
+            wallpaper_save_and_apply,
         ])
         .run(tauri::generate_context!())
         .expect("Prisma no pudo iniciar el runtime de Tauri");

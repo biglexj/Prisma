@@ -153,6 +153,7 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
     progressBarStyle,
     sidebarDensity,
     auroraOnlineServicesEnabled,
+    auroraWallpapersEnabled,
     auroraServerUrl,
     setQuickLookShortcut,
     setAutostart,
@@ -161,6 +162,7 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
     setProgressBarStyle,
     setSidebarDensity,
     setAuroraOnlineServicesEnabled,
+    setAuroraWallpapersEnabled,
     setAuroraServerUrl,
   } = useSystemSettings();
 
@@ -172,6 +174,34 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
     }, 1000);
     return () => clearInterval(timer);
   }, [demoPlaying, activeTab]);
+
+  const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
+  const [testFeedback, setTestFeedback] = useState<string>("");
+
+  const handleTestConnection = async () => {
+    setTestStatus("testing");
+    setTestFeedback("Comprobando conexión con el servidor...");
+    const cleanUrl = auroraServerUrl.trim().replace(/\/$/, "");
+    const startTime = performance.now();
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      await fetch(`${cleanUrl}/api/v1/wallpapers?limit=1`, {
+        signal: controller.signal,
+      }).catch(async () => {
+        return await fetch(cleanUrl, { signal: controller.signal, mode: "no-cors" });
+      });
+
+      clearTimeout(timeoutId);
+      const elapsed = Math.round(performance.now() - startTime);
+      setTestStatus("success");
+      setTestFeedback(`¡Conexión establecida exitosamente! (${elapsed}ms) · Endpoint activo`);
+    } catch {
+      setTestStatus("error");
+      setTestFeedback(`No se pudo conectar a "${cleanUrl}". Verifica que el servidor local (ej. Astro) esté en ejecución.`);
+    }
+  };
 
   const isQuickLookActive = quickLookShortcut !== "disabled";
 
@@ -668,7 +698,7 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
           <div className="settings-panel">
             <div className="settings-card">
               <h3>Referencia de Atajos de Teclado</h3>
-              <p>Consulta los atajos rápidos de teclado para controlar la reproducción de vídeos y música con máxima agilidad.</p>
+              <p>Consulta los atajos rápidos de teclado para controlar la reproducción de vídeos, visor de imágenes y música con máxima agilidad.</p>
 
               <div className="shortcuts-reference-grid">
                 {/* Categoría: Reproducción */}
@@ -796,6 +826,56 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
                     </div>
                   </div>
                 </div>
+
+                {/* Categoría: Visor de Imágenes y Galería */}
+                <div className="shortcuts-category-card">
+                  <h4>
+                    <Icon name="image" />
+                    <span>Visor de Imágenes</span>
+                  </h4>
+                  <div className="shortcuts-list">
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Restablecer tamaño normal (Escala)</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">R</kbd>
+                        <kbd className="shortcut-kbd-pill">Ctrl + 0</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Acercar / Alejar zoom</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">Ctrl +</kbd>
+                        <kbd className="shortcut-kbd-pill">Ctrl -</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Imagen anterior / siguiente</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">←</kbd>
+                        <kbd className="shortcut-kbd-pill">→</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Presentación automática</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">Espacio</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Editar / Renombrar</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">E</kbd>
+                        <kbd className="shortcut-kbd-pill">F2</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Cerrar visor</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">Esc</kbd>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -805,110 +885,255 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
             PESTAÑA 7: SERVICIOS ONLINE (ECOSISTEMA AURORA)
         ══════════════════════════════════════════════════════════════════════════ */}
         {activeTab === "aurora" && (
-          <div className="settings-panel">
-            <div className="settings-cards-grid">
-              {/* ── Switch Principal ── */}
-              <div className="settings-card">
-                <div className="settings-card-header-row">
-                  <div>
-                    <h3>Servicios Online del Ecosistema Aurora</h3>
-                    <p>
-                      Habilita la integración en la nube con Aurora para explorar el catálogo de Wallpapers en alta fidelidad, sincronización de favoritos y biblioteca musical.
-                    </p>
+          <div className="settings-panel aurora-settings-panel">
+            {/* ── Banner Principal con Switch Maestro ── */}
+            <div className="settings-card aurora-hero-card">
+              <div className="settings-card-header-row">
+                <div className="aurora-hero-text">
+                  <div className="aurora-hero-title-row">
+                    <div className="aurora-hero-icon">
+                      <Icon name="sparkles" />
+                    </div>
+                    <div>
+                      <h3>Servicios Online del Ecosistema Aurora</h3>
+                      <p>
+                        Habilita la integración en la nube con Aurora para explorar el catálogo de Wallpapers en alta fidelidad, sincronización de favoritos y biblioteca musical.
+                      </p>
+                    </div>
                   </div>
-                  <label className="toggle-switch">
-                    <input
-                      type="checkbox"
-                      checked={auroraOnlineServicesEnabled}
-                      onChange={(e) => setAuroraOnlineServicesEnabled(e.target.checked)}
-                      aria-label="Habilitar Servicios Online de Aurora"
-                    />
-                    <span className="toggle-slider" />
-                  </label>
                 </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={auroraOnlineServicesEnabled}
+                    onChange={(e) => setAuroraOnlineServicesEnabled(e.target.checked)}
+                    aria-label="Habilitar Servicios Online de Aurora"
+                  />
+                  <span className="toggle-slider" />
+                </label>
               </div>
+            </div>
 
-              {auroraOnlineServicesEnabled && (
-                <>
-                  {/* ── Servidor de Aurora ── */}
-                  <div className="settings-card">
-                    <h4 className="settings-subheading">Servidor de Aurora Cloud</h4>
-                    <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "16px" }}>
-                      Selecciona el entorno de Aurora para la consulta de catálogos y sincronización en la nube:
-                    </p>
+            {auroraOnlineServicesEnabled && (
+              <div className="aurora-columns-layout">
+                {/* ── Columna Izquierda: Servidor de Aurora Cloud ── */}
+                <div className="aurora-col">
+                  <div className="settings-card aurora-server-card">
+                    <div className="aurora-card-header">
+                      <Icon name="server" />
+                      <div>
+                        <h3>Servidor de Aurora Cloud</h3>
+                        <p>Selecciona el entorno de Aurora para la consulta de catálogos y sincronización:</p>
+                      </div>
+                    </div>
 
-                    <div style={{ display: "grid", gap: "10px" }}>
-                      <label
-                        className={`density-option-card ${auroraServerUrl === "https://www.biglexj.com" ? "is-selected" : ""}`}
-                        onClick={() => setAuroraServerUrl("https://www.biglexj.com")}
-                        style={{ cursor: "pointer" }}
+                    <div className="aurora-server-options">
+                      {/* Opción 1: Servidor Oficial */}
+                      <div
+                        className={`aurora-env-card ${auroraServerUrl === "https://www.biglexj.com" ? "is-selected" : ""}`}
+                        onClick={() => {
+                          setAuroraServerUrl("https://www.biglexj.com");
+                          setTestStatus("idle");
+                        }}
+                        role="button"
+                        tabIndex={0}
                       >
-                        <input
-                          type="radio"
-                          name="aurora-server"
-                          checked={auroraServerUrl === "https://www.biglexj.com"}
-                          onChange={() => setAuroraServerUrl("https://www.biglexj.com")}
-                        />
-                        <div>
-                          <strong>🟢 Servidor Oficial</strong>
-                          <p style={{ margin: "2px 0 0", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
-                            https://www.biglexj.com
-                          </p>
+                        <div className="aurora-env-radio">
+                          <span className={`aurora-radio-dot ${auroraServerUrl === "https://www.biglexj.com" ? "is-active" : ""}`} />
                         </div>
-                      </label>
+                        <div className="aurora-env-info">
+                          <div className="aurora-env-title">
+                            <span className="aurora-status-pill is-prod">🟢 Oficial</span>
+                            <strong>Servidor Oficial de Producción</strong>
+                          </div>
+                          <span className="aurora-env-url">https://www.biglexj.com</span>
+                        </div>
+                      </div>
 
-                      <label
-                        className={`density-option-card ${auroraServerUrl !== "https://www.biglexj.com" ? "is-selected" : ""}`}
+                      {/* Opción 2: Servidor Personalizado / LAN / Astro */}
+                      <div
+                        className={`aurora-env-card is-custom ${auroraServerUrl !== "https://www.biglexj.com" ? "is-selected" : ""}`}
                         onClick={() => {
                           if (auroraServerUrl === "https://www.biglexj.com") {
                             setAuroraServerUrl("http://localhost:4321");
                           }
+                          setTestStatus("idle");
                         }}
-                        style={{ cursor: "pointer" }}
+                        role="button"
+                        tabIndex={0}
                       >
-                        <input
-                          type="radio"
-                          name="aurora-server"
-                          checked={auroraServerUrl !== "https://www.biglexj.com"}
-                          onChange={() => {}}
-                        />
-                        <div style={{ flex: 1 }}>
-                          <strong>🔵 Servidor Personalizado / LAN</strong>
-                          <p style={{ margin: "2px 0 0", color: "var(--text-secondary)", fontSize: "0.8rem" }}>
-                            Para pruebas en red local con Astro (ej. http://localhost:4321)
-                          </p>
+                        <div className="aurora-env-radio">
+                          <span className={`aurora-radio-dot ${auroraServerUrl !== "https://www.biglexj.com" ? "is-active" : ""}`} />
+                        </div>
+                        <div className="aurora-env-info" style={{ flex: 1 }}>
+                          <div className="aurora-env-title">
+                            <span className="aurora-status-pill is-dev">🔵 Personalizado</span>
+                            <strong>Servidor Local / LAN (Astro)</strong>
+                          </div>
+                          <span className="aurora-env-url">Para desarrollo y pruebas locales con Astro o Node</span>
+
                           {auroraServerUrl !== "https://www.biglexj.com" && (
-                            <input
-                              type="text"
-                              className="settings-input"
-                              value={auroraServerUrl}
-                              onChange={(e) => setAuroraServerUrl(e.target.value)}
-                              placeholder="http://localhost:4321"
-                              style={{ marginTop: "8px", width: "100%" }}
-                            />
+                            <div className="aurora-input-group" onClick={(e) => e.stopPropagation()}>
+                              <div className="aurora-input-box">
+                                <span className="aurora-input-icon">
+                                  <Icon name="globe" />
+                                </span>
+                                <input
+                                  type="text"
+                                  className="aurora-server-input"
+                                  value={auroraServerUrl}
+                                  onChange={(e) => {
+                                    setAuroraServerUrl(e.target.value);
+                                    setTestStatus("idle");
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleTestConnection();
+                                  }}
+                                  placeholder="http://localhost:4321"
+                                  spellCheck={false}
+                                />
+                                <button
+                                  type="button"
+                                  className={`aurora-test-btn ${testStatus === "testing" ? "is-loading" : ""}`}
+                                  onClick={handleTestConnection}
+                                  title="Probar conexión con este servidor"
+                                >
+                                  <Icon name={testStatus === "success" ? "check" : "refresh"} />
+                                  <span>{testStatus === "testing" ? "Probando..." : "Probar"}</span>
+                                </button>
+                              </div>
+
+                              {/* Preajustes Rápidos */}
+                              <div className="aurora-chips-row">
+                                <span className="aurora-chips-label">Atajos:</span>
+                                <button
+                                  type="button"
+                                  className="aurora-chip"
+                                  onClick={() => {
+                                    setAuroraServerUrl("http://localhost:4321");
+                                    setTestStatus("idle");
+                                  }}
+                                >
+                                  localhost:4321 (Astro)
+                                </button>
+                                <button
+                                  type="button"
+                                  className="aurora-chip"
+                                  onClick={() => {
+                                    setAuroraServerUrl("http://localhost:3000");
+                                    setTestStatus("idle");
+                                  }}
+                                >
+                                  localhost:3000
+                                </button>
+                                <button
+                                  type="button"
+                                  className="aurora-chip"
+                                  onClick={() => {
+                                    setAuroraServerUrl("http://127.0.0.1:4321");
+                                    setTestStatus("idle");
+                                  }}
+                                >
+                                  127.0.0.1:4321
+                                </button>
+                              </div>
+
+                              {/* Estado y Feedback del Test */}
+                              {testStatus !== "idle" && (
+                                <div className={`aurora-test-feedback is-${testStatus}`}>
+                                  <Icon name={testStatus === "success" ? "check" : testStatus === "error" ? "close" : "refresh"} />
+                                  <span>{testFeedback}</span>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Columna Derecha: Catálogos y Servicios Nube ── */}
+                <div className="aurora-col">
+                  {/* Catálogo Wallpapers Aurora */}
+                  <div className="settings-card">
+                    <div className="settings-card-header-row">
+                      <div>
+                        <h3>Catálogo de Wallpapers Aurora</h3>
+                        <p>
+                          Descarga y aplica wallpapers en resolución 4K directamente desde el repositorio del blog Aurora integrado en Prisma.
+                        </p>
+                      </div>
+                      <label className="toggle-switch" title={auroraWallpapersEnabled ? "Desactivar Wallpapers" : "Activar Wallpapers"}>
+                        <input
+                          type="checkbox"
+                          checked={auroraWallpapersEnabled}
+                          onChange={(e) => setAuroraWallpapersEnabled(e.target.checked)}
+                          aria-label="Activar o desactivar Catálogo de Wallpapers Aurora"
+                        />
+                        <span className="toggle-slider" />
                       </label>
                     </div>
                   </div>
 
-                  {/* ── Música Online ── */}
-                  <div className="settings-card">
+                  {/* Suite Musical de Aurora Cloud (Música, Instrumentales, Karaokes) */}
+                  <div className="settings-card aurora-music-suite-card">
                     <div className="settings-card-header-row">
-                      <div>
-                        <h3>Música Online (Aurora Cloud Music)</h3>
-                        <p>
-                          Streaming musical en alta fidelidad y sincronización de listas personales. (Próximamente disponible para usuarios autenticados).
-                        </p>
+                      <div className="aurora-music-suite-title-row">
+                        <Icon name="music" />
+                        <div>
+                          <h3>Servicios Musicales de Aurora Cloud</h3>
+                          <p>
+                            Ecosistema de streaming en la nube con acceso a pistas completas, versiones instrumentales y karaokes sincronizados.
+                          </p>
+                        </div>
                       </div>
-                      <span style={{ background: "rgba(99, 102, 241, 0.2)", color: "#818cf8", padding: "4px 10px", borderRadius: "12px", fontSize: "0.75rem", fontWeight: "bold" }}>
+                      <span className="aurora-upcoming-badge">
                         Próximamente
                       </span>
                     </div>
+
+                    <div className="aurora-music-services-list">
+                      {/* 1. Explorar Música */}
+                      <div className="aurora-music-service-item">
+                        <div className="aurora-music-service-icon is-music">
+                          <Icon name="disc" />
+                        </div>
+                        <div className="aurora-music-service-info">
+                          <strong>Explorar Música</strong>
+                          <p>Streaming en alta fidelidad de discografía oficial, álbumes y lanzamientos exclusivos.</p>
+                        </div>
+                        <span className="aurora-service-tag">Audio HD</span>
+                      </div>
+
+                      {/* 2. Pistas Instrumentales */}
+                      <div className="aurora-music-service-item">
+                        <div className="aurora-music-service-icon is-instrumental">
+                          <Icon name="sliders" />
+                        </div>
+                        <div className="aurora-music-service-info">
+                          <strong>Instrumentales (Off-Vocal)</strong>
+                          <p>Versiones instrumentales limpias y pistas de acompañamiento para práctica y creación.</p>
+                        </div>
+                        <span className="aurora-service-tag">Off-Vocal</span>
+                      </div>
+
+                      {/* 3. Karaokes */}
+                      <div className="aurora-music-service-item">
+                        <div className="aurora-music-service-icon is-karaoke">
+                          <Icon name="mic" />
+                        </div>
+                        <div className="aurora-music-service-info">
+                          <strong>Karaokes & Letras Dinámicas</strong>
+                          <p>Pistas preparadas para cantar con letras sincronizadas en tiempo real estrofa por estrofa.</p>
+                        </div>
+                        <span className="aurora-service-tag">LRC / Sing</span>
+                      </div>
+                    </div>
                   </div>
-                </>
-              )}
-            </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

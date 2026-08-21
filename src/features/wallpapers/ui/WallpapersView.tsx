@@ -6,7 +6,7 @@ import { Icon } from "../../../shared/ui/Icon";
 import "./wallpapers.css";
 
 export function WallpapersView() {
-  const { auroraOnlineServicesEnabled, setAuroraOnlineServicesEnabled, auroraServerUrl } = useSystemSettings();
+  const { auroraOnlineServicesEnabled, setAuroraOnlineServicesEnabled } = useSystemSettings();
   const [wallpapers, setWallpapers] = useState<AuroraWallpaper[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +19,7 @@ export function WallpapersView() {
   const [selectedWallpaper, setSelectedWallpaper] = useState<AuroraWallpaper | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+  const [isSimulatingDesktop, setIsSimulatingDesktop] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!auroraOnlineServicesEnabled) {
@@ -48,12 +49,28 @@ export function WallpapersView() {
     loadData();
   }, [loadData]);
 
+  // Manejo de atajo Escape para cerrar modal o salir de simulación de escritorio
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selectedWallpaper) {
+        e.preventDefault();
+        if (isSimulatingDesktop) {
+          setIsSimulatingDesktop(false);
+        } else {
+          setSelectedWallpaper(null);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedWallpaper, isSimulatingDesktop]);
+
   const handleApplyWallpaper = async (wp: AuroraWallpaper) => {
     setIsApplying(true);
     setActionStatus("Aplicando fondo en Windows...");
     try {
       await setWindowsWallpaper(wp);
-      setActionStatus("✅ ¡Fondo de pantalla aplicado correctamente!");
+      setActionStatus("✅ ¡Fondo de pantalla aplicado correctamente en tu escritorio!");
       setTimeout(() => setActionStatus(null), 4000);
     } catch (err: unknown) {
       setActionStatus(`❌ Error: ${err instanceof Error ? err.message : "No se pudo aplicar"}`);
@@ -74,6 +91,16 @@ export function WallpapersView() {
     }
   };
 
+  const handleSendToMobile = (wp: AuroraWallpaper) => {
+    window.dispatchEvent(
+      new CustomEvent("prisma-send-to-supergallery", {
+        detail: { path: wp.src, title: wp.title },
+      })
+    );
+    setActionStatus("📲 Enviando wallpaper a Super Gallery...");
+    setTimeout(() => setActionStatus(null), 3000);
+  };
+
   const handleToggleFavorite = async (wp: AuroraWallpaper) => {
     try {
       const newFav = await toggleAuroraFavorite(wp.id, wp.isFavorite);
@@ -89,6 +116,10 @@ export function WallpapersView() {
     }
   };
 
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const dateStr = now.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+
   return (
     <div className="wallpapers-container">
       {/* Cabecera */}
@@ -103,22 +134,33 @@ export function WallpapersView() {
           </p>
         </div>
 
-        <div className="wallpapers-search-bar">
-          <Icon name="search" />
-          <input
-            type="text"
-            placeholder="Buscar por anime, estilo, tag..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}
-            >
-              <Icon name="close" />
-            </button>
-          )}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div className="wallpapers-search-bar">
+            <Icon name="search" />
+            <input
+              type="text"
+              placeholder="Buscar por anime, estilo, tag..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}
+                title="Limpiar búsqueda"
+              >
+                <Icon name="close" />
+              </button>
+            )}
+          </div>
+          <button
+            className="wallpaper-btn wallpaper-btn-secondary"
+            onClick={loadData}
+            title="Recargar catálogo de Aurora"
+            style={{ padding: "8px 12px" }}
+          >
+            <Icon name="refresh" />
+          </button>
         </div>
       </header>
 
@@ -175,6 +217,12 @@ export function WallpapersView() {
           onClick={() => setSelectedCategory(selectedCategory === "Paisaje" ? undefined : "Paisaje")}
         >
           Paisajes
+        </button>
+        <button
+          className={`wallpaper-filter-chip ${selectedCategory === "Escritorio" ? "is-active" : ""}`}
+          onClick={() => setSelectedCategory(selectedCategory === "Escritorio" ? undefined : "Escritorio")}
+        >
+          Escritorio
         </button>
       </div>
 
@@ -234,25 +282,50 @@ export function WallpapersView() {
         <div className="wallpapers-grid">
           {wallpapers.map((wp) => {
             const isVertical = wp.aspectRatio === "9:16";
+            const isSquare = wp.aspectRatio === "1:1";
+            const isUltrawide = wp.aspectRatio === "21:9";
+            const spanClass = isVertical
+              ? "is-vertical-9-16"
+              : isSquare
+              ? "is-square-1-1"
+              : isUltrawide
+              ? "is-ultrawide-21-9"
+              : "is-landscape-16-9";
+
             return (
               <div
                 key={wp.id}
-                className={`wallpaper-card ${isVertical ? "is-vertical" : ""}`}
-                onClick={() => setSelectedWallpaper(wp)}
+                className={`wallpaper-card ${spanClass}`}
+                onClick={() => {
+                  setSelectedWallpaper(wp);
+                  setIsSimulatingDesktop(false);
+                }}
               >
-                <img src={wp.thumbnailSrc} alt={wp.title} loading="lazy" />
+                <img src={wp.thumbnailSrc || wp.src} alt={wp.title} loading="lazy" />
                 <div className="wallpaper-card-overlay">
                   <div className="wallpaper-card-top">
-                    <span className="wallpaper-card-pill">{wp.aspectRatio}</span>
-                    {wp.isPremium && (
-                      <span className="wallpaper-card-pill" style={{ background: "#6366f1" }}>
-                        ⭐ Fan
-                      </span>
-                    )}
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      <span className="wallpaper-card-pill">{wp.aspectRatio || "16:9"}</span>
+                      {wp.isPremium && (
+                        <span className="wallpaper-card-pill" style={{ background: "rgba(99, 102, 241, 0.8)", border: "1px solid rgba(99, 102, 241, 0.4)" }}>
+                          ⭐ Fan
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      className={`wallpaper-card-fav-btn ${wp.isFavorite ? "is-fav" : ""}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleFavorite(wp);
+                      }}
+                      title={wp.isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
+                    >
+                      <Icon name="heart" />
+                    </button>
                   </div>
                   <div className="wallpaper-card-bottom">
                     <span className="wallpaper-card-title">{wp.title}</span>
-                    <span className="wallpaper-card-meta">{wp.category}</span>
+                    <span className="wallpaper-card-meta">{wp.category} • {wp.resolution}</span>
                   </div>
                 </div>
               </div>
@@ -261,32 +334,74 @@ export function WallpapersView() {
         </div>
       )}
 
-      {/* Modal / Visor de Wallpaper */}
+      {/* Modal / Visor de Wallpaper Estilo Super Gallery */}
       {selectedWallpaper && (
-        <div className="wallpaper-modal-backdrop" onClick={() => setSelectedWallpaper(null)}>
+        <div
+          className="wallpaper-modal-backdrop"
+          onClick={() => {
+            if (isSimulatingDesktop) {
+              setIsSimulatingDesktop(false);
+            } else {
+              setSelectedWallpaper(null);
+            }
+          }}
+        >
           <div className="wallpaper-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="wallpaper-modal-preview">
               <img src={selectedWallpaper.src} alt={selectedWallpaper.title} />
-              <button
-                onClick={() => setSelectedWallpaper(null)}
-                style={{
-                  position: "absolute",
-                  top: "16px",
-                  right: "16px",
-                  background: "rgba(0,0,0,0.6)",
-                  border: "none",
-                  color: "white",
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "50%",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Icon name="close" />
-              </button>
+
+              {/* Simulación de Escritorio de Windows */}
+              {isSimulatingDesktop && (
+                <div className="desktop-simulation-overlay">
+                  <div className="desktop-sim-widget">
+                    <span className="desktop-sim-time">{timeStr}</span>
+                    <span className="desktop-sim-date">{dateStr}</span>
+                  </div>
+                  <div className="desktop-sim-taskbar">
+                    <div className="desktop-sim-icon">💠</div>
+                    <div className="desktop-sim-icon">📁</div>
+                    <div className="desktop-sim-icon">🌐</div>
+                    <div className="desktop-sim-icon">🎵</div>
+                    <div className="desktop-sim-icon">⚙️</div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ position: "absolute", top: "16px", right: "16px", display: "flex", gap: "8px" }}>
+                <button
+                  className="wallpaper-btn wallpaper-btn-secondary"
+                  onClick={() => setIsSimulatingDesktop(!isSimulatingDesktop)}
+                  title={isSimulatingDesktop ? "Desactivar simulación" : "Vista previa de escritorio"}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: "18px",
+                    background: isSimulatingDesktop ? "var(--primary, #c90045)" : "rgba(0,0,0,0.6)",
+                    color: "white",
+                  }}
+                >
+                  <Icon name="layout" />
+                  <span>{isSimulatingDesktop ? "Modo normal" : "Vista previa escritorio"}</span>
+                </button>
+
+                <button
+                  onClick={() => setSelectedWallpaper(null)}
+                  style={{
+                    background: "rgba(0,0,0,0.6)",
+                    border: "none",
+                    color: "white",
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  title="Cerrar (Esc)"
+                >
+                  <Icon name="close" />
+                </button>
+              </div>
             </div>
 
             <div className="wallpaper-modal-body">
@@ -296,10 +411,23 @@ export function WallpapersView() {
                   <span className="wallpaper-card-pill">{selectedWallpaper.category}</span>
                   <span className="wallpaper-card-pill">{selectedWallpaper.aspectRatio}</span>
                   <span className="wallpaper-card-pill">{selectedWallpaper.resolution}</span>
+                  {selectedWallpaper.isPremium && (
+                    <span className="wallpaper-card-pill" style={{ background: "#6366f1" }}>
+                      ⭐ Fan Exclusivo
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div className="wallpaper-modal-actions">
+                <button
+                  className="wallpaper-btn wallpaper-btn-secondary"
+                  onClick={() => handleSendToMobile(selectedWallpaper)}
+                  title="Enviar a Super Gallery en tu móvil (Synapse)"
+                >
+                  <Icon name="smartphone" />
+                  Móvil
+                </button>
                 <button
                   className="wallpaper-btn wallpaper-btn-secondary"
                   onClick={() => handleToggleFavorite(selectedWallpaper)}
@@ -310,6 +438,7 @@ export function WallpapersView() {
                 <button
                   className="wallpaper-btn wallpaper-btn-secondary"
                   onClick={() => handleDownload(selectedWallpaper)}
+                  title="Descargar archivo en alta definición"
                 >
                   <Icon name="download" />
                   Descargar HD
@@ -318,9 +447,10 @@ export function WallpapersView() {
                   className="wallpaper-btn wallpaper-btn-primary"
                   onClick={() => handleApplyWallpaper(selectedWallpaper)}
                   disabled={isApplying}
+                  title="Establecer inmediatamente como fondo de pantalla de Windows"
                 >
                   <Icon name="image" />
-                  {isApplying ? "Aplicando..." : "Establecer como Fondo"}
+                  {isApplying ? "Aplicando fondo..." : "Establecer como Fondo"}
                 </button>
               </div>
             </div>

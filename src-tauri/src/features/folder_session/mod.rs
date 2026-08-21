@@ -95,6 +95,7 @@ impl FolderSession {
         })
     }
 
+    #[allow(dead_code)]
     pub fn current_path(&self) -> &Path {
         &self.items[self.current_index]
     }

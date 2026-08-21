@@ -59,7 +59,7 @@ export function AppSidebar({
   density = "standard",
 }: AppSidebarProps) {
   const { activeLibraries } = useCustomLibraries();
-  const { auroraOnlineServicesEnabled } = useSystemSettings();
+  const { auroraOnlineServicesEnabled, auroraWallpapersEnabled } = useSystemSettings();
 
   const dynamicLibraryItems: SidebarItem[] = [
     ...libraryItems,
@@ -74,7 +74,7 @@ export function AppSidebar({
     { icon: "sliders", label: "Conversor", view: "converter" },
     { icon: "download", label: "Luna Fetch", view: "luna_fetch" },
     { icon: "layers", label: "Gallery-DL", view: "gallery_dl" },
-    ...(auroraOnlineServicesEnabled
+    ...(auroraOnlineServicesEnabled && auroraWallpapersEnabled
       ? [{ icon: "sparkles" as IconName, label: "Wallpapers Aurora", view: "wallpapers" }]
       : []),
   ];

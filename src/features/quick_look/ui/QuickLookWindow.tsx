@@ -19,6 +19,7 @@ import { QuickLookPlaylist } from "./QuickLookPlaylist";
 import { QuickLookLyrics } from "./QuickLookLyrics";
 import { QuickLookHtml } from "./QuickLookHtml";
 import { QuickLookFallback } from "./QuickLookFallback";
+import { ImageComparisonModal } from "../../visual_library/ui/comparison/ImageComparisonModal";
 import "./quick-look.css";
 
 export function QuickLookWindow() {
@@ -29,6 +30,7 @@ export function QuickLookWindow() {
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [paletteStyle, setPaletteStyle] = useState<CSSProperties | undefined>(undefined);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isComparing, setIsComparing] = useState(false);
 
   useEffect(() => {
     let resolved = false;
@@ -118,12 +120,22 @@ export function QuickLookWindow() {
   // Atajos locales de teclado (Esc cierra siempre; Espacio solo la vista previa principal)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isComparing) return;
       const isCloseKey =
         e.key === "Escape" || (!isDetached && (e.code === "Space" || e.key === " "));
       if (isCloseKey) {
         e.preventDefault();
         e.stopPropagation();
         handleClose();
+      } else if (
+        e.key.toLowerCase() === "c" &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        payload?.mediaType === "image"
+      ) {
+        e.preventDefault();
+        setIsComparing(true);
       }
     };
 
@@ -131,7 +143,7 @@ export function QuickLookWindow() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isDetached]);
+  }, [isDetached, isComparing, payload]);
 
   // Seguimiento en tiempo real del estado de maximizado / tamaño de ventana
   useEffect(() => {
@@ -190,20 +202,19 @@ export function QuickLookWindow() {
   };
 
   const handleClose = () => {
+    playbackTimeRef.current = 0;
+    if (isDetached) {
+      void quickLookClient.closeWindow().catch(() => {
+        void getCurrentWebviewWindow().close().catch(() => {});
+      });
+      return;
+    }
     setPayload(null);
     setPaletteStyle(undefined);
     setIsMaximized(false);
-    playbackTimeRef.current = 0;
-    if (isDetached) {
-      try {
-        void getCurrentWebviewWindow().close();
-      } catch {}
-      return;
-    }
-    try {
-      void getCurrentWebviewWindow().hide();
-    } catch {}
-    void quickLookClient.hide();
+    void quickLookClient.hide().catch(() => {
+      void getCurrentWebviewWindow().hide().catch(() => {});
+    });
   };
 
   return (
@@ -218,11 +229,27 @@ export function QuickLookWindow() {
               imageDimensions={imageDimensions}
               isMaximized={isMaximized}
               onClose={handleClose}
+              onCompare={() => setIsComparing(true)}
               onOpenDetached={handleOpenDetached}
               onOpenInMain={handleOpenInMain}
               onToggleMaximize={handleToggleMaximize}
               payload={payload}
             />
+
+            {isComparing && (
+              <ImageComparisonModal
+                initialItem={{
+                  path: payload.path,
+                  title: payload.fileName,
+                  sourcePath: payload.path,
+                  relativeFolder: "",
+                  kind: "image",
+                  modifiedAtMillis: Date.now(),
+                  sizeBytes: 0,
+                }}
+                onClose={() => setIsComparing(false)}
+              />
+            )}
 
             <div className="quicklook-body">
               {payload.mediaType === "audio" ? (

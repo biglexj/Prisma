@@ -16,6 +16,7 @@ interface LyricsPreviewProps {
   onTogglePlay?: () => void;
   onSeek: (seconds: number) => void;
   onBackToCover?: () => void;
+  onOpenFullscreen?: () => void;
 }
 
 export function LyricsPreview({
@@ -29,6 +30,7 @@ export function LyricsPreview({
   onTogglePlay,
   onSeek,
   onBackToCover,
+  onOpenFullscreen,
 }: LyricsPreviewProps) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const activeLineRef = useRef<HTMLDivElement | null>(null);
@@ -70,6 +72,17 @@ export function LyricsPreview({
           <h2>{title}</h2>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          {onOpenFullscreen ? (
+            <button
+              className="lyrics-view-album-btn lyrics-fullscreen-trigger-btn"
+              onClick={onOpenFullscreen}
+              title="Modo pantalla completa inmersivo para cantar (Karaoke)"
+              type="button"
+            >
+              <Icon name="fullscreen" />
+              <span>Pantalla completa</span>
+            </button>
+          ) : null}
           {path ? (
             <button
               className="lyrics-view-album-btn"
@@ -79,17 +92,6 @@ export function LyricsPreview({
             >
               <Icon name="edit" />
               <span>Editar letras</span>
-            </button>
-          ) : null}
-          {onBackToCover ? (
-            <button
-              className="lyrics-view-album-btn"
-              onClick={onBackToCover}
-              title="Volver a la carátula del álbum"
-              type="button"
-            >
-              <Icon name="disc" />
-              <span>Ver álbum</span>
             </button>
           ) : null}
         </div>

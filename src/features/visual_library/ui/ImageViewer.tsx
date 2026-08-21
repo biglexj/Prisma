@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
@@ -11,6 +11,8 @@ import { RenameMediaDialog } from "../../../shared/ui/RenameMediaDialog";
 import { addToHistory } from "../../../shared/useHistory";
 import type { VisualLibraryItem } from "../model/types";
 import { ImageEditor } from "./editor/ImageEditor";
+import { ImageComparisonModal } from "./comparison/ImageComparisonModal";
+import { quickLookClient } from "../../quick_look/tauri/client";
 import "./visual-library.css";
 import "./image-viewer.css";
 
@@ -38,6 +40,7 @@ export function ImageViewer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<number | null>(null);
+  const initialFitScaleRef = useRef<number>(1);
 
   const [zoomScale, setZoomScale] = useState(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -58,6 +61,7 @@ export function ImageViewer({
   const controlsSuppressUntilRef = useRef(0);
 
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const favorites = useFavorites();
 
   const activeList = itemsList.length > 0 ? itemsList : [currentItem];
@@ -86,6 +90,7 @@ export function ImageViewer({
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isComparing, setIsComparing] = useState(false);
 
   const mediaRename = useMediaRename({
     onRefresh,
@@ -132,8 +137,7 @@ export function ImageViewer({
   };
 
   const resetImageTransform = (fitScale?: number) => {
-    // Volver al ajuste de pantalla (fit) no a 1:1 pixel crudo
-    const scale = fitScale ?? zoomScale;
+    const scale = fitScale ?? initialFitScaleRef.current ?? 1;
     setZoomScale(scale);
     setPanOffset({ x: 0, y: 0 });
     setIsDragging(false);
@@ -149,9 +153,11 @@ export function ImageViewer({
     addToHistory(item.path, "image");
   }, [item]);
 
-  // Historial del primer elemento al abrir el visor
+  // Historial del primer elemento al abrir el visor y garantizar foco activo
   useEffect(() => {
     addToHistory(item.path, "image");
+    window.focus();
+    containerRef.current?.focus();
     // Solo al montar
   }, []);
 
@@ -250,20 +256,9 @@ export function ImageViewer({
   };
 
   const handleResetZoom = () => {
-    // Volver al ajuste de pantalla calculando la escala actual desde las dimensiones del img
-    const img = imgRef.current;
-    if (img && img.naturalWidth) {
-      const scaleX = window.innerWidth / img.naturalWidth;
-      const scaleY = window.innerHeight / img.naturalHeight;
-      const fitScale = Math.round(Math.min(scaleX, scaleY) * 10000) / 10000;
-      setZoomScale(fitScale);
-      setPanOffset({ x: 0, y: 0 });
-      setIsDragging(false);
-      setAutoFit(false);
-      showZoomToast(fitScale);
-    } else {
-      resetImageTransform();
-    }
+    const fitScale = initialFitScaleRef.current || 1;
+    resetImageTransform(fitScale);
+    showZoomToast(fitScale);
   };
 
   const handleToggleZoom = () => {
@@ -319,6 +314,7 @@ export function ImageViewer({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (zoomScale <= 1 || e.button !== 0) return;
+    e.preventDefault();
     setIsDragging(true);
     setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
   };
@@ -334,6 +330,19 @@ export function ImageViewer({
   const handleMouseUp = () => {
     setIsDragging(false);
   };
+
+  // Garantizar que isDragging siempre se desactive si se suelta el ratón fuera del contenedor
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false);
+    };
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    window.addEventListener("pointerup", handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener("mouseup", handleGlobalMouseUp);
+      window.removeEventListener("pointerup", handleGlobalMouseUp);
+    };
+  }, []);
 
   // Fullscreen change listener
   useEffect(() => {
@@ -378,6 +387,20 @@ export function ImageViewer({
         label: "Editar imagen",
         icon: "crop" as const,
         onSelect: () => setIsEditing(true),
+      },
+      {
+        id: "compare",
+        label: "Comparar con otra imagen",
+        icon: "compare" as const,
+        onSelect: () => setIsComparing(true),
+      },
+      {
+        id: "detach",
+        label: "Abrir en otra instancia a la par",
+        icon: "copy" as const,
+        onSelect: () => {
+          void quickLookClient.openDetached(target.item.path).catch(() => {});
+        },
       },
       {
         id: "rename",
@@ -440,23 +463,23 @@ export function ImageViewer({
   };
 
   // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent | React.KeyboardEvent) => {
       if (mediaDelete.pendingDelete || mediaRename.pendingRename || isEditing) return;
       if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
         if (mediaDelete.menu) {
           mediaDelete.closeMenu();
-        } else if (zoomScale > 1) {
-          handleResetZoom();
-        } else if (document.fullscreenElement) {
-          void document.exitFullscreen().catch(() => {});
-          setIsFullscreen(false);
         } else {
           closeViewer();
         }
       } else if (event.key.toLowerCase() === "e") {
         event.preventDefault();
         setIsEditing(true);
+      } else if (event.key.toLowerCase() === "c" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        setIsComparing(true);
       } else if (event.key === "F2") {
         event.preventDefault();
         mediaRename.requestRename({
@@ -474,6 +497,9 @@ export function ImageViewer({
         event.preventDefault();
         handleZoomOut();
       } else if ((event.ctrlKey || event.metaKey) && event.key === "0") {
+        event.preventDefault();
+        handleResetZoom();
+      } else if (event.key.toLowerCase() === "r" && !event.ctrlKey && !event.metaKey && !event.altKey) {
         event.preventDefault();
         handleResetZoom();
       } else if (event.key === "ArrowLeft") {
@@ -496,9 +522,22 @@ export function ImageViewer({
         event.preventDefault();
         setIsSlideshowActive((prev) => !prev);
       }
-    };
+    },
+    [
+      isEditing,
+      mediaDelete,
+      mediaRename,
+      currentItem.path,
+      currentItem.title,
+      isDragging,
+      activeList,
+      currentIndex,
+    ]
+  );
 
-    window.addEventListener("keydown", handleKeyDown);
+  useEffect(() => {
+    const onWindowKey = (e: KeyboardEvent) => handleKeyDown(e);
+    window.addEventListener("keydown", onWindowKey, true);
 
     // Integración de Mando a Distancia LAN (Super Gallery)
     const onRemotePrev = () => handlePreviousImage();
@@ -514,27 +553,14 @@ export function ImageViewer({
     window.addEventListener("prisma-gallery-slideshow", onRemoteSlideshow);
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", onWindowKey, true);
       window.removeEventListener("prisma-gallery-prev", onRemotePrev);
       window.removeEventListener("prisma-gallery-next", onRemoteNext);
       window.removeEventListener("prisma-gallery-fullscreen", onRemoteFullscreen);
       window.removeEventListener("prisma-gallery-escape", onRemoteEscape);
       window.removeEventListener("prisma-gallery-slideshow", onRemoteSlideshow);
     };
-  }, [
-    currentIndex,
-    activeList,
-    currentItem,
-    zoomScale,
-    isDragging,
-    isEditing,
-    mediaDelete.pendingDelete,
-    mediaDelete.menu,
-    mediaDelete.requestDelete,
-    mediaDelete.closeMenu,
-    mediaRename.pendingRename,
-    mediaRename.requestRename,
-  ]);
+  }, [handleKeyDown]);
 
   // Slideshow timer
   useEffect(() => {
@@ -569,11 +595,14 @@ export function ImageViewer({
   return (
     <div
       id="image-cinema-container"
+      ref={containerRef}
+      tabIndex={-1}
       role="dialog"
       aria-label={currentItem.title}
       aria-modal="true"
       className={`image-viewer ${isFullscreen ? "is-fullscreen-mode" : ""} ${!showControls ? "controls-hidden" : ""}`}
       onContextMenu={handleContextMenu}
+      onKeyDown={handleKeyDown}
       onMouseMove={handleUserActivity}
     >
       <div className="image-viewer-top-bar" onClick={(event) => event.stopPropagation()}>
@@ -597,6 +626,24 @@ export function ImageViewer({
           >
             <Icon name="crop" />
             <span>Editar</span>
+          </button>
+          <button
+            className="image-viewer-top-btn image-viewer-compare-btn"
+            onClick={() => setIsComparing(true)}
+            title="Comparar con otra imagen (C)"
+          >
+            <Icon name="compare" />
+            <span>Comparar</span>
+          </button>
+          <button
+            className="image-viewer-top-btn image-viewer-detach-btn"
+            onClick={() => {
+              void quickLookClient.openDetached(currentItem.path).catch(() => {});
+            }}
+            title="Abrir esta imagen en otra ventana independiente a la par"
+          >
+            <Icon name="copy" />
+            <span>Abrir en otra instancia</span>
           </button>
           <button
             className="image-viewer-top-btn"
@@ -790,6 +837,7 @@ export function ImageViewer({
                 const scaleX = window.innerWidth / naturalW;
                 const scaleY = window.innerHeight / naturalH;
                 const fitScale = Math.round(Math.min(scaleX, scaleY) * 10000) / 10000;
+                initialFitScaleRef.current = fitScale;
 
                 // Ajustar a pantalla al cargar sin animar la escala durante el fundido cruzado
                 suppressTransformTransitionRef.current = true;
@@ -817,7 +865,7 @@ export function ImageViewer({
         <button onClick={handleZoomOut} title="Alejar (Ctrl - / Rueda abajo)">
           <Icon name="minus" />
         </button>
-        <button className="image-viewer-zoom-level" onClick={handleResetZoom} title="Restablecer zoom 100% (Ctrl 0)">
+        <button className="image-viewer-zoom-level" onClick={handleResetZoom} title="Restablecer tamaño normal (R / Ctrl 0)">
           {Math.round(zoomScale * 100)}%
         </button>
         <button onClick={handleZoomIn} title="Acercar (Ctrl + / Rueda arriba)">
@@ -869,6 +917,14 @@ export function ImageViewer({
           item={currentItem}
           onClose={() => setIsEditing(false)}
           onSaveSuccess={handleSaveSuccess}
+        />
+      )}
+
+      {isComparing && (
+        <ImageComparisonModal
+          initialItem={currentItem}
+          itemsList={activeList}
+          onClose={() => setIsComparing(false)}
         />
       )}
 

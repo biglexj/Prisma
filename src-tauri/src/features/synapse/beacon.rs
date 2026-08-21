@@ -27,7 +27,7 @@ impl SynapseBeaconService {
                     device_id: format!("prisma_desktop_{}", device_name.to_lowercase().replace(' ', "_")),
                     device_name,
                     device_type: "desktop".to_string(),
-                    port: 49288,
+                    port: 49290,
                     os: "windows".to_string(),
                     target_app: "prisma".to_string(),
                     capabilities: vec![
@@ -69,6 +69,7 @@ impl SynapseBeaconService {
         Self { running }
     }
 
+    #[allow(dead_code)]
     pub fn stop(&self) {
         self.running.store(false, Ordering::Relaxed);
     }

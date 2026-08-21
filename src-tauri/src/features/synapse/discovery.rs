@@ -26,6 +26,7 @@ pub struct SynapseDiscoveredDevice {
 #[derive(Clone)]
 pub struct SynapseDiscoveryService {
     devices: Arc<Mutex<Vec<SynapseDiscoveredDevice>>>,
+    #[allow(dead_code)]
     running: Arc<AtomicBool>,
 }
 
@@ -123,6 +124,7 @@ impl SynapseDiscoveryService {
         }
     }
 
+    #[allow(dead_code)]
     pub fn stop(&self) {
         self.running.store(false, Ordering::Relaxed);
     }

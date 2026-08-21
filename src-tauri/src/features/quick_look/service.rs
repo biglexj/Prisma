@@ -239,6 +239,7 @@ impl QuickLookState {
         });
     }
 
+    #[allow(dead_code)]
     pub fn can_hide_on_unfocus(&self) -> bool {
         if !is_preview_open() {
             return false;

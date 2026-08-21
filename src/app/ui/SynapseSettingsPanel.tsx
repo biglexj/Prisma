@@ -2,11 +2,6 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../shared/ui/Icon";
-import lunaFetchLogo from "../../assets/icons/luna-fetch.png";
-import galleryDlLogo from "../../assets/icons/gallery-dl.png";
-import superGalleryLogo from "../../assets/icons/super-gallery.png";
-import lyraflowLogo from "../../assets/icons/lyraflow.png";
-import elyTesiaLogo from "../../assets/icons/ely-tesia.png";
 import "./synapse-settings.css";
 
 interface SynapseStatus {
@@ -39,7 +34,7 @@ const ECOSYSTEM_APPS: EcosystemApp[] = [
     category: "Descargas · Audio & Vídeo",
     statusBadge: "active",
     statusText: "Sinergia Activa",
-    iconPath: lunaFetchLogo,
+    iconPath: "/Aurora-Synapse/Icon/luna-fetch.png",
     description: "Gestor y analizador de descargas multimedia de alta fidelidad conectado directamente con Prisma.",
     repoUrl: "https://github.com/biglexj/Luna---Fetch/releases",
     downloadLabel: "Releases",
@@ -52,7 +47,7 @@ const ECOSYSTEM_APPS: EcosystemApp[] = [
     category: "Descargas · Galerías",
     statusBadge: "active",
     statusText: "Sinergia Activa",
-    iconPath: galleryDlLogo,
+    iconPath: "/Aurora-Synapse/Icon/gallery-dl.png",
     description: "Descargador masivo de álbumes, perfiles de artistas y colecciones (+100 sitios de arte).",
     repoUrl: "https://github.com/biglexj/Gallery-DL-GUI/releases",
     downloadLabel: "Releases",
@@ -65,7 +60,7 @@ const ECOSYSTEM_APPS: EcosystemApp[] = [
     category: "Móvil · Android LAN",
     statusBadge: "active",
     statusText: "Sinergia Activa",
-    iconPath: superGalleryLogo,
+    iconPath: "/Aurora-Synapse/Icon/super-gallery.png",
     description: "Galería móvil inteligente con visor fluido y recepción directa LAN sin cables en Prisma.",
     repoUrl: "https://www.biglexj.com/desarrollo/lienzo-gallery",
     downloadLabel: "Descargar APK",
@@ -77,7 +72,7 @@ const ECOSYSTEM_APPS: EcosystemApp[] = [
     category: "IA Local · Transcripción",
     statusBadge: "coming_soon",
     statusText: "Próximamente",
-    iconPath: lyraflowLogo,
+    iconPath: "/Aurora-Synapse/Icon/lyraflow.png",
     description: "Asistente inteligente de transcripción, subtítulos y análisis de voz con modelos locales.",
     repoUrl: "https://github.com/biglexj/LyraFlow/releases",
     downloadLabel: "Descargar",
@@ -89,7 +84,7 @@ const ECOSYSTEM_APPS: EcosystemApp[] = [
     category: "Música · Reproductor MIDI",
     statusBadge: "coming_soon",
     statusText: "Próximamente",
-    iconPath: elyTesiaLogo,
+    iconPath: "/Aurora-Synapse/Icon/ely-tesia.png",
     description: "Lector y sintetizador MIDI multi-instancia de alta precisión para compositores y creadores.",
     repoUrl: "https://github.com/biglexj/Ely-Tesia/releases",
     downloadLabel: "Descargar",

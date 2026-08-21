@@ -454,21 +454,31 @@ export function App() {
           break;
         }
         case "lyrics":
-        case "toggle_lyrics": {
-          setActiveView("studio_player");
-          window.dispatchEvent(new CustomEvent("prisma-music-toggle-lyrics"));
+        case "toggle_lyrics":
+        case "fullscreen_lyrics": {
+          setActiveView("player");
+          window.dispatchEvent(new CustomEvent("prisma-music-toggle-fullscreen-lyrics"));
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("prisma-music-toggle-fullscreen-lyrics"));
+          }, 60);
           break;
         }
         case "queue":
         case "toggle_queue": {
-          setActiveView("studio_player");
+          setActiveView("player");
           window.dispatchEvent(new CustomEvent("prisma-music-toggle-queue"));
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("prisma-music-toggle-queue"));
+          }, 60);
           break;
         }
         case "previa":
         case "music_cover": {
-          setActiveView("studio_player");
+          setActiveView("player");
           window.dispatchEvent(new CustomEvent("prisma-music-tab", { detail: { tab: "cover" } }));
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent("prisma-music-tab", { detail: { tab: "cover" } }));
+          }, 60);
           break;
         }
         case "search":

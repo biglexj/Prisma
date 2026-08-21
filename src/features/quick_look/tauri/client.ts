@@ -21,4 +21,8 @@ export const quickLookClient = {
   getDetachedPayload(label: string): Promise<QuickLookPayload | null> {
     return invoke("quick_look_get_detached_payload", { label });
   },
+
+  closeWindow(): Promise<void> {
+    return invoke("quick_look_close_window");
+  },
 };

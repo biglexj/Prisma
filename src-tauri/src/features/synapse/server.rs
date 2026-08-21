@@ -27,7 +27,7 @@ impl SynapseServer {
         std::thread::Builder::new()
             .name("synapse-server-thread".into())
             .spawn(move || {
-                let port = 49288;
+                let port = 49290;
                 let listener = match TcpListener::bind(format!("0.0.0.0:{port}")) {
                     Ok(l) => {
                         let _ = l.set_nonblocking(true);
@@ -62,6 +62,7 @@ impl SynapseServer {
         Self { running }
     }
 
+    #[allow(dead_code)]
     pub fn stop(&self) {
         self.running.store(false, Ordering::Relaxed);
     }

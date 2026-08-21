@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Icon, type IconName } from "../../../shared/ui/Icon";
 import type { AppView } from "../../../app/ui/AppSidebar";
-import lunaFetchLogo from "../../../assets/icons/luna-fetch.png";
 import "./luna-fetch.css";
 
 interface LunaFetchViewProps {
@@ -212,7 +211,7 @@ export function LunaFetchView({ onNavigate }: LunaFetchViewProps) {
         <div className="luna-fetch-header-content">
           <div className="luna-fetch-brand">
             <div className="luna-fetch-icon-badge">
-              <img src={lunaFetchLogo} alt="Luna Fetch" />
+              <img src="/Aurora-Synapse/Icon/luna-fetch.png" alt="Luna Fetch" />
             </div>
             <div>
               <div className="luna-fetch-title-row">

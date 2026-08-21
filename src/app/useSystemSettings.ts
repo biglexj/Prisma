@@ -24,6 +24,7 @@ interface SystemSettings {
   progressBarStyle: ProgressBarStyle;
   sidebarDensity: SidebarDensity;
   auroraOnlineServicesEnabled: boolean;
+  auroraWallpapersEnabled: boolean;
   auroraServerUrl: string;
 }
 
@@ -39,6 +40,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   progressBarStyle: "wavy",
   sidebarDensity: "standard",
   auroraOnlineServicesEnabled: false,
+  auroraWallpapersEnabled: true,
   auroraServerUrl: "https://www.biglexj.com",
 };
 
@@ -78,18 +80,34 @@ export function useSystemSettings() {
           await invoke("set_minimize_to_tray", { enabled: stored.minimizeToTray }).catch(() => {});
         }
 
-        const autostart = await invoke<boolean>("autostart_get_status").catch(() => false);
+        // Leer estado real del registro de Windows
+        const registryAutostart = await invoke<boolean>("autostart_get_status").catch(() => false);
+        const storedAutostart = stored.autostart ?? false;
+
+        // Auto-sanado post-actualización: si el usuario tenía autostart activo
+        // pero el instalador limpió la entrada del registro durante la actualización,
+        // se re-registra automáticamente sin requerir acción manual.
+        let effectiveAutostart = registryAutostart;
+        if (storedAutostart && !registryAutostart) {
+          try {
+            await invoke("autostart_set", { enabled: true });
+            effectiveAutostart = true;
+          } catch {
+            effectiveAutostart = false;
+          }
+        }
 
         if (isMounted) {
           setSettings((prev) => {
             const synced: SystemSettings = {
               quickLookShortcut: stored.quickLookShortcut ?? prev.quickLookShortcut,
-              autostart,
+              autostart: effectiveAutostart,
               minimizeToTray: stored.minimizeToTray ?? prev.minimizeToTray,
               confirmDeletion: stored.confirmDeletion ?? prev.confirmDeletion,
               progressBarStyle: stored.progressBarStyle ?? prev.progressBarStyle,
               sidebarDensity: stored.sidebarDensity ?? prev.sidebarDensity,
               auroraOnlineServicesEnabled: stored.auroraOnlineServicesEnabled ?? prev.auroraOnlineServicesEnabled,
+              auroraWallpapersEnabled: stored.auroraWallpapersEnabled ?? prev.auroraWallpapersEnabled,
               auroraServerUrl: stored.auroraServerUrl ?? prev.auroraServerUrl,
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
@@ -208,6 +226,15 @@ export function useSystemSettings() {
     });
   }, []);
 
+  const setAuroraWallpapersEnabled = useCallback((enabled: boolean) => {
+    setSettings((prev) => {
+      const next = { ...prev, auroraWallpapersEnabled: enabled };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, []);
+
   const setAuroraServerUrl = useCallback((url: string) => {
     setSettings((prev) => {
       const next = { ...prev, auroraServerUrl: url };
@@ -226,6 +253,7 @@ export function useSystemSettings() {
     progressBarStyle: settings.progressBarStyle,
     sidebarDensity: settings.sidebarDensity,
     auroraOnlineServicesEnabled: settings.auroraOnlineServicesEnabled,
+    auroraWallpapersEnabled: settings.auroraWallpapersEnabled,
     auroraServerUrl: settings.auroraServerUrl,
     setQuickLookShortcut,
     setAutostart,
@@ -234,6 +262,7 @@ export function useSystemSettings() {
     setProgressBarStyle,
     setSidebarDensity,
     setAuroraOnlineServicesEnabled,
+    setAuroraWallpapersEnabled,
     setAuroraServerUrl,
   };
 }

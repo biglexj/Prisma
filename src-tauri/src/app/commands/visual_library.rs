@@ -243,95 +243,103 @@ pub struct SubtitleTrackMeta {
 
 /// Busca archivos de subtítulos externos (.srt, .vtt, .ass, .ssa) en la misma carpeta del vídeo.
 #[tauri::command]
-pub fn video_get_subtitles(video_path: String) -> Result<Vec<SubtitleTrackMeta>, String> {
-    let clean = video_path.trim_start_matches(r"\\?\");
-    let video_p = Path::new(clean);
-    let parent = match video_p.parent() {
-        Some(p) => p,
-        None => return Ok(Vec::new()),
-    };
+pub async fn video_get_subtitles(video_path: String) -> Result<Vec<SubtitleTrackMeta>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean = video_path.trim_start_matches(r"\\?\");
+        let video_p = Path::new(clean);
+        let parent = match video_p.parent() {
+            Some(p) => p,
+            None => return Ok(Vec::new()),
+        };
 
-    let stem = match video_p.file_stem().and_then(|s| s.to_str()) {
-        Some(s) => s.to_lowercase(),
-        None => return Ok(Vec::new()),
-    };
+        let stem = match video_p.file_stem().and_then(|s| s.to_str()) {
+            Some(s) => s.to_lowercase(),
+            None => return Ok(Vec::new()),
+        };
 
-    let mut tracks = Vec::new();
-    let sub_exts = ["srt", "vtt", "ass", "ssa", "sub"];
+        let mut tracks = Vec::new();
+        let sub_exts = ["srt", "vtt", "ass", "ssa", "sub"];
 
-    if let Ok(entries) = std::fs::read_dir(parent) {
-        for entry in entries.flatten() {
-            let p = entry.path();
-            if !p.is_file() {
-                continue;
-            }
-            if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
-                let ext_lower = ext.to_lowercase();
-                if sub_exts.contains(&ext_lower.as_str()) {
-                    if let Some(file_name) = p.file_name().and_then(|f| f.to_str()) {
-                        let name_lower = file_name.to_lowercase();
-                        if name_lower.starts_with(&stem) {
-                            let label = p
-                                .file_stem()
-                                .and_then(|s| s.to_str())
-                                .unwrap_or("Subtítulo")
-                                .to_string();
+        if let Ok(entries) = std::fs::read_dir(parent) {
+            for entry in entries.flatten() {
+                let p = entry.path();
+                if !p.is_file() {
+                    continue;
+                }
+                if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
+                    let ext_lower = ext.to_lowercase();
+                    if sub_exts.contains(&ext_lower.as_str()) {
+                        if let Some(file_name) = p.file_name().and_then(|f| f.to_str()) {
+                            let name_lower = file_name.to_lowercase();
+                            if name_lower.starts_with(&stem) {
+                                let label = p
+                                    .file_stem()
+                                    .and_then(|s| s.to_str())
+                                    .unwrap_or("Subtítulo")
+                                    .to_string();
 
-                            let lang = if name_lower.contains(".es.")
-                                || name_lower.contains("spanish")
-                                || name_lower.contains("español")
-                            {
-                                Some("Español".to_string())
-                            } else if name_lower.contains(".en.")
-                                || name_lower.contains("english")
-                                || name_lower.contains("inglés")
-                            {
-                                Some("Inglés".to_string())
-                            } else {
-                                None
-                            };
+                                let lang = if name_lower.contains(".es.")
+                                    || name_lower.contains("spanish")
+                                    || name_lower.contains("español")
+                                {
+                                    Some("Español".to_string())
+                                } else if name_lower.contains(".en.")
+                                    || name_lower.contains("english")
+                                    || name_lower.contains("inglés")
+                                {
+                                    Some("Inglés".to_string())
+                                } else {
+                                    None
+                                };
 
-                            tracks.push(SubtitleTrackMeta {
-                                label: lang.clone().unwrap_or(label),
-                                path: p.to_string_lossy().into_owned(),
-                                format: ext_lower,
-                                language: lang,
-                            });
+                                tracks.push(SubtitleTrackMeta {
+                                    label: lang.clone().unwrap_or(label),
+                                    path: p.to_string_lossy().into_owned(),
+                                    format: ext_lower,
+                                    language: lang,
+                                });
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    Ok(tracks)
+        Ok(tracks)
+    })
+    .await
+    .map_err(|e| format!("Error en tarea de subtítulos: {e}"))?
 }
 
 /// Lee un archivo SRT/VTT externo y lo devuelve como contenido WebVTT compatible con <track>.
 #[tauri::command]
-pub fn video_read_subtitle_vtt(subtitle_path: String) -> Result<String, String> {
-    let clean = subtitle_path.trim_start_matches(r"\\?\");
-    let bytes = std::fs::read(clean)
-        .map_err(|e| format!("No se pudo leer el archivo de subtítulos: {e}"))?;
+pub async fn video_read_subtitle_vtt(subtitle_path: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean = subtitle_path.trim_start_matches(r"\\?\");
+        let bytes = std::fs::read(clean)
+            .map_err(|e| format!("No se pudo leer el archivo de subtítulos: {e}"))?;
 
-    let text = String::from_utf8_lossy(&bytes);
+        let text = String::from_utf8_lossy(&bytes);
 
-    if text.trim_start().starts_with("WEBVTT") {
-        return Ok(text.into_owned());
-    }
-
-    let mut vtt = String::from("WEBVTT\n\n");
-    for line in text.lines() {
-        if line.contains("-->") {
-            let converted = line.replace(',', ".");
-            vtt.push_str(&converted);
-        } else {
-            vtt.push_str(line);
+        if text.trim_start().starts_with("WEBVTT") {
+            return Ok(text.into_owned());
         }
-        vtt.push('\n');
-    }
 
-    Ok(vtt)
+        let mut vtt = String::from("WEBVTT\n\n");
+        for line in text.lines() {
+            if line.contains("-->") {
+                let converted = line.replace(',', ".");
+                vtt.push_str(&converted);
+            } else {
+                vtt.push_str(line);
+            }
+            vtt.push('\n');
+        }
+
+        Ok(vtt)
+    })
+    .await
+    .map_err(|e| format!("Error al leer subtítulos: {e}"))?
 }
 
 /// Metadatos de una pista de audio detectada por ffprobe.
@@ -347,192 +355,200 @@ pub struct AudioTrackMeta {
 /// Lee las pistas de audio del archivo de vídeo usando ffprobe.
 /// Devuelve la lista de pistas encontradas, o un error descriptivo si ffprobe no está disponible.
 #[tauri::command]
-pub fn video_get_audio_tracks(path: String) -> Result<Vec<AudioTrackMeta>, String> {
-    let clean = path.trim_start_matches(r"\\?\");
+pub async fn video_get_audio_tracks(path: String) -> Result<Vec<AudioTrackMeta>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean = path.trim_start_matches(r"\\?\");
 
-    // Intentar localizar ffprobe en PATH o en ubicaciones conocidas de Windows
-    let mut ffprobe_candidates = vec![
-        "ffprobe".to_string(),
-        r"C:\Users\biglexj\AppData\Local\Microsoft\WinGet\Links\ffprobe.exe".to_string(),
-        r"C:\Program Files\Krita (x64)\bin\ffprobe.exe".to_string(),
-    ];
+        // Intentar localizar ffprobe en PATH o en ubicaciones conocidas de Windows
+        let mut ffprobe_candidates = vec![
+            "ffprobe".to_string(),
+            r"C:\Users\biglexj\AppData\Local\Microsoft\WinGet\Links\ffprobe.exe".to_string(),
+            r"C:\Program Files\Krita (x64)\bin\ffprobe.exe".to_string(),
+        ];
 
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(parent) = exe_path.parent() {
-            ffprobe_candidates.push(parent.join("ffprobe.exe").to_string_lossy().into_owned());
-        }
-    }
-
-    if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
-        ffprobe_candidates.push(format!(r"{}\Microsoft\WinGet\Links\ffprobe.exe", local_appdata));
-    }
-
-    let mut output = None;
-    for candidate in &ffprobe_candidates {
-        if candidate.is_empty() {
-            continue;
-        }
-
-        let mut cmd = std::process::Command::new(candidate);
-        cmd.args([
-            "-v", "quiet",
-            "-print_format", "json",
-            "-show_streams",
-            "-select_streams", "a",
-            clean,
-        ]);
-
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-        }
-
-        if let Ok(out) = cmd.output() {
-            if out.status.success() {
-                output = Some(out.stdout);
-                break;
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(parent) = exe_path.parent() {
+                ffprobe_candidates.push(parent.join("ffprobe.exe").to_string_lossy().into_owned());
             }
         }
-    }
 
-    let raw = output.ok_or_else(|| {
-        "ffprobe no encontrado. Instala ffmpeg para detectar pistas de audio.".to_string()
-    })?;
+        if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+            ffprobe_candidates.push(format!(r"{}\Microsoft\WinGet\Links\ffprobe.exe", local_appdata));
+        }
 
-    let json: serde_json::Value = serde_json::from_slice(&raw)
-        .map_err(|e| format!("Error al parsear salida de ffprobe: {e}"))?;
+        let mut output = None;
+        for candidate in &ffprobe_candidates {
+            if candidate.is_empty() {
+                continue;
+            }
 
-    let streams = json["streams"]
-        .as_array()
-        .ok_or_else(|| "ffprobe no devolvió streams".to_string())?;
+            let mut cmd = std::process::Command::new(candidate);
+            cmd.args([
+                "-v", "quiet",
+                "-print_format", "json",
+                "-show_streams",
+                "-select_streams", "a",
+                clean,
+            ]);
 
-    let mut tracks: Vec<AudioTrackMeta> = Vec::new();
-    for (i, stream) in streams.iter().enumerate() {
-        let lang = stream["tags"]["language"]
-            .as_str()
-            .or_else(|| stream["tags"]["LANGUAGE"].as_str())
-            .map(|s| s.to_string());
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+            }
 
-        let title = stream["tags"]["title"]
-            .as_str()
-            .or_else(|| stream["tags"]["TITLE"].as_str())
-            .map(|s| s.to_string());
-
-        let codec = stream["codec_name"].as_str().map(|s| s.to_uppercase());
-
-        let channels = stream["channels"].as_u64().map(|c| c as u32);
-
-        // Construir etiqueta legible
-        let label = if let Some(t) = &title {
-            t.clone()
-        } else {
-            let mut parts = vec![format!("Pista {}", i + 1)];
-            if let Some(ref l) = lang {
-                if l != "und" {
-                    parts.push(l.to_uppercase());
+            if let Ok(out) = cmd.output() {
+                if out.status.success() {
+                    output = Some(out.stdout);
+                    break;
                 }
             }
-            if let Some(ref c) = codec {
-                parts.push(c.clone());
-            }
-            if let Some(ch) = channels {
-                let ch_label = match ch {
-                    1 => "Mono".to_string(),
-                    2 => "Estéreo".to_string(),
-                    6 => "5.1".to_string(),
-                    8 => "7.1".to_string(),
-                    n => format!("{n} ch"),
-                };
-                parts.push(ch_label);
-            }
-            parts.join(" · ")
-        };
+        }
 
-        tracks.push(AudioTrackMeta {
-            index: i,
-            label,
-            language: lang,
-            codec,
-            channels,
-        });
-    }
+        let raw = output.ok_or_else(|| {
+            "ffprobe no encontrado. Instala ffmpeg para detectar pistas de audio.".to_string()
+        })?;
 
-    Ok(tracks)
+        let json: serde_json::Value = serde_json::from_slice(&raw)
+            .map_err(|e| format!("Error al parsear salida de ffprobe: {e}"))?;
+
+        let streams = json["streams"]
+            .as_array()
+            .ok_or_else(|| "ffprobe no devolvió streams".to_string())?;
+
+        let mut tracks: Vec<AudioTrackMeta> = Vec::new();
+        for (i, stream) in streams.iter().enumerate() {
+            let lang = stream["tags"]["language"]
+                .as_str()
+                .or_else(|| stream["tags"]["LANGUAGE"].as_str())
+                .map(|s| s.to_string());
+
+            let title = stream["tags"]["title"]
+                .as_str()
+                .or_else(|| stream["tags"]["TITLE"].as_str())
+                .map(|s| s.to_string());
+
+            let codec = stream["codec_name"].as_str().map(|s| s.to_uppercase());
+
+            let channels = stream["channels"].as_u64().map(|c| c as u32);
+
+            // Construir etiqueta legible
+            let label = if let Some(t) = &title {
+                t.clone()
+            } else {
+                let mut parts = vec![format!("Pista {}", i + 1)];
+                if let Some(ref l) = lang {
+                    if l != "und" {
+                        parts.push(l.to_uppercase());
+                    }
+                }
+                if let Some(ref c) = codec {
+                    parts.push(c.clone());
+                }
+                if let Some(ch) = channels {
+                    let ch_label = match ch {
+                        1 => "Mono".to_string(),
+                        2 => "Estéreo".to_string(),
+                        6 => "5.1".to_string(),
+                        8 => "7.1".to_string(),
+                        n => format!("{n} ch"),
+                    };
+                    parts.push(ch_label);
+                }
+                parts.join(" · ")
+            };
+
+            tracks.push(AudioTrackMeta {
+                index: i,
+                label,
+                language: lang,
+                codec,
+                channels,
+            });
+        }
+
+        Ok(tracks)
+    })
+    .await
+    .map_err(|e| format!("Error al consultar pistas de audio: {e}"))?
 }
 
 /// Extrae una pista de audio específica del vídeo a un archivo temporal rápido (.m4a / .mp3) para reproducirla en sincronía.
 #[tauri::command]
-pub fn video_extract_audio_track(path: String, track_index: usize) -> Result<String, String> {
-    let clean = path.trim_start_matches(r"\\?\");
+pub async fn video_extract_audio_track(path: String, track_index: usize) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean = path.trim_start_matches(r"\\?\");
 
-    let mut ffprobe_candidates = vec![
-        "ffmpeg".to_string(),
-        r"C:\Users\biglexj\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe".to_string(),
-        r"C:\Program Files\Krita (x64)\bin\ffmpeg.exe".to_string(),
-    ];
+        let mut ffprobe_candidates = vec![
+            "ffmpeg".to_string(),
+            r"C:\Users\biglexj\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe".to_string(),
+            r"C:\Program Files\Krita (x64)\bin\ffmpeg.exe".to_string(),
+        ];
 
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(parent) = exe_path.parent() {
-            ffprobe_candidates.push(parent.join("ffmpeg.exe").to_string_lossy().into_owned());
-        }
-    }
-
-    if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
-        ffprobe_candidates.push(format!(r"{}\Microsoft\WinGet\Links\ffmpeg.exe", local_appdata));
-    }
-
-    let temp_dir = std::env::temp_dir().join("prisma_audio_tracks");
-    let _ = std::fs::create_dir_all(&temp_dir);
-
-    use std::hash::{DefaultHasher, Hasher};
-    let mut hasher = DefaultHasher::new();
-    hasher.write(clean.as_bytes());
-    hasher.write_usize(track_index);
-    let hash = hasher.finish();
-
-    let out_file = temp_dir.join(format!("track_{}_{}.m4a", hash, track_index));
-
-    // Si ya existe y no está vacío, reutilizarlo inmediatamente
-    if out_file.exists() && out_file.metadata().map(|m| m.len() > 0).unwrap_or(false) {
-        return Ok(out_file.to_string_lossy().into_owned());
-    }
-
-    let mut success = false;
-    for candidate in &ffprobe_candidates {
-        if candidate.is_empty() {
-            continue;
-        }
-
-        // Intento 1: Copia directa stream copy (ultra instantáneo, 0ms)
-        let mut cmd = std::process::Command::new(candidate);
-        cmd.args([
-            "-y",
-            "-i", clean,
-            "-map", &format!("0:a:{}", track_index),
-            "-c:a", "aac",
-            "-b:a", "192k",
-            &out_file.to_string_lossy(),
-        ]);
-
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-        }
-
-        if let Ok(status) = cmd.status() {
-            if status.success() && out_file.exists() {
-                success = true;
-                break;
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(parent) = exe_path.parent() {
+                ffprobe_candidates.push(parent.join("ffmpeg.exe").to_string_lossy().into_owned());
             }
         }
-    }
 
-    if success {
-        Ok(out_file.to_string_lossy().into_owned())
-    } else {
-        Err("No se pudo extraer la pista de audio con ffmpeg".to_string())
-    }
+        if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+            ffprobe_candidates.push(format!(r"{}\Microsoft\WinGet\Links\ffmpeg.exe", local_appdata));
+        }
+
+        let temp_dir = std::env::temp_dir().join("prisma_audio_tracks");
+        let _ = std::fs::create_dir_all(&temp_dir);
+
+        use std::hash::{DefaultHasher, Hasher};
+        let mut hasher = DefaultHasher::new();
+        hasher.write(clean.as_bytes());
+        hasher.write_usize(track_index);
+        let hash = hasher.finish();
+
+        let out_file = temp_dir.join(format!("track_{}_{}.m4a", hash, track_index));
+
+        // Si ya existe y no está vacío, reutilizarlo inmediatamente
+        if out_file.exists() && out_file.metadata().map(|m| m.len() > 0).unwrap_or(false) {
+            return Ok(out_file.to_string_lossy().into_owned());
+        }
+
+        let mut success = false;
+        for candidate in &ffprobe_candidates {
+            if candidate.is_empty() {
+                continue;
+            }
+
+            // Intento: Copia directa o extracción a AAC rápido
+            let mut cmd = std::process::Command::new(candidate);
+            cmd.args([
+                "-y",
+                "-i", clean,
+                "-map", &format!("0:a:{}", track_index),
+                "-c:a", "aac",
+                "-b:a", "192k",
+                &out_file.to_string_lossy(),
+            ]);
+
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+            }
+
+            if let Ok(status) = cmd.status() {
+                if status.success() && out_file.exists() {
+                    success = true;
+                    break;
+                }
+            }
+        }
+
+        if success {
+            Ok(out_file.to_string_lossy().into_owned())
+        } else {
+            Err("No se pudo extraer la pista de audio con ffmpeg".to_string())
+        }
+    })
+    .await
+    .map_err(|e| format!("Error al extraer pista de audio: {e}"))?
 }
 

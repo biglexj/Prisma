@@ -15,6 +15,8 @@ export function PrismaConvertView() {
     setMode,
     queue,
     isRunning,
+    isDraggingOver,
+    handleIncomingPaths,
     customOutputFolder,
     setCustomOutputFolder,
     imageOptions,
@@ -40,7 +42,19 @@ export function PrismaConvertView() {
   } = useMediaConverter();
 
   return (
-    <div className="convert-root">
+    <div className={`convert-root ${isDraggingOver ? "is-drag-over" : ""}`}>
+      {isDraggingOver ? (
+        <div className="convert-drop-overlay">
+          <div className="convert-drop-card">
+            <div className="convert-drop-icon-pulse">
+              <Icon name="download" />
+            </div>
+            <h3>Suelta tus archivos o carpetas aquí</h3>
+            <p>Se añadirán y escanearán automáticamente en el Convertidor Prisma</p>
+          </div>
+        </div>
+      ) : null}
+
       <header className="convert-header">
         <div className="convert-title-area">
           <h1>Convertidor Prisma</h1>
