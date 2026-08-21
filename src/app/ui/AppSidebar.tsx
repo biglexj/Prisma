@@ -1,6 +1,7 @@
 import { Icon, type IconName } from "../../shared/ui/Icon";
 import { useCustomLibraries } from "../../features/custom_libraries/hooks/useCustomLibraries";
 import { useSystemSettings, type SidebarDensity } from "../useSystemSettings";
+import { APP_VERSION, APP_AUTHOR } from "../../shared/version";
 import appIcon from "../../../icon/icon.png";
 import "./app-sidebar.css";
 
@@ -125,7 +126,7 @@ export function AppSidebar({
           </span>
           <div className="sidebar-copy">
             <strong>Acerca de</strong>
-            <span>v0.0.1 · biglexj</span>
+            <span>v{APP_VERSION} · {APP_AUTHOR}</span>
           </div>
         </button>
       </footer>

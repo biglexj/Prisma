@@ -1,18 +1,17 @@
-# 🚀 Prisma v1.0.2 — Suite de Comparativa de Imágenes, Bento Grid y Modo Desarrollo Aislado
+# 🚀 Prisma v1.0.3 — Visor Maximizado de Wallpapers, Micro-interacciones Elásticas y Contraste Adaptativo
 
-Llega **Prisma v1.0.2**, una importante actualización que introduce la nueva **Suite de Comparativa de Imágenes Multimodal** integrada al visor y a QuickLook, soporte para **instancias y ventanas desacopladas en paralelo**, **modo desarrollo aislado** para programar sin bloqueos, rediseño adaptable de fondos de pantalla en **Bento Grid de 12 columnas**, expansión de la **Suite Musical Aurora Cloud** (Música, Instrumentales y Karaokes) con test de ping en tiempo real, y **estabilización de alto rendimiento en las barras de progreso** sin parpadeos ni recálculos continuos de layout.
+Llega **Prisma v1.0.3**, una actualización centrada en el perfeccionamiento visual y ergonómico del catálogo de **Wallpapers Aurora** con tarjetas limpias y títulos animados en hover, visor maximizado al 80% de ancho y 90% de alto, optimización de **micro-interacciones elásticas** en controles de transporte bajo Material 3 Expressive, **corrección integral de contraste e inversión cromática de textos en botones** para temas Claro y Oscuro, transiciones asíncronas de vídeo sin pausas ni desaparición abrupta del cursor, simplificación del visor de letras y sincronización centralizada de versión en toda la interfaz.
 
 ---
 
 ### ✨ Novedades Destacadas
 
-- 🔍 **Suite de Comparativa de Imágenes Multimodal**: Inspecciona y contrasta fotografías con 4 modos visuales: Cortina Deslizante (*Split Slider*), Lado a Lado simétrico, Alternancia Rápida (*Flicker* a 60 Hz para notar microdiferencias) y Mapa de Diferencia matemática, con zoom sincronizado hasta el 500% y atajo rápido (`C`).
-- 🪟 **Ventanas Desacopladas en Quick Look**: Desacopla múltiples visores flotantes para mantener abiertas comparaciones de imágenes, vídeos o documentos de forma simultánea.
-- ⚡ **Modo Desarrollo Aislado y Concurrencia**: Bypass inteligente de bloqueo para ejecutar Prisma en modo desarrollo concurrentemente con la versión oficial instalada mediante perfiles de datos aislados (`dev_profile/`).
-- 🍱 **Bento Grid Adaptativo para Wallpapers Aurora**: Cuadrícula de 12 columnas densa que empaqueta armoniosamente fondos 16:9, 21:9, 9:16 y 1:1 eliminando huecos negros residuales, con botones flotantes de favoritos y tarjetas de cristal esmerilado.
-- ☁️ **Suite Musical Aurora Cloud & Test de Servidor**: Panel de configuración con medición de latencia/ping en vivo y catálogo dividido en 3 vertientes: Explorar Música (Audio HD), Pistas Instrumentales (Off-Vocal) y Karaokes con letras dinámicas (LRC / Sing).
-- 🎯 **Barras de Progreso Ultra-Estables (Zero Layout Thrashing)**: Migración del motor de canvas a `ResizeObserver`, garantizando una altura inmutable de 28px y eliminando al 100% los saltos de altura y parpadeos al pasar el cursor.
-- 🔁 **Autorun Persistente Tras Actualización**: El inicio automático con Windows ya no se desactiva al instalar actualizaciones. Prisma detecta y restablece la entrada del registro silenciosamente en cada inicio si fue limpiada por el instalador.
+- 🖼️ **Galería Bento y Visor Cinematográfico de Wallpapers**: Las tarjetas de fondos de pantalla ahora presentan el arte de forma completamente limpia en reposo, desplegando los títulos, resolución, categoría y favoritos únicamente al interactuar con el puntero en hover. El visor modal aprovecha hasta el 80% de ancho y 90% de alto de la pantalla, maximizando la imagen con ajuste inteligente sin espacios negros residuales.
+- 🎨 **Micro-interacciones y Corrección de Contraste en Botones**: Físicas elásticas de resorte en controles secundarios y transporte de audio/vídeo. Refactorización completa de todos los botones de acción (`filled`, `tonal` y variantes primarias) con tokens semánticos de diseño, garantizando legibilidad y contraste del 100% de textos e iconos tanto en reposo como en hover y pulsación en temas Claro y Oscuro.
+- 🎬 **Transición Asíncrona y Puntero Continuo en Vídeo**: Ejecución asíncrona en segundo plano para la lectura de pistas de audio, subtítulos y metadatos nativos, erradicando micro-bloqueos en la interfaz al cambiar de vídeo o pista. El cursor del ratón y los controles permanecen activos y visibles de forma natural durante la navegación interactiva.
+- 🎵 **Simplificación del Visor de Letras y Cabeceras**: Rediseño enfocado del visor de letras priorizando la experiencia inmersiva de pantalla completa y edición rápida, junto con la unificación de acciones en cabeceras de colecciones bajo el comando integral de administración de fuentes.
+- 🔗 **Centralización de Recursos y Sincronización de Versión**: Estandarización de los iconos oficiales de alta resolución de las aplicaciones vinculadas (*Luna Fetch, Gallery-DL GUI, Super Gallery, LyraFlow y Ely-Tesia*), junto con un módulo único de sincronización de versión para la barra lateral y el diálogo informativo de Acerca de.
+- 🔍 **Control de Zoom y Salida Universal con Escape en Imágenes**: Garantía de salida inmediata del visor de imágenes con la tecla `Escape` independientemente del nivel de aumento (>100%), además del atajo `R` para restablecer al instante la escala nativa del archivo visual.
 
 ---
 

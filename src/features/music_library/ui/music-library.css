@@ -13,63 +13,117 @@
   line-height:1.5
 }
 
-.filled-button,.tonal-button,.icon-button {
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border:0;
-  cursor:pointer;
-  transition:color 160ms ease,background-color 160ms ease,box-shadow 160ms ease,opacity 160ms ease
+.filled-button,
+.tonal-button,
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 180ms ease,
+    opacity 160ms ease;
 }
 
-.filled-button,.tonal-button {
-  min-height:48px;
-  gap:9px;
-  border-radius:24px;
-  padding:0 20px;
-  font-size:.76rem;
-  font-weight:850
-}
-
-.filled-button {
-  color:var(--on-primary);
-  background:var(--primary);
-  box-shadow:0 9px 24px rgb(201 0 69 / 17%)
-}
-
+.filled-button,
 .tonal-button {
-  color:var(--on-primary-container);
-  background:var(--primary-container)
+  min-height: 48px;
+  gap: 9px;
+  border-radius: 24px;
+  padding: 0 20px;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+/* ── Filled Button (Primario Sólido) ── */
+.filled-button {
+  color: var(--on-primary) !important;
+  background: var(--primary) !important;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--primary) 28%, transparent);
 }
 
 .filled-button:hover:not(:disabled) {
-  background:#ad003b;
-  box-shadow:0 10px 26px rgb(201 0 69 / 22%)
+  color: var(--on-primary) !important;
+  background: color-mix(in srgb, var(--primary) 85%, var(--on-primary)) !important;
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--primary) 38%, transparent);
+  transform: scaleX(1.04) scaleY(1.02) translateY(-2px);
 }
 
 .filled-button:active:not(:disabled) {
-  background:#940033
+  color: var(--on-primary) !important;
+  background: color-mix(in srgb, var(--primary) 72%, var(--on-primary)) !important;
+  transform: scale(0.97) translateY(0);
+}
+
+.filled-button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* ── Tonal Button (Secundario Tonal / Administrar fuentes) ── */
+.tonal-button {
+  color: var(--on-primary-container) !important;
+  background: var(--primary-container) !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary-container) 35%, transparent);
 }
 
 .tonal-button:hover:not(:disabled) {
-  background:#f2cbd2
+  color: var(--on-primary-container) !important;
+  background: color-mix(in srgb, var(--primary-container) 80%, var(--primary)) !important;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--primary-container) 50%, transparent);
+  transform: scaleX(1.04) scaleY(1.02) translateY(-2px);
 }
 
 .tonal-button:active:not(:disabled) {
-  background:#e9bdc6
+  color: var(--on-primary-container) !important;
+  background: color-mix(in srgb, var(--primary-container) 68%, var(--primary)) !important;
+  transform: scale(0.97) translateY(0);
 }
 
+.tonal-button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* ── Tonal Button is-primary (Reproducir todo) ── */
+.tonal-button.is-primary {
+  color: var(--on-primary) !important;
+  background: var(--primary) !important;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+.tonal-button.is-primary:hover:not(:disabled) {
+  color: var(--on-primary) !important;
+  background: color-mix(in srgb, var(--primary) 85%, var(--on-primary)) !important;
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--primary) 38%, transparent);
+  transform: scaleX(1.04) scaleY(1.02) translateY(-2px);
+}
+
+.tonal-button.is-primary:active:not(:disabled) {
+  color: var(--on-primary) !important;
+  background: color-mix(in srgb, var(--primary) 72%, var(--on-primary)) !important;
+  transform: scale(0.97) translateY(0);
+}
+
+/* ── Icon Button ── */
 .icon-button:hover:not(:disabled) {
-  background:var(--surface-container-high)
+  background: var(--surface-container-high);
 }
 
 .icon-button:active:not(:disabled) {
-  background:#e7dcdd
+  background: var(--active-pressed, #2d2023);
 }
 
-.filled-button svg,.tonal-button svg {
-  width:19px;
-  height:19px
+.filled-button svg,
+.tonal-button svg {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
 }
 
 .library-home,.folder-manager {

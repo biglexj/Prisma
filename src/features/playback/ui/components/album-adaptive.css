@@ -43,8 +43,15 @@
 }
 
 .preview-screen.has-album-palette .preview-transport button:not(.preview-play) {
-  color: var(--album-accent-deep) !important;
-  background: var(--album-accent-soft) !important;
+  color: var(--on-surface, #ffffff) !important;
+  background: color-mix(in srgb, var(--album-accent) 22%, var(--surface-container-high, #2b2326)) !important;
+  border: 1px solid color-mix(in srgb, var(--album-accent) 24%, transparent) !important;
+}
+
+.preview-screen.has-album-palette .preview-transport button:not(.preview-play):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--album-accent) 34%, var(--surface-container-highest, #362a2e)) !important;
+  border-color: color-mix(in srgb, var(--album-accent) 38%, transparent) !important;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--album-accent) 20%, transparent) !important;
 }
 
 .preview-screen.has-album-palette input[type="range"] {

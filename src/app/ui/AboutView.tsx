@@ -2,6 +2,7 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../shared/ui/Icon";
 import { useScrollRestoration } from "../../shared/useScrollRestoration";
+import { APP_VERSION, APP_AUTHOR, APP_BUILD_NAME } from "../../shared/version";
 import appIcon from "../../../icon/icon.png";
 import "./about-view.css";
 
@@ -29,7 +30,7 @@ export function AboutView() {
     try {
       // Simulación de comprobación de release contra GitHub
       await new Promise((resolve) => setTimeout(resolve, 800));
-      setUpdateStatus("✅ ¡Estás en la última versión oficial (v1.0.0)!");
+      setUpdateStatus(`✅ ¡Estás en la última versión oficial (v${APP_VERSION})!`);
     } catch {
       setUpdateStatus("ℹ️ No se pudo verificar la actualización. Revisa tu conexión a internet.");
     } finally {
@@ -49,15 +50,15 @@ export function AboutView() {
             <div className="about-hero-text">
               <div className="about-title-row">
                 <h2>Prisma</h2>
-                <span className="about-version-badge">v1.0.0</span>
-                <span className="about-release-tag">Lanzamiento Oficial</span>
+                <span className="about-version-badge">v{APP_VERSION}</span>
+                <span className="about-release-tag">{APP_BUILD_NAME}</span>
               </div>
               <p className="about-tagline">
                 Estación y reproductor multimedia local-first diseñada bajo el lenguaje Material 3 Expressive para Windows.
               </p>
               <div className="about-meta-chips">
                 <span className="about-chip">Licencia MIT</span>
-                <span className="about-chip">Autor: biglexj (2026)</span>
+                <span className="about-chip">Autor: {APP_AUTHOR} (2026)</span>
                 <span className="about-chip">Local-First</span>
                 <span className="about-chip">Audio • Vídeo • Imágenes • Libros • Documentos</span>
               </div>
@@ -72,7 +73,7 @@ export function AboutView() {
               </div>
               <div className="about-update-text">
                 <strong>Estado de Versión</strong>
-                <p>Prisma v1.0.0 (Windows 64-bit)</p>
+                <p>Prisma v{APP_VERSION} (Windows 64-bit)</p>
               </div>
             </div>
             <button

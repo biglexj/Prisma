@@ -471,9 +471,6 @@ export function VisualLibrary({
           <button className="tonal-button" onClick={onOpenFolders}>
             <Icon name="folder" /> Administrar fuentes
           </button>
-          <button className="filled-button" onClick={() => void chooseFolder()}>
-            <Icon name="plus" /> Añadir carpeta
-          </button>
         </div>
       </header>
 
