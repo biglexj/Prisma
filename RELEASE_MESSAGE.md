@@ -12,6 +12,7 @@ Llega **Prisma v1.0.2**, una importante actualización que introduce la nueva **
 - 🍱 **Bento Grid Adaptativo para Wallpapers Aurora**: Cuadrícula de 12 columnas densa que empaqueta armoniosamente fondos 16:9, 21:9, 9:16 y 1:1 eliminando huecos negros residuales, con botones flotantes de favoritos y tarjetas de cristal esmerilado.
 - ☁️ **Suite Musical Aurora Cloud & Test de Servidor**: Panel de configuración con medición de latencia/ping en vivo y catálogo dividido en 3 vertientes: Explorar Música (Audio HD), Pistas Instrumentales (Off-Vocal) y Karaokes con letras dinámicas (LRC / Sing).
 - 🎯 **Barras de Progreso Ultra-Estables (Zero Layout Thrashing)**: Migración del motor de canvas a `ResizeObserver`, garantizando una altura inmutable de 28px y eliminando al 100% los saltos de altura y parpadeos al pasar el cursor.
+- 🔁 **Autorun Persistente Tras Actualización**: El inicio automático con Windows ya no se desactiva al instalar actualizaciones. Prisma detecta y restablece la entrada del registro silenciosamente en cada inicio si fue limpiada por el instalador.
 
 ---
 
