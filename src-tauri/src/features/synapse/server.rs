@@ -189,6 +189,26 @@ fn handle_client(stream: TcpStream, app: AppHandle) {
             send_http_response(reader.get_mut(), 404, "text/plain", b"No artwork available");
         }
 
+        // ── GET /api/v1/synapse/lyrics (Letras Sincronizadas en Tiempo Real) ──
+        ("GET", "/api/v1/synapse/lyrics") | ("GET", "/lyrics") => {
+            let status = app
+                .try_state::<super::config::SynapseState>()
+                .map(|s| s.get_playback_status())
+                .unwrap_or_default();
+
+            if let Some(ref path_str) = status.path {
+                let p = Path::new(path_str);
+                if p.is_file() {
+                    if let Some(lyrics_content) = crate::infrastructure::lyrics::load_track_lyrics(p) {
+                        send_http_response(reader.get_mut(), 200, "text/plain; charset=utf-8", lyrics_content.as_bytes());
+                        return;
+                    }
+                }
+            }
+
+            send_http_response(reader.get_mut(), 404, "text/plain", b"No lyrics available");
+        }
+
         // ── POST /api/v1/synapse/handoff (Continuidad Multimedia) ──
         ("POST", "/api/v1/synapse/handoff") | ("POST", "/handoff") => {
             let mut body = vec![0u8; content_length];
