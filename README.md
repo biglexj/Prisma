@@ -19,29 +19,25 @@
 
 ## 📸 Capturas de Pantalla
 
-<div align="center">
+| Inicio | Escuchar | Música | Imágenes |
+| :---: | :---: | :---: | :---: |
+| ![Inicio](screenshots/home.png) | ![Escuchar](screenshots/listen.png) | ![Música](screenshots/music.png) | ![Imágenes de hoy](screenshots/images_today.png) |
 
-| Vista Principal (Inicio) | Biblioteca de Música |
-| :---: | :---: |
-| ![Inicio](screenshots/home.webp) | ![Música](screenshots/music.webp) |
+| Imágenes anteriores | Vídeos | Libros | Krita |
+| :---: | :---: | :---: | :---: |
+| ![Imágenes anteriores](screenshots/images_yesterday.png) | ![Vídeos](screenshots/videos.png) | ![Libros](screenshots/books.png) | ![Krita](screenshots/krita.png) |
 
-| Reproductor Inmersivo (Now Playing) | Galería de Imágenes |
-| :---: | :---: |
-| ![Reproducción](screenshots/now_playing.webp) | ![Imágenes](screenshots/image.webp) |
+| DaVinci Resolve | Favoritos | Historial | Listas de reproducción |
+| :---: | :---: | :---: | :---: |
+| ![DaVinci Resolve](screenshots/davinci_resolve.png) | ![Favoritos](screenshots/favorites.png) | ![Historial](screenshots/history.png) | ![Listas de reproducción](screenshots/playlists.png) |
 
-| Bibliotecas Modulares (Libros/Docs) | Lector y Editor de Documentos |
-| :---: | :---: |
-| ![Bibliotecas](screenshots/books.webp) | ![Documentos y Editor](screenshots/document_viewer.webp) |
+| Conversor | Luna Fetch | Gallery-DL | Wallpapers Aurora |
+| :---: | :---: | :---: | :---: |
+| ![Conversor](screenshots/converter.png) | ![Luna Fetch](screenshots/luna_fetch.png) | ![Gallery-DL](screenshots/gallery_dl.png) | ![Wallpapers Aurora](screenshots/wallpapers_aurora.png) |
 
-| Reproductor de Vídeo | Colección de Favoritos |
-| :---: | :---: |
-| ![Vídeo](screenshots/video.webp) | ![Favoritos](screenshots/favorites.webp) |
-
-| Configuración General | Acerca de Prisma |
-| :---: | :---: |
-| ![Configuración](screenshots/settings.webp) | ![Acerca de](screenshots/about.webp) |
-
-</div>
+| Configuración general | Aurora Synapse | Atajos de teclado | Acerca de |
+| :---: | :---: | :---: | :---: |
+| ![Configuración general](screenshots/settings_general.png) | ![Aurora Synapse](screenshots/settings_aurora_synapse.png) | ![Atajos de teclado](screenshots/settings_keyboard_shortcuts.png) | ![Acerca de](screenshots/about.png) |
 
 ---
 
