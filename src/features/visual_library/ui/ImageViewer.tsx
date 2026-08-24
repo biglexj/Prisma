@@ -13,6 +13,7 @@ import type { VisualLibraryItem } from "../model/types";
 import { ImageEditor } from "./editor/ImageEditor";
 import { ImageComparisonModal } from "./comparison/ImageComparisonModal";
 import { quickLookClient } from "../../quick_look/tauri/client";
+import { ViewerToolsMenu } from "./components/ViewerToolsMenu";
 import "./visual-library.css";
 import "./image-viewer.css";
 
@@ -59,6 +60,8 @@ export function ImageViewer({
   const clearPrevTimerRef = useRef<number | null>(null);
   const suppressTransformTransitionRef = useRef(true);
   const controlsSuppressUntilRef = useRef(0);
+  const isToolsMenuOpenRef = useRef(false);
+  const isHoveringControlsRef = useRef(false);
 
   const imgRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -167,9 +170,13 @@ export function ImageViewer({
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
     }
-    controlsTimeoutRef.current = window.setTimeout(() => {
-      setShowControls(false);
-    }, 3000);
+    if (!isToolsMenuOpenRef.current && !isHoveringControlsRef.current) {
+      controlsTimeoutRef.current = window.setTimeout(() => {
+        if (!isToolsMenuOpenRef.current && !isHoveringControlsRef.current) {
+          setShowControls(false);
+        }
+      }, 3000);
+    }
   };
 
   const closeViewer = () => {
@@ -239,7 +246,8 @@ export function ImageViewer({
   const handleZoomIn = () => {
     setAutoFit(false);
     setZoomScale((prev) => {
-      const next = Math.min(5, Math.round((prev + 0.25) * 100) / 100);
+      const step = prev < 0.2 ? 0.03 : prev < 0.5 ? 0.05 : 0.25;
+      const next = Math.min(10, Math.round((prev + step) * 100) / 100);
       showZoomToast(next);
       return next;
     });
@@ -248,8 +256,9 @@ export function ImageViewer({
   const handleZoomOut = () => {
     setAutoFit(false);
     setZoomScale((prev) => {
-      const next = Math.max(0.5, Math.round((prev - 0.25) * 100) / 100);
-      if (next <= 1) setPanOffset({ x: 0, y: 0 });
+      const step = prev <= 0.15 ? 0.02 : prev <= 0.5 ? 0.05 : 0.25;
+      const next = Math.max(0.05, Math.round((prev - step) * 100) / 100);
+      if (next <= (initialFitScaleRef.current || 1)) setPanOffset({ x: 0, y: 0 });
       showZoomToast(next);
       return next;
     });
@@ -262,13 +271,13 @@ export function ImageViewer({
   };
 
   const handleToggleZoom = () => {
-    if (zoomScale > 1) {
+    const fitScale = initialFitScaleRef.current || 1;
+    if (zoomScale > fitScale * 1.05) {
       handleResetZoom();
     } else {
-      setZoomScale(2);
+      setZoomScale(Math.max(2, fitScale * 2));
     }
   };
-
 
   const handleAutoScale = () => {
     if (isAutoFitRef.current) {
@@ -298,14 +307,16 @@ export function ImageViewer({
     setAutoFit(false);
     if (e.deltaY < 0) {
       setZoomScale((prev) => {
-        const next = Math.min(5, Math.round((prev + 0.15) * 100) / 100);
+        const step = prev < 0.2 ? 0.02 : prev < 0.5 ? 0.05 : 0.15;
+        const next = Math.min(10, Math.round((prev + step) * 100) / 100);
         showZoomToast(next);
         return next;
       });
     } else {
       setZoomScale((prev) => {
-        const next = Math.max(0.5, Math.round((prev - 0.15) * 100) / 100);
-        if (next <= 1) setPanOffset({ x: 0, y: 0 });
+        const step = prev <= 0.15 ? 0.02 : prev <= 0.5 ? 0.05 : 0.15;
+        const next = Math.max(0.05, Math.round((prev - step) * 100) / 100);
+        if (next <= (initialFitScaleRef.current || 1)) setPanOffset({ x: 0, y: 0 });
         showZoomToast(next);
         return next;
       });
@@ -313,14 +324,16 @@ export function ImageViewer({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (zoomScale <= 1 || e.button !== 0) return;
+    const minScaleForPan = Math.min(1, (initialFitScaleRef.current || 1) * 0.98);
+    if (zoomScale <= minScaleForPan || e.button !== 0) return;
     e.preventDefault();
     setIsDragging(true);
     setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || zoomScale <= 1) return;
+    const minScaleForPan = Math.min(1, (initialFitScaleRef.current || 1) * 0.98);
+    if (!isDragging || zoomScale <= minScaleForPan) return;
     setPanOffset({
       x: e.clientX - dragStart.x,
       y: e.clientY - dragStart.y,
@@ -605,7 +618,19 @@ export function ImageViewer({
       onKeyDown={handleKeyDown}
       onMouseMove={handleUserActivity}
     >
-      <div className="image-viewer-top-bar" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="image-viewer-top-bar"
+        onClick={(event) => event.stopPropagation()}
+        onMouseEnter={() => {
+          isHoveringControlsRef.current = true;
+          setShowControls(true);
+          if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+        }}
+        onMouseLeave={() => {
+          isHoveringControlsRef.current = false;
+          handleUserActivity();
+        }}
+      >
         <div className="image-viewer-top-left">
           <button
             className="image-viewer-top-btn is-icon-only image-viewer-back-btn"
@@ -619,54 +644,6 @@ export function ImageViewer({
               Foto {currentIndex >= 0 ? currentIndex + 1 : 1} de {activeList.length}
             </span>
           ) : null}
-          <button
-            className="image-viewer-top-btn image-viewer-edit-btn"
-            onClick={() => setIsEditing(true)}
-            title="Editar imagen (E)"
-          >
-            <Icon name="crop" />
-            <span>Editar</span>
-          </button>
-          <button
-            className="image-viewer-top-btn image-viewer-compare-btn"
-            onClick={() => setIsComparing(true)}
-            title="Comparar con otra imagen (C)"
-          >
-            <Icon name="compare" />
-            <span>Comparar</span>
-          </button>
-          <button
-            className="image-viewer-top-btn image-viewer-detach-btn"
-            onClick={() => {
-              void quickLookClient.openDetached(currentItem.path).catch(() => {});
-            }}
-            title="Abrir esta imagen en otra ventana independiente a la par"
-          >
-            <Icon name="copy" />
-            <span>Abrir en otra instancia</span>
-          </button>
-          <button
-            className="image-viewer-top-btn"
-            onClick={() =>
-              mediaRename.requestRename({
-                path: currentItem.path,
-                title: currentItem.title,
-                kind: "image",
-              })
-            }
-            title="Renombrar imagen (F2)"
-          >
-            <Icon name="edit" />
-            <span>Renombrar</span>
-          </button>
-          <button
-            className={`image-viewer-top-btn image-viewer-slideshow-btn ${isSlideshowActive ? "is-active" : ""}`}
-            onClick={() => setIsSlideshowActive(!isSlideshowActive)}
-            title={isSlideshowActive ? "Detener presentación" : "Iniciar presentación automática"}
-          >
-            <Icon name={isSlideshowActive ? "pause" : "play"} />
-            <span>{isSlideshowActive ? "Pausar" : "Presentación"}</span>
-          </button>
         </div>
 
         <div className="image-viewer-top-center">
@@ -676,45 +653,6 @@ export function ImageViewer({
         </div>
 
         <div className="image-viewer-top-right">
-          <button
-            className="image-viewer-top-btn"
-            onClick={() => {
-              window.dispatchEvent(
-                new CustomEvent("prisma-open-converter", {
-                  detail: { path: currentItem.path, mode: "image" },
-                })
-              );
-              closeViewer();
-            }}
-            title="Convertir imagen en Convertidor Prisma"
-          >
-            <Icon name="refresh" />
-            <span>Convertir</span>
-          </button>
-          <button
-            className="image-viewer-top-btn"
-            onClick={() => {
-              invoke("show_in_file_manager", { path: currentItem.path }).catch(() => {});
-            }}
-            title="Mostrar en explorador de archivos"
-          >
-            <Icon name="folder" />
-            <span>Ubicación</span>
-          </button>
-          <button
-            className="image-viewer-top-btn"
-            onClick={() => {
-              window.dispatchEvent(
-                new CustomEvent("prisma-send-to-supergallery", {
-                  detail: { path: currentItem.path, title: currentItem.title },
-                })
-              );
-            }}
-            title="Enviar foto a Super Galería (Móvil)"
-          >
-            <Icon name="smartphone" />
-            <span>Móvil</span>
-          </button>
           <button
             aria-label={favorites.isFavorite(currentItem.path) ? "Quitar de favoritos" : "Añadir a favoritos"}
             className={`image-viewer-top-btn is-icon-only image-viewer-fav-btn ${favorites.isFavorite(currentItem.path) ? "is-favorite" : ""}`}
@@ -745,14 +683,53 @@ export function ImageViewer({
           >
             <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen"} />
           </button>
-          <button
-            aria-label="Cerrar vista previa (Esc)"
-            className="image-viewer-top-btn is-icon-only image-viewer-close-btn"
-            onClick={closeViewer}
-            title="Cerrar (Esc)"
-          >
-            <Icon name="close" />
-          </button>
+          <ViewerToolsMenu
+            onEdit={() => setIsEditing(true)}
+            onCompare={() => setIsComparing(true)}
+            onConvert={() => {
+              window.dispatchEvent(
+                new CustomEvent("prisma-open-converter", {
+                  detail: { path: currentItem.path, mode: "image" },
+                })
+              );
+              closeViewer();
+            }}
+            onRename={() =>
+              mediaRename.requestRename({
+                path: currentItem.path,
+                title: currentItem.title,
+                kind: "image",
+              })
+            }
+            onDetach={() => {
+              void quickLookClient.openDetached(cleanPath(currentItem.path)).catch((err) => {
+                console.error("Error al abrir instancia:", err);
+              });
+            }}
+            onShowInFolder={() => {
+              invoke("show_in_file_manager", { path: cleanPath(currentItem.path) }).catch((err) => {
+                console.error("Error al mostrar en explorador:", err);
+              });
+            }}
+            onSendToMobile={() => {
+              window.dispatchEvent(
+                new CustomEvent("prisma-send-to-supergallery", {
+                  detail: { path: currentItem.path, title: currentItem.title },
+                })
+              );
+            }}
+            isSlideshowActive={isSlideshowActive}
+            onToggleSlideshow={() => setIsSlideshowActive(!isSlideshowActive)}
+            onOpenChange={(isOpen) => {
+              isToolsMenuOpenRef.current = isOpen;
+              if (isOpen) {
+                setShowControls(true);
+                if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+              } else {
+                handleUserActivity();
+              }
+            }}
+          />
         </div>
       </div>
 
@@ -790,7 +767,7 @@ export function ImageViewer({
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
         style={{
-          cursor: zoomScale > 1 ? (isDragging ? "grabbing" : "grab") : "default",
+          cursor: zoomScale > Math.min(1, (initialFitScaleRef.current || 1) * 0.98) ? (isDragging ? "grabbing" : "grab") : "default",
         }}
       >
         <div className="image-viewer-media-container">
@@ -861,7 +838,19 @@ export function ImageViewer({
       )}
 
       {/* Barra de control de Zoom y Escala Automática */}
-      <div className="image-viewer-zoom-controls" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="image-viewer-zoom-controls"
+        onClick={(e) => e.stopPropagation()}
+        onMouseEnter={() => {
+          isHoveringControlsRef.current = true;
+          setShowControls(true);
+          if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+        }}
+        onMouseLeave={() => {
+          isHoveringControlsRef.current = false;
+          handleUserActivity();
+        }}
+      >
         <button onClick={handleZoomOut} title="Alejar (Ctrl - / Rueda abajo)">
           <Icon name="minus" />
         </button>

@@ -82,6 +82,7 @@ export interface PlaybackQueueState {
   clear: () => void;
   clearQueue: (queueId: string) => void;
   clearAllQueues: () => void;
+  syncItemMetadata: (items: MusicQueueItem[]) => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   toggleJumpToNextQueue: () => void;
@@ -596,6 +597,30 @@ export function usePlaybackQueue(): PlaybackQueueState {
     setActiveQueueId(DEFAULT_QUEUE_ID);
   }, []);
 
+  const syncItemMetadata = useCallback((items: MusicQueueItem[]) => {
+    const metadataByPath = new Map(
+      items.map((item) => [item.path.trim().replace(/\\/g, "/").toLowerCase(), item]),
+    );
+
+    setQueues((previousQueues) => {
+      let changed = false;
+      const nextQueues = previousQueues.map((queue) => {
+        let queueChanged = false;
+        const nextItems = queue.items.map((item) => {
+          const metadata = metadataByPath.get(item.path.trim().replace(/\\/g, "/").toLowerCase());
+          if (!metadata || (metadata.title === item.title && metadata.artist === item.artist)) {
+            return item;
+          }
+          queueChanged = true;
+          changed = true;
+          return { ...item, title: metadata.title, artist: metadata.artist };
+        });
+        return queueChanged ? { ...queue, items: nextItems } : queue;
+      });
+      return changed ? nextQueues : previousQueues;
+    });
+  }, []);
+
   const toggleShuffle = useCallback(() => {
     setSettings((prev) => {
       const nextShuffle = !prev.shuffleMode;
@@ -691,6 +716,7 @@ export function usePlaybackQueue(): PlaybackQueueState {
     clear,
     clearQueue,
     clearAllQueues,
+    syncItemMetadata,
     toggleShuffle,
     toggleRepeat,
     toggleJumpToNextQueue,

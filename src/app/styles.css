@@ -30,6 +30,12 @@
   --transport-hover: #f4cbd2;
   --transport-play-hover: #ad003b;
   --preview-actions-pressed: #e7dcdd;
+  --state-hover-surface: color-mix(in srgb, var(--on-surface) 8%, var(--surface-container));
+  --state-pressed-surface: color-mix(in srgb, var(--on-surface) 12%, var(--surface-container));
+  --state-selected-surface: color-mix(in srgb, var(--primary) 16%, var(--surface-container));
+  --focus-ring: color-mix(in srgb, var(--primary) 48%, transparent);
+  --interactive-outline: color-mix(in srgb, var(--on-surface) 18%, transparent);
+  --elevation-hover: 0 10px 26px rgb(0 0 0 / 22%);
   --header-height: 56px;
 }
 
@@ -162,9 +168,21 @@ button:active:not(:disabled) {
 }
 
 button:focus-visible,
-input:focus-visible {
-  outline: 3px solid rgb(201 0 69 / 24%);
+input:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 button:disabled {
@@ -240,9 +258,9 @@ button:disabled {
   flex: 0 0 auto;
   place-items: center;
   overflow: hidden;
-  border-radius: 50%;
-  background: var(--surface-bright);
-  box-shadow: 0 6px 18px rgb(201 0 69 / 14%);
+  border-radius: 9px;
+  background: transparent;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 16%);
 }
 
 .brand-mark img {
@@ -333,12 +351,12 @@ button:disabled {
 
 .sidebar-item:hover:not(:disabled) {
   color: var(--on-surface);
-  background: var(--surface-container-high);
+  background: var(--state-hover-surface);
 }
 
 .sidebar-item:active:not(:disabled) {
   color: var(--on-surface);
-  background: var(--active-pressed);
+  background: var(--state-pressed-surface);
 }
 
 .sidebar-item.is-active {

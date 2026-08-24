@@ -8,11 +8,40 @@
 > **Sanitización de Notas (CRÍTICO):**
 > - Los mensajes de las notas de lanzamiento DEBEN estar limpios de rutas de archivos del sistema local (ej. `d:\Proyectos\...`), nombres de variables internas, fragmentos de prompts o logs técnicos de depuración. Deben redactarse con lenguaje limpio, profesional y enfocado al usuario final.
 >
-> **Regla del .9 para Versionado:**
-> - Nunca se debe pasar de una versión de parche `.9` (ej. de `0.0.9` no se pasa a `0.0.10`). Al alcanzar el límite del parche `.9`, se incrementa el número menor/secundario (ej. pasando a `0.1.0`).
+> **Estándar SemVer Flexible (Core-Docs v1.7.0):**
+> - Se utiliza SemVer estándar (`MAJOR.MINOR.PATCH`) sin límites artificiales por dígito (segmentos mayores a 9 como `1.0.12` son 100% válidos).
+> - Se incrementa `PATCH`, `MINOR` o `MAJOR` según el alcance real del cambio y compatibilidad, sin saltos forzados de versión basados únicamente en alcanzar un dígito 9.
 > - **Extensión proporcional en Release Notes:** La cantidad de párrafos depende del alcance: 1 para un hito pequeño, 2 cuando hay dos cambios relevantes, 3 como extensión habitual, 4 para hitos relativamente grandes y hasta 5 para lanzamientos de gran alcance. Cada párrafo debe concentrarse en un cambio principal y evitar descripciones excesivamente largas o listas detalladas de archivos.
 
 Registro histórico de cambios y versiones de Prisma.
+
+> [!NOTE]
+> **Prisma v1.0.5 está preparada localmente.** Según la confirmación de Biglex, v1.0.4 ya fue publicada. La instalación y la publicación de v1.0.5 continúan pendientes hasta recibir la orden de lanzamiento.
+
+## [1.0.5] - 2026-08-24
+
+### Resumen
+Actualización **Prisma v1.0.5** enfocada en la ergonomía y limpieza visual del visor multimedia, la reorganización modular de herramientas en menús desplegables para imágenes y vídeos, ampliación extrema del rango de zoom desde el 5%, perfeccionamiento del modo de alternancia A/B en la comparativa de fotos, integración nativa precisa con el Explorador de Windows y multiventana desacoplada, junto con la renovación del icono de alto contraste con fondo blanco sincronizado en todos sus puntos de consumo.
+
+### Detalles
+- **Menús desplegables de Herramientas**: Reorganización limpia de las cabeceras en el visor de imágenes y en el reproductor de vídeo mediante menús desplegables modulares con estética de cristal. Agrupan de forma ordenada Edición (`E`), Convertidor, Comparativa (`C`), Renombrado (`F2`), Multiventana, Mostrar en explorador, Enviar a Móvil y Presentación (`Espacio`), retirando botones redundantes de las barras principales.
+- **Persistencia inteligente de controles**: Los paneles, cabeceras y barras de transporte se mantienen visibles e interactivos de forma continua mientras el puntero se encuentre sobre ellos o cuando el menú de herramientas esté abierto, evitando desapariciones o auto-ocultamientos involuntarios.
+- **Rango de zoom ultra amplio en imágenes**: Extensión del límite mínimo de zoom hasta el **5% (0.05)** con pasos dinámicos de aumento y desplazamiento fluido (`pan`) con el cursor para inspeccionar ilustraciones y fotos de ultra alta resolución.
+- **Suite de Comparativa refinada (Modo Alternar A/B)**: El indicador de foto, título y dimensiones en píxeles se eleva de forma compacta a la parte superior, unificando la altura, encuadre vertical y escala visual para que sea idéntica y consistente con los modos Cuadrícula y Lado a lado.
+- **Integración con el Explorador de Windows y Multiventana**: Corrección en el comando nativo de apertura de archivos (`/select`) para resaltar el elemento seleccionado en el Explorador de Windows y normalización integral de rutas para abrir previsualizaciones flotantes independientes a la par sin fricción.
+- **Identidad de alto contraste en Windows**: El nuevo icono con base blanca mantiene el símbolo de Prisma nítido y reconocible en tamaños pequeños (barra de tareas, bandeja del sistema, ejecutable e instalador), sincronizado automáticamente antes de cada compilación.
+
+## [1.0.4] - 2026-08-22
+
+### Resumen
+Actualización **Prisma v1.0.4** centrada en una carga inicial más estable, el refinamiento visual de Inicio, Wallpapers y Música, y una integración más segura con el catálogo de **Wallpapers Aurora**. La interfaz conserva el lugar de cada sección mientras se hidratan las bibliotecas, reduce el trabajo simultáneo y mejora la coherencia de estados interactivos en los temas Claro y Oscuro.
+
+### Detalles
+- **Inicio más estable y carga escalonada**: Los estantes de Música, Vídeos e Imágenes mantienen su posición durante la carga mediante espacios reservados coherentes. Los escaneos iniciales se coordinan de forma secuencial y las vistas previas visuales aplican límites por cantidad y memoria estimada para reducir saltos, bloqueos y presión innecesaria sobre equipos con recursos limitados.
+- **Wallpapers Aurora adaptables y protegidos**: El catálogo utiliza la API web versionada de Aurora, admite autenticación opcional y se degrada de forma controlada al catálogo público. La búsqueda incorpora espera breve y cancelación de solicitudes anteriores; las categorías se construyen con los datos disponibles y las acciones HD permanecen deshabilitadas cuando Aurora marca un recurso como no autorizado o no entrega su URL protegida.
+- **Visor de wallpapers sin bandas residuales**: El modal adapta su ancho a la proporción natural de cada imagen, evitando espacios internos laterales o superiores y manteniendo visibles las acciones principales. También se refinó la altura de los controles para conservar la armonía del encabezado y del visor en distintos tamaños de ventana.
+- **Títulos musicales y colas consistentes**: Prisma respeta el título y el artista incrustados en los archivos antes de interpretar el nombre del archivo. Las colas guardadas se reconcilian con los metadatos actuales sin perder su orden, muestran una carátula de respaldo cuando falta la original, recuperan el redondeo completo al final del panel y permiten arrastrar horizontalmente la franja de colas cuando existen más elementos.
+- **Interacciones visuales unificadas**: Navegación, colecciones, Inicio y Wallpapers comparten estados de hover y foco más consistentes en modo Claro y Oscuro, con tokens semánticos y reducción de movimiento cuando el sistema lo solicita.
 
 ## [1.0.3] - 2026-08-20
 

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import type { MusicLibraryItem } from "../../music_library/model/types";
 import { MusicArtwork } from "../../music_library/ui/MusicArtwork";
-import { parseTrackInfo } from "../../music_library/model/trackInfo";
+import { resolveLibraryTrackInfo } from "../../music_library/model/trackInfo";
 import type { VisualLibraryItem } from "../../visual_library/model/types";
 import { VisualThumbnail } from "../../visual_library/ui/VisualThumbnail";
 import { VideoThumbnail } from "../../visual_library/ui/VideoThumbnail";
@@ -109,7 +109,7 @@ export function FavoriteFullView({
           {filteredItems.map((item) => {
             if (mediaType === "music") {
               const musicItem = item as MusicLibraryItem;
-              const { title: songTitle, artist } = parseTrackInfo(musicItem.title);
+              const { title: songTitle, artist } = resolveLibraryTrackInfo(musicItem);
               return (
                 <div className="favorite-full-card is-music" key={musicItem.path}>
                   <div

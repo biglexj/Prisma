@@ -294,15 +294,20 @@ impl QuickLookState {
     }
 
     pub fn open_detached(&self, path: &str) -> Result<String, String> {
-        let file_path = Path::new(path);
-        if !file_path.is_file() {
+        let clean = path.trim_start_matches(r"\\?\").trim_start_matches(r"\\?\UNC\").to_string();
+        let win_path = clean.replace('/', "\\");
+        let file_path = if Path::new(&win_path).is_file() {
+            Path::new(&win_path)
+        } else if Path::new(path).is_file() {
+            Path::new(path)
+        } else {
             return Err("El archivo ya no existe".to_string());
-        }
+        };
 
         let media_type = QuickLookMediaType::from_path(file_path)
             .ok_or_else(|| "Tipo de archivo no soportado".to_string())?;
 
-        let payload = QuickLookPayload::new(path.to_string(), media_type);
+        let payload = QuickLookPayload::new(win_path.clone(), media_type);
         let (target_w, target_h) = resolve_media_size(media_type, file_path);
 
         let open_count = self.detached_payloads.lock().unwrap().len() as u32;

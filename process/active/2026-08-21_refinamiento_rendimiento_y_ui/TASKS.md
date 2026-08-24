@@ -1,0 +1,37 @@
+# Tareas
+
+- [x] Crear un coordinador ligero para serializar los escaneos iniciales.
+- [x] Separar la carga rápida de fuentes del escaneo completo de elementos.
+- [x] Reservar los estantes de Inicio mientras las bibliotecas se hidratan.
+- [x] Limitar la caché visual por cantidad y bytes estimados.
+- [x] Incorporar tokens semánticos para estados interactivos.
+- [x] Añadir movimiento reducido global y foco equivalente al hover.
+- [x] Corregir los filtros de Wallpapers según categorías recibidas.
+- [x] Añadir debounce y cancelación de solicitudes del catálogo.
+- [x] Bloquear acciones HD cuando `isAuthorized` sea falso.
+- [x] Adaptar el ancho del visor a la proporción natural de cada wallpaper.
+- [x] Alinear las llamadas del catálogo con las bases Core de Aurora y separar API web de Synapse.
+- [x] Normalizar respuestas y errores del endpoint `/api/v1/wallpapers`.
+- [x] Admitir `src` ausente y bloquear acciones HD sin una URL autorizada.
+- [x] Preservar títulos y artistas incrustados al construir la cola y las vistas de Música.
+- [x] Reconciliar las colas persistidas con los metadatos actuales de la biblioteca.
+- [x] Ejecutar build y revisión visual proporcional al cambio.
+- [x] Incrementar y sincronizar la versión candidata a `1.0.5` tras confirmarse la publicación de v1.0.4.
+- [x] Preparar `RELEASE_NOTES.md`, `RELEASE_MESSAGE.md` y el estado correspondiente en `ROADMAP.md`.
+- [x] Consolidar el icono web en `public/icon/icon.png` y regenerar `src-tauri/icons/`.
+- [x] Eliminar la carpeta raíz duplicada, el PNG público redundante y las variantes temporales.
+- [x] Retirar la copia de Prisma sin consumidores dentro del catálogo de iconos de aplicaciones vinculadas.
+- [x] Generar e inspeccionar el instalador nativo de `1.0.4`.
+- [x] Hacer que desarrollo y empaquetado regeneren los derivados nativos desde `public/icon/icon.png`.
+- [x] Evitar reescrituras innecesarias mediante una huella de la fuente para no colisionar con archivos mapeados por Windows.
+- [x] Sustituir el icono provisional de build por una validación explícita de recursos nativos.
+- [x] Implementar menú desplegable de Herramientas modular en el visor de imágenes (`ViewerToolsMenu.tsx`).
+- [x] Implementar menú desplegable de Herramientas en el reproductor de vídeo (`VideoToolsMenu.tsx`).
+- [x] Limpiar botones redundantes de favoritos y móvil de la barra inferior de controles.
+- [x] Añadir protección de auto-ocultamiento en cabeceras y menús al interactuar con el puntero.
+- [x] Ampliar el rango mínimo de zoom en imágenes hasta el 5% (0.05) con soporte de pan dinámico.
+- [x] Unificar altura, escala y encuadre del modo Alternar A/B en la Suite de Comparativa de imágenes.
+- [x] Corregir la apertura y resaltado de archivos con `explorer.exe` en Windows (`show_in_file_manager`).
+- [x] Normalizar rutas y prefijos de Windows para apertura de ventanas desacopladas (`open_detached`).
+- [ ] Ejecutar una instalación limpia y validar el flujo principal.
+- [ ] Publicar la versión remota únicamente tras una orden explícita de lanzamiento.

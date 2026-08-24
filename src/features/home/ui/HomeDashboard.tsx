@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import type { MusicFolderSource, MusicLibraryItem } from "../../music_library/model/types";
 import { MusicArtwork } from "../../music_library/ui/MusicArtwork";
-import { parseTrackInfo } from "../../music_library/model/trackInfo";
+import { resolveLibraryTrackInfo } from "../../music_library/model/trackInfo";
 import type { VisualFolderSource, VisualLibraryItem } from "../../visual_library/model/types";
 import { VisualThumbnail } from "../../visual_library/ui/VisualThumbnail";
 import { VideoThumbnail } from "../../visual_library/ui/VideoThumbnail";
@@ -25,6 +25,7 @@ interface HomeDashboardProps {
   videoFolders: VisualFolderSource[];
   videos: VisualLibraryItem[];
   loading: boolean;
+  sourcesReady: boolean;
   error: string | null;
   onOpenFolders: () => void;
   onOpenImages: () => void;
@@ -50,6 +51,7 @@ export function HomeDashboard({
   videoFolders,
   videos,
   loading,
+  sourcesReady,
   error,
   onOpenFolders,
   onOpenImages,
@@ -239,7 +241,7 @@ export function HomeDashboard({
 
       {/* Renderizado Dinámico de Estantes según lo último reproducido/visto */}
       {shelvesOrder.map((category) => {
-        if (category === "music" && musicFolders.length > 0) {
+        if (category === "music" && (!sourcesReady || musicFolders.length > 0)) {
           return (
             <MediaShelf
               key="shelf-music"
@@ -250,7 +252,7 @@ export function HomeDashboard({
               <div className="home-media-row">
                 {homeMusicItems.length > 0 ? (
                   homeMusicItems.map((item) => {
-                    const { title, artist } = parseTrackInfo(item.title);
+                    const { title, artist } = resolveLibraryTrackInfo(item);
                     return (
                       <button
                         className="home-media-card"
@@ -268,7 +270,7 @@ export function HomeDashboard({
                       </button>
                     );
                   })
-                ) : loading ? (
+                ) : loading || !sourcesReady ? (
                   Array.from({ length: HOME_ROW_ITEMS_LIMIT }).map((_, i) => (
                     <div className="home-media-card is-skeleton" key={i}>
                       <span className="home-media-frame" />
@@ -282,7 +284,7 @@ export function HomeDashboard({
           );
         }
 
-        if (category === "video" && videoFolders.length > 0) {
+        if (category === "video" && (!sourcesReady || videoFolders.length > 0)) {
           return (
             <MediaShelf
               key="shelf-video"
@@ -307,7 +309,7 @@ export function HomeDashboard({
                       <small>{cleanPath(item.relativeFolder)}</small>
                     </button>
                   ))
-                ) : loading ? (
+                ) : loading || !sourcesReady ? (
                   Array.from({ length: HOME_VIDEO_ROW_LIMIT }).map((_, i) => (
                     <div className="home-media-card is-skeleton" key={i}>
                       <span className="home-media-frame" />
@@ -321,7 +323,7 @@ export function HomeDashboard({
           );
         }
 
-        if (category === "image" && imageFolders.length > 0) {
+        if (category === "image" && (!sourcesReady || imageFolders.length > 0)) {
           return (
             <MediaShelf
               key="shelf-image"
@@ -351,7 +353,7 @@ export function HomeDashboard({
                       <small>{cleanPath(item.relativeFolder)}</small>
                     </button>
                   ))
-                ) : loading ? (
+                ) : loading || !sourcesReady ? (
                   Array.from({ length: HOME_ROW_ITEMS_LIMIT }).map((_, i) => (
                     <div className="home-media-card is-skeleton" key={i}>
                       <span className="home-media-frame" />

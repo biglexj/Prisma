@@ -10,6 +10,7 @@ import { VideoThumbnail } from "./VideoThumbnail";
 import { useFavorites } from "../../../shared/useFavorites";
 import { useMediaDelete } from "../../../shared/useMediaDelete";
 import { MediaProgressBar } from "../../../shared/ui/MediaProgressBar";
+import { VideoToolsMenu } from "./components/VideoToolsMenu";
 import "./video-player.css";
 
 interface VideoPlayerProps {
@@ -96,6 +97,9 @@ export function VideoPlayer({
   const isPipActiveRef = useRef(false);
   isPipActiveRef.current = isPipActive;
   const explicitAppToggleRef = useRef(false);
+
+  const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
+  const isHoveringHeaderRef = useRef(false);
 
   const favorites = useFavorites();
   const isFav = path ? favorites.isFavorite(path) : false;
@@ -711,15 +715,17 @@ export function VideoPlayer({
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
     }
-    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist) {
+    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist && !isToolsMenuOpen && !isHoveringHeaderRef.current) {
       controlsTimeoutRef.current = window.setTimeout(() => {
-        setShowControls(false);
+        if (!isToolsMenuOpen && !isHoveringHeaderRef.current) {
+          setShowControls(false);
+        }
       }, 3500);
     }
   };
 
   const handleMouseLeave = () => {
-    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist) {
+    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist && !isToolsMenuOpen && !isHoveringHeaderRef.current) {
       if (controlsTimeoutRef.current) {
         window.clearTimeout(controlsTimeoutRef.current);
       }
@@ -728,7 +734,7 @@ export function VideoPlayer({
   };
 
   useEffect(() => {
-    if (showAudioMenu || showSubMenu || showPlaylist || paused) {
+    if (showAudioMenu || showSubMenu || showPlaylist || paused || isToolsMenuOpen) {
       setShowControls(true);
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
     } else {
@@ -737,7 +743,7 @@ export function VideoPlayer({
         setShowControls(false);
       }, 3500);
     }
-  }, [showAudioMenu, showSubMenu, showPlaylist, paused]);
+  }, [showAudioMenu, showSubMenu, showPlaylist, paused, isToolsMenuOpen]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -985,7 +991,18 @@ export function VideoPlayer({
       ) : null}
 
       {/* Cabecera Flotante */}
-      <header className="video-player-header">
+      <header
+        className="video-player-header"
+        onMouseEnter={() => {
+          isHoveringHeaderRef.current = true;
+          setShowControls(true);
+          if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+        }}
+        onMouseLeave={() => {
+          isHoveringHeaderRef.current = false;
+          handleUserActivity();
+        }}
+      >
         <div className="video-header-left">
           <button
             aria-label="Volver a la galería"
@@ -1037,14 +1054,28 @@ export function VideoPlayer({
               >
                 <Icon name="trash" />
               </button>
-              <button
-                className="video-top-btn"
-                onClick={() => invoke("show_in_file_manager", { path }).catch(() => {})}
-                title="Abrir ubicación en el explorador"
-              >
-                <Icon name="folder" />
-                <span>Ubicación</span>
-              </button>
+              <VideoToolsMenu
+                onConvert={() => {
+                  window.dispatchEvent(
+                    new CustomEvent("prisma-open-converter", {
+                      detail: { path, mode: "video" },
+                    })
+                  );
+                }}
+                onShowInFolder={() => {
+                  void invoke("show_in_file_manager", { path: cleanPath(path) }).catch((err) => {
+                    console.error("Error al mostrar en explorador:", err);
+                  });
+                }}
+                onSendToMobile={() => {
+                  window.dispatchEvent(
+                    new CustomEvent("prisma-send-to-supergallery", {
+                      detail: { path, title },
+                    })
+                  );
+                }}
+                onOpenChange={(isOpen) => setIsToolsMenuOpen(isOpen)}
+              />
             </>
           ) : null}
         </div>
@@ -1385,24 +1416,8 @@ export function VideoPlayer({
             </button>
           </div>
 
-          {/* Lado Derecho: Favorito, Volumen, PiP y Pantalla Completa */}
+          {/* Lado Derecho: Volumen, PiP y Pantalla Completa */}
           <div className="video-controls-right">
-            <button
-              aria-label={isFav ? "Quitar de favoritos" : "Marcar como favorito"}
-              className={`video-icon-btn video-fav-btn ${isFav ? "is-favorite is-active" : ""}`}
-              disabled={!path}
-              onClick={() => {
-                if (path) {
-                  const nextFav = favorites.toggleFavorite(path, "video");
-                  setShuffleToastText(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
-                  setTimeout(() => setShuffleToastText(null), 1800);
-                }
-              }}
-              title={isFav ? "Quitar de favoritos (D)" : "Añadir a favoritos (D)"}
-            >
-              <Icon name="heart" />
-            </button>
-
             <div className="video-volume-group">
               <button
                 aria-label={volume === 0 ? "Activar sonido" : "Silenciar"}
@@ -1438,24 +1453,6 @@ export function VideoPlayer({
               title="Picture-in-Picture (Ventana flotante)"
             >
               <Icon name="pip" />
-            </button>
-
-            <button
-              aria-label="Enviar a Super Galería (Móvil)"
-              className="video-icon-btn"
-              disabled={!path}
-              onClick={() => {
-                if (path) {
-                  window.dispatchEvent(
-                    new CustomEvent("prisma-send-to-supergallery", {
-                      detail: { path, title }
-                    })
-                  );
-                }
-              }}
-              title="Enviar vídeo a Super Galería (Móvil)"
-            >
-              <Icon name="smartphone" />
             </button>
 
             <button

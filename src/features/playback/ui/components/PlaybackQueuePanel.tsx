@@ -51,8 +51,17 @@ export function PlaybackQueuePanel({
   const [editingName, setEditingName] = useState("");
   const [isSavingActive, setIsSavingActive] = useState(false);
   const [saveAsName, setSaveAsName] = useState("");
+  const [isDraggingQueueTabs, setIsDraggingQueueTabs] = useState(false);
 
   const activeRowRef = useRef<HTMLDivElement | null>(null);
+  const queueTabsRef = useRef<HTMLDivElement | null>(null);
+  const queueTabsDragRef = useRef({
+    pointerId: -1,
+    startX: 0,
+    startScrollLeft: 0,
+    moved: false,
+  });
+  const suppressQueueTabClickRef = useRef(false);
   const totalItems = activeQueue.items.length;
   const QUEUE_WINDOW_SIZE = 80;
   const currentIdx = activeQueue.currentIndex ?? 0;
@@ -80,6 +89,52 @@ export function PlaybackQueuePanel({
     } else {
       switchQueue(qId);
     }
+  };
+
+  const handleQueueTabsPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    const tabs = queueTabsRef.current;
+    if (!tabs || tabs.scrollWidth <= tabs.clientWidth) return;
+
+    queueTabsDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startScrollLeft: tabs.scrollLeft,
+      moved: false,
+    };
+    tabs.setPointerCapture(event.pointerId);
+  };
+
+  const handleQueueTabsPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const tabs = queueTabsRef.current;
+    const drag = queueTabsDragRef.current;
+    if (!tabs || drag.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - drag.startX;
+    if (!drag.moved && Math.abs(deltaX) > 4) {
+      drag.moved = true;
+      setIsDraggingQueueTabs(true);
+    }
+    if (!drag.moved) return;
+
+    event.preventDefault();
+    tabs.scrollLeft = drag.startScrollLeft - deltaX;
+  };
+
+  const finishQueueTabsDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const tabs = queueTabsRef.current;
+    const drag = queueTabsDragRef.current;
+    if (!tabs || drag.pointerId !== event.pointerId) return;
+
+    if (tabs.hasPointerCapture(event.pointerId)) {
+      tabs.releasePointerCapture(event.pointerId);
+    }
+    suppressQueueTabClickRef.current = drag.moved;
+    queueTabsDragRef.current.pointerId = -1;
+    setIsDraggingQueueTabs(false);
+    window.requestAnimationFrame(() => {
+      suppressQueueTabClickRef.current = false;
+    });
   };
 
   const handleCreateQueue = (e: React.FormEvent) => {
@@ -137,7 +192,14 @@ export function PlaybackQueuePanel({
     <div className="playback-queue-panel">
       {/* ── 1. Barra de Pestañas / Chips de Colas ── */}
       <div className="queue-tabs-bar" role="tablist" aria-label="Colas de reproducción">
-        <div className="queue-tabs-scroll">
+        <div
+          className={`queue-tabs-scroll ${isDraggingQueueTabs ? "is-dragging" : ""}`}
+          onPointerCancel={finishQueueTabsDrag}
+          onPointerDown={handleQueueTabsPointerDown}
+          onPointerMove={handleQueueTabsPointerMove}
+          onPointerUp={finishQueueTabsDrag}
+          ref={queueTabsRef}
+        >
           {queues.map((q) => {
             const isActive = q.id === activeQueueId;
             return (
@@ -146,7 +208,13 @@ export function PlaybackQueuePanel({
                 role="tab"
                 aria-selected={isActive}
                 className={`queue-tab-chip ${isActive ? "is-active" : ""}`}
-                onClick={() => handleQueueChange(q.id)}
+                onClick={(event) => {
+                  if (suppressQueueTabClickRef.current) {
+                    event.preventDefault();
+                    return;
+                  }
+                  handleQueueChange(q.id);
+                }}
                 title={`Cambiar a ${q.name} (${q.items.length} canciones)`}
               >
                 <span className="queue-tab-name">{q.name}</span>
@@ -512,7 +580,12 @@ export function PlaybackQueuePanel({
                       </span>
 
                       <div className="queue-item-artwork">
-                        <MusicArtwork alt={item.title} className="queue-thumb-img" path={item.path} />
+                        <MusicArtwork
+                          alt={item.title}
+                          className="queue-thumb-img"
+                          path={item.path}
+                          showFallback
+                        />
                       </div>
 
                       <div className="queue-item-text">

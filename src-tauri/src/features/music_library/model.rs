@@ -14,6 +14,7 @@ pub struct MusicFolderSource {
 pub struct MusicLibraryItem {
     pub path: String,
     pub title: String,
+    pub title_from_metadata: bool,
     pub artist: Option<String>,
     pub album: Option<String>,
     pub source_path: String,

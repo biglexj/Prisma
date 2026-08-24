@@ -44,7 +44,19 @@
   gap: 0.4rem;
   overflow-x: auto;
   flex: 1;
+  padding-right: 0.2rem;
+  border-radius: 9999px;
+  clip-path: inset(0 round 9999px);
   scrollbar-width: none;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  scroll-behavior: smooth;
+}
+
+.queue-tabs-scroll.is-dragging {
+  cursor: grabbing;
+  scroll-behavior: auto;
 }
 
 .queue-tabs-scroll::-webkit-scrollbar {
@@ -323,6 +335,51 @@
   object-fit: cover;
   display: block;
   border-radius: inherit;
+}
+
+.queue-item-artwork .music-artwork-fallback {
+  position: relative;
+  isolation: isolate;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  background: linear-gradient(145deg, #173c97 0%, #4f3fa8 52%, #b51f75 100%);
+}
+
+.queue-item-artwork .music-artwork-fallback::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 9px;
+  right: -4px;
+  width: 27px;
+  height: 27px;
+  border: 3px double rgba(13, 10, 63, 0.55);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(13, 10, 63, 0.2), 0 0 0 6px rgba(13, 10, 63, 0.14);
+}
+
+.queue-item-artwork .music-artwork-fallback strong {
+  position: absolute;
+  top: 4px;
+  left: 7px;
+  color: rgba(255, 255, 255, 0.96);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.queue-item-artwork .music-artwork-fallback i {
+  position: absolute;
+  right: 5px;
+  bottom: 6px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid rgba(255, 225, 233, 0.88);
+  border-radius: 50%;
+  background: #f7a2bb;
 }
 
 .queue-item-text {

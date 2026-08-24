@@ -661,16 +661,23 @@ export function ImageComparisonModal({
             onWheel={(e) => handleSlotWheel(e, slots[activeFlickIndex].id)}
             onMouseDown={(e) => handlePanStart(e, slots[activeFlickIndex].id)}
           >
-            <div className="img-compare-flick-badge">
-              <span className={`img-compare-slot-tag is-idx-${activeFlickIndex % 4}`}>
-                Foto #{activeFlickIndex + 1}
-              </span>
-              <span className="img-compare-slot-title">
-                {slots[activeFlickIndex].item.title}
-              </span>
-              <span className="img-compare-flick-hint">
-                (Haz clic o pulsa Espacio para alternar)
-              </span>
+            <div className="img-compare-flick-header">
+              <div className="img-compare-flick-badge">
+                <span className={`img-compare-slot-tag is-idx-${activeFlickIndex % 4}`}>
+                  Foto #{activeFlickIndex + 1}
+                </span>
+                <span className="img-compare-slot-title" title={slots[activeFlickIndex].item.path}>
+                  {slots[activeFlickIndex].item.title}
+                </span>
+                {slots[activeFlickIndex].width && slots[activeFlickIndex].height && (
+                  <span className="img-compare-dims-pill">
+                    {slots[activeFlickIndex].width} × {slots[activeFlickIndex].height} px
+                  </span>
+                )}
+                <span className="img-compare-flick-hint">
+                  (Haz clic o pulsa Espacio para alternar)
+                </span>
+              </div>
             </div>
 
             <div
@@ -685,6 +692,19 @@ export function ImageComparisonModal({
                 src={convertFileSrc(cleanPath(slots[activeFlickIndex].item.path))}
                 alt={slots[activeFlickIndex].item.title}
                 draggable={false}
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  const activeSlot = slots[activeFlickIndex];
+                  if (img.naturalWidth && !activeSlot.width) {
+                    setSlots((prev) =>
+                      prev.map((s) =>
+                        s.id === activeSlot.id
+                          ? { ...s, width: img.naturalWidth, height: img.naturalHeight }
+                          : s,
+                      ),
+                    );
+                  }
+                }}
               />
             </div>
           </div>

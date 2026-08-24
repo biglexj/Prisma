@@ -1,7 +1,7 @@
 {
   "name": "prisma",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.5",
   "type": "module",
   "scripts": {
     "predev": "bun run scripts/free-port.ts 1421",
@@ -10,9 +10,10 @@
     "check": "tsc --noEmit",
     "preview": "vite preview",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:dev:isolated": "tauri dev -- -- --dev --multi-instance",
-    "tauri:build": "tauri build && bun scripts/copy-build-releases.ts",
+    "icons:generate": "bun scripts/generate-icons.ts",
+    "tauri:dev": "bun run icons:generate && tauri dev",
+    "tauri:dev:isolated": "bun run icons:generate && tauri dev -- -- --dev --multi-instance",
+    "tauri:build": "bun run icons:generate && tauri build",
     "posttauri:build": "bun scripts/copy-build-releases.ts",
     "release": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -LocalOnly"
   },

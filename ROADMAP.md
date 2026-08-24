@@ -8,6 +8,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [ ] **v1.0.5 — Visor Despejado, Herramientas Modulares y Nueva Identidad**: menús desplegables en imagen y vídeo, zoom ultra amplio (5%), comparativa A/B unificada, integración con explorador y multiventana, e icono nativo de alto contraste; quedan pendientes la instalación limpia y la publicación remota.
 - [ ] **Expansión de Conversión Multimedia con FFmpeg**: Extracción de audio (Video → MP3, FLAC, AAC, WAV) y transcodificación por lotes de vídeo en `PrismaConvertView`.
 - [ ] **Ecualizador y Procesamiento DSP de Audio**: Panel de ecualización gráfica de 10 bandas y presets acústicos integrados con el motor MPV nativo.
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
@@ -31,6 +32,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.0.4**
+  - **Inicio Estable, Wallpapers Aurora Adaptables y Música Consistente**: carga inicial escalonada, posiciones estables en Inicio, visor de wallpapers proporcional, defensas para recursos no autorizados, metadatos musicales respetados, colas refinadas y estados interactivos coherentes. Publicación confirmada por Biglex el 24 de agosto de 2026.
 - [x] **v1.0.3**
   - **Wallpapers Bento con Títulos en Hover, Visor Maximizado 80%x90%, Micro-interacciones Táctiles y Contraste Adaptativo**: Perfeccionamiento visual del catálogo de Wallpapers Aurora con tarjetas limpias en reposo y títulos/metadatos animados en hover, visor modal maximizado al 80% de ancho y 90% de alto de pantalla sin franjas residuales, físicas de resorte en transporte multimedia, corrección integral de contraste e inversión cromática de textos en botones para modo Claro y Oscuro, transiciones asíncronas de vídeo sin pausas ni desaparición de cursor, simplificación del visor de letras y centralización de versión.
 - [x] **v1.0.2**

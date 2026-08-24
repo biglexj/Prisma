@@ -1,23 +1,23 @@
-# 🚀 Prisma v1.0.3 — Visor Maximizado de Wallpapers, Micro-interacciones Elásticas y Contraste Adaptativo
+# 🚀 Prisma v1.0.5 — Visor Despejado, Herramientas Modulares y Nueva Identidad
 
-Llega **Prisma v1.0.3**, una actualización centrada en el perfeccionamiento visual y ergonómico del catálogo de **Wallpapers Aurora** con tarjetas limpias y títulos animados en hover, visor maximizado al 80% de ancho y 90% de alto, optimización de **micro-interacciones elásticas** en controles de transporte bajo Material 3 Expressive, **corrección integral de contraste e inversión cromática de textos en botones** para temas Claro y Oscuro, transiciones asíncronas de vídeo sin pausas ni desaparición abrupta del cursor, simplificación del visor de letras y sincronización centralizada de versión en toda la interfaz.
-
----
-
-### ✨ Novedades Destacadas
-
-- 🖼️ **Galería Bento y Visor Cinematográfico de Wallpapers**: Las tarjetas de fondos de pantalla ahora presentan el arte de forma completamente limpia en reposo, desplegando los títulos, resolución, categoría y favoritos únicamente al interactuar con el puntero en hover. El visor modal aprovecha hasta el 80% de ancho y 90% de alto de la pantalla, maximizando la imagen con ajuste inteligente sin espacios negros residuales.
-- 🎨 **Micro-interacciones y Corrección de Contraste en Botones**: Físicas elásticas de resorte en controles secundarios y transporte de audio/vídeo. Refactorización completa de todos los botones de acción (`filled`, `tonal` y variantes primarias) con tokens semánticos de diseño, garantizando legibilidad y contraste del 100% de textos e iconos tanto en reposo como en hover y pulsación en temas Claro y Oscuro.
-- 🎬 **Transición Asíncrona y Puntero Continuo en Vídeo**: Ejecución asíncrona en segundo plano para la lectura de pistas de audio, subtítulos y metadatos nativos, erradicando micro-bloqueos en la interfaz al cambiar de vídeo o pista. El cursor del ratón y los controles permanecen activos y visibles de forma natural durante la navegación interactiva.
-- 🎵 **Simplificación del Visor de Letras y Cabeceras**: Rediseño enfocado del visor de letras priorizando la experiencia inmersiva de pantalla completa y edición rápida, junto con la unificación de acciones en cabeceras de colecciones bajo el comando integral de administración de fuentes.
-- 🔗 **Centralización de Recursos y Sincronización de Versión**: Estandarización de los iconos oficiales de alta resolución de las aplicaciones vinculadas (*Luna Fetch, Gallery-DL GUI, Super Gallery, LyraFlow y Ely-Tesia*), junto con un módulo único de sincronización de versión para la barra lateral y el diálogo informativo de Acerca de.
-- 🔍 **Control de Zoom y Salida Universal con Escape en Imágenes**: Garantía de salida inmediata del visor de imágenes con la tecla `Escape` independientemente del nivel de aumento (>100%), además del atajo `R` para restablecer al instante la escala nativa del archivo visual.
+Llega **Prisma v1.0.5**, una actualización enfocada en la limpieza visual y ergonomía del visor multimedia, la organización modular de herramientas en menús desplegables para imágenes y vídeos, zoom ultra amplio desde el 5%, perfeccionamiento del comparador de imágenes y el nuevo icono de alto contraste para Windows.
 
 ---
 
-### 💖 Apoyo y Comunidad
+### ✨ Novedades destacadas
+
+- 🎛️ **Menús desplegables de Herramientas**: Las barras superiores de imagen y vídeo ahora son más limpias y elegantes gracias al nuevo menú desplegable *Herramientas*, que agrupa edición, conversión, comparativa, renombrado, multiventana y proyección.
+- 👁️ **Controles interactivos estables**: Las barras y cabeceras nunca se ocultan mientras estés interactuando con ellas o tengas el menú desplegado.
+- 🔍 **Zoom ultra amplio (5% a 1000%)**: Se amplió el límite inferior para alejar imágenes gigantes hasta el 5% con pasos suaves y desplazamiento libre con el puntero.
+- ⚖️ **Comparador de fotos perfeccionado**: En el modo *Alternar A/B*, el título e información se ubican arriba de forma compacta, manteniendo la misma altura y escala uniforme que en los modos Cuadrícula y Lado a lado.
+- 📂 **Integración nativa con Windows**: *Mostrar en explorador* resalta el archivo directamente y *Abrir en otra instancia* abre ventanas desacopladas en paralelo de forma inmediata.
+- 🎨 **Nuevo icono de alto contraste**: La base blanca mantiene el isotipo de Prisma perfectamente nítido en la barra de tareas, bandeja, ventana e instalador.
+
+---
+
+### 💖 Apoyo y comunidad
 
 Si disfrutas usando **Prisma**, considera apoyar el desarrollo continuo:
 - ☕ **Buy Me a Coffee**: https://buymeacoffee.com/biglexj
-- 💳 **Donaciones Directas**: https://www.biglexj.com/donaciones
+- 💳 **Donaciones directas**: https://www.biglexj.com/donaciones
 - 🐙 **GitHub**: https://github.com/biglexj

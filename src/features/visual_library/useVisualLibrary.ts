@@ -5,6 +5,7 @@ import type {
   VisualMediaKind,
 } from "./model/types";
 import { visualLibraryClient } from "./tauri/client";
+import { scheduleLibraryScan } from "../../shared/libraryScanScheduler";
 
 export function useVisualLibrary(kind: VisualMediaKind) {
   const [folders, setFolders] = useState<VisualFolderSource[]>([]);
@@ -12,21 +13,24 @@ export function useVisualLibrary(kind: VisualMediaKind) {
   const [items, setItems] = useState<VisualLibraryItem[]>([]);
   const [busyPath, setBusyPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sourcesLoaded, setSourcesLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [nextFolders, nextExcluded, nextItems] = await Promise.all([
+      const [nextFolders, nextExcluded] = await Promise.all([
         visualLibraryClient.listFolders(kind),
         visualLibraryClient.listExcludedFolders(kind),
-        visualLibraryClient.listItems(kind),
       ]);
       setFolders(nextFolders);
       setExcludedFolders(nextExcluded);
+      setSourcesLoaded(true);
+      const nextItems = await scheduleLibraryScan(() => visualLibraryClient.listItems(kind));
       setItems(nextItems);
     } catch (reason) {
+      setSourcesLoaded(true);
       setError(String(reason));
     } finally {
       setLoading(false);
@@ -60,6 +64,7 @@ export function useVisualLibrary(kind: VisualMediaKind) {
     items,
     busyPath,
     loading,
+    sourcesLoaded,
     error,
     addFolder: (path: string) =>
       runFolderAction(path, () => visualLibraryClient.addFolder(path, kind)),

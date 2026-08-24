@@ -15,7 +15,7 @@ import { useMediaDelete } from "../../../shared/useMediaDelete";
 import type { MusicFolderSource, MusicLibraryItem } from "../model/types";
 import type { MusicQueueItem } from "../../playback/model/queue";
 import { MusicArtwork } from "./MusicArtwork";
-import { parseTrackInfo } from "../model/trackInfo";
+import { resolveLibraryTrackInfo } from "../model/trackInfo";
 import { playlistsSaveFromItems } from "../../collections/tauri/client";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
 import { TagEditorModal } from "../../tags/ui/TagEditorModal";
@@ -55,7 +55,7 @@ interface MusicLibraryProps {
 }
 
 function toQueueItem(item: MusicLibraryItem): MusicQueueItem {
-  const { title, artist } = parseTrackInfo(item.title);
+  const { title, artist } = resolveLibraryTrackInfo(item);
   return {
     id: item.path,
     path: item.path,
@@ -191,7 +191,7 @@ export function MusicLibrary({
     >();
 
     for (const item of visibleItems) {
-      const parsed = parseTrackInfo(item.title);
+      const parsed = resolveLibraryTrackInfo(item);
       const albumTag = item.album?.trim();
       const folderFallback = item.relativeFolder?.trim() || "Álbum desconocido";
       const albumName = albumTag || folderFallback;
@@ -289,7 +289,7 @@ export function MusicLibrary({
     if (!name || !name.trim()) return;
     try {
       const playlistItems = folderItems.map((it) => {
-        const { title, artist } = parseTrackInfo(it.title);
+        const { title, artist } = resolveLibraryTrackInfo(it);
         return {
           path: it.path,
           title: artist ? `${artist} - ${title}` : title,
@@ -307,7 +307,7 @@ export function MusicLibrary({
   useScrollRestoration(`view:music:${viewMode}:${currentFolderPath}`, !loading);
 
   const buildTrackDisplayTitle = (item: MusicLibraryItem) => {
-    const { title, artist } = parseTrackInfo(item.title);
+    const { title, artist } = resolveLibraryTrackInfo(item);
     return artist ? `${artist} — ${title}` : title;
   };
 
@@ -935,7 +935,7 @@ interface MusicCardProps {
 }
 
 function MusicCard({ item, isFavorite, isPlaying, onClick, onAddToQueue, onToggleFavorite, onContextMenu, onDeleteRequest }: MusicCardProps) {
-  const { title, artist } = parseTrackInfo(item.title);
+  const { title, artist } = resolveLibraryTrackInfo(item);
 
   return (
     <div className="music-media-card-wrapper">
@@ -1048,7 +1048,7 @@ function MusicAlbumCard({
   onContextMenu,
   onDeleteRequest,
 }: MusicAlbumCardProps) {
-  const parsed = parseTrackInfo(item.title);
+  const parsed = resolveLibraryTrackInfo(item);
   const displayArtist = artistName || item.artist || parsed.artist;
 
   return (

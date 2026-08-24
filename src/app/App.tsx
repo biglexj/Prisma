@@ -17,7 +17,7 @@ import type { VisualLibraryItem } from "../features/visual_library/model/types";
 import { AppSettings } from "./ui/AppSettings";
 import { AppSidebar, type AppView } from "./ui/AppSidebar";
 import { LibrarySources } from "./ui/LibrarySources";
-import { parseTrackInfo } from "../features/music_library/model/trackInfo";
+import { parseTrackInfo, resolveLibraryTrackInfo } from "../features/music_library/model/trackInfo";
 import { FavoritesView } from "../features/collections/ui/FavoritesView";
 import { HistoryView } from "../features/collections/ui/HistoryView";
 import { PlaylistsView } from "../features/collections/ui/PlaylistsView";
@@ -81,6 +81,21 @@ export function App() {
     }
   }, [activeView, auroraOnlineServicesEnabled]);
 
+  useEffect(() => {
+    if (library.items.length === 0) return;
+    playback.queue.syncItemMetadata(
+      library.items.map((item) => {
+        const { title, artist } = resolveLibraryTrackInfo(item);
+        return {
+          id: item.path,
+          path: item.path,
+          title,
+          artist: artist || null,
+        };
+      }),
+    );
+  }, [library.items, playback.queue.syncItemMetadata]);
+
   const playMusicItem = useCallback((path: string, navigate = true, initialTime?: number) => {
     addToHistory(path, "music");
 
@@ -98,7 +113,7 @@ export function App() {
     const foundIdx = library.items.findIndex((it) => it.path === path);
     if (foundIdx >= 0) {
       const queueItems = library.items.map((it) => {
-        const { title, artist } = parseTrackInfo(it.title);
+        const { title, artist } = resolveLibraryTrackInfo(it);
         return {
           id: it.path,
           path: it.path,
@@ -707,6 +722,7 @@ export function App() {
               imageFolders={imageLibrary.folders}
               images={imageLibrary.items}
               loading={library.loading || imageLibrary.loading || videoLibrary.loading}
+              sourcesReady={library.sourcesLoaded && imageLibrary.sourcesLoaded && videoLibrary.sourcesLoaded}
               musicFolders={library.folders}
               musicItems={library.items}
               onOpenFolders={() => setActiveView("folders")}
@@ -959,4 +975,3 @@ export function App() {
     </div>
   );
 }
-

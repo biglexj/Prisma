@@ -8,6 +8,8 @@ export interface MusicFolderSource {
 export interface MusicLibraryItem {
   path: string;
   title: string;
+  /** Indica que el título proviene de una etiqueta incrustada y no debe reinterpretarse. */
+  titleFromMetadata?: boolean;
   artist?: string;
   album?: string;
   sourcePath: string;

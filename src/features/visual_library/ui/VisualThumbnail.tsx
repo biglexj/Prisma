@@ -2,8 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { visualLibraryClient } from "../tauri/client";
 
 const MAX_CACHE_ITEMS = 400;
-const previewCache = new Map<string, string | null>();
+const MAX_CACHE_BYTES = 32 * 1024 * 1024;
+
+interface PreviewCacheEntry {
+  data: string | null;
+  bytes: number;
+}
+
+const previewCache = new Map<string, PreviewCacheEntry>();
 const pendingPreviews = new Map<string, Promise<string | null>>();
+let totalEstimatedCacheBytes = 0;
 
 interface VisualThumbnailProps {
   path: string;
@@ -70,7 +78,7 @@ export function VisualThumbnail({
 
 export function useImagePreview(path: string | null, enabled = true) {
   const [preview, setPreview] = useState<string | null | undefined>(() =>
-    path ? previewCache.get(path) : null,
+    path ? previewCache.get(path)?.data : null,
   );
 
   useEffect(() => {
@@ -80,7 +88,9 @@ export function useImagePreview(path: string | null, enabled = true) {
     }
     const cached = previewCache.get(path);
     if (cached !== undefined) {
-      setPreview(cached);
+      previewCache.delete(path);
+      previewCache.set(path, cached);
+      setPreview(cached.data);
       return;
     }
     setPreview(undefined);
@@ -98,8 +108,11 @@ export function useImagePreview(path: string | null, enabled = true) {
 }
 
 function requestPreview(path: string): Promise<string | null> {
-  if (previewCache.has(path)) {
-    return Promise.resolve(previewCache.get(path) ?? null);
+  const cached = previewCache.get(path);
+  if (cached !== undefined) {
+    previewCache.delete(path);
+    previewCache.set(path, cached);
+    return Promise.resolve(cached.data);
   }
   const pending = pendingPreviews.get(path);
   if (pending) return pending;
@@ -107,11 +120,23 @@ function requestPreview(path: string): Promise<string | null> {
     .imagePreview(path)
     .catch(() => null)
     .then((dataUrl) => {
+      const previous = previewCache.get(path);
+      if (previous) totalEstimatedCacheBytes -= previous.bytes;
       previewCache.delete(path);
-      previewCache.set(path, dataUrl);
-      if (previewCache.size > MAX_CACHE_ITEMS) {
+
+      const bytes = dataUrl ? dataUrl.length * 2 : 64;
+      previewCache.set(path, { data: dataUrl, bytes });
+      totalEstimatedCacheBytes += bytes;
+
+      while (
+        previewCache.size > MAX_CACHE_ITEMS ||
+        totalEstimatedCacheBytes > MAX_CACHE_BYTES
+      ) {
         const oldest = previewCache.keys().next().value;
-        if (oldest) previewCache.delete(oldest);
+        if (!oldest) break;
+        const entry = previewCache.get(oldest);
+        if (entry) totalEstimatedCacheBytes -= entry.bytes;
+        previewCache.delete(oldest);
       }
       return dataUrl;
     })

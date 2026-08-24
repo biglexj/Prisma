@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import type { MusicLibraryItem } from "../../music_library/model/types";
 import { MusicArtwork } from "../../music_library/ui/MusicArtwork";
-import { parseTrackInfo } from "../../music_library/model/trackInfo";
+import { resolveLibraryTrackInfo } from "../../music_library/model/trackInfo";
 import type { VisualLibraryItem } from "../../visual_library/model/types";
 import { VisualThumbnail } from "../../visual_library/ui/VisualThumbnail";
 import { VideoThumbnail } from "../../visual_library/ui/VideoThumbnail";
@@ -209,7 +209,7 @@ export function FavoritesView({
           </header>
           <div className="favorites-grid-shelf">
             {favoriteMusicItems.slice(0, FAVORITE_SHELF_LIMIT).map((item) => {
-              const { title, artist } = parseTrackInfo(item.title);
+              const { title, artist } = resolveLibraryTrackInfo(item);
               return (
                 <button
                   className="home-media-card"

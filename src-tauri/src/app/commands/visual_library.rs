@@ -155,9 +155,13 @@ pub async fn show_in_file_manager(path: String) -> Result<(), String> {
             use std::process::Command;
             let win_path = clean_path.replace('/', "\\");
             let target = Path::new(&win_path);
-            if target.exists() {
+            if target.is_file() {
                 let _ = Command::new("explorer")
-                    .args(["/select,", &win_path])
+                    .arg(format!("/select,{}", win_path))
+                    .spawn();
+            } else if target.is_dir() {
+                let _ = Command::new("explorer")
+                    .arg(&win_path)
                     .spawn();
             } else if let Some(parent) = target.parent() {
                 let parent_str = parent.to_string_lossy().to_string();

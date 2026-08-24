@@ -1,10 +1,9 @@
 // Build script para Tauri v2 y runtime mpv
 fn main() {
-    ensure_probe_icon();
+    verify_native_icons();
     configure_libmpv();
     tauri_build::build();
 }
-
 
 fn configure_libmpv() {
     println!("cargo:rerun-if-env-changed=PRISMA_LIBMPV_DIR");
@@ -79,25 +78,25 @@ fn copy_libmpv_runtime(libmpv_dir: &std::path::Path) {
 
     let _ = std::fs::copy(&runtime_dll, &destination);
     println!("cargo:rerun-if-changed={}", runtime_dll.display());
-
 }
 
-fn ensure_probe_icon() {
-    let icon_path = std::path::Path::new("icons/icon.ico");
-    if icon_path.exists() {
-        return;
+fn verify_native_icons() {
+    const REQUIRED_ICONS: [&str; 5] = [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico",
+    ];
+
+    for icon in REQUIRED_ICONS {
+        let icon_path = std::path::Path::new(icon);
+        if !icon_path.is_file() {
+            panic!(
+                "Falta el recurso nativo '{icon}'. Ejecuta `bun run icons:generate` desde la raíz de Prisma."
+            );
+        }
+
+        println!("cargo:rerun-if-changed={}", icon_path.display());
     }
-
-    std::fs::create_dir_all("icons").expect("No se pudo crear la carpeta temporal de iconos");
-    std::fs::write(icon_path, PROBE_ICON)
-        .expect("No se pudo escribir el icono provisional de Prisma");
 }
-
-// ICO mínimo de 1 × 1 píxel en #00AAFF. Solo desbloquea la prueba técnica.
-const PROBE_ICON: &[u8] = &[
-    0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x20, 0x00, 0x30, 0x00,
-    0x00, 0x00, 0x16, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00,
-    0x00, 0x00, 0x01, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xAA,
-    0x00, 0xFF, 0x00, 0x00, 0x00, 0x00,
-];

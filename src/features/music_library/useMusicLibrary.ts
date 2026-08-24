@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { MusicFolderSource, MusicLibraryItem } from "./model/types";
 import { musicLibraryClient } from "./tauri/client";
+import { scheduleLibraryScan } from "../../shared/libraryScanScheduler";
 
 export function useMusicLibrary() {
   const [folders, setFolders] = useState<MusicFolderSource[]>([]);
@@ -8,21 +9,24 @@ export function useMusicLibrary() {
   const [items, setItems] = useState<MusicLibraryItem[]>([]);
   const [busyPath, setBusyPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sourcesLoaded, setSourcesLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [nextFolders, nextExcluded, nextItems] = await Promise.all([
+      const [nextFolders, nextExcluded] = await Promise.all([
         musicLibraryClient.listFolders(),
         musicLibraryClient.listExcludedFolders(),
-        musicLibraryClient.listItems(),
       ]);
       setFolders(nextFolders);
       setExcludedFolders(nextExcluded);
+      setSourcesLoaded(true);
+      const nextItems = await scheduleLibraryScan(() => musicLibraryClient.listItems());
       setItems(nextItems);
     } catch (reason) {
+      setSourcesLoaded(true);
       setError(String(reason));
     } finally {
       setLoading(false);
@@ -55,6 +59,7 @@ export function useMusicLibrary() {
     items,
     busyPath,
     loading,
+    sourcesLoaded,
     error,
     addFolder: (path: string) => runFolderAction(path, () => musicLibraryClient.addFolder(path)),
     addExcludedFolder: (path: string) =>

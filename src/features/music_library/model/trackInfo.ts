@@ -3,6 +3,12 @@ export interface ParsedTrackInfo {
   artist: string;
 }
 
+interface LibraryTrackInfoSource {
+  title: string;
+  artist?: string | null;
+  titleFromMetadata?: boolean;
+}
+
 /**
  * Parsea el título y artista a partir del nombre de archivo o título sin extensión.
  * Maneja patrones comunes de archivos locales:
@@ -43,4 +49,20 @@ export function parseTrackInfo(rawTitle: string): ParsedTrackInfo {
     title: cleaned || rawTitle,
     artist: "",
   };
+}
+
+/**
+ * Respeta primero las etiquetas incrustadas que ya normalizó el escáner.
+ * El patrón "Artista - Título" solo se interpreta cuando ambos metadatos faltan
+ * y el valor procede del nombre de archivo.
+ */
+export function resolveLibraryTrackInfo(item: LibraryTrackInfoSource): ParsedTrackInfo {
+  const title = item.title?.trim() || "Pista sin nombre";
+  const artist = item.artist?.trim() || "";
+
+  if (item.titleFromMetadata || artist) {
+    return { title, artist };
+  }
+
+  return parseTrackInfo(title);
 }

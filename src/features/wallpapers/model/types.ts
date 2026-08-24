@@ -7,8 +7,10 @@ export interface AuroraWallpaper {
   aspectRatio: string; // e.g. "16:9", "9:16", "21:9", "1:1"
   resolution: string;
   fileSize: number;
-  src: string;
-  thumbnailSrc: string;
+  /** URL HD entregada únicamente cuando el servidor autoriza el acceso. */
+  src: string | null;
+  /** Vista previa pública o degradada; no concede acceso al archivo original. */
+  thumbnailSrc: string | null;
   isPremium: boolean;
   isAuthorized: boolean;
   isNsfw: boolean;
@@ -35,5 +37,4 @@ export interface WallpaperFilterOptions {
   category?: string;
   sort?: "recent" | "trending" | "views" | "downloads";
   query?: string;
-  nsfw?: boolean;
 }

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Prisma Icon](icon/icon.png)
+![Prisma Icon](public/icon/icon.png)
 
 **Estación y reproductor multimedia local-first diseñada bajo Material 3 Expressive para Windows.**
 
@@ -21,23 +21,28 @@
 
 | Inicio | Escuchar | Música | Imágenes |
 | :---: | :---: | :---: | :---: |
-| ![Inicio](screenshots/home.png) | ![Escuchar](screenshots/listen.png) | ![Música](screenshots/music.png) | ![Imágenes de hoy](screenshots/images_today.png) |
+| ![Inicio](docs/screenshots/home.png) | ![Escuchar](docs/screenshots/listen.png) | ![Música](docs/screenshots/music.png) | ![Imágenes de hoy](docs/screenshots/images_today.png) |
 
 | Imágenes anteriores | Vídeos | Libros | Krita |
 | :---: | :---: | :---: | :---: |
-| ![Imágenes anteriores](screenshots/images_yesterday.png) | ![Vídeos](screenshots/videos.png) | ![Libros](screenshots/books.png) | ![Krita](screenshots/krita.png) |
+| ![Imágenes anteriores](docs/screenshots/images_yesterday.png) | ![Vídeos](docs/screenshots/videos.png) | ![Libros](docs/screenshots/books.png) | ![Krita](docs/screenshots/krita.png) |
 
 | DaVinci Resolve | Favoritos | Historial | Listas de reproducción |
 | :---: | :---: | :---: | :---: |
-| ![DaVinci Resolve](screenshots/davinci_resolve.png) | ![Favoritos](screenshots/favorites.png) | ![Historial](screenshots/history.png) | ![Listas de reproducción](screenshots/playlists.png) |
+| ![DaVinci Resolve](docs/screenshots/davinci_resolve.png) | ![Favoritos](docs/screenshots/favorites.png) | ![Historial](docs/screenshots/history.png) | ![Listas de reproducción](docs/screenshots/playlists.png) |
 
 | Conversor | Luna Fetch | Gallery-DL | Wallpapers Aurora |
 | :---: | :---: | :---: | :---: |
-| ![Conversor](screenshots/converter.png) | ![Luna Fetch](screenshots/luna_fetch.png) | ![Gallery-DL](screenshots/gallery_dl.png) | ![Wallpapers Aurora](screenshots/wallpapers_aurora.png) |
+| ![Conversor](docs/screenshots/converter.png) | ![Luna Fetch](docs/screenshots/luna_fetch.png) | ![Gallery-DL](docs/screenshots/gallery_dl.png) | ![Wallpapers Aurora](docs/screenshots/wallpapers_aurora.png) |
 
 | Configuración general | Aurora Synapse | Atajos de teclado | Acerca de |
 | :---: | :---: | :---: | :---: |
-| ![Configuración general](screenshots/settings_general.png) | ![Aurora Synapse](screenshots/settings_aurora_synapse.png) | ![Atajos de teclado](screenshots/settings_keyboard_shortcuts.png) | ![Acerca de](screenshots/about.png) |
+| ![Configuración general](docs/screenshots/settings_general.png) | ![Aurora Synapse](docs/screenshots/settings_aurora_synapse.png) | ![Atajos de teclado](docs/screenshots/settings_keyboard_shortcuts.png) | ![Acerca de](docs/screenshots/about.png) |
+
+## Organización de recursos
+
+El icono canónico de identidad se conserva en [`assets/branding/icons/icon-transparent.png`](assets/branding/icons/icon-transparent.png). Los recursos derivados deben generarse desde esa fuente mediante `bun run icons:generate` conforme al [Asset Organization Standard](../Core-Docs/global/architecture/asset-organization-standard.md); las capturas documentales viven en `docs/screenshots/`.
+
 
 ---
 

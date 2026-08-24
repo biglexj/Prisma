@@ -1,9 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
 import type { AuroraWallpaper } from "../model/types";
 import { fetchAuroraWallpapers, setWindowsWallpaper, downloadWallpaperHd, toggleAuroraFavorite } from "../services/wallpapersApi";
 import { useSystemSettings } from "../../../app/useSystemSettings";
 import { Icon } from "../../../shared/ui/Icon";
 import "./wallpapers.css";
+
+function getWallpaperRatio(wallpaper: AuroraWallpaper): number {
+  const resolutionMatch = wallpaper.resolution.match(/(\d+)\s*[x×]\s*(\d+)/i);
+  if (resolutionMatch) {
+    const width = Number(resolutionMatch[1]);
+    const height = Number(resolutionMatch[2]);
+    if (width > 0 && height > 0) return width / height;
+  }
+
+  const [width, height] = wallpaper.aspectRatio.split(":").map(Number);
+  return width > 0 && height > 0 ? width / height : 16 / 9;
+}
 
 export function WallpapersView() {
   const { auroraOnlineServicesEnabled, setAuroraOnlineServicesEnabled } = useSystemSettings();
@@ -13,19 +25,34 @@ export function WallpapersView() {
 
   const [selectedRatio, setSelectedRatio] = useState<string | undefined>(undefined);
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [selectedSort, setSelectedSort] = useState<"recent" | "trending" | "views">("recent");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
   const [selectedWallpaper, setSelectedWallpaper] = useState<AuroraWallpaper | null>(null);
+  const [loadedPreviewRatio, setLoadedPreviewRatio] = useState<{ id: string; ratio: number } | null>(null);
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
   const [isSimulatingDesktop, setIsSimulatingDesktop] = useState(false);
+  const activeRequestRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
 
   const loadData = useCallback(async () => {
+    activeRequestRef.current?.abort();
+    activeRequestRef.current = null;
     if (!auroraOnlineServicesEnabled) {
       setLoading(false);
       return;
     }
+    const controller = new AbortController();
+    activeRequestRef.current = controller;
     setLoading(true);
     setError(null);
     try {
@@ -35,18 +62,32 @@ export function WallpapersView() {
         ratio: selectedRatio,
         category: selectedCategory,
         sort: selectedSort,
-        query: searchQuery.trim() || undefined,
-      });
-      setWallpapers(res.wallpapers || []);
+        query: debouncedSearchQuery || undefined,
+      }, controller.signal);
+      const nextWallpapers = res.wallpapers || [];
+      setWallpapers(nextWallpapers);
+      const responseCategories = nextWallpapers
+        .map((wallpaper) => wallpaper.category?.trim())
+        .filter((category): category is string => Boolean(category));
+      setAvailableCategories((current) =>
+        Array.from(new Set([...current, ...responseCategories])).sort((left, right) =>
+          left.localeCompare(right, "es"),
+        ),
+      );
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Error al conectar con Aurora");
     } finally {
-      setLoading(false);
+      if (activeRequestRef.current === controller) {
+        activeRequestRef.current = null;
+        setLoading(false);
+      }
     }
-  }, [auroraOnlineServicesEnabled, selectedRatio, selectedCategory, selectedSort, searchQuery]);
+  }, [auroraOnlineServicesEnabled, selectedRatio, selectedCategory, selectedSort, debouncedSearchQuery]);
 
   useEffect(() => {
-    loadData();
+    void loadData();
+    return () => activeRequestRef.current?.abort();
   }, [loadData]);
 
   // Manejo de atajo Escape para cerrar modal o salir de simulación de escritorio
@@ -92,6 +133,16 @@ export function WallpapersView() {
   };
 
   const handleSendToMobile = (wp: AuroraWallpaper) => {
+    if (wp.isAuthorized === false) {
+      setActionStatus("Este wallpaper requiere una cuenta Fan autorizada");
+      setTimeout(() => setActionStatus(null), 3000);
+      return;
+    }
+    if (!wp.src) {
+      setActionStatus("Aurora no entregó el archivo HD autorizado");
+      setTimeout(() => setActionStatus(null), 3000);
+      return;
+    }
     window.dispatchEvent(
       new CustomEvent("prisma-send-to-supergallery", {
         detail: { path: wp.src, title: wp.title },
@@ -119,6 +170,16 @@ export function WallpapersView() {
   const now = new Date();
   const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const dateStr = now.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+  const previewRatio = selectedWallpaper
+    ? loadedPreviewRatio?.id === selectedWallpaper.id
+      ? loadedPreviewRatio.ratio
+      : getWallpaperRatio(selectedWallpaper)
+    : 16 / 9;
+  const modalStyle = {
+    "--wallpaper-preview-ratio": previewRatio,
+    "--wallpaper-modal-vh-width": `${94 * previewRatio}vh`,
+    "--wallpaper-modal-footer-width": `${142 * previewRatio}px`,
+  } as CSSProperties;
 
   return (
     <div className="wallpapers-container">
@@ -134,7 +195,7 @@ export function WallpapersView() {
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div className="wallpapers-header-actions">
           <div className="wallpapers-search-bar">
             <Icon name="search" />
             <input
@@ -154,10 +215,10 @@ export function WallpapersView() {
             )}
           </div>
           <button
-            className="wallpaper-btn wallpaper-btn-secondary"
-            onClick={loadData}
+            className="wallpaper-btn wallpaper-btn-secondary wallpapers-refresh-button"
+            onClick={() => void loadData()}
             title="Recargar catálogo de Aurora"
-            style={{ padding: "8px 12px" }}
+            aria-label="Recargar catálogo de Aurora"
           >
             <Icon name="refresh" />
           </button>
@@ -191,7 +252,7 @@ export function WallpapersView() {
           📱 Móvil (9:16)
         </button>
 
-        <span style={{ width: "1px", height: "24px", background: "rgba(255,255,255,0.1)", margin: "0 4px" }} />
+        <span className="wallpaper-filter-divider" aria-hidden="true" />
 
         <button
           className={`wallpaper-filter-chip ${selectedSort === "trending" ? "is-active" : ""}`}
@@ -200,47 +261,22 @@ export function WallpapersView() {
           🔥 Tendencias
         </button>
 
-        <button
-          className={`wallpaper-filter-chip ${selectedCategory === "Anime" ? "is-active" : ""}`}
-          onClick={() => setSelectedCategory(selectedCategory === "Anime" ? undefined : "Anime")}
-        >
-          Anime
-        </button>
-        <button
-          className={`wallpaper-filter-chip ${selectedCategory === "Cyberpunk" ? "is-active" : ""}`}
-          onClick={() => setSelectedCategory(selectedCategory === "Cyberpunk" ? undefined : "Cyberpunk")}
-        >
-          Cyberpunk
-        </button>
-        <button
-          className={`wallpaper-filter-chip ${selectedCategory === "Paisaje" ? "is-active" : ""}`}
-          onClick={() => setSelectedCategory(selectedCategory === "Paisaje" ? undefined : "Paisaje")}
-        >
-          Paisajes
-        </button>
-        <button
-          className={`wallpaper-filter-chip ${selectedCategory === "Escritorio" ? "is-active" : ""}`}
-          onClick={() => setSelectedCategory(selectedCategory === "Escritorio" ? undefined : "Escritorio")}
-        >
-          Escritorio
-        </button>
+        {availableCategories.map((category) => (
+          <button
+            className={`wallpaper-filter-chip ${selectedCategory === category ? "is-active" : ""}`}
+            key={category}
+            onClick={() => setSelectedCategory(selectedCategory === category ? undefined : category)}
+          >
+            {category}
+          </button>
+        ))}
       </div>
 
       {/* Feedback Toast */}
       {actionStatus && (
         <div
-          style={{
-            position: "fixed",
-            bottom: "32px",
-            right: "32px",
-            background: "#1e293b",
-            border: "1px solid rgba(255,255,255,0.2)",
-            color: "white",
-            padding: "12px 20px",
-            borderRadius: "12px",
-            zIndex: 1100,
-            boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
-          }}
+          aria-live="polite"
+          className="wallpaper-action-status"
         >
           {actionStatus}
         </div>
@@ -269,7 +305,7 @@ export function WallpapersView() {
         </div>
       ) : error ? (
         <div style={{ textAlign: "center", padding: "60px 20px", maxWidth: "480px", margin: "0 auto" }}>
-          <p style={{ color: "#ef4444", marginBottom: "16px" }}>{error}</p>
+          <p style={{ color: "var(--error)", marginBottom: "16px" }}>{error}</p>
           <button className="wallpaper-btn wallpaper-btn-secondary" onClick={loadData} style={{ margin: "0 auto" }}>
             Reintentar
           </button>
@@ -295,39 +331,41 @@ export function WallpapersView() {
             return (
               <div
                 key={wp.id}
-                className={`wallpaper-card ${spanClass}`}
-                onClick={() => {
-                  setSelectedWallpaper(wp);
-                  setIsSimulatingDesktop(false);
-                }}
+                className={`wallpaper-card ${spanClass} ${wp.isAuthorized === false ? "is-locked" : ""}`}
               >
-                <img src={wp.thumbnailSrc || wp.src} alt={wp.title} loading="lazy" />
+                <img src={wp.thumbnailSrc || wp.src || undefined} alt={wp.title} loading="lazy" />
+                <button
+                  aria-label={`Abrir ${wp.title}`}
+                  className="wallpaper-card-open"
+                  onClick={() => {
+                    setSelectedWallpaper(wp);
+                    setIsSimulatingDesktop(false);
+                  }}
+                />
                 <div className="wallpaper-card-overlay">
                   <div className="wallpaper-card-top">
                     <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                       <span className="wallpaper-card-pill">{wp.aspectRatio || "16:9"}</span>
                       {wp.isPremium && (
-                        <span className="wallpaper-card-pill" style={{ background: "rgba(99, 102, 241, 0.8)", border: "1px solid rgba(99, 102, 241, 0.4)" }}>
+                        <span className="wallpaper-card-pill is-fan">
                           ⭐ Fan
                         </span>
                       )}
                     </div>
-                    <button
-                      className={`wallpaper-card-fav-btn ${wp.isFavorite ? "is-fav" : ""}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleFavorite(wp);
-                      }}
-                      title={wp.isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
-                    >
-                      <Icon name="heart" />
-                    </button>
                   </div>
                   <div className="wallpaper-card-bottom">
                     <span className="wallpaper-card-title">{wp.title}</span>
                     <span className="wallpaper-card-meta">{wp.category} • {wp.resolution}</span>
                   </div>
                 </div>
+                <button
+                  className={`wallpaper-card-fav-btn ${wp.isFavorite ? "is-fav" : ""}`}
+                  onClick={() => handleToggleFavorite(wp)}
+                  aria-pressed={wp.isFavorite}
+                  title={wp.isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
+                >
+                  <Icon name="heart" />
+                </button>
               </div>
             );
           })}
@@ -346,9 +384,32 @@ export function WallpapersView() {
             }
           }}
         >
-          <div className="wallpaper-modal-content" onClick={(e) => e.stopPropagation()}>
+          <div
+            aria-label={`Vista previa de ${selectedWallpaper.title}`}
+            aria-modal="true"
+            className={`wallpaper-modal-content ${previewRatio < 1 ? "is-portrait" : ""}`}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            style={modalStyle}
+          >
             <div className="wallpaper-modal-preview">
-              <img src={selectedWallpaper.src} alt={selectedWallpaper.title} />
+              <img
+                src={
+                  (selectedWallpaper.isAuthorized === false
+                    ? selectedWallpaper.thumbnailSrc
+                    : selectedWallpaper.src || selectedWallpaper.thumbnailSrc) || undefined
+                }
+                alt={selectedWallpaper.title}
+                onLoad={(event) => {
+                  const { naturalWidth, naturalHeight } = event.currentTarget;
+                  if (naturalWidth > 0 && naturalHeight > 0) {
+                    setLoadedPreviewRatio({
+                      id: selectedWallpaper.id,
+                      ratio: naturalWidth / naturalHeight,
+                    });
+                  }
+                }}
+              />
 
               {/* Simulación de Escritorio de Windows */}
               {isSimulatingDesktop && (
@@ -389,8 +450,8 @@ export function WallpapersView() {
                     background: "rgba(0,0,0,0.6)",
                     border: "none",
                     color: "white",
-                    width: "36px",
-                    height: "36px",
+                    width: "48px",
+                    height: "48px",
                     borderRadius: "50%",
                     cursor: "pointer",
                     display: "flex",
@@ -412,32 +473,39 @@ export function WallpapersView() {
                   <span className="wallpaper-card-pill">{selectedWallpaper.aspectRatio}</span>
                   <span className="wallpaper-card-pill">{selectedWallpaper.resolution}</span>
                   {selectedWallpaper.isPremium && (
-                    <span className="wallpaper-card-pill" style={{ background: "#6366f1" }}>
+                    <span className="wallpaper-card-pill is-fan">
                       ⭐ Fan Exclusivo
                     </span>
                   )}
                 </div>
+                {selectedWallpaper.isAuthorized === false ? (
+                  <p className="wallpaper-access-notice">
+                    Conecta una cuenta Fan autorizada para acceder al archivo en alta definición.
+                  </p>
+                ) : null}
               </div>
 
               <div className="wallpaper-modal-actions">
                 <button
                   className="wallpaper-btn wallpaper-btn-secondary"
                   onClick={() => handleSendToMobile(selectedWallpaper)}
+                  disabled={selectedWallpaper.isAuthorized === false || !selectedWallpaper.src}
                   title="Enviar a Super Gallery en tu móvil (Synapse)"
                 >
                   <Icon name="smartphone" />
                   Móvil
                 </button>
                 <button
-                  className="wallpaper-btn wallpaper-btn-secondary"
+                  className={`wallpaper-btn wallpaper-btn-secondary ${selectedWallpaper.isFavorite ? "is-fav" : ""}`}
                   onClick={() => handleToggleFavorite(selectedWallpaper)}
                   title="Guardar en favoritos"
                 >
-                  <Icon name="heart" style={{ color: selectedWallpaper.isFavorite ? "#f43f5e" : "inherit" }} />
+                  <Icon name="heart" />
                 </button>
                 <button
                   className="wallpaper-btn wallpaper-btn-secondary"
                   onClick={() => handleDownload(selectedWallpaper)}
+                  disabled={selectedWallpaper.isAuthorized === false || !selectedWallpaper.src}
                   title="Descargar archivo en alta definición"
                 >
                   <Icon name="download" />
@@ -446,7 +514,7 @@ export function WallpapersView() {
                 <button
                   className="wallpaper-btn wallpaper-btn-primary"
                   onClick={() => handleApplyWallpaper(selectedWallpaper)}
-                  disabled={isApplying}
+                  disabled={isApplying || selectedWallpaper.isAuthorized === false || !selectedWallpaper.src}
                   title="Establecer inmediatamente como fondo de pantalla de Windows"
                 >
                   <Icon name="image" />

@@ -5,9 +5,10 @@ interface MusicArtworkProps {
   path: string;
   alt: string;
   className?: string;
+  showFallback?: boolean;
 }
 
-export function MusicArtwork({ path, alt, className = "" }: MusicArtworkProps) {
+export function MusicArtwork({ path, alt, className = "", showFallback = false }: MusicArtworkProps) {
 
   const containerRef = useRef<HTMLSpanElement>(null);
   const [visible, setVisible] = useState(() => isMusicArtworkCached(path));
@@ -43,6 +44,11 @@ export function MusicArtwork({ path, alt, className = "" }: MusicArtworkProps) {
           loading="lazy"
           src={artwork}
         />
+      ) : showFallback ? (
+        <span className="music-artwork-fallback" aria-hidden="true">
+          <strong>{alt.trim().slice(0, 1).toUpperCase() || "♪"}</strong>
+          <i />
+        </span>
       ) : null}
     </span>
   );
