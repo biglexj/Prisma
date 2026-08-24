@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 const projectRoot = process.cwd();
-const sourcePath = join(projectRoot, "public", "icon", "Icon.png");
+const sourcePath = join(projectRoot, "public", "icon", "Icon-transparent.png");
 const iconsDirectory = join(projectRoot, "src-tauri", "icons");
 const fingerprintPath = join(iconsDirectory, ".icon-source.sha256");
 const requiredOutputs = [
@@ -64,4 +64,4 @@ if (generation.exitCode !== 0) {
 }
 
 await Bun.write(fingerprintPath, `${sourceFingerprint}\n`);
-console.log("✓ Iconos nativos regenerados desde public/icon/Icon.png.");
+console.log("✓ Iconos nativos regenerados desde public/icon/Icon-transparent.png.");
