@@ -85,7 +85,7 @@ if ($hasRemote) {
     }
 }
 
-# 4. GitHub Release
+# 4. GitHub Release (única fuente del binario para proyectos no privados)
 Write-Host "[3/4] Publicando GitHub Release v$Version..." -ForegroundColor Yellow
 $releaseNotesFile = Join-Path $root "RELEASE_MESSAGE.md"
 
@@ -100,85 +100,70 @@ if (-not $ReleaseNotes) {
     gh release create "v$Version" $installerTarget --title "Prisma v$Version" --notes $ReleaseNotes
 }
 
+$githubTagUrl = "https://github.com/biglexj/Prisma/releases/tag/v$Version"
+$assetFileName = Split-Path $installerTarget -Leaf
+$githubAssetUrl = "https://github.com/biglexj/Prisma/releases/download/v$Version/$assetFileName"
+
 Write-Host ""
 Write-Host "══════════════════════════════════════════" -ForegroundColor Green
 Write-Host "  ¡Release v$Version publicado en GitHub con éxito!" -ForegroundColor Green
 Write-Host "══════════════════════════════════════════" -ForegroundColor Green
-Write-Host "  https://github.com/biglexj/Prisma/releases/tag/v$Version" -ForegroundColor Cyan
+Write-Host "  $githubTagUrl" -ForegroundColor Cyan
 
-# 5. Publicar en Aurora Blog (biglexj.com)
+# 5. Notificar a Aurora Blog (biglexj.com) — SOLO METADATA.
+#    Regla Core: para proyectos no privados el binario vive en GitHub.
+#    Aurora solo recibe el "mensaje de actualización" (versión, notas, SHA-256, URL de GitHub).
+#    NO se sube el EXE a Cloudflare R2 desde este script.
 Write-Host ""
 if ($SkipAuroraUpload) {
-    Write-Host "[4/4] Aurora Upload omitido (-SkipAuroraUpload)." -ForegroundColor DarkGray
+    Write-Host "[4/4] Notificación a Aurora omitida (-SkipAuroraUpload)." -ForegroundColor DarkGray
 } else {
-    Write-Host "[4/4] Publicando en Aurora Blog (biglexj.com)..." -ForegroundColor Yellow
+    Write-Host "[4/4] Notificando release metadata a Aurora (biglexj.com)..." -ForegroundColor Yellow
 
     $auroraEnvPath = "D:\Proyectos\biglexj\Aurora---Blog\frontend\.env"
     if (Test-Path $auroraEnvPath) {
         $auroraEnv     = Get-Content $auroraEnvPath -Raw -Encoding UTF8
         $serviceKey    = [regex]::Match($auroraEnv, '(?m)^SUPABASE_SERVICE_ROLE_KEY=(.+)$').Groups[1].Value.Trim()
-        
+
         if ($serviceKey) {
             $baseUrl   = "https://www.biglexj.com"
             $slug      = "prisma"
-            $mimeType  = "application/octet-stream"
-            $fileName  = Split-Path $installerTarget -Leaf
 
             $releaseMsg = if (Test-Path $releaseNotesFile) {
                 [System.IO.File]::ReadAllText($releaseNotesFile, [System.Text.Encoding]::UTF8)
             } else { "Prisma v$Version" }
 
             try {
-                # ── PASO A: Presigned URL de R2 ──
-                Write-Host "  [A] Obteniendo Presigned URL de R2..." -ForegroundColor DarkYellow
-                $encodedMime = [Uri]::EscapeDataString($mimeType)
-                $encodedFile = [Uri]::EscapeDataString($fileName)
-                $presignUri  = "$baseUrl/api/admin/developer-app-presign?slug=$slug&fileName=$encodedFile&contentType=$encodedMime&type=package&os=windows"
+                # ── Calcular SHA-256 del binario que YA está en GitHub ──
+                $sha256Hash = (Get-FileHash -Path $installerTarget -Algorithm SHA256).Hash.ToLower()
+                Write-Host "  SHA-256: $sha256Hash" -ForegroundColor DarkGray
 
-                $presignData = Invoke-RestMethod -Uri $presignUri -Method GET `
-                               -Headers @{ Authorization = "Bearer $serviceKey" }
+                # ── Registrar release en Aurora (PUT) con URL de GitHub como downloadUrl ──
+                #    Aurora NO recibe el EXE, solo la metadata del lanzamiento.
+                $releaseBody = @{
+                    slug           = $slug
+                    downloadUrl    = $githubAssetUrl
+                    versionName    = $Version
+                    versionCode    = 1
+                    releaseNotes   = $releaseMsg
+                    sha256Checksum = $sha256Hash
+                } | ConvertTo-Json -Depth 5
 
-                if ($presignData.success) {
-                    Write-Host "  Presigned URL obtenida." -ForegroundColor DarkGreen
+                Invoke-RestMethod -Uri "$baseUrl/api/admin/developer-apps" -Method PUT `
+                                  -Headers @{
+                                      "Content-Type" = "application/json"
+                                      Authorization  = "Bearer $serviceKey"
+                                  } `
+                                  -Body $releaseBody | Out-Null
 
-                    # ── PASO B: Subir binario a R2 ──
-                    Write-Host "  [B] Subiendo instalador a R2 ($fileName)..." -ForegroundColor DarkYellow
-                    $fileBytes = [System.IO.File]::ReadAllBytes($installerTarget)
-                    Invoke-RestMethod -Uri $presignData.presignedUrl -Method PUT `
-                                      -Body $fileBytes -ContentType $mimeType | Out-Null
-                    Write-Host "  Instalador en R2: $($presignData.publicUrl)" -ForegroundColor DarkGreen
-
-                    # ── PASO C: Registrar en Supabase vía Aurora API ──
-                    Write-Host "  [C] Registrando release en Aurora Manager..." -ForegroundColor DarkYellow
-                    $sha256Hash = (Get-FileHash -Path $installerTarget -Algorithm SHA256).Hash.ToLower()
-                    Write-Host "  SHA-256: $sha256Hash" -ForegroundColor DarkGray
-
-                    $releaseBody = @{
-                        slug           = $slug
-                        downloadUrl    = $presignData.publicUrl
-                        versionName    = $Version
-                        versionCode    = 1
-                        releaseNotes   = $releaseMsg
-                        sha256Checksum = $sha256Hash
-                    } | ConvertTo-Json -Depth 5
-
-                    Invoke-RestMethod -Uri "$baseUrl/api/admin/developer-apps" -Method PUT `
-                                      -Headers @{
-                                          "Content-Type" = "application/json"
-                                          Authorization  = "Bearer $serviceKey"
-                                      } `
-                                      -Body $releaseBody | Out-Null
-
-                    Write-Host ""
-                    Write-Host "══════════════════════════════════════════" -ForegroundColor Cyan
-                    Write-Host "  ✅ Prisma v$Version en biglexj.com" -ForegroundColor Cyan
-                    Write-Host "  $($presignData.publicUrl)" -ForegroundColor Cyan
-                    Write-Host "══════════════════════════════════════════" -ForegroundColor Cyan
-                } else {
-                    Write-Host "  ⚠️ No se pudo presignar R2 para el slug '$slug': $($presignData.error)" -ForegroundColor DarkYellow
-                }
+                Write-Host ""
+                Write-Host "══════════════════════════════════════════" -ForegroundColor Cyan
+                Write-Host "  ✅ Prisma v$Version notificado a biglexj.com" -ForegroundColor Cyan
+                Write-Host "  Binario (GitHub): $githubAssetUrl" -ForegroundColor Cyan
+                Write-Host "  Aurora solo recibió metadata (sin EXE)." -ForegroundColor DarkGray
+                Write-Host "══════════════════════════════════════════" -ForegroundColor Cyan
             } catch {
-                Write-Host "  ⚠️ Error durante la publicación en biglexj.com: $_" -ForegroundColor DarkYellow
+                Write-Host "  ⚠️ Error durante la notificación a biglexj.com: $_" -ForegroundColor DarkYellow
             }
         } else {
             Write-Host "  ⚠️ No se encontró SUPABASE_SERVICE_ROLE_KEY en $auroraEnvPath" -ForegroundColor DarkGray

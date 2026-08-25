@@ -22,6 +22,19 @@ Antes de modificar la estructura del proyecto, leer:
 - No introducir SQLite, biblioteca, letras ni metadata durante la Fase 1.
 - Mantener Imágenes y Vídeos en `visual_library`; no incorporar sus reglas dentro de `music_library`.
 - Las fuentes de música persisten solo rutas y conteos en JSON; no crean todavía un índice multimedia.
+
+## Publicación de Releases (Prisma → GitHub + Aurora metadata)
+
+Prisma es un proyecto **no privado**. El flujo de release está definido en `scripts/release/build-release.ps1` y se compone de:
+
+1. **Compilar** el instalador Tauri v2 (`.exe` + `.msi`) localmente.
+2. **Publicar el binario en GitHub Releases** (`gh release create`). El binario vive exclusivamente en GitHub.
+3. **Calcular el SHA-256** del instalador.
+4. **Notificar a Aurora** (`PUT /api/admin/developer-apps`) con la URL del asset en GitHub como `downloadUrl`, más `versionName`, `versionCode`, `releaseNotes` y `sha256Checksum`. Aurora solo recibe metadata; **no** se sube el EXE a Cloudflare R2.
+
+`user_id` canónico del ecosistema Aurora: `e7918151-8a32-4413-be32-a35866e2fb4e` (`biglexj`).
+
+Documentación completa de la regla en `Aurora---Blog/docs/es/guides/Protocolo de Actualizaciones y Versionado.md` (sección 6).
 - Las carátulas se leen bajo demanda y no se persisten ni se escanean anticipadamente.
 - Las vistas previas visuales se leen bajo demanda, con límites estrictos de memoria, y nunca se persisten.
 - No convertir vídeos completos a base64 ni precargarlos en el WebView.
