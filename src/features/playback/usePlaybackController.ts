@@ -87,7 +87,7 @@ export function usePlaybackController() {
   );
 
   const switchQueueAndPlay = useCallback(
-    (queueId: string, startIndex = 0) => {
+    (queueId: string, startIndex?: number) => {
       const target = queue.switchQueue(queueId, startIndex);
       if (target) {
         void loadPath(target.path);

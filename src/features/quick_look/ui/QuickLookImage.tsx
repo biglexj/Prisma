@@ -1,5 +1,6 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { useState, useRef } from "react";
+import { toPlatformPath } from "../../../shared/mediaTree";
 import type { QuickLookPayload } from "../model/types";
 
 interface QuickLookImageProps {
@@ -14,7 +15,7 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
   const dragStartRef = useRef({ x: 0, y: 0 });
   const initialPanRef = useRef({ x: 0, y: 0 });
 
-  const imgSrc = convertFileSrc(payload.path);
+  const imgSrc = convertFileSrc(toPlatformPath(payload.path));
 
   const handleImageLoad = async (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;

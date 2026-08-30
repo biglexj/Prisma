@@ -14,6 +14,7 @@ import { ImageEditor } from "./editor/ImageEditor";
 import { ImageComparisonModal } from "./comparison/ImageComparisonModal";
 import { quickLookClient } from "../../quick_look/tauri/client";
 import { ViewerToolsMenu } from "./components/ViewerToolsMenu";
+import { ImageInfoDrawer } from "./components/ImageInfoDrawer";
 import "./visual-library.css";
 import "./image-viewer.css";
 
@@ -39,6 +40,7 @@ export function ImageViewer({
   const [currentItem, setCurrentItem] = useState<VisualLibraryItem>(item);
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showInfoDrawer, setShowInfoDrawer] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<number | null>(null);
   const initialFitScaleRef = useRef<number>(1);
@@ -482,11 +484,16 @@ export function ImageViewer({
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
-        if (mediaDelete.menu) {
+        if (showInfoDrawer) {
+          setShowInfoDrawer(false);
+        } else if (mediaDelete.menu) {
           mediaDelete.closeMenu();
         } else {
           closeViewer();
         }
+      } else if (event.key.toLowerCase() === "i" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        setShowInfoDrawer((prev) => !prev);
       } else if (event.key.toLowerCase() === "e") {
         event.preventDefault();
         setIsEditing(true);
@@ -701,6 +708,7 @@ export function ImageViewer({
                 kind: "image",
               })
             }
+            onShowInfo={() => setShowInfoDrawer(true)}
             onDetach={() => {
               void quickLookClient.openDetached(cleanPath(currentItem.path)).catch((err) => {
                 console.error("Error al abrir instancia:", err);
@@ -925,6 +933,17 @@ export function ImageViewer({
           onCancel={mediaRename.cancelRename}
         />
       )}
+
+      <ImageInfoDrawer
+        isOpen={showInfoDrawer}
+        onClose={() => setShowInfoDrawer(false)}
+        item={currentItem}
+        onShowInFolder={() => {
+          invoke("show_in_file_manager", { path: cleanPath(currentItem.path) }).catch((err) => {
+            console.error("Error al mostrar en explorador:", err);
+          });
+        }}
+      />
     </div>
   );
 }

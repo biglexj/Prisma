@@ -8,7 +8,6 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [ ] **v1.0.5 — Visor Despejado, Herramientas Modulares y Nueva Identidad**: menús desplegables en imagen y vídeo, zoom ultra amplio (5%), comparativa A/B unificada, integración con explorador y multiventana, e icono nativo de alto contraste; quedan pendientes la instalación limpia y la publicación remota.
 - [ ] **Expansión de Conversión Multimedia con FFmpeg**: Extracción de audio (Video → MP3, FLAC, AAC, WAV) y transcodificación por lotes de vídeo en `PrismaConvertView`.
 - [ ] **Ecualizador y Procesamiento DSP de Audio**: Panel de ecualización gráfica de 10 bandas y presets acústicos integrados con el motor MPV nativo.
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
@@ -32,6 +31,10 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.0.6**
+  - **Quick Look Multiformato, Inspector EXIF Nativo, EPUB/ZIP y Visor Enriquecido**: Navegación continua con flechas sin robo de foco (`SW_SHOWNOACTIVATE`), previsualización estructurada de archivos ZIP/7Z/RAR con búsqueda, soporte de libros EPUB con portada 3D y capítulos, motor nativo puro de EXIF fotográfico, panel lateral de información técnica en el visor de fotos (`I`), alternancia reactiva de colas musicales y renderizado fluido sin recortes artificiales.
+- [x] **v1.0.5**
+  - **Menús de Herramientas Modulares, Zoom Ultra Amplio (5%), Suite de Comparativa A/B e Integración Nativa**: Menús desplegables con diseño glassmorphic en imágenes y vídeos, persistencia inteligente de controles en pantalla, zoom fotográfico desde el 5% con desplazamiento suave, alineación compacta en comparativa A/B, comando nativo de selección en el Explorador de Windows y nuevo icono de alto contraste con fondo blanco.
 - [x] **v1.0.4**
   - **Inicio Estable, Wallpapers Aurora Adaptables y Música Consistente**: carga inicial escalonada, posiciones estables en Inicio, visor de wallpapers proporcional, defensas para recursos no autorizados, metadatos musicales respetados, colas refinadas y estados interactivos coherentes. Publicación confirmada por Biglex el 24 de agosto de 2026.
 - [x] **v1.0.3**

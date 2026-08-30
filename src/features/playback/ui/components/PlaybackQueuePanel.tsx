@@ -63,15 +63,6 @@ export function PlaybackQueuePanel({
   });
   const suppressQueueTabClickRef = useRef(false);
   const totalItems = activeQueue.items.length;
-  const QUEUE_WINDOW_SIZE = 80;
-  const currentIdx = activeQueue.currentIndex ?? 0;
-  const windowStart = totalItems > QUEUE_WINDOW_SIZE
-    ? Math.max(0, Math.min(currentIdx - 20, totalItems - QUEUE_WINDOW_SIZE))
-    : 0;
-  const windowEnd = totalItems > QUEUE_WINDOW_SIZE
-    ? Math.min(totalItems, windowStart + QUEUE_WINDOW_SIZE)
-    : totalItems;
-  const visibleQueueItems = activeQueue.items.slice(windowStart, windowEnd);
 
   // Auto-scroll a la canción activa en la cola al cargar o cambiar
   useEffect(() => {
@@ -102,7 +93,6 @@ export function PlaybackQueuePanel({
       startScrollLeft: tabs.scrollLeft,
       moved: false,
     };
-    tabs.setPointerCapture(event.pointerId);
   };
 
   const handleQueueTabsPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -114,6 +104,9 @@ export function PlaybackQueuePanel({
     if (!drag.moved && Math.abs(deltaX) > 4) {
       drag.moved = true;
       setIsDraggingQueueTabs(true);
+      try {
+        tabs.setPointerCapture(event.pointerId);
+      } catch {}
     }
     if (!drag.moved) return;
 
@@ -127,14 +120,26 @@ export function PlaybackQueuePanel({
     if (!tabs || drag.pointerId !== event.pointerId) return;
 
     if (tabs.hasPointerCapture(event.pointerId)) {
-      tabs.releasePointerCapture(event.pointerId);
+      try {
+        tabs.releasePointerCapture(event.pointerId);
+      } catch {}
     }
-    suppressQueueTabClickRef.current = drag.moved;
-    queueTabsDragRef.current.pointerId = -1;
+    const wasMoved = drag.moved;
+    suppressQueueTabClickRef.current = wasMoved;
+    queueTabsDragRef.current = {
+      pointerId: -1,
+      startX: 0,
+      startScrollLeft: 0,
+      moved: false,
+    };
     setIsDraggingQueueTabs(false);
-    window.requestAnimationFrame(() => {
+    if (wasMoved) {
+      setTimeout(() => {
+        suppressQueueTabClickRef.current = false;
+      }, 50);
+    } else {
       suppressQueueTabClickRef.current = false;
-    });
+    }
   };
 
   const handleCreateQueue = (e: React.FormEvent) => {
@@ -541,7 +546,7 @@ export function PlaybackQueuePanel({
             </form>
           ) : null}
 
-          {/* ── 4. Lista de Canciones en Cola (Ventana Optimizada) ── */}
+          {/* ── 4. Lista de Canciones en Cola ── */}
           {totalItems === 0 ? (
             <div className="queue-empty-state">
               <Icon name="queue" />
@@ -550,14 +555,7 @@ export function PlaybackQueuePanel({
             </div>
           ) : (
             <div className="queue-list" role="list">
-              {windowStart > 0 ? (
-                <div className="queue-window-notice">
-                  <span>+{windowStart} canciones anteriores</span>
-                </div>
-              ) : null}
-
-              {visibleQueueItems.map((item, sliceIdx) => {
-                const index = windowStart + sliceIdx;
+              {activeQueue.items.map((item, index) => {
                 const isPlaying = index === activeQueue.currentIndex;
                 const fileName = item.path.split(/[/\\]/).pop() ?? item.title;
                 const subLabel = item.artist ?? cleanPath(item.folder) ?? fileName;
@@ -631,12 +629,6 @@ export function PlaybackQueuePanel({
                   </div>
                 );
               })}
-
-              {windowEnd < totalItems ? (
-                <div className="queue-window-notice">
-                  <span>+{totalItems - windowEnd} canciones más en cola</span>
-                </div>
-              ) : null}
             </div>
           )}
         </>

@@ -1,17 +1,18 @@
-# 🚀 Prisma v1.0.5 — Visor Despejado, Herramientas Modulares y Nueva Identidad
+# 🚀 Prisma v1.0.6 — Quick Look Avanzado, Inspector EXIF y Visor Enriquecido
 
-Llega **Prisma v1.0.5**, una actualización enfocada en la limpieza visual y ergonomía del visor multimedia, la organización modular de herramientas en menús desplegables para imágenes y vídeos, zoom ultra amplio desde el 5%, perfeccionamiento del comparador de imágenes y el nuevo icono de alto contraste para Windows.
+Llega **Prisma v1.0.6**, una gran actualización centrada en transformar **Prisma Quick Look** en una suite de previsualización ultrarrápida para Windows, junto con un nuevo Inspector EXIF nativo, soporte para libros EPUB y archivos ZIP, panel de información técnica en el visor de fotos y optimización en las colas de reproducción musical.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- 🎛️ **Menús desplegables de Herramientas**: Las barras superiores de imagen y vídeo ahora son más limpias y elegantes gracias al nuevo menú desplegable *Herramientas*, que agrupa edición, conversión, comparativa, renombrado, multiventana y proyección.
-- 👁️ **Controles interactivos estables**: Las barras y cabeceras nunca se ocultan mientras estés interactuando con ellas o tengas el menú desplegado.
-- 🔍 **Zoom ultra amplio (5% a 1000%)**: Se amplió el límite inferior para alejar imágenes gigantes hasta el 5% con pasos suaves y desplazamiento libre con el puntero.
-- ⚖️ **Comparador de fotos perfeccionado**: En el modo *Alternar A/B*, el título e información se ubican arriba de forma compacta, manteniendo la misma altura y escala uniforme que en los modos Cuadrícula y Lado a lado.
-- 📂 **Integración nativa con Windows**: *Mostrar en explorador* resalta el archivo directamente y *Abrir en otra instancia* abre ventanas desacopladas en paralelo de forma inmediata.
-- 🎨 **Nuevo icono de alto contraste**: La base blanca mantiene el isotipo de Prisma perfectamente nítido en la barra de tareas, bandeja, ventana e instalador.
+- ⚡ **Navegación continua en Windows**: Al pulsar `Espacio` en el Explorador o en el Escritorio, la vista previa se despliega de forma instantánea sin robar el foco de teclado. Puedes usar las flechas (`←`, `→`, `↑`, `↓`), `Inicio`, `Fin` y `RePág`/`AvPág` para desplazarte libremente entre archivos de cualquier tipo con ajuste dimensional automático.
+- 📦 **Archivos Comprimidos (.zip, .7z, .rar)**: Vista previa con conteo de elementos, árbol interno interactivo, buscador en tiempo real y cálculo de peso comprimido vs descomprimido.
+- 📚 **Libros Electrónicos (.epub)**: Portada 3D de alta resolución, ficha de autor, sinopsis y visor de índice de capítulos.
+- 📷 **Inspector EXIF Nativo (Quick Look y Visor Principal)**: Extracción pura y ultrarrápida de datos de captura fotográfica (cámara, objetivo, apertura, obturación, ISO, distancia focal, fecha, balance de blancos, medición y coordenadas GPS con enlace directo a Google Maps).
+- 🖼️ **Panel Lateral de Información en Fotos (`I`)**: Ficha técnica completa de resolución, megapíxeles, relación de aspecto, equipo fotográfico, ajustes de exposición y botones para copiar ruta o abrir en el Explorador de Windows.
+- 🎵 **Colas de Reproducción sin Cortes ("Escuchar")**: Interacción inmediata entre pestañas de colas simultáneas y renderizado completo y fluido de listas extensas de más de 200 canciones.
+- 🪟 **Cabecera Minimalista y Maximización Fluida**: Botonera compacta de sólo iconos que da respiro total al título del archivo, maximización fluida respetando el monitor activo y normalización integral de rutas de Windows.
 
 ---
 

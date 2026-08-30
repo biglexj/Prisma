@@ -1,0 +1,223 @@
+/* ── QuickLook EPUB Book Viewer ── */
+.quicklook-epub-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  padding: 16px 20px;
+  gap: 12px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.quicklook-epub-body {
+  display: flex;
+  flex: 1;
+  gap: 20px;
+  min-height: 0;
+}
+
+.quicklook-epub-cover-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 200px;
+  flex-shrink: 0;
+}
+
+.quicklook-epub-book-3d {
+  position: relative;
+  width: 180px;
+  height: 250px;
+  border-radius: 6px 12px 12px 6px;
+  overflow: hidden;
+  box-shadow: -8px 12px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.2);
+  background: var(--surface-container-high, #1e2022);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quicklook-epub-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.quicklook-epub-book-spine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 12px;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.4), transparent);
+  pointer-events: none;
+}
+
+.quicklook-epub-cover-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
+  gap: 8px;
+  color: var(--on-surface-variant);
+}
+
+.quicklook-epub-fallback-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  line-height: 1.2;
+}
+
+.quicklook-epub-fallback-author {
+  font-size: 0.72rem;
+  opacity: 0.8;
+}
+
+.quicklook-epub-file-meta {
+  display: flex;
+  gap: 6px;
+}
+
+.quicklook-epub-info-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 10px;
+}
+
+.quicklook-epub-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quicklook-epub-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--on-surface, #fff);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.quicklook-epub-author {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--primary, #a8c7fa);
+  font-weight: 600;
+}
+
+.quicklook-epub-author svg {
+  width: 14px;
+  height: 14px;
+}
+
+.quicklook-epub-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.08));
+  padding-bottom: 4px;
+}
+
+.quicklook-epub-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--on-surface-variant, #8e918f);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quicklook-epub-tab:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--on-surface);
+}
+
+.quicklook-epub-tab.is-active {
+  background: var(--surface-container-high, rgba(255, 255, 255, 0.1));
+  color: var(--primary, #a8c7fa);
+}
+
+.quicklook-epub-tab-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.quicklook-epub-synopsis {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--on-surface-variant, #c4c7c5);
+}
+
+.quicklook-epub-synopsis p {
+  margin: 0;
+}
+
+.quicklook-epub-no-synopsis {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--on-surface-variant, #8e918f);
+  font-size: 0.82rem;
+}
+
+.quicklook-epub-chapters-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quicklook-epub-chapter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--on-surface);
+  transition: background 0.15s ease;
+}
+
+.quicklook-epub-chapter-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.quicklook-epub-chapter-num {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary, #a8c7fa);
+  width: 20px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.quicklook-epub-chapter-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quicklook-epub-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}

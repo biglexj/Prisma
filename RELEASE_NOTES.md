@@ -15,8 +15,19 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
-> [!NOTE]
-> **Prisma v1.0.5 está preparada localmente.** Según la confirmación de Biglex, v1.0.4 ya fue publicada. La instalación y la publicación de v1.0.5 continúan pendientes hasta recibir la orden de lanzamiento.
+## [1.0.6] - 2026-08-29
+
+### Resumen
+Actualización **Prisma v1.0.6** centrada en la evolución mayor de **Prisma Quick Look** hacia una experiencia de exploración continua y multiformato sin robar foco en Windows, la integración de un **Inspector EXIF** nativo de alta velocidad, soporte para previsualizar **libros electrónicos EPUB** y **archivos comprimidos ZIP/RAR**, la incorporación del **Panel Lateral de Información Técnica en el visor de fotos** (`I`), y la optimización en la alternancia y renderizado de colas de reproducción musical.
+
+### Detalles
+- **Navegación Continua con Flechas en Quick Look**: Al pulsar la barra espaciadora (`Espacio`) sobre cualquier archivo en el Explorador de Windows o Escritorio, la vista previa se abre sin arrebatar el foco activo. El usuario puede utilizar las teclas de dirección (`←`, `→`, `↑`, `↓`), `Inicio`, `Fin`, `RePág` y `AvPág` para desplazarse libremente entre archivos de cualquier tipo con ajuste dinámico de tamaño sin parpadeos.
+- **Soporte de Archivos Comprimidos (.zip, .7z, .rar)**: Vista previa estructurada con desglose de carpetas y archivos internos, buscador reactivo en tiempo real y estadísticas de tamaño comprimido vs descomprimido.
+- **Libros Electrónicos (.epub)**: Portada tridimensional en alta definición, sinopsis, metadatos editoriales y navegador interactivo de capítulos.
+- **Inspector EXIF Nativo (Quick Look y Visor Principal)**: Motor de extracción fotográfica ultrarrápido en Rust puro sin dependencias externas. Detecta cámara, lente, apertura, obturador, ISO, distancia focal, balance de blancos, modo de medición, flash y coordenadas GPS con enlace directo a mapas.
+- **Panel Lateral de Información en Visor de Fotos (`I`)**: Ficha técnica completa accesible desde el menú Herramientas o con la tecla `I`, mostrando resolución, relación de aspecto, megapíxeles, parámetros de exposición y botones rápidos para copiar ruta o abrir carpeta en Windows.
+- **Gestión de Colas Musicales sin Cortes ("Escuchar")**: Interacción inmediata en las pestañas de colas de reproducción simultáneas y visualización completa y fluida de listas de más de 200 canciones sin recortes artificiales.
+- **Cabecera Minimalista y Maximización Lógica**: Diseño de cabecera con botonera de sólo iconos para dar espacio completo al nombre del archivo, maximización adaptativa al área de trabajo del monitor y normalización integral de rutas de Windows.
 
 ## [1.0.5] - 2026-08-24
 

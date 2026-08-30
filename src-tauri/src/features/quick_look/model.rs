@@ -12,6 +12,8 @@ pub enum QuickLookMediaType {
     Markdown,
     Html,
     Folder,
+    Archive,
+    Epub,
     Project,
     Playlist,
     Lyrics,
@@ -26,6 +28,8 @@ impl QuickLookMediaType {
             "mp4" | "mkv" | "avi" | "mov" | "webm" | "flv" | "wmv" | "m4v" => Self::Video,
             "jpg" | "jpeg" | "png" | "webp" | "gif" | "bmp" | "svg" | "ico" => Self::Image,
             "pdf" => Self::Pdf,
+            "epub" => Self::Epub,
+            "zip" | "7z" | "rar" | "tar" | "gz" | "bz2" | "xz" | "tgz" => Self::Archive,
             "md" | "markdown" => Self::Markdown,
             "html" | "htm" | "xhtml" => Self::Html,
             "m3u" | "m3u8" | "pls" | "xspf" => Self::Playlist,
@@ -57,6 +61,15 @@ impl QuickLookMediaType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ArchiveEntryInfo {
+    pub name: String,
+    pub uncompressed_size: u64,
+    pub compressed_size: u64,
+    pub is_dir: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct QuickLookPayload {
     pub path: String,
     pub file_name: String,
@@ -72,17 +85,43 @@ pub struct QuickLookPayload {
     pub folder_preview_items: Option<Vec<String>>,
     pub text_content: Option<String>,
     pub project_preview_url: Option<String>,
+    pub archive_items_count: Option<usize>,
+    pub archive_uncompressed_bytes: Option<u64>,
+    pub archive_entries: Option<Vec<ArchiveEntryInfo>>,
+    pub epub_author: Option<String>,
+    pub epub_description: Option<String>,
+    pub epub_cover_data_url: Option<String>,
+    pub epub_chapters: Option<Vec<String>>,
+    pub exif_camera: Option<String>,
+    pub exif_lens: Option<String>,
+    pub exif_iso: Option<String>,
+    pub exif_aperture: Option<String>,
+    pub exif_shutter: Option<String>,
+    pub exif_focal_length: Option<String>,
+    pub exif_date_taken: Option<String>,
+    pub selection_index: Option<usize>,
+    pub selection_total: Option<usize>,
     pub extension: String,
     pub modified_date: Option<String>,
 }
 
 impl QuickLookPayload {
     pub fn new(path_str: String, media_type: QuickLookMediaType) -> Self {
-        let path = Path::new(&path_str);
+        Self::with_selection(path_str, media_type, None, None)
+    }
+
+    pub fn with_selection(
+        path_str: String,
+        media_type: QuickLookMediaType,
+        selection_index: Option<usize>,
+        selection_total: Option<usize>,
+    ) -> Self {
+        let clean_path_str = path_str.trim_start_matches(r"\\?\").to_string();
+        let path = Path::new(&clean_path_str);
         let file_name = path
             .file_name()
             .and_then(|n| n.to_str())
-            .unwrap_or(&path_str)
+            .unwrap_or(&clean_path_str)
             .to_string();
 
         let ext = path
@@ -157,8 +196,57 @@ impl QuickLookPayload {
             None
         };
 
+        let (archive_items_count, archive_uncompressed_bytes, archive_entries) =
+            if media_type == QuickLookMediaType::Archive {
+                if ext == "zip" {
+                    inspect_zip_archive(path)
+                } else {
+                    (None, None, None)
+                }
+            } else {
+                (None, None, None)
+            };
+
+        let (epub_author, epub_description, epub_cover_data_url, epub_chapters) =
+            if media_type == QuickLookMediaType::Epub {
+                inspect_epub(path)
+            } else {
+                (None, None, None, None)
+            };
+
+        let (exif_camera, exif_lens, exif_iso, exif_aperture, exif_shutter, exif_focal_length, exif_date_taken) =
+            if media_type == QuickLookMediaType::Image {
+                if let Ok(exif) = crate::infrastructure::exif::read_image_exif(path) {
+                    let camera = match (exif.camera_make, exif.camera_model) {
+                        (Some(make), Some(model)) => {
+                            if model.to_lowercase().starts_with(&make.to_lowercase()) {
+                                Some(model)
+                            } else {
+                                Some(format!("{make} {model}"))
+                            }
+                        }
+                        (None, Some(model)) => Some(model),
+                        (Some(make), None) => Some(make),
+                        (None, None) => None,
+                    };
+                    (
+                        camera,
+                        exif.lens_model,
+                        exif.iso,
+                        exif.aperture,
+                        exif.shutter_speed,
+                        exif.focal_length,
+                        exif.date_taken,
+                    )
+                } else {
+                    (None, None, None, None, None, None, None)
+                }
+            } else {
+                (None, None, None, None, None, None, None)
+            };
+
         Self {
-            path: path_str,
+            path: clean_path_str,
             file_name,
             media_type,
             file_size_bytes,
@@ -172,6 +260,22 @@ impl QuickLookPayload {
             folder_preview_items,
             text_content,
             project_preview_url,
+            archive_items_count,
+            archive_uncompressed_bytes,
+            archive_entries,
+            epub_author,
+            epub_description,
+            epub_cover_data_url,
+            epub_chapters,
+            exif_camera,
+            exif_lens,
+            exif_iso,
+            exif_aperture,
+            exif_shutter,
+            exif_focal_length,
+            exif_date_taken,
+            selection_index,
+            selection_total,
             extension: ext,
             modified_date,
         }
@@ -343,6 +447,204 @@ pub fn read_text_preview(path: &Path) -> Option<String> {
     String::from_utf8(buffer[..bytes_read].to_vec()).ok()
 }
 
+pub fn inspect_zip_archive(path: &Path) -> (Option<usize>, Option<u64>, Option<Vec<ArchiveEntryInfo>>) {
+    let file = match std::fs::File::open(path) {
+        Ok(f) => f,
+        Err(_) => return (None, None, None),
+    };
+    let mut archive = match zip::ZipArchive::new(file) {
+        Ok(a) => a,
+        Err(_) => return (None, None, None),
+    };
+
+    let count = archive.len();
+    let mut total_uncompressed: u64 = 0;
+    let mut entries = Vec::new();
+
+    for i in 0..count {
+        if let Ok(entry) = archive.by_index(i) {
+            let uncompressed = entry.size();
+            let compressed = entry.compressed_size();
+            total_uncompressed += uncompressed;
+
+            if entries.len() < 35 {
+                entries.push(ArchiveEntryInfo {
+                    name: entry.name().to_string(),
+                    uncompressed_size: uncompressed,
+                    compressed_size: compressed,
+                    is_dir: entry.is_dir(),
+                });
+            }
+        }
+    }
+
+    (Some(count), Some(total_uncompressed), Some(entries))
+}
+
+pub fn inspect_epub(path: &Path) -> (Option<String>, Option<String>, Option<String>, Option<Vec<String>>) {
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    use std::io::Read;
+
+    let file = match std::fs::File::open(path) {
+        Ok(f) => f,
+        Err(_) => return (None, None, None, None),
+    };
+    let mut archive = match zip::ZipArchive::new(file) {
+        Ok(a) => a,
+        Err(_) => return (None, None, None, None),
+    };
+
+    // 1. Encontrar la ruta del OPF desde container.xml
+    let mut opf_path = String::from("OEBPS/content.opf");
+    if let Ok(mut container) = archive.by_name("META-INF/container.xml") {
+        let mut xml = String::new();
+        if container.read_to_string(&mut xml).is_ok() {
+            if let Some(pos) = xml.find("full-path=\"") {
+                let start = pos + 11;
+                if let Some(end) = xml[start..].find('"') {
+                    opf_path = xml[start..start + end].to_string();
+                }
+            }
+        }
+    }
+
+    let mut opf_content = String::new();
+    let mut opf_folder = String::new();
+    if let Some(idx) = opf_path.rfind('/') {
+        opf_folder = opf_path[..=idx].to_string();
+    }
+
+    if let Ok(mut opf_file) = archive.by_name(&opf_path) {
+        let _ = opf_file.read_to_string(&mut opf_content);
+    } else {
+        // Fallback: buscar cualquier archivo .opf en el zip
+        for i in 0..archive.len() {
+            if let Ok(name) = archive.by_index(i).map(|e| e.name().to_string()) {
+                if name.ends_with(".opf") {
+                    if let Ok(mut opf_file) = archive.by_name(&name) {
+                        let _ = opf_file.read_to_string(&mut opf_content);
+                        if let Some(idx) = name.rfind('/') {
+                            opf_folder = name[..=idx].to_string();
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    if opf_content.is_empty() {
+        return (None, None, None, None);
+    }
+
+    // 2. Extraer metadatos del OPF
+    let author = extract_xml_tag_content(&opf_content, "dc:creator");
+    let description = extract_xml_tag_content(&opf_content, "dc:description");
+
+    // 3. Extraer portada
+    let mut cover_data_url = None;
+    let mut cover_href = None;
+
+    // Buscar cover en <item ... properties="cover-image" ... href="..." /> o id="cover" o id="cover-image"
+    for line in opf_content.lines() {
+        if line.contains("<item ") && (line.contains("cover-image") || line.contains("id=\"cover\"") || line.contains("id=\"cover-image\"")) {
+            if let Some(pos) = line.find("href=\"") {
+                let start = pos + 6;
+                if let Some(end) = line[start..].find('"') {
+                    cover_href = Some(line[start..start + end].to_string());
+                    break;
+                }
+            }
+        }
+    }
+
+    // Fallback de portada si no se encontró en el manifest: buscar imágenes en el zip que contengan "cover"
+    let target_cover_entry = if let Some(href) = cover_href {
+        let full = if href.starts_with('/') {
+            href.trim_start_matches('/').to_string()
+        } else {
+            format!("{}{}", opf_folder, href)
+        };
+        Some(full)
+    } else {
+        let mut found = None;
+        for i in 0..archive.len() {
+            if let Ok(name) = archive.by_index(i).map(|e| e.name().to_string()) {
+                let lower = name.to_ascii_lowercase();
+                if (lower.ends_with(".jpg") || lower.ends_with(".jpeg") || lower.ends_with(".png") || lower.ends_with(".webp"))
+                    && (lower.contains("cover") || lower.contains("portada")) {
+                    found = Some(name);
+                    break;
+                }
+            }
+        }
+        found
+    };
+
+    if let Some(cover_name) = target_cover_entry {
+        if let Ok(mut entry) = archive.by_name(&cover_name) {
+            let mut buf = Vec::new();
+            if entry.read_to_end(&mut buf).is_ok() && !buf.is_empty() {
+                let mime = if cover_name.ends_with(".png") {
+                    "image/png"
+                } else if cover_name.ends_with(".webp") {
+                    "image/webp"
+                } else {
+                    "image/jpeg"
+                };
+                cover_data_url = Some(format!("data:{mime};base64,{}", STANDARD.encode(&buf)));
+            }
+        }
+    }
+
+    // 4. Extraer capítulos del toc.ncx / nav.xhtml o manifest
+    let mut chapters = Vec::new();
+    let ncx_path = format!("{}toc.ncx", opf_folder);
+    if let Ok(mut ncx_file) = archive.by_name(&ncx_path) {
+        let mut ncx_content = String::new();
+        if ncx_file.read_to_string(&mut ncx_content).is_ok() {
+            for part in ncx_content.split("<text>") {
+                if let Some(end) = part.find("</text>") {
+                    let title = part[..end].trim().to_string();
+                    if !title.is_empty() && !chapters.contains(&title) {
+                        chapters.push(title);
+                        if chapters.len() >= 20 {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let chapters_opt = if chapters.is_empty() { None } else { Some(chapters) };
+
+    (author, description, cover_data_url, chapters_opt)
+}
+
+fn extract_xml_tag_content(xml: &str, tag: &str) -> Option<String> {
+    let open_tag = format!("<{tag}");
+    let close_tag = format!("</{tag}>");
+    if let Some(start_idx) = xml.find(&open_tag) {
+        let rest = &xml[start_idx..];
+        if let Some(tag_end) = rest.find('>') {
+            let content_start = tag_end + 1;
+            if let Some(content_end) = rest.find(&close_tag) {
+                if content_end > content_start {
+                    let raw = rest[content_start..content_end].trim();
+                    let clean = if raw.starts_with("<![CDATA[") && raw.ends_with("]]>") {
+                        &raw[9..raw.len() - 3]
+                    } else {
+                        raw
+                    };
+                    return Some(clean.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
 #[cfg(not(target_os = "windows"))]
 pub fn get_video_dimensions(_path: &Path) -> Option<(u32, u32)> {
     None
@@ -362,6 +664,10 @@ mod tests {
         assert_eq!(QuickLookMediaType::from_extension("jpg"), QuickLookMediaType::Image);
         assert_eq!(QuickLookMediaType::from_extension("PNG"), QuickLookMediaType::Image);
         assert_eq!(QuickLookMediaType::from_extension("pdf"), QuickLookMediaType::Pdf);
+        assert_eq!(QuickLookMediaType::from_extension("epub"), QuickLookMediaType::Epub);
+        assert_eq!(QuickLookMediaType::from_extension("zip"), QuickLookMediaType::Archive);
+        assert_eq!(QuickLookMediaType::from_extension("7z"), QuickLookMediaType::Archive);
+        assert_eq!(QuickLookMediaType::from_extension("rar"), QuickLookMediaType::Archive);
         assert_eq!(QuickLookMediaType::from_extension("docx"), QuickLookMediaType::Generic);
         assert_eq!(QuickLookMediaType::from_extension("exe"), QuickLookMediaType::Generic);
     }

@@ -18,6 +18,8 @@ import { QuickLookProject } from "./QuickLookProject";
 import { QuickLookPlaylist } from "./QuickLookPlaylist";
 import { QuickLookLyrics } from "./QuickLookLyrics";
 import { QuickLookHtml } from "./QuickLookHtml";
+import { QuickLookArchive } from "./QuickLookArchive";
+import { QuickLookEpub } from "./QuickLookEpub";
 import { QuickLookFallback } from "./QuickLookFallback";
 import { ImageComparisonModal } from "../../visual_library/ui/comparison/ImageComparisonModal";
 import "./quick-look.css";
@@ -136,6 +138,19 @@ export function QuickLookWindow() {
       ) {
         e.preventDefault();
         setIsComparing(true);
+      } else if (
+        [
+          "ArrowUp",
+          "ArrowDown",
+          "ArrowLeft",
+          "ArrowRight",
+          "PageUp",
+          "PageDown",
+          "Home",
+          "End",
+        ].includes(e.key)
+      ) {
+        e.preventDefault();
       }
     };
 
@@ -232,6 +247,7 @@ export function QuickLookWindow() {
               onCompare={() => setIsComparing(true)}
               onOpenDetached={handleOpenDetached}
               onOpenInMain={handleOpenInMain}
+              onStepSelection={(forward) => void quickLookClient.stepSelection(forward)}
               onToggleMaximize={handleToggleMaximize}
               payload={payload}
             />
@@ -278,6 +294,10 @@ export function QuickLookWindow() {
                 />
               ) : payload.mediaType === "pdf" ? (
                 <QuickLookPdf key={payload.path} payload={payload} />
+              ) : payload.mediaType === "archive" ? (
+                <QuickLookArchive key={payload.path} payload={payload} />
+              ) : payload.mediaType === "epub" ? (
+                <QuickLookEpub key={payload.path} payload={payload} />
               ) : payload.mediaType === "html" ? (
                 <QuickLookHtml key={payload.path} payload={payload} />
               ) : payload.mediaType === "lyrics" ? (

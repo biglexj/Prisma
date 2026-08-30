@@ -29,69 +29,127 @@ pub mod windows_impl {
         }};
     }
 
+    use std::sync::atomic::{AtomicIsize, Ordering};
+
     const SID_STOPLEVELLBROWSER: GUID =
         GUID::from_u128(0x4C96BE40_915C_11CF_99D3_00AA004AE837);
     const SID_SSHELL_BROWSER: GUID =
         GUID::from_u128(0x000214E2_0000_0000_C000_000000000046);
 
-    pub fn get_active_selection() -> Option<PathBuf> {
+    static LAST_EXPLORER_HWND: AtomicIsize = AtomicIsize::new(0);
+
+    pub fn update_last_explorer_hwnd(hwnd: HWND) {
+        if !hwnd.0.is_null() {
+            LAST_EXPLORER_HWND.store(hwnd.0 as isize, Ordering::SeqCst);
+        }
+    }
+
+    pub fn forward_key_to_last_explorer(vk_code: u16) {
+        unsafe {
+            let val = LAST_EXPLORER_HWND.load(Ordering::SeqCst);
+            if val != 0 {
+                let hwnd = HWND(val as *mut core::ffi::c_void);
+                use windows::Win32::Foundation::{LPARAM, WPARAM};
+                use windows::Win32::UI::WindowsAndMessaging::{PostMessageW, WM_KEYDOWN, WM_KEYUP};
+                let _ = PostMessageW(hwnd, WM_KEYDOWN, WPARAM(vk_code as usize), LPARAM(0));
+                let _ = PostMessageW(hwnd, WM_KEYUP, WPARAM(vk_code as usize), LPARAM(0xC0000001));
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct SelectionInfo {
+        pub primary_path: PathBuf,
+        pub index: usize,
+        pub total: usize,
+        pub all_paths: Vec<PathBuf>,
+    }
+
+    pub fn get_active_selection_info() -> Option<SelectionInfo> {
         unsafe {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
             let result = get_selected_file_internal();
-            ql_log!("get_active_selection resultado: {:?}", result);
+            ql_log!("get_active_selection_info resultado: {:?}", result);
             CoUninitialize();
             result
         }
     }
 
-    unsafe fn get_selected_file_internal() -> Option<PathBuf> {
+    #[allow(dead_code)]
+    pub fn get_active_selection() -> Option<PathBuf> {
+        get_active_selection_info().map(|s| s.primary_path)
+    }
+
+    unsafe fn get_selected_file_internal() -> Option<SelectionInfo> {
         let fg = unsafe { GetForegroundWindow() };
-        if fg.0.is_null() {
-            ql_log!("get_selected_file_internal: GetForegroundWindow es NULL");
-            return None;
-        }
+        if !fg.0.is_null() {
+            let mut class_name = [0u16; 256];
+            let len = unsafe { GetClassNameW(fg, &mut class_name) };
+            let class_str = if len > 0 {
+                String::from_utf16_lossy(&class_name[..len as usize])
+            } else {
+                String::new()
+            };
 
-        let mut class_name = [0u16; 256];
-        let len = unsafe { GetClassNameW(fg, &mut class_name) };
-        let class_str = if len > 0 {
-            String::from_utf16_lossy(&class_name[..len as usize])
-        } else {
-            String::new()
-        };
+            ql_log!("Foreground HWND: {:?}, Class: '{}'", fg, class_str);
 
-        ql_log!("Foreground HWND: {:?}, Class: '{}'", fg, class_str);
-
-        if class_str == "CabinetWClass" || class_str == "ExploreWClass" {
-            if let Some(p) = unsafe { get_selection_from_explorer(fg) } {
-                return Some(p);
+            if class_str == "CabinetWClass" || class_str == "ExploreWClass" {
+                update_last_explorer_hwnd(fg);
+                if let Some(info) = unsafe { get_selection_from_explorer(fg) } {
+                    return Some(info);
+                }
+            } else if class_str == "Progman" || class_str == "WorkerW" {
+                update_last_explorer_hwnd(fg);
+                if let Some(info) = unsafe { get_selection_from_desktop() } {
+                    return Some(info);
+                }
             }
-        } else if class_str == "Progman" || class_str == "WorkerW" {
-            if let Some(p) = unsafe { get_selection_from_desktop() } {
-                return Some(p);
-            }
-        }
 
-        // Si la ventana en foco es un subcontrol de Explorer o Desktop, verificar la raíz
-        let root = unsafe { GetAncestor(fg, GA_ROOT) };
-        if !root.0.is_null() && root != fg {
-            let mut root_class = [0u16; 256];
-            let rlen = unsafe { GetClassNameW(root, &mut root_class) };
-            if rlen > 0 {
-                let rclass_str = String::from_utf16_lossy(&root_class[..rlen as usize]);
-                ql_log!("Root HWND: {:?}, Class: '{}'", root, rclass_str);
-                if rclass_str == "CabinetWClass" || rclass_str == "ExploreWClass" {
-                    if let Some(p) = unsafe { get_selection_from_explorer(fg) } {
-                        return Some(p);
-                    }
-                } else if rclass_str == "Progman" || rclass_str == "WorkerW" {
-                    if let Some(p) = unsafe { get_selection_from_desktop() } {
-                        return Some(p);
+            // Si la ventana en foco es un subcontrol de Explorer o Desktop, verificar la raíz
+            let root = unsafe { GetAncestor(fg, GA_ROOT) };
+            if !root.0.is_null() && root != fg {
+                let mut root_class = [0u16; 256];
+                let rlen = unsafe { GetClassNameW(root, &mut root_class) };
+                if rlen > 0 {
+                    let rclass_str = String::from_utf16_lossy(&root_class[..rlen as usize]);
+                    ql_log!("Root HWND: {:?}, Class: '{}'", root, rclass_str);
+                    if rclass_str == "CabinetWClass" || rclass_str == "ExploreWClass" {
+                        update_last_explorer_hwnd(root);
+                        if let Some(info) = unsafe { get_selection_from_explorer(root) } {
+                            return Some(info);
+                        }
+                    } else if rclass_str == "Progman" || rclass_str == "WorkerW" {
+                        update_last_explorer_hwnd(root);
+                        if let Some(info) = unsafe { get_selection_from_desktop() } {
+                            return Some(info);
+                        }
                     }
                 }
             }
         }
 
-        ql_log!("No se encontró selección activa en ventana en primer plano");
+        // Si la ventana activa no es Explorer (ej. QuickLook o transición de foco), intentar con LAST_EXPLORER_HWND
+        let val = LAST_EXPLORER_HWND.load(Ordering::SeqCst);
+        if val != 0 {
+            let cached = HWND(val as *mut core::ffi::c_void);
+            ql_log!("Intentando selección con LAST_EXPLORER_HWND: {:?}", cached);
+            if let Some(info) = unsafe { get_selection_from_explorer(cached) } {
+                return Some(info);
+            }
+        }
+
+        // Como fallback final, consultar todas las ventanas de Explorer disponibles
+        if let Some(info) = unsafe { get_selection_from_explorer(HWND::default()) } {
+            return Some(info);
+        }
+
+        // Y luego desktop
+        if let Some(info) = unsafe { get_selection_from_desktop() } {
+            return Some(info);
+        }
+
+        ql_log!("No se encontró selección activa");
         None
     }
 
@@ -101,7 +159,7 @@ pub mod windows_impl {
         browser: IShellBrowser,
     }
 
-    unsafe fn get_selection_from_explorer(target_hwnd: HWND) -> Option<PathBuf> {
+    unsafe fn get_selection_from_explorer(target_hwnd: HWND) -> Option<SelectionInfo> {
         let shell_windows: IShellWindows =
             match unsafe { CoCreateInstance(&ShellWindows, None, CLSCTX_LOCAL_SERVER) } {
                 Ok(sw) => sw,
@@ -245,14 +303,14 @@ pub mod windows_impl {
         for candidate in candidates {
             if let Ok(shell_view) = unsafe { candidate.browser.QueryActiveShellView() } {
                 if let Ok(folder_view) = shell_view.cast::<IFolderView>() {
-                    if let Some(path) = unsafe { get_selection_from_folder_view(&folder_view) } {
+                    if let Some(info) = unsafe { get_selection_from_folder_view(&folder_view) } {
                         ql_log!(
                             "Archivo resuelto con éxito desde candidato (hwnd={:?}, score={}): {:?}",
                             candidate.window_hwnd,
                             candidate.score,
-                            path
+                            info.primary_path
                         );
-                        return Some(path);
+                        return Some(info);
                     }
                 }
             }
@@ -261,7 +319,7 @@ pub mod windows_impl {
         None
     }
 
-    unsafe fn get_selection_from_desktop() -> Option<PathBuf> {
+    unsafe fn get_selection_from_desktop() -> Option<SelectionInfo> {
         let progman = unsafe { FindWindowW(w!("Progman"), None).unwrap_or_default() };
         let mut def_view =
             unsafe { FindWindowExW(progman, None, w!("SHELLDLL_DefView"), None).unwrap_or_default() };
@@ -317,8 +375,8 @@ pub mod windows_impl {
 
             if let Ok(shell_view) = unsafe { browser.QueryActiveShellView() } {
                 if let Ok(folder_view) = shell_view.cast::<IFolderView>() {
-                    if let Some(path) = unsafe { get_selection_from_folder_view(&folder_view) } {
-                        return Some(path);
+                    if let Some(info) = unsafe { get_selection_from_folder_view(&folder_view) } {
+                        return Some(info);
                     }
                 }
             }
@@ -327,15 +385,28 @@ pub mod windows_impl {
         None
     }
 
-    unsafe fn get_selection_from_folder_view(folder_view: &IFolderView) -> Option<PathBuf> {
+    unsafe fn get_selection_from_folder_view(folder_view: &IFolderView) -> Option<SelectionInfo> {
         // 1. Intentar obtener el elemento seleccionado
         if let Ok(items) = unsafe { folder_view.Items::<IShellItemArray>(SVGIO_SELECTION) } {
             if let Ok(count) = unsafe { items.GetCount() } {
                 if count > 0 {
-                    if let Ok(item) = unsafe { items.GetItemAt(0) } {
-                        if let Some(path) = unsafe { shell_item_to_path(&item) } {
-                            return Some(path);
+                    let mut paths = Vec::new();
+                    for i in 0..count {
+                        if let Ok(item) = unsafe { items.GetItemAt(i) } {
+                            if let Some(path) = unsafe { shell_item_to_path(&item) } {
+                                paths.push(path);
+                            }
                         }
+                    }
+                    if !paths.is_empty() {
+                        let primary = paths[0].clone();
+                        let total = paths.len();
+                        return Some(SelectionInfo {
+                            primary_path: primary,
+                            index: 1,
+                            total,
+                            all_paths: paths,
+                        });
                     }
                 }
             }
@@ -346,10 +417,23 @@ pub mod windows_impl {
         if let Ok(items) = unsafe { folder_view.Items::<IShellItemArray>(SVGIO_CHECKED) } {
             if let Ok(count) = unsafe { items.GetCount() } {
                 if count > 0 {
-                    if let Ok(item) = unsafe { items.GetItemAt(0) } {
-                        if let Some(path) = unsafe { shell_item_to_path(&item) } {
-                            return Some(path);
+                    let mut paths = Vec::new();
+                    for i in 0..count {
+                        if let Ok(item) = unsafe { items.GetItemAt(i) } {
+                            if let Some(path) = unsafe { shell_item_to_path(&item) } {
+                                paths.push(path);
+                            }
                         }
+                    }
+                    if !paths.is_empty() {
+                        let primary = paths[0].clone();
+                        let total = paths.len();
+                        return Some(SelectionInfo {
+                            primary_path: primary,
+                            index: 1,
+                            total,
+                            all_paths: paths,
+                        });
                     }
                 }
             }
@@ -372,7 +456,7 @@ pub mod windows_impl {
 
         if let Some(p) = path_str {
             let path = PathBuf::from(p);
-            if path.is_file() {
+            if path.exists() {
                 return Some(path);
             }
         }
@@ -397,9 +481,25 @@ pub mod windows_impl {
 #[cfg(not(windows))]
 pub mod windows_impl {
     use std::path::PathBuf;
+
+    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct SelectionInfo {
+        pub primary_path: PathBuf,
+        pub index: usize,
+        pub total: usize,
+        pub all_paths: Vec<PathBuf>,
+    }
+
+    pub fn get_active_selection_info() -> Option<SelectionInfo> {
+        None
+    }
+
     pub fn get_active_selection() -> Option<PathBuf> {
         None
     }
+    pub fn forward_key_to_last_explorer(_vk_code: u16) {}
 }
 
-pub use windows_impl::get_active_selection;
+pub use windows_impl::*;
+

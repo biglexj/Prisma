@@ -40,7 +40,7 @@ use app::commands::quick_look::{
     quick_look_close_window, quick_look_get_current, quick_look_get_detached_payload,
     quick_look_get_shortcut, quick_look_hide, quick_look_is_maximized, quick_look_open_detached,
     quick_look_open_in_main, quick_look_set_shortcut, quick_look_set_size, quick_look_show_file,
-    quick_look_start_dragging, quick_look_toggle, quick_look_toggle_maximize, set_minimize_to_tray,
+    quick_look_start_dragging, quick_look_step_selection, quick_look_toggle, quick_look_toggle_maximize, set_minimize_to_tray,
 };
 use app::commands::synapse::{
     launch_gallery_dl, launch_luna_fetch, synapse_get_discovered_devices, synapse_get_downloads_dir,
@@ -394,6 +394,7 @@ pub fn run() {
             quick_look_toggle_maximize,
             quick_look_is_maximized,
             quick_look_start_dragging,
+            quick_look_step_selection,
             quick_look_set_size,
             autostart_get_status,
             autostart_set,

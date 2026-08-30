@@ -1,0 +1,161 @@
+/* ── QuickLook EXIF Popover & Multi-Selection Pager ── */
+
+/* Multi-Selection Pager */
+.quicklook-selection-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface-container-high, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  padding: 2px 4px;
+}
+
+.quicklook-pager-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: var(--on-surface-variant, #c4c7c5);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quicklook-pager-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--on-surface, #fff);
+}
+
+.quicklook-pager-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.quicklook-pager-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary, #a8c7fa);
+  padding: 0 6px;
+  user-select: none;
+}
+
+/* EXIF Popover */
+.quicklook-exif-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.quicklook-exif-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: var(--surface-container-highest, rgba(30, 32, 34, 0.95));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.15));
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: quicklook-exif-appear 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes quicklook-exif-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.quicklook-exif-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary, #a8c7fa);
+  border-bottom: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.1));
+  padding-bottom: 6px;
+}
+
+.quicklook-exif-header svg {
+  width: 15px;
+  height: 15px;
+}
+
+.quicklook-exif-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.76rem;
+}
+
+.quicklook-exif-label {
+  color: var(--on-surface-variant, #8e918f);
+  flex-shrink: 0;
+}
+
+.quicklook-exif-val {
+  color: var(--on-surface, #fff);
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+}
+
+.quicklook-exif-chips {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.quicklook-exif-chip {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 8px;
+  background: var(--surface-container, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+}
+
+.quicklook-exif-chip .chip-key {
+  font-size: 0.65rem;
+  color: var(--on-surface-variant, #8e918f);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.quicklook-exif-chip .chip-val {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--on-surface, #fff);
+}
+
+.quicklook-exif-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--on-surface-variant, #8e918f);
+  border-top: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.08));
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.quicklook-exif-footer svg {
+  width: 12px;
+  height: 12px;
+}

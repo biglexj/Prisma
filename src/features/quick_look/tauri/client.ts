@@ -25,4 +25,8 @@ export const quickLookClient = {
   closeWindow(): Promise<void> {
     return invoke("quick_look_close_window");
   },
+
+  stepSelection(forward: boolean): Promise<boolean> {
+    return invoke("quick_look_step_selection", { forward });
+  },
 };

@@ -310,16 +310,29 @@ export function usePlaybackQueue(): PlaybackQueueState {
   );
 
   const switchQueue = useCallback(
-    (queueId: string, startIndex = 0): MusicQueueItem | null => {
+    (queueId: string, startIndex?: number): MusicQueueItem | null => {
       const targetQ = queues.find((q) => q.id === queueId);
-      if (!targetQ || targetQ.items.length === 0) return null;
-      const safeIndex = Math.max(0, Math.min(startIndex, targetQ.items.length - 1));
+      if (!targetQ) return null;
+
+      setActiveQueueId(queueId);
+
+      if (targetQ.items.length === 0) {
+        return null;
+      }
+
+      const safeIndex =
+        startIndex !== undefined
+          ? Math.max(0, Math.min(startIndex, targetQ.items.length - 1))
+          : Math.max(0, Math.min(targetQ.currentIndex ?? 0, targetQ.items.length - 1));
+
       const target = targetQ.items[safeIndex] ?? null;
 
-      setQueues((prev) =>
-        prev.map((q) => (q.id === queueId ? { ...q, currentIndex: safeIndex } : q)),
-      );
-      setActiveQueueId(queueId);
+      if (targetQ.currentIndex !== safeIndex) {
+        setQueues((prev) =>
+          prev.map((q) => (q.id === queueId ? { ...q, currentIndex: safeIndex } : q)),
+        );
+      }
+
       return target;
     },
     [queues],

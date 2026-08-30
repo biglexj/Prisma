@@ -4,6 +4,7 @@ pub mod windows_hook {
     use std::sync::{Arc, Mutex};
     use std::io::Write;
     use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+    use crate::features::quick_look::shell_selection;
 
     macro_rules! ql_log {
         ($($arg:tt)*) => {{
@@ -165,27 +166,30 @@ pub mod windows_hook {
             }
         }
 
-        // Si la previsualización está activa y se pulsa Espacio en Explorer (sin editar texto), cerrar
-        if preview_active && vk_code == VK_SPACE.0 {
-            if unsafe { is_explorer_or_desktop_focused() && !is_text_edit_focused() } {
-                if let Ok(guard) = GLOBAL_CALLBACK.lock() {
-                    if let Some(ref cb) = *guard {
-                        cb(TriggerEvent::Close);
-                        return LRESULT(1);
-                    }
-                }
-            }
-            return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
-        }
+        // Si la previsualización está activa y se pulsan teclas de navegación (flechas, inicio, fin, página), actualizar la vista previa
+        let is_nav_key = vk_code == VK_UP.0
+            || vk_code == VK_DOWN.0
+            || vk_code == VK_LEFT.0
+            || vk_code == VK_RIGHT.0
+            || vk_code == 0x24 // VK_HOME
+            || vk_code == 0x23 // VK_END
+            || vk_code == 0x21 // VK_PRIOR (PageUp)
+            || vk_code == 0x22; // VK_NEXT (PageDown)
 
-        // Si la previsualización está activa y se pulsan flechas de dirección, actualizar la vista previa
-        if preview_active
-            && (vk_code == VK_UP.0
-                || vk_code == VK_DOWN.0
-                || vk_code == VK_LEFT.0
-                || vk_code == VK_RIGHT.0)
-        {
+        if preview_active && is_nav_key {
             if !unsafe { is_text_edit_focused() } {
+                // Comprobar si la ventana en primer plano es QuickLook
+                let fg = unsafe { GetForegroundWindow() };
+                let mut pid = 0u32;
+                if !fg.0.is_null() {
+                    unsafe { GetWindowThreadProcessId(fg, Some(&mut pid)) };
+                }
+                let my_pid = unsafe { windows::Win32::System::Threading::GetCurrentProcessId() };
+                if pid != 0 && pid == my_pid {
+                    // QuickLook está enfocado: reenviar pulsación a la ventana de Explorer recordada
+                    shell_selection::forward_key_to_last_explorer(vk_code);
+                }
+
                 if let Ok(guard) = GLOBAL_CALLBACK.lock() {
                     if let Some(ref cb) = *guard {
                         cb(TriggerEvent::Navigation);
@@ -276,10 +280,14 @@ pub mod windows_hook {
         }
 
         // Es atajo válido: activar/cerrar Quick Look
-        ql_log!("Firing Toggle callback!");
+        ql_log!("Firing Space action: preview_active={}", preview_active);
         if let Ok(guard) = GLOBAL_CALLBACK.lock() {
             if let Some(ref cb) = *guard {
-                cb(TriggerEvent::Toggle);
+                if preview_active {
+                    cb(TriggerEvent::Close);
+                } else {
+                    cb(TriggerEvent::Toggle);
+                }
                 return LRESULT(1); // Suprimir la pulsación
             }
         }
@@ -294,16 +302,19 @@ pub mod windows_hook {
         }
 
         if unsafe { is_class_matching(fg) } {
+            shell_selection::update_last_explorer_hwnd(fg);
             return true;
         }
 
         let root = unsafe { GetAncestor(fg, GA_ROOT) };
         if !root.0.is_null() && root != fg && unsafe { is_class_matching(root) } {
+            shell_selection::update_last_explorer_hwnd(root);
             return true;
         }
 
         let root_owner = unsafe { GetAncestor(fg, GA_ROOTOWNER) };
         if !root_owner.0.is_null() && root_owner != fg && unsafe { is_class_matching(root_owner) } {
+            shell_selection::update_last_explorer_hwnd(root_owner);
             return true;
         }
 
@@ -333,6 +344,7 @@ pub mod windows_hook {
                     let _ = unsafe { windows::Win32::Foundation::CloseHandle(handle) };
                     if full_path.ends_with("explorer.exe") {
                         ql_log!("is_explorer_or_desktop_focused: ventana confirmada de explorer.exe (pid={})", pid);
+                        shell_selection::update_last_explorer_hwnd(fg);
                         return true;
                     }
                 } else {

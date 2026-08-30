@@ -6,6 +6,7 @@ export interface ViewerToolsMenuProps {
   onCompare: () => void;
   onConvert: () => void;
   onRename: () => void;
+  onShowInfo: () => void;
   onDetach: () => void;
   onShowInFolder: () => void;
   onSendToMobile: () => void;
@@ -19,6 +20,7 @@ export function ViewerToolsMenu({
   onCompare,
   onConvert,
   onRename,
+  onShowInfo,
   onDetach,
   onShowInFolder,
   onSendToMobile,
@@ -129,6 +131,19 @@ export function ViewerToolsMenu({
           {/* Sección de Gestión */}
           <div className="viewer-tools-section">
             <div className="viewer-tools-section-title">Gestión y Archivo</div>
+            <button
+              className="viewer-tools-item"
+              onClick={() => handleAction(onShowInfo)}
+              role="menuitem"
+            >
+              <Icon name="info" />
+              <div className="viewer-tools-item-content">
+                <span className="viewer-tools-item-title">Información y EXIF</span>
+                <span className="viewer-tools-item-desc">Detalles técnicos del archivo y cámara</span>
+              </div>
+              <kbd className="viewer-tools-shortcut">I</kbd>
+            </button>
+
             <button
               className="viewer-tools-item"
               onClick={() => handleAction(onRename)}
