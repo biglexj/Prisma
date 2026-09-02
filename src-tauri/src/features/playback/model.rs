@@ -1,6 +1,40 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::features::folder_session::FolderSessionSnapshot;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DspBandConfig {
+    pub freq: u32,
+    pub gain_db: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DspEffectsConfig {
+    pub clarity: f64,
+    pub ambience: f64,
+    pub surround: f64,
+    pub dynamic_boost: f64,
+    pub bass_boost: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DspConfig {
+    pub enabled: bool,
+    pub preamp_db: f64,
+    pub bands: Vec<DspBandConfig>,
+    pub effects: DspEffectsConfig,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioDeviceItem {
+    pub name: String,
+    pub description: String,
+    pub is_active: bool,
+}
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

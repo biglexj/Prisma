@@ -205,7 +205,13 @@ export function QuickLookWindow() {
 
   const handleOpenInMain = () => {
     if (!payload) return;
-    void quickLookClient.openInMain(payload.path, playbackTimeRef.current);
+    const targetPath = payload.path;
+    const targetTime = playbackTimeRef.current;
+    // Cortar inmediatamente la reproducción local en QuickLook antes de transferir a la ventana principal
+    setPayload(null);
+    setPaletteStyle(undefined);
+    setIsMaximized(false);
+    void quickLookClient.openInMain(targetPath, targetTime);
     if (isDetached) {
       handleClose();
     }

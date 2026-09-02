@@ -55,6 +55,7 @@ export type IconName =
   | "flip-h"
   | "flip-v"
   | "brush"
+  | "broom"
   | "sliders"
   | "undo"
   | "save"
@@ -90,9 +91,18 @@ export type IconName =
   | "user"
   | "list"
   | "globe"
-  | "map-pin";
+  | "wifi"
+  | "map-pin"
+  | "equalizer"
+  | "waveform"
+  | "pulse"
+  | "library"
+  | "chevronDown"
+  | "chevronUp"
+  | "convert";
 
 const paths: Record<IconName, ReactNode> = {
+  wifi: <><path d="M5 12.55a11 11 0 0 1 14.08 0" /><path d="M1.42 9a16 16 0 0 1 21.16 0" /><path d="M8.53 16.11a6 6 0 0 1 6.95 0" /><line x1="12" y1="20" x2="12.01" y2="20" /></>,
   "map-pin": <><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></>,
   camera: <><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></>,
   archive: <><polyline points="21 8 21 21 3 21 3 8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" /></>,
@@ -171,6 +181,7 @@ const paths: Record<IconName, ReactNode> = {
   "flip-h": <><path d="M12 2v20M4 18l5-6-5-6v12ZM20 18l-5-6 5-6v12Z" /></>,
   "flip-v": <><path d="M2 12h20M18 4l-6 5-6-5h12ZM18 20l-6-5-6 5h12Z" /></>,
   brush: <><path d="m14 4 6 6-10 10H4v-6L14 4z" /><path d="M18 10l-4-4" /></>,
+  broom: <><path d="m18 3 3 3-10.5 10.5a2.12 2.12 0 0 1-3 0L6 15a2.12 2.12 0 0 1 0-3L16.5 1.5" /><path d="m14 7 3 3" /><path d="M5 16l-2 5 5-2" /><path d="m10 14-4 4" /></>,
   sliders: <><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></>,
   undo: <><path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" /></>,
   save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></>,
@@ -183,6 +194,13 @@ const paths: Record<IconName, ReactNode> = {
   github: <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />,
   synapse: <><path d="M5 12.55a11 11 0 0 1 14.08 0" /><path d="M8.53 16.11a6 6 0 0 1 6.95 0" /><circle cx="12" cy="20" r="1.5" /><path d="M12 2v6" /></>,
   "external-link": <><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></>,
+  equalizer: <><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></>,
+  waveform: <><path d="M2 10v4" /><path d="M6 6v12" /><path d="M10 3v18" /><path d="M14 8v8" /><path d="M18 5v14" /><path d="M22 10v4" /></>,
+  pulse: <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />,
+  library: <><path d="m16 6 4 14" /><path d="M12 6v14" /><path d="M8 8v12" /><path d="M4 4v16" /></>,
+  chevronDown: <polyline points="6 9 12 15 18 9" />,
+  chevronUp: <polyline points="18 15 12 9 6 15" />,
+  convert: <><path d="M21 7v6h-6" /><path d="M3 17v-6h6" /><path d="M6 7.5a9 9 0 0 1 14.5-1.5L21 7" /><path d="M18 16.5a9 9 0 0 1-14.5 1.5L3 17" /></>,
 };
 
 export function Icon({ name, width = "1em", height = "1em", ...props }: SVGProps<SVGSVGElement> & { name: IconName }) {

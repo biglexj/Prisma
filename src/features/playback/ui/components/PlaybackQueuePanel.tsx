@@ -10,12 +10,14 @@ interface PlaybackQueuePanelProps {
   queueState: PlaybackQueueState;
   onSelectTrack: (index: number) => void;
   onSwitchQueue?: (queueId: string) => void;
+  onPlayQueue?: (queueId: string) => void;
 }
 
 export function PlaybackQueuePanel({
   queueState,
   onSelectTrack,
   onSwitchQueue,
+  onPlayQueue,
 }: PlaybackQueuePanelProps) {
   const {
     queues,
@@ -74,11 +76,17 @@ export function PlaybackQueuePanel({
     }
   }, [activeQueue.currentIndex, isManaging]);
 
-  const handleQueueChange = (qId: string) => {
-    if (onSwitchQueue) {
+  const handleSelectQueue = (qId: string) => {
+    switchQueue(qId, 0);
+  };
+
+  const handlePlayQueueExplicit = (qId: string) => {
+    if (onPlayQueue) {
+      onPlayQueue(qId);
+    } else if (onSwitchQueue) {
       onSwitchQueue(qId);
     } else {
-      switchQueue(qId);
+      switchQueue(qId, 0);
     }
   };
 
@@ -148,7 +156,7 @@ export function PlaybackQueuePanel({
     if (!trimmed) return;
     const newId = addQueue(trimmed);
     setNewQueueName("");
-    handleQueueChange(newId);
+    handleSelectQueue(newId);
     setIsManaging(false);
   };
 
@@ -159,7 +167,7 @@ export function PlaybackQueuePanel({
     const newId = saveActiveQueueAs(trimmed);
     setSaveAsName("");
     setIsSavingActive(false);
-    handleQueueChange(newId);
+    handleSelectQueue(newId);
   };
 
   const handleExportM3U = async () => {
@@ -218,9 +226,9 @@ export function PlaybackQueuePanel({
                     event.preventDefault();
                     return;
                   }
-                  handleQueueChange(q.id);
+                  handleSelectQueue(q.id);
                 }}
-                title={`Cambiar a ${q.name} (${q.items.length} canciones)`}
+                title={`Ver ${q.name} (${q.items.length} canciones)`}
               >
                 <span className="queue-tab-name">{q.name}</span>
                 <span className="queue-tab-badge">{q.items.length}</span>
@@ -269,10 +277,29 @@ export function PlaybackQueuePanel({
               const isEditing = editingQueueId === q.id;
 
               return (
-                <div key={q.id} className={`queue-manage-item ${isActive ? "is-active" : ""}`}>
+                <div
+                  key={q.id}
+                  className={`queue-manage-item ${isActive ? "is-active" : ""}`}
+                  onClick={() => {
+                    handleSelectQueue(q.id);
+                    setIsManaging(false);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      if (editingQueueId !== q.id) {
+                        e.preventDefault();
+                        handleSelectQueue(q.id);
+                        setIsManaging(false);
+                      }
+                    }
+                  }}
+                  title={`Abrir y ver ${q.name}`}
+                >
                   <div className="queue-manage-item-info">
                     {isEditing ? (
-                      <div className="queue-inline-edit">
+                      <div className="queue-inline-edit" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="text"
                           value={editingName}
@@ -292,7 +319,10 @@ export function PlaybackQueuePanel({
                         <strong className="queue-manage-title">{q.name}</strong>
                         <button
                           className="queue-edit-name-btn"
-                          onClick={() => startEditing(q.id, q.name)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEditing(q.id, q.name);
+                          }}
                           title="Renombrar cola"
                         >
                           ✎
@@ -305,7 +335,7 @@ export function PlaybackQueuePanel({
                     </span>
                   </div>
 
-                  <div className="queue-manage-item-actions">
+                  <div className="queue-manage-item-actions" onClick={(e) => e.stopPropagation()}>
                     {queues.length > 1 ? (
                       <div className="queue-reorder-controls">
                         <button
@@ -327,14 +357,14 @@ export function PlaybackQueuePanel({
                       </div>
                     ) : null}
 
-                    {!isActive ? (
+                    {!isActive && q.items.length > 0 ? (
                       <button
                         className="queue-manage-play-btn"
                         onClick={() => {
-                          handleQueueChange(q.id);
+                          handlePlayQueueExplicit(q.id);
                           setIsManaging(false);
                         }}
-                        title="Reproducir esta cola"
+                        title="Reproducir esta cola desde la canción 1"
                       >
                         <Icon name="play" /> Reproducir
                       </button>

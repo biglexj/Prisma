@@ -524,11 +524,29 @@
   border-radius: 12px;
   background: var(--surface-container-high);
   border: 1px solid var(--outline-variant);
+  cursor: pointer;
+  user-select: none;
+  transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 120ms ease;
+}
+
+.queue-manage-item:hover {
+  background: var(--surface-container-highest);
+  border-color: var(--outline);
+  transform: translateY(-1px);
+}
+
+.queue-manage-item:active {
+  transform: translateY(0);
 }
 
 .queue-manage-item.is-active {
   background: var(--primary-container);
   border-color: var(--primary);
+}
+
+.queue-manage-item.is-active:hover {
+  background: var(--primary-container);
+  filter: brightness(1.04);
 }
 
 .queue-manage-item-info {

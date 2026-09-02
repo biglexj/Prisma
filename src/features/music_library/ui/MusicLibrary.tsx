@@ -275,9 +275,17 @@ export function MusicLibrary({
   };
 
   const handlePlayItemInList = (list: MusicLibraryItem[], index: number, queueName?: string) => {
-    if (onPlayQueue) {
-      const queueItems = list.map(toQueueItem);
-      onPlayQueue(queueItems, index, queueName ?? "Árbol de Música");
+    const targetItem = list[index];
+    const defaultName = targetItem?.relativeFolder
+      ? targetItem.relativeFolder.replace(/^Álbum:\s*/i, "").split(/[/\\]/).filter(Boolean).pop() || targetItem.relativeFolder
+      : "Música";
+    const cleanName = (queueName ?? defaultName).replace(/^Álbum:\s*/i, "").replace(/^[⭐📂]\s*/, "");
+
+    const queueItems = list.map(toQueueItem);
+    if (onPlayFolder) {
+      onPlayFolder(cleanName, queueItems, index);
+    } else if (onPlayQueue) {
+      onPlayQueue(queueItems, index, cleanName);
     } else {
       onPlay(list[index].path);
     }
@@ -372,7 +380,36 @@ export function MusicLibrary({
       });
     }
 
-    // 2. Reproducir
+    // 2. Renombrar carpeta en Renombrador
+    if (itemsCount > 0 && !isVirtual && firstItem) {
+      const norm = firstItem.path.replace(/\\/g, "/");
+      const lastSlash = norm.lastIndexOf("/");
+      const folderDir =
+        lastSlash > 0
+          ? firstItem.path.includes("\\")
+            ? norm.slice(0, lastSlash).replace(/\//g, "\\")
+            : norm.slice(0, lastSlash)
+          : "";
+      if (folderDir) {
+        menuItems.push({
+          id: "rename-folder",
+          label: `Renombrar ${itemsCount} ${itemsCount === 1 ? "canción" : "canciones"} en Renombrador`,
+          icon: "edit" as const,
+          onSelect: () => {
+            window.dispatchEvent(
+              new CustomEvent("prisma-open-renamer", {
+                detail: {
+                  folderPath: folderDir,
+                  filterMode: "audio",
+                },
+              })
+            );
+          },
+        });
+      }
+    }
+
+    // 3. Reproducir
     if (itemsCount > 0) {
       menuItems.push({
         id: "play-folder",
@@ -382,7 +419,7 @@ export function MusicLibrary({
       });
     }
 
-    // 3. Añadir a la cola
+    // 4. Añadir a la cola
     if (onAddToQueue && itemsCount > 0) {
       menuItems.push({
         id: "queue-folder",
@@ -392,7 +429,7 @@ export function MusicLibrary({
       });
     }
 
-    // 4. Abrir carpeta
+    // 5. Abrir carpeta
     menuItems.push({
       id: "open-folder",
       label: "Abrir y explorar álbum",
@@ -400,7 +437,7 @@ export function MusicLibrary({
       onSelect: () => handleNavigateFolder(folder.id),
     });
 
-    // 5. Mostrar en explorador si no es virtual
+    // 6. Mostrar en explorador si no es virtual
     if (!isVirtual && firstItem) {
       menuItems.push({
         id: "show-in-explorer",
@@ -448,11 +485,48 @@ export function MusicLibrary({
         },
       },
       {
+        id: "open-in-renamer",
+        label: "Abrir carpeta en Renombrador",
+        icon: "edit" as const,
+        onSelect: () => {
+          const norm = target.item.path.replace(/\\/g, "/");
+          const lastSlash = norm.lastIndexOf("/");
+          const folderDir =
+            lastSlash > 0
+              ? target.item.path.includes("\\")
+                ? norm.slice(0, lastSlash).replace(/\//g, "\\")
+                : norm.slice(0, lastSlash)
+              : "";
+          if (folderDir) {
+            window.dispatchEvent(
+              new CustomEvent("prisma-open-renamer", {
+                detail: {
+                  folderPath: folderDir,
+                  filterMode: "audio",
+                },
+              })
+            );
+          }
+        },
+      },
+      {
         id: "show",
         label: "Mostrar en carpeta",
         icon: "folder-open" as const,
         onSelect: () => {
           void invoke("show_in_file_manager", { path: target.item.path }).catch(() => {});
+        },
+      },
+      {
+        id: "send-to-mobile",
+        label: "Enviar a Super Galería (Móvil)",
+        icon: "smartphone" as const,
+        onSelect: () => {
+          window.dispatchEvent(
+            new CustomEvent("prisma-send-to-supergallery", {
+              detail: { path: target.item.path, title: target.item.title },
+            })
+          );
         },
       },
       {
@@ -855,7 +929,10 @@ export function MusicLibrary({
           onPlayFolder={(folderItems, name) => handlePlayFolder(folderItems, name)}
           onPlayItem={(item, list) => {
             const idx = list.findIndex((it) => it.path === item.path);
-            handlePlayItemInList(list, idx >= 0 ? idx : 0, "Árbol de Música");
+            const folderName = item.relativeFolder
+              ? item.relativeFolder.replace(/^Álbum:\s*/i, "").split(/[/\\]/).filter(Boolean).pop() || item.relativeFolder
+              : "Música";
+            handlePlayItemInList(list, idx >= 0 ? idx : 0, folderName);
           }}
           onOpenItemMenu={(event, item) => handleCardContextMenu(event, item)}
           onOpenFolderMenu={(event, folder) => {

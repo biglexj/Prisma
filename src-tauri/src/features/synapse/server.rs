@@ -69,6 +69,7 @@ impl SynapseServer {
 }
 
 fn handle_client(stream: TcpStream, app: AppHandle) {
+    let _ = stream.set_nonblocking(false);
     let _ = stream.set_read_timeout(Some(Duration::from_secs(60)));
     let _ = stream.set_write_timeout(Some(Duration::from_secs(60)));
 
@@ -476,13 +477,7 @@ fn send_http_response(stream: &mut TcpStream, status_code: u16, content_type: &s
     };
 
     let response_headers = format!(
-        "HTTP/1.1 {status_code} {status_text}\r\n\
-        Content-Type: {content_type}; charset=utf-8\r\n\
-        Content-Length: {}\r\n\
-        Access-Control-Allow-Origin: *\r\n\
-        Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n\
-        Access-Control-Allow-Headers: Content-Type, X-File-Name, X-Media-Type\r\n\
-        Connection: close\r\n\r\n",
+        "HTTP/1.1 {status_code} {status_text}\r\nContent-Type: {content_type}; charset=utf-8\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type, X-File-Name, X-Media-Type\r\nConnection: close\r\n\r\n",
         body.len()
     );
 

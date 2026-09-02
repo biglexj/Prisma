@@ -151,13 +151,26 @@ export function SendToSuperGalleryModal({
         </header>
 
         <div className="send-modal-body">
-          <label className="send-modal-section-label">
-            Dispositivos móviles descubiertos en Wi-Fi:
-          </label>
+          <div className="send-modal-section-header">
+            <label className="send-modal-section-label">
+              Dispositivos móviles descubiertos en Wi-Fi:
+            </label>
+            <span className="send-modal-live-indicator">
+              <span className="send-modal-live-dot" />
+              <span>Escaneando</span>
+            </span>
+          </div>
 
           {devices.length === 0 ? (
             <div className="send-modal-empty">
-              <div className="send-modal-spinner" />
+              <div className="send-modal-radar-wrap">
+                <div className="send-modal-radar-ring" />
+                <div className="send-modal-radar-ring" />
+                <div className="send-modal-radar-ring" />
+                <div className="send-modal-radar-core">
+                  <Icon name="wifi" />
+                </div>
+              </div>
               <p>Buscando dispositivos móviles con Super Galería abierta en la red local…</p>
               <span className="send-modal-hint">
                 Asegúrate de que tu teléfono esté conectado a la misma red Wi-Fi y con Super Galería abierta.

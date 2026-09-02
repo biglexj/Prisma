@@ -1,18 +1,16 @@
-# 🚀 Prisma v1.0.6 — Quick Look Avanzado, Inspector EXIF y Visor Enriquecido
+# 🚀 Prisma v1.0.7 — Renombrador Masivo Inteligente, Aurora Synapse y Motor Nativo de Imagen
 
-Llega **Prisma v1.0.6**, una gran actualización centrada en transformar **Prisma Quick Look** en una suite de previsualización ultrarrápida para Windows, junto con un nuevo Inspector EXIF nativo, soporte para libros EPUB y archivos ZIP, panel de información técnica en el visor de fotos y optimización en las colas de reproducción musical.
+Llega **Prisma v1.0.7**, una importante actualización centrada en la evolución completa del **Renombrador Masivo Multimedia**, la integración profunda y continua con el protocolo de sincronización **Aurora Synapse** (handoff, control remoto y enrutamiento inteligente), un nuevo motor nativo de conversión de imágenes ultrarrápido en Rust, la renovación de la iconografía oficial del ecosistema y la estandarización de scripts y alias de compilación.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- ⚡ **Navegación continua en Windows**: Al pulsar `Espacio` en el Explorador o en el Escritorio, la vista previa se despliega de forma instantánea sin robar el foco de teclado. Puedes usar las flechas (`←`, `→`, `↑`, `↓`), `Inicio`, `Fin` y `RePág`/`AvPág` para desplazarte libremente entre archivos de cualquier tipo con ajuste dimensional automático.
-- 📦 **Archivos Comprimidos (.zip, .7z, .rar)**: Vista previa con conteo de elementos, árbol interno interactivo, buscador en tiempo real y cálculo de peso comprimido vs descomprimido.
-- 📚 **Libros Electrónicos (.epub)**: Portada 3D de alta resolución, ficha de autor, sinopsis y visor de índice de capítulos.
-- 📷 **Inspector EXIF Nativo (Quick Look y Visor Principal)**: Extracción pura y ultrarrápida de datos de captura fotográfica (cámara, objetivo, apertura, obturación, ISO, distancia focal, fecha, balance de blancos, medición y coordenadas GPS con enlace directo a Google Maps).
-- 🖼️ **Panel Lateral de Información en Fotos (`I`)**: Ficha técnica completa de resolución, megapíxeles, relación de aspecto, equipo fotográfico, ajustes de exposición y botones para copiar ruta o abrir en el Explorador de Windows.
-- 🎵 **Colas de Reproducción sin Cortes ("Escuchar")**: Interacción inmediata entre pestañas de colas simultáneas y renderizado completo y fluido de listas extensas de más de 200 canciones.
-- 🪟 **Cabecera Minimalista y Maximización Fluida**: Botonera compacta de sólo iconos que da respiro total al título del archivo, maximización fluida respetando el monitor activo y normalización integral de rutas de Windows.
+- 🏷️ **Renombrador Masivo con Reglas Apiladas**: Nueva interfaz con distribución de "un elemento por línea", proporcionando respiro visual total a selectores, patrones y contadores de caracteres. Se incluyen menús desplegables de ancho completo y plantillas rápidas combinadas con insignias de conteo de pasos.
+- ⚡ **Sincronización Aurora Synapse LAN & P2P**: Soporte completo para deep links y URIs canónicas en Windows, recepción fluida de reproducción continua (Handoff) desde dispositivos móviles, servidor HTTP de alta velocidad para carátulas y letras sincronizadas, y balizas UDP automáticas.
+- 🖼️ **Motor de Conversión Nativo en Rust**: Conversión y redimensionado de imágenes de alto rendimiento en memoria (`Lanczos3`) para WebP, PNG y JPG, eliminando dependencias de códecs externos y acelerando la exportación.
+- 🎨 **Iconografía Oficial Sincronizada**: Nuevos gráficos oficiales en formato web optimizado para todas las aplicaciones integradas del ecosistema.
+- 🛠️ **Estandarización de Scripts y Alias de Compilación**: Incorporación de comandos canónicos normalizados (`build:web`, `build:desktop`, `compile`, `release:local`, `release:publish`) alineados con la Documentación Core para una experiencia de desarrollo homogénea.
 
 ---
 
@@ -22,3 +20,4 @@ Si disfrutas usando **Prisma**, considera apoyar el desarrollo continuo:
 - ☕ **Buy Me a Coffee**: https://buymeacoffee.com/biglexj
 - 💳 **Donaciones directas**: https://www.biglexj.com/donaciones
 - 🐙 **GitHub**: https://github.com/biglexj
+

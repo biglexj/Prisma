@@ -14,6 +14,7 @@ import { VisualLibrary } from "../features/visual_library/ui/VisualLibrary";
 import { VideoPlayer } from "../features/visual_library/ui/VideoPlayer";
 import { useVisualLibrary } from "../features/visual_library/useVisualLibrary";
 import type { VisualLibraryItem } from "../features/visual_library/model/types";
+import type { QuickLookPayload } from "../features/quick_look/model/types";
 import { AppSettings } from "./ui/AppSettings";
 import { AppSidebar, type AppView } from "./ui/AppSidebar";
 import { LibrarySources } from "./ui/LibrarySources";
@@ -32,6 +33,9 @@ import { PrismaConvertView } from "../features/converter/ui/PrismaConvertView";
 import { LunaFetchView } from "../features/luna_fetch/ui/LunaFetchView";
 import { GalleryDlView } from "../features/gallery_dl/ui/GalleryDlView";
 import { WallpapersView } from "../features/wallpapers/ui/WallpapersView";
+import { BatchRenamerView } from "../features/renamer/ui/BatchRenamerView";
+import { DspEqualizerView } from "../features/dsp/ui/DspEqualizerView";
+import { DspEqualizerModal } from "../features/dsp/ui/DspEqualizerModal";
 import { Icon, type IconName } from "../shared/ui/Icon";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
@@ -50,6 +54,8 @@ const VIEW_TITLES: Record<AppView, string> = {
   favorites: "Favoritos",
   history: "Historial",
   playlists: "Listas de reproducción",
+  renamer: "Renombrador por Lotes",
+  equalizer: "Ecualizador & DSP",
   converter: "Convertidor Prisma",
   luna_fetch: "Luna Fetch",
   gallery_dl: "Gallery-DL",
@@ -58,12 +64,14 @@ const VIEW_TITLES: Record<AppView, string> = {
 
 export function App() {
   const [activeView, setActiveView] = useState<AppView>("home");
+  const [isEqualizerModalOpen, setIsEqualizerModalOpen] = useState(false);
   const [activeVideoPath, setActiveVideoPath] = useState<string | null>(null);
   const [activeVideoInitialTime, setActiveVideoInitialTime] = useState<number | undefined>(undefined);
   const [activeVideoSessionItems, setActiveVideoSessionItems] = useState<VisualLibraryItem[]>([]);
   const [videoReturnView, setVideoReturnView] = useState<AppView>("videos");
   const [activeInitialImagePath, setActiveInitialImagePath] = useState<string | null>(null);
   const [isPip, setIsPip] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [synapseToastFile, setSynapseToastFile] = useState<SynapseReceivedFile | null>(null);
   const [sendModalFile, setSendModalFile] = useState<{ path: string; title?: string } | null>(null);
@@ -74,6 +82,11 @@ export function App() {
   const imageLibrary = useVisualLibrary("image");
   const videoLibrary = useVisualLibrary("video");
   const { libraries: customLibrariesList } = useCustomLibraries();
+
+  // Coordinación de reproducción entre QuickLook y la aplicación principal
+  const wasPlayingBeforeQuickLookRef = useRef<boolean>(false);
+  const wasVideoPlayingBeforeQuickLookRef = useRef<boolean>(false);
+  const resumeTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (activeView === "wallpapers" && !auroraOnlineServicesEnabled) {
@@ -96,7 +109,7 @@ export function App() {
     );
   }, [library.items, playback.queue.syncItemMetadata]);
 
-  const playMusicItem = useCallback((path: string, navigate = true, initialTime?: number) => {
+  const playMusicItem = useCallback((path: string, navigate = false, initialTime?: number) => {
     addToHistory(path, "music");
 
     // Detener y limpiar cualquier vídeo previo activo para evitar audio simultáneo
@@ -110,9 +123,32 @@ export function App() {
     if (navigate) {
       setActiveView("player");
     }
-    const foundIdx = library.items.findIndex((it) => it.path === path);
-    if (foundIdx >= 0) {
-      const queueItems = library.items.map((it) => {
+
+    const foundItem = library.items.find((it) => it.path === path);
+    if (foundItem) {
+      // Filtrar únicamente las canciones que pertenecen a la misma carpeta
+      const siblingItems = library.items.filter((it) => {
+        if (foundItem.sourcePath && it.sourcePath) {
+          return it.sourcePath === foundItem.sourcePath && it.relativeFolder === foundItem.relativeFolder;
+        }
+        return it.relativeFolder === foundItem.relativeFolder;
+      });
+
+      const itemsToQueue = siblingItems.length > 0 ? siblingItems : [foundItem];
+      const folderStartIndex = itemsToQueue.findIndex((it) => it.path === path);
+      const safeIndex = folderStartIndex >= 0 ? folderStartIndex : 0;
+
+      // Obtener el nombre limpio de la carpeta
+      const cleanFolderName =
+        foundItem.relativeFolder
+          ?.replace(/^Álbum:\s*/i, "")
+          .split(/[/\\]/)
+          .filter(Boolean)
+          .pop() ||
+        path.replace(/\\/g, "/").split("/").slice(-2, -1)[0] ||
+        "Música";
+
+      const queueItems = itemsToQueue.map((it) => {
         const { title, artist } = resolveLibraryTrackInfo(it);
         return {
           id: it.path,
@@ -123,8 +159,25 @@ export function App() {
           sizeBytes: it.sizeBytes,
         };
       });
-      playback.playQueue(queueItems, foundIdx, "Árbol de Música");
+
+      playback.playFolder(cleanFolderName, queueItems, safeIndex);
     } else {
+      // Archivo externo (ej. abierto desde Quick Look en una carpeta no indexada)
+      const normalizedPath = path.replace(/\\/g, "/");
+      const parts = normalizedPath.split("/").filter(Boolean);
+      const fileName = parts.pop() || "Audio";
+      const folderName = parts.pop() || "Música";
+      const parsed = parseTrackInfo(fileName);
+
+      const singleQueueItem = {
+        id: path,
+        path,
+        title: parsed.title || fileName,
+        artist: parsed.artist || null,
+        folder: folderName,
+      };
+
+      playback.playFolder(folderName, [singleQueueItem], 0);
       void playback.loadPath(path);
     }
 
@@ -291,6 +344,13 @@ export function App() {
       .catch(() => {});
 
     const unlistenPromise = listen<string | { path: string; currentTime?: number; title?: string; artist?: string }>("prisma://open-media", (event) => {
+      if (resumeTimeoutRef.current) {
+        window.clearTimeout(resumeTimeoutRef.current);
+        resumeTimeoutRef.current = null;
+      }
+      wasPlayingBeforeQuickLookRef.current = false;
+      wasVideoPlayingBeforeQuickLookRef.current = false;
+
       if (event.payload) {
         let filePath = typeof event.payload === "string" ? event.payload : event.payload.path;
         const currentTime = typeof event.payload === "object" ? event.payload.currentTime : undefined;
@@ -518,6 +578,19 @@ export function App() {
     };
     window.addEventListener("prisma-open-converter", handleOpenConverter);
 
+    const handleOpenRenamer = (e: Event) => {
+      const customEvent = e as CustomEvent<{ folderPath?: string; filterMode?: string }>;
+      setActiveView("renamer");
+      if (customEvent.detail?.folderPath) {
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent("prisma-renamer-load-folder", { detail: customEvent.detail })
+          );
+        }, 120);
+      }
+    };
+    window.addEventListener("prisma-open-renamer", handleOpenRenamer);
+
     const handleGlobalContextMenu = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       const isEditable =
@@ -544,6 +617,7 @@ export function App() {
 
     return () => {
       window.removeEventListener("prisma-open-converter", handleOpenConverter);
+      window.removeEventListener("prisma-open-renamer", handleOpenRenamer);
       window.removeEventListener("prisma-send-to-supergallery", handleSendToSuperGallery);
       window.removeEventListener("contextmenu", handleGlobalContextMenu);
       unlistenPromise.then((unlisten) => unlisten());
@@ -593,50 +667,76 @@ export function App() {
     activeVideoPath,
   ]);
 
-  // Coordinación de reproducción entre QuickLook y la aplicación principal
-  const wasPlayingBeforeQuickLookRef = useRef<boolean>(false);
-  const wasVideoPlayingBeforeQuickLookRef = useRef<boolean>(false);
+  const playbackRef = useRef(playback);
+  useEffect(() => {
+    playbackRef.current = playback;
+  }, [playback]);
 
   useEffect(() => {
-    const unlistenPreviewPromise = listen("quicklook://preview", () => {
-      // Si la música de Prisma estaba reproduciéndose, pausarla y recordar estado
-      if (!playback.snapshot.paused && playback.snapshot.path) {
-        wasPlayingBeforeQuickLookRef.current = true;
-        void playback.toggle();
+    const unlistenPreviewPromise = listen<QuickLookPayload>("quicklook://preview", (event) => {
+      if (resumeTimeoutRef.current) {
+        window.clearTimeout(resumeTimeoutRef.current);
+        resumeTimeoutRef.current = null;
       }
 
-      // Si el reproductor de vídeo de Prisma está activo y reproduciéndose, pausarlo
-      const videoEl = document.querySelector<HTMLVideoElement>("video.video-player-media, video");
-      if (videoEl && !videoEl.paused) {
-        wasVideoPlayingBeforeQuickLookRef.current = true;
-        videoEl.pause();
+      const mediaType = event.payload?.mediaType;
+      const isAudibleMedia = mediaType === "audio" || mediaType === "video";
+
+      if (isAudibleMedia) {
+        const currentSnap = playbackRef.current.snapshot;
+        // Si la música de Prisma estaba reproduciéndose, pausarla y recordar estado
+        if (!currentSnap.paused && currentSnap.path) {
+          wasPlayingBeforeQuickLookRef.current = true;
+          void playbackRef.current.pause();
+        }
+
+        // Si el reproductor de vídeo de Prisma está activo y reproduciéndose, pausarlo
+        const videoEl = document.querySelector<HTMLVideoElement>("video.video-player-media, video");
+        if (videoEl && !videoEl.paused) {
+          wasVideoPlayingBeforeQuickLookRef.current = true;
+          videoEl.pause();
+        }
       }
     });
 
     const unlistenHidePromise = listen("quicklook://hide", () => {
-      // Al cerrar QuickLook, si la música de Prisma estaba sonando antes, reanudarla
-      if (wasPlayingBeforeQuickLookRef.current) {
-        wasPlayingBeforeQuickLookRef.current = false;
-        if (playback.snapshot.paused && playback.snapshot.path) {
-          void playback.toggle();
-        }
+      if (resumeTimeoutRef.current) {
+        window.clearTimeout(resumeTimeoutRef.current);
       }
+      // Se añade un pequeño retardo para permitir que si se presionó "Abrir en Prisma",
+      // el evento prisma://open-media cancele la reanudación de la pista previa.
+      resumeTimeoutRef.current = window.setTimeout(() => {
+        resumeTimeoutRef.current = null;
 
-      // Al cerrar QuickLook, si el vídeo de Prisma estaba sonando antes, reanudarlo
-      if (wasVideoPlayingBeforeQuickLookRef.current) {
-        wasVideoPlayingBeforeQuickLookRef.current = false;
-        const videoEl = document.querySelector<HTMLVideoElement>("video.video-player-media, video");
-        if (videoEl && videoEl.paused) {
-          void videoEl.play().catch(() => {});
+        // Al cerrar QuickLook (descartar), si la música de Prisma estaba sonando antes, reanudarla
+        if (wasPlayingBeforeQuickLookRef.current) {
+          wasPlayingBeforeQuickLookRef.current = false;
+          const currentSnap = playbackRef.current.snapshot;
+          if (currentSnap.paused && currentSnap.path) {
+            void playbackRef.current.resume();
+          }
         }
-      }
+
+        // Al cerrar QuickLook, si el vídeo de Prisma estaba sonando antes, reanudarlo
+        if (wasVideoPlayingBeforeQuickLookRef.current) {
+          wasVideoPlayingBeforeQuickLookRef.current = false;
+          const videoEl = document.querySelector<HTMLVideoElement>("video.video-player-media, video");
+          if (videoEl && videoEl.paused) {
+            void videoEl.play().catch(() => {});
+          }
+        }
+      }, 100);
     });
 
     return () => {
+      if (resumeTimeoutRef.current) {
+        window.clearTimeout(resumeTimeoutRef.current);
+        resumeTimeoutRef.current = null;
+      }
       unlistenPreviewPromise.then((u) => u());
       unlistenHidePromise.then((u) => u());
     };
-  }, [playback.snapshot.paused, playback.snapshot.path, playback.toggle]);
+  }, []);
 
     const activeCustomLib = customLibrariesList.find((l) => `custom_${l.id}` === activeView);
     const searchPlaceholder =
@@ -847,9 +947,10 @@ export function App() {
                 onPrevious={() => void playback.previous()}
                 onSeek={(seconds) => void playback.seek(seconds)}
                 onSelectQueueIndex={playback.playQueueAt}
-                onSwitchQueue={playback.switchQueueAndPlay}
+                onPlayQueue={(queueId) => playback.switchQueueAndPlay(queueId, 0)}
                 onToggle={() => void playback.toggle()}
                 onVolume={(volume) => void playback.setVolume(volume)}
+                onOpenEqualizer={() => setIsEqualizerModalOpen(true)}
                 queueState={playback.queue}
                 snapshot={playback.snapshot}
               />
@@ -884,12 +985,14 @@ export function App() {
                 onBack={() => {
                   // Limpiar sesión completamente al volver (Esc): desmonta el <video> y detiene el audio
                   setIsPip(false);
+                  setIsVideoPlaying(false);
                   setActiveVideoPath(null);
                   setActiveVideoInitialTime(undefined);
                   setActiveVideoSessionItems([]);
                   setActiveView(videoReturnView);
                 }}
                 onPipChange={handlePipChange}
+                onPlayingChange={setIsVideoPlaying}
                 onRefresh={() => videoLibrary.refresh()}
                 onSelectVideo={(path) => {
                   setActiveVideoPath(path);
@@ -953,6 +1056,12 @@ export function App() {
               onPlayVideo={playVideoItem}
             />
           ) : null}
+          {activeView === "equalizer" ? (
+            <DspEqualizerView
+              isPlaying={(!playback.snapshot.paused && Boolean(playback.snapshot.path || playback.queue.currentItem)) || isVideoPlaying}
+            />
+          ) : null}
+          {activeView === "renamer" ? <BatchRenamerView /> : null}
           {activeView === "converter" ? <PrismaConvertView /> : null}
           {activeView === "luna_fetch" ? <LunaFetchView onNavigate={setActiveView} /> : null}
           {activeView === "gallery_dl" ? <GalleryDlView onNavigate={setActiveView} /> : null}
@@ -971,6 +1080,12 @@ export function App() {
         fileTitle={sendModalFile?.title}
         isOpen={Boolean(sendModalFile)}
         onClose={() => setSendModalFile(null)}
+      />
+
+      <DspEqualizerModal
+        isOpen={isEqualizerModalOpen}
+        isPlaying={(!playback.snapshot.paused && Boolean(playback.snapshot.path || playback.queue.currentItem)) || isVideoPlaying}
+        onClose={() => setIsEqualizerModalOpen(false)}
       />
     </div>
   );

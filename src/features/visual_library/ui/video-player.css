@@ -256,8 +256,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 14px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.video-playlist-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .video-playlist-header h3 {
@@ -265,6 +271,99 @@
   font-weight: 700;
   margin: 0;
   color: #fff;
+}
+
+.video-playlist-badge {
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(224, 82, 115, 0.2);
+  color: #ff859d;
+  font-weight: 700;
+}
+
+.video-playlist-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 12px 4px 12px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+.video-playlist-search-bar:focus-within {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(224, 82, 115, 0.6);
+  box-shadow: 0 0 0 2px rgba(224, 82, 115, 0.2);
+}
+
+.video-playlist-search-bar svg {
+  width: 14px;
+  height: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}
+
+.video-playlist-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.78rem;
+  color: #ffffff;
+}
+
+.video-playlist-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.video-playlist-search-clear {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s ease;
+}
+
+.video-playlist-search-clear:hover {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.video-playlist-search-clear svg {
+  width: 10px;
+  height: 10px;
+}
+
+.video-playlist-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 16px;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+  gap: 8px;
+}
+
+.video-playlist-empty svg {
+  width: 24px;
+  height: 24px;
+  opacity: 0.5;
+}
+
+.video-playlist-empty p {
+  margin: 0;
+  font-size: 0.76rem;
 }
 
 .video-playlist-close {

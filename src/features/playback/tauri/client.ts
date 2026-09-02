@@ -10,6 +10,8 @@ export const playbackClient = {
   next: () => invoke<PlaybackSnapshot>("playback_next"),
   previous: () => invoke<PlaybackSnapshot>("playback_previous"),
   togglePause: () => invoke<PlaybackSnapshot>("playback_toggle_pause"),
+  pause: () => invoke<PlaybackSnapshot>("playback_pause"),
+  resume: () => invoke<PlaybackSnapshot>("playback_resume"),
   seek: (seconds: number) =>
     invoke<PlaybackSnapshot>("playback_seek", { seconds }),
   setVolume: (volume: number) =>

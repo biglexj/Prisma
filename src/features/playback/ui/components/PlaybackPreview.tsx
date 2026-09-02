@@ -35,6 +35,8 @@ interface PlaybackPreviewProps {
   onVolume: (volume: number) => void;
   onSelectQueueIndex?: (index: number) => void;
   onSwitchQueue?: (queueId: string) => void;
+  onPlayQueue?: (queueId: string) => void;
+  onOpenEqualizer?: () => void;
 }
 
 export function PlaybackPreview({
@@ -51,6 +53,8 @@ export function PlaybackPreview({
   onVolume,
   onSelectQueueIndex,
   onSwitchQueue,
+  onPlayQueue,
+  onOpenEqualizer,
 }: PlaybackPreviewProps) {
   const [viewMode, setViewMode] = useState<"cover" | "lyrics" | "queue">("cover");
   const [isFullscreenLyrics, setIsFullscreenLyrics] = useState(false);
@@ -230,6 +234,7 @@ export function PlaybackPreview({
               if (onSelectQueueIndex) onSelectQueueIndex(idx);
             }}
             onSwitchQueue={onSwitchQueue}
+            onPlayQueue={onPlayQueue || onSwitchQueue}
           />
         ) : viewMode === "lyrics" ? (
           <LyricsPreview
@@ -407,6 +412,16 @@ export function PlaybackPreview({
             >
               <Icon name="edit" />
             </button>
+            {onOpenEqualizer ? (
+              <button
+                onClick={onOpenEqualizer}
+                title="Abrir Ecualizador & Procesador DSP de Audio"
+                aria-label="Ecualizador"
+                style={{ fontSize: "0.85rem" }}
+              >
+                <Icon name="equalizer" />
+              </button>
+            ) : null}
           </div>
 
           <div className="preview-runtime">

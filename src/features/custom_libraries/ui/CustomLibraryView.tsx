@@ -407,7 +407,26 @@ export function CustomLibraryView({
       });
     }
 
-    // 2. Abrir carpeta
+    // 2. Renombrar carpeta en Renombrador
+    if (itemsCount > 0 && col.folderPath) {
+      menuItems.push({
+        id: "rename-folder",
+        label: `Renombrar ${itemsCount} ${itemsCount === 1 ? "archivo" : "archivos"} en Renombrador`,
+        icon: "edit" as const,
+        onSelect: () => {
+          window.dispatchEvent(
+            new CustomEvent("prisma-open-renamer", {
+              detail: {
+                folderPath: col.folderPath,
+                filterMode: "all",
+              },
+            })
+          );
+        },
+      });
+    }
+
+    // 3. Abrir carpeta
     menuItems.push({
       id: "open-folder",
       label: "Abrir y explorar carpeta",
@@ -415,7 +434,7 @@ export function CustomLibraryView({
       onSelect: () => setCurrentFolderPath(col.folderPath),
     });
 
-    // 3. Mostrar en explorador
+    // 4. Mostrar en explorador
     if (firstItem) {
       menuItems.push({
         id: "show-in-explorer",
@@ -456,11 +475,48 @@ export function CustomLibraryView({
         },
       },
       {
+        id: "open-in-renamer",
+        label: "Abrir carpeta en Renombrador",
+        icon: "edit" as const,
+        onSelect: () => {
+          const norm = target.item.path.replace(/\\/g, "/");
+          const lastSlash = norm.lastIndexOf("/");
+          const folderDir =
+            lastSlash > 0
+              ? target.item.path.includes("\\")
+                ? norm.slice(0, lastSlash).replace(/\//g, "\\")
+                : norm.slice(0, lastSlash)
+              : "";
+          if (folderDir) {
+            window.dispatchEvent(
+              new CustomEvent("prisma-open-renamer", {
+                detail: {
+                  folderPath: folderDir,
+                  filterMode: "all",
+                },
+              })
+            );
+          }
+        },
+      },
+      {
         id: "show",
         label: "Mostrar en carpeta",
         icon: "folder-open" as const,
         onSelect: () => {
           void invoke("show_in_file_manager", { path: target.item.path }).catch(() => {});
+        },
+      },
+      {
+        id: "send-to-mobile",
+        label: "Enviar a Super Galería (Móvil)",
+        icon: "smartphone" as const,
+        onSelect: () => {
+          window.dispatchEvent(
+            new CustomEvent("prisma-send-to-supergallery", {
+              detail: { path: target.item.path, title: target.item.title },
+            })
+          );
         },
       },
       {

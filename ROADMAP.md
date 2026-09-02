@@ -9,7 +9,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 ## 🔴 Pendientes activos
 
 - [ ] **Expansión de Conversión Multimedia con FFmpeg**: Extracción de audio (Video → MP3, FLAC, AAC, WAV) y transcodificación por lotes de vídeo en `PrismaConvertView`.
-- [ ] **Ecualizador y Procesamiento DSP de Audio**: Panel de ecualización gráfica de 10 bandas y presets acústicos integrados con el motor MPV nativo.
+- [x] **v1.0.7 — Ecualizador y Procesamiento DSP de Audio**: Suite de ecualización gráfica de 10 bandas con curva spline interactiva, 5 procesadores de señal DSP (Claridad, Ambiente, Sonido Envolvente, Refuerzo Dinámico y Graves), selector de dispositivos de salida de audio y acceso rápido desde System Tray y Reproductor (estilo FxSound).
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
 
 ---
@@ -31,6 +31,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.0.7**
+  - **Renombrador Masivo con Reglas Apiladas, Sincronización Synapse LAN/P2P, Motor Nativo Rust y Estandarización de Scripts**: Rediseño ergonómico del Renombrador Masivo con disposición "un elemento por línea", menús desplegables de ancho completo y panel de plantillas; soporte integral de deep links y Handoff móvil en Aurora Synapse con balizas UDP automáticas; motor de conversión de imágenes nativo en Rust puro (`Lanczos3`) para WebP/PNG/JPG; iconografía oficial actualizada y adopción del estándar universal de scripts y alias de compilación en `package.json`.
 - [x] **v1.0.6**
   - **Quick Look Multiformato, Inspector EXIF Nativo, EPUB/ZIP y Visor Enriquecido**: Navegación continua con flechas sin robo de foco (`SW_SHOWNOACTIVATE`), previsualización estructurada de archivos ZIP/7Z/RAR con búsqueda, soporte de libros EPUB con portada 3D y capítulos, motor nativo puro de EXIF fotográfico, panel lateral de información técnica en el visor de fotos (`I`), alternancia reactiva de colas musicales y renderizado fluido sin recortes artificiales.
 - [x] **v1.0.5**

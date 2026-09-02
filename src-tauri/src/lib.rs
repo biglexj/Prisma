@@ -12,9 +12,10 @@ use app::commands::music_library::{
     music_library_rescan_folder,
 };
 use app::commands::playback::{
-    get_initial_file, playback_capabilities, playback_load, playback_next, playback_previous,
-    playback_seek, playback_set_speed, playback_set_volume, playback_snapshot,
-    playback_toggle_pause,
+    get_initial_file, playback_capabilities, playback_get_audio_devices, playback_load,
+    playback_next, playback_pause, playback_previous, playback_resume, playback_seek,
+    playback_set_audio_device, playback_set_dsp_config, playback_set_speed, playback_set_volume,
+    playback_snapshot, playback_toggle_pause,
 };
 use app::commands::playlists::{
     playlists_add_files, playlists_add_item, playlists_clean_missing, playlists_create,
@@ -41,6 +42,9 @@ use app::commands::quick_look::{
     quick_look_get_shortcut, quick_look_hide, quick_look_is_maximized, quick_look_open_detached,
     quick_look_open_in_main, quick_look_set_shortcut, quick_look_set_size, quick_look_show_file,
     quick_look_start_dragging, quick_look_step_selection, quick_look_toggle, quick_look_toggle_maximize, set_minimize_to_tray,
+};
+use app::commands::renamer::{
+    renamer_execute_batch, renamer_scan_folder, renamer_undo_batch, RenamerState,
 };
 use app::commands::synapse::{
     launch_gallery_dl, launch_luna_fetch, synapse_get_discovered_devices, synapse_get_downloads_dir,
@@ -164,6 +168,7 @@ pub fn run() {
         )
         .manage(PlaybackProbeState::new())
         .manage(InitialFileState(std::sync::Mutex::new(initial_file_for_main)))
+        .manage(RenamerState::default())
         .setup(move |app| {
             let mut data_directory = app.path().app_data_dir()?;
             if is_dev_mode {
@@ -223,12 +228,13 @@ pub fn run() {
 
             // ── Menú de la bandeja del sistema (System Tray) ──
             let show_item = MenuItemBuilder::with_id("show", "Mostrar Prisma").build(app)?;
+            let equalizer_item = MenuItemBuilder::with_id("equalizer", "Ecualizador & DSP").build(app)?;
             let settings_item = MenuItemBuilder::with_id("settings", "Configuración").build(app)?;
             let separator = PredefinedMenuItem::separator(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "Salir de Prisma").build(app)?;
 
             let tray_menu = MenuBuilder::new(app)
-                .items(&[&show_item, &settings_item, &separator, &quit_item])
+                .items(&[&show_item, &equalizer_item, &settings_item, &separator, &quit_item])
                 .build()?;
 
             let _tray = TrayIconBuilder::new()
@@ -244,6 +250,15 @@ pub fn run() {
                                 let _ = w.show();
                                 let _ = w.maximize();
                                 let _ = w.set_focus();
+                            }
+                        }
+                        "equalizer" => {
+                            if let Some(w) = app.get_webview_window("main") {
+                                let _ = w.unminimize();
+                                let _ = w.show();
+                                let _ = w.maximize();
+                                let _ = w.set_focus();
+                                let _ = w.emit("prisma://navigate", "equalizer");
                             }
                         }
                         "settings" => {
@@ -361,10 +376,15 @@ pub fn run() {
             playback_next,
             playback_previous,
             playback_toggle_pause,
+            playback_pause,
+            playback_resume,
             playback_seek,
             playback_set_volume,
             playback_set_speed,
             playback_snapshot,
+            playback_set_dsp_config,
+            playback_get_audio_devices,
+            playback_set_audio_device,
             playlists_list,
             playlists_read,
             playlists_create,
@@ -437,6 +457,9 @@ pub fn run() {
             image_read_exif,
             wallpaper_set_desktop,
             wallpaper_save_and_apply,
+            renamer_scan_folder,
+            renamer_execute_batch,
+            renamer_undo_batch,
         ])
         .run(tauri::generate_context!())
         .expect("Prisma no pudo iniciar el runtime de Tauri");

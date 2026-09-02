@@ -1,12 +1,23 @@
 {
   "name": "prisma",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "scripts": {
     "predev": "bun run scripts/free-port.ts 1421",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:web": "tsc --noEmit && vite build",
+    "build:desktop": "bun run tauri:build",
+    "build:app": "bun run tauri:build",
+    "build:tauri": "bun run tauri:build",
+    "build:debug": "bun run icons:generate && tauri build --debug",
+    "build:release": "bun run release",
+    "compile": "bun run build",
+    "compile:web": "tsc --noEmit && vite build",
+    "compile:desktop": "bun run tauri:build",
+    "compile:debug": "bun run icons:generate && tauri build --debug",
+    "compile:check": "tsc --noEmit",
     "check": "tsc --noEmit",
     "preview": "vite preview",
     "tauri": "tauri",
@@ -14,8 +25,11 @@
     "tauri:dev": "bun run icons:generate && tauri dev",
     "tauri:dev:isolated": "bun run icons:generate && tauri dev -- -- --dev --multi-instance",
     "tauri:build": "bun run icons:generate && tauri build",
+    "tauri:build:debug": "bun run icons:generate && tauri build --debug",
     "posttauri:build": "bun scripts/copy-build-releases.ts",
-    "release": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -LocalOnly"
+    "release": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -LocalOnly",
+    "release:local": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -LocalOnly",
+    "release:publish": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

@@ -65,6 +65,29 @@ impl PlaybackProbeState {
         self.navigate(NavigationDirection::Previous)
     }
 
+    pub fn pause(&self) -> Result<PlaybackSnapshot, String> {
+        self.with_backend(|backend| backend.pause())
+    }
+
+    pub fn resume(&self) -> Result<PlaybackSnapshot, String> {
+        self.with_backend(|backend| backend.resume())
+    }
+
+    pub fn set_dsp_config(&self, config: &crate::features::playback::model::DspConfig) -> Result<(), String> {
+        let mut runtime = self.lock_runtime()?;
+        runtime.backend.set_dsp_config(config)
+    }
+
+    pub fn get_audio_devices(&self) -> Result<Vec<crate::features::playback::model::AudioDeviceItem>, String> {
+        let runtime = self.lock_runtime()?;
+        runtime.backend.get_audio_devices()
+    }
+
+    pub fn set_audio_device(&self, device_name: &str) -> Result<(), String> {
+        let mut runtime = self.lock_runtime()?;
+        runtime.backend.set_audio_device(device_name)
+    }
+
     pub fn with_backend(
         &self,
         operation: impl FnOnce(&mut dyn PlaybackBackend) -> Result<PlaybackSnapshot, String>,

@@ -1,6 +1,6 @@
 [package]
 name = "prisma"
-version = "1.0.6"
+version = "1.0.7"
 description = "Visor y reproductor multimedia local-first"
 authors = ["Biglex J"]
 edition = "2024"
@@ -37,6 +37,7 @@ tokio = { version = "1", default-features = false, features = ["sync"] }
 windows = { version = "0.58", features = [
     "Win32_Foundation",
     "Win32_Graphics_Gdi",
+    "Win32_Media_Audio",
     "Win32_Security",
     "Win32_System_Com",
     "Win32_System_LibraryLoader",

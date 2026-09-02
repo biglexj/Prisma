@@ -66,8 +66,35 @@ export function HomeDashboard({
 }: HomeDashboardProps) {
   useScrollRestoration("view:home", !loading);
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
+  const [activatingPath, setActivatingPath] = useState<string | null>(null);
   const { store: historyStore } = useHistory();
   const { playlists } = usePlaylists();
+
+  const triggerActivation = (path: string) => {
+    setActivatingPath(path);
+    window.setTimeout(() => {
+      setActivatingPath((curr) => (curr === path ? null : curr));
+    }, 600);
+  };
+
+  const handlePlayMusicWithFeedback = (path: string) => {
+    triggerActivation(path);
+    onPlayMusic(path);
+  };
+
+  const handlePlayVideoWithFeedback = (path: string, sessionItems?: VisualLibraryItem[]) => {
+    triggerActivation(path);
+    onPlayVideo(path, sessionItems);
+  };
+
+  const handlePlayPlaylistWithFeedback = (playlistPath: string) => {
+    triggerActivation(playlistPath);
+    if (onPlayPlaylist) {
+      onPlayPlaylist(playlistPath);
+    } else {
+      onOpenPlaylists?.();
+    }
+  };
 
   const nonExcludedMusic = useMemo(() => musicItems.filter((it) => !it.isExcluded), [musicItems]);
   const nonExcludedImages = useMemo(() => images.filter((it) => !it.isExcluded), [images]);
@@ -255,9 +282,9 @@ export function HomeDashboard({
                     const { title, artist } = resolveLibraryTrackInfo(item);
                     return (
                       <button
-                        className="home-media-card"
+                        className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
                         key={item.path}
-                        onClick={() => onPlayMusic(item.path)}
+                        onClick={() => handlePlayMusicWithFeedback(item.path)}
                         title={artist ? `${artist} — ${title}` : title}
                       >
                         <span className="home-media-frame">
@@ -296,9 +323,9 @@ export function HomeDashboard({
                 {homeVideoItems.length > 0 ? (
                   homeVideoItems.map((item) => (
                     <button
-                      className="home-media-card"
+                      className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
                       key={item.path}
-                      onClick={() => onPlayVideo(item.path, nonExcludedVideos)}
+                      onClick={() => handlePlayVideoWithFeedback(item.path, nonExcludedVideos)}
                       title={item.title}
                     >
                       <span className="home-media-frame">

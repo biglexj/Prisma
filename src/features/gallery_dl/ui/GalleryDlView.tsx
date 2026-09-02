@@ -176,7 +176,7 @@ export function GalleryDlView({ onNavigate }: GalleryDlViewProps) {
         <div className="gallery-dl-header-content">
           <div className="gallery-dl-brand">
             <div className="gallery-dl-icon-badge">
-              <img src="/Aurora-Synapse/Icon/gallery-dl.png" alt="Gallery-DL" />
+              <img src="/icons/gallery-dl-gui/icon.webp" alt="Gallery-DL" />
             </div>
             <div>
               <div className="gallery-dl-title-row">

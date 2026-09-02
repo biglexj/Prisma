@@ -15,6 +15,18 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.0.7] - 2026-08-31
+ 
+### Resumen
+Actualización **Prisma v1.0.7** centrada en la evolución completa del **Renombrador Masivo Multimedia**, la integración profunda y bidireccional con el protocolo de sincronización **Aurora Synapse** (handoff, control remoto y enrutamiento inteligente), la incorporación de un motor nativo de conversión de imágenes ultrarrápido en Rust (sin dependencias externas para WebP, JPG y PNG), la adopción de la nueva iconografía oficial del ecosistema y la estandarización de scripts de compilación.
+
+### Detalles
+- **Renombrador Masivo con Reglas Apiladas e Intuitivas**: Nueva distribución visual basada en una línea por componente ("un elemento por línea"), brindando espacio completo a selectores y contadores de caracteres sin recortes. Incorpora menús desplegables de ancho completo con alineación milimétrica y panel de plantillas rápidas combinadas con insignias de conteo de pasos.
+- **Sincronización Avanzada con Aurora Synapse**: Soporte integral para deep links y URIs canónicas en Windows, receptor de continuidad de reproducción (Handoff) desde dispositivos móviles, servidor local HTTP de alta velocidad para carátulas, letras sincronizadas y telemetría, y emisión automática de beacons UDP para descubrimiento en red local.
+- **Motor de Conversión de Imágenes Nativo**: Conversión y redimensionado de imágenes de alto rendimiento procesado directamente en memoria en Rust (`Lanczos3`) para formatos WebP, PNG y JPG, eliminando incompatibilidades de códecs y reduciendo drásticamente los tiempos de procesamiento.
+- **Iconografía Oficial del Ecosistema**: Actualización integral de los identificadores visuales y logos de las aplicaciones hermanas del ecosistema con gráficos en formato web optimizado de alta definición.
+- **Estandarización de Scripts y Alias de Compilación**: Adopción del estándar global de comandos en `package.json` con alias predecibles (`build:web`, `build:desktop`, `compile`, `release:local`, `release:publish`) para agilizar flujos locales y automatizados.
+
 ## [1.0.6] - 2026-08-29
 
 ### Resumen

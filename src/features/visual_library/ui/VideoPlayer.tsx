@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { formatTime, mediaTitle } from "../../playback/ui/formatters";
 import { Icon } from "../../../shared/ui/Icon";
@@ -21,6 +21,8 @@ interface VideoPlayerProps {
   onSelectVideo?: (path: string) => void;
   /** Notifica a App.tsx cuándo entra/sale del modo Picture-in-Picture */
   onPipChange?: (active: boolean, reason?: "restore" | "close") => void;
+  /** Notifica si el vídeo está reproduciéndose activamente */
+  onPlayingChange?: (isPlaying: boolean) => void;
   confirmDeletion?: boolean;
   onRefresh?: () => void | Promise<void>;
 }
@@ -51,6 +53,7 @@ export function VideoPlayer({
   onBack,
   onSelectVideo,
   onPipChange,
+  onPlayingChange,
   confirmDeletion = true,
   onRefresh,
 }: VideoPlayerProps) {
@@ -63,6 +66,7 @@ export function VideoPlayer({
   const [volume, setVolume] = useState(100);
   const [prevVolume, setPrevVolume] = useState(80);
   const [showPlaylist, setShowPlaylist] = useState(false);
+  const [playlistSearch, setPlaylistSearch] = useState("");
   const [repeatMode, setRepeatMode] = useState<"off" | "all" | "one">(() => {
     try {
       const saved = localStorage.getItem("prisma:video_repeat");
@@ -92,6 +96,17 @@ export function VideoPlayer({
   const [localVideoItems, setLocalVideoItems] = useState<VisualLibraryItem[]>(videoItems);
   const [shuffleToastText, setShuffleToastText] = useState<string | null>(null);
 
+  // Filtrado reactivo de la cola de reproducción
+  const filteredVideoItems = useMemo(() => {
+    if (!playlistSearch.trim()) return localVideoItems;
+    const q = playlistSearch.toLowerCase().trim();
+    return localVideoItems.filter(
+      (item) =>
+        item.title.toLowerCase().includes(q) ||
+        (item.relativeFolder && item.relativeFolder.toLowerCase().includes(q)),
+    );
+  }, [localVideoItems, playlistSearch]);
+
   // Picture-in-Picture State
   const [isPipActive, setIsPipActive] = useState(false);
   const isPipActiveRef = useRef(false);
@@ -118,6 +133,15 @@ export function VideoPlayer({
   useEffect(() => {
     setLocalVideoItems(videoItems);
   }, [videoItems]);
+
+  // Notificar a App / Ecualizador el estado de reproducción de vídeo
+  useEffect(() => {
+    const isPlaying = Boolean(path && !paused && !videoError);
+    onPlayingChange?.(isPlaying);
+    return () => {
+      onPlayingChange?.(false);
+    };
+  }, [path, paused, videoError, onPlayingChange]);
 
   // Limpieza y reinicio atómico de pistas secundarias al cambiar de vídeo
   useEffect(() => {
@@ -196,6 +220,18 @@ export function VideoPlayer({
         icon: "folder-open" as const,
         onSelect: () => {
           void invoke("show_in_file_manager", { path: target.item.path }).catch(() => {});
+        },
+      },
+      {
+        id: "send-to-mobile",
+        label: "Enviar a Super Galería (Móvil)",
+        icon: "smartphone" as const,
+        onSelect: () => {
+          window.dispatchEvent(
+            new CustomEvent("prisma-send-to-supergallery", {
+              detail: { path: target.item.path, title: target.item.title },
+            })
+          );
         },
       },
       {
@@ -845,6 +881,10 @@ export function VideoPlayer({
           e.preventDefault();
           handleOneShotShuffle();
           break;
+        case "q":
+          e.preventDefault();
+          setShowPlaylist((prev) => !prev);
+          break;
         case "d":
           e.preventDefault();
           if (path) {
@@ -1347,7 +1387,7 @@ export function VideoPlayer({
               <button
                 className={`video-icon-btn ${showPlaylist ? "is-active" : ""}`}
                 onClick={() => setShowPlaylist(!showPlaylist)}
-                title="Cola de reproducción"
+                title="Cola de reproducción (Q)"
               >
                 <Icon name="queue" />
               </button>
@@ -1471,40 +1511,81 @@ export function VideoPlayer({
       {showPlaylist && localVideoItems.length > 0 ? (
         <aside className="video-playlist-sidebar">
           <div className="video-playlist-header">
-            <h3>Cola de Proyección ({localVideoItems.length})</h3>
+            <div className="video-playlist-title-wrap">
+              <h3>Cola de Proyección</h3>
+              <span className="video-playlist-badge">
+                {filteredVideoItems.length !== localVideoItems.length
+                  ? `${filteredVideoItems.length} de ${localVideoItems.length}`
+                  : `${localVideoItems.length} ${localVideoItems.length === 1 ? "vídeo" : "vídeos"}`}
+              </span>
+            </div>
             <button
-              aria-label="Cerrar lista"
+              aria-label="Cerrar lista (Q / Esc)"
               className="video-playlist-close"
               onClick={() => setShowPlaylist(false)}
+              title="Cerrar cola (Q / Esc)"
             >
               <Icon name="close" />
             </button>
           </div>
+
+          {/* Buscador reactivo de vídeos en la cola */}
+          <div className="video-playlist-search-bar">
+            <Icon name="search" />
+            <input
+              type="text"
+              placeholder="Buscar en la cola de vídeos..."
+              value={playlistSearch}
+              onChange={(e) => setPlaylistSearch(e.target.value)}
+              className="video-playlist-search-input"
+            />
+            {playlistSearch ? (
+              <button
+                type="button"
+                className="video-playlist-search-clear"
+                onClick={() => setPlaylistSearch("")}
+                title="Limpiar búsqueda"
+              >
+                <Icon name="close" />
+              </button>
+            ) : null}
+          </div>
+
           <div className="video-playlist-items">
-            {localVideoItems.map((item, idx) => {
-              const isSelected = item.path === path;
-              return (
-                <div
-                  className={`video-playlist-item ${isSelected ? "is-active" : ""}`}
-                  key={item.path}
-                  onClick={() => onSelectVideo && onSelectVideo(item.path)}
-                >
-                  <span className="video-playlist-item-idx">{idx + 1}</span>
-                  <div className="video-playlist-thumb-wrap">
-                    <VideoThumbnail className="video-playlist-thumb" path={item.path} title={item.title} />
-                    {isSelected ? (
-                      <div className="video-playlist-playing-badge">
-                        <Icon name="play" />
-                      </div>
-                    ) : null}
+            {filteredVideoItems.length === 0 ? (
+              <div className="video-playlist-empty">
+                <Icon name="search" />
+                <p>No se encontraron vídeos que coincidan con &quot;{playlistSearch}&quot;</p>
+              </div>
+            ) : (
+              filteredVideoItems.map((item) => {
+                const originalIdx = localVideoItems.findIndex((it) => it.path === item.path);
+                const isSelected = item.path === path;
+                return (
+                  <div
+                    className={`video-playlist-item ${isSelected ? "is-active" : ""}`}
+                    key={item.path}
+                    onClick={() => onSelectVideo && onSelectVideo(item.path)}
+                  >
+                    <span className="video-playlist-item-idx">
+                      {originalIdx >= 0 ? originalIdx + 1 : 1}
+                    </span>
+                    <div className="video-playlist-thumb-wrap">
+                      <VideoThumbnail className="video-playlist-thumb" path={item.path} title={item.title} />
+                      {isSelected ? (
+                        <div className="video-playlist-playing-badge">
+                          <Icon name="play" />
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="video-playlist-item-info">
+                      <strong title={item.title}>{item.title}</strong>
+                      <small>{cleanPath(item.relativeFolder)}</small>
+                    </div>
                   </div>
-                  <div className="video-playlist-item-info">
-                    <strong title={item.title}>{item.title}</strong>
-                    <small>{cleanPath(item.relativeFolder)}</small>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </aside>
       ) : null}

@@ -32,6 +32,14 @@ impl PlaybackBackend for UnavailableBackend {
         self.error()
     }
 
+    fn pause(&mut self) -> Result<PlaybackSnapshot, String> {
+        self.error()
+    }
+
+    fn resume(&mut self) -> Result<PlaybackSnapshot, String> {
+        self.error()
+    }
+
     fn seek(&mut self, _seconds: f64) -> Result<PlaybackSnapshot, String> {
         self.error()
     }
@@ -46,5 +54,21 @@ impl PlaybackBackend for UnavailableBackend {
 
     fn snapshot(&mut self) -> Result<PlaybackSnapshot, String> {
         self.error()
+    }
+
+    fn set_dsp_config(&mut self, _config: &crate::features::playback::model::DspConfig) -> Result<(), String> {
+        Err(self.reason.clone())
+    }
+
+    fn get_audio_devices(&self) -> Result<Vec<crate::features::playback::model::AudioDeviceItem>, String> {
+        Ok(vec![crate::features::playback::model::AudioDeviceItem {
+            name: "auto".to_string(),
+            description: "Predeterminado del sistema".to_string(),
+            is_active: true,
+        }])
+    }
+
+    fn set_audio_device(&mut self, _device_name: &str) -> Result<(), String> {
+        Err(self.reason.clone())
     }
 }

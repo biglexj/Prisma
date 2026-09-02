@@ -288,7 +288,38 @@ export function VisualLibrary({
       });
     }
 
-    // 2. Abrir carpeta
+    // 2. Renombrar carpeta completa en Renombrador
+    if (itemsCount > 0 && !isVirtual && firstItem) {
+      const norm = firstItem.path.replace(/\\/g, "/");
+      const lastSlash = norm.lastIndexOf("/");
+      const folderDir =
+        lastSlash > 0
+          ? firstItem.path.includes("\\")
+            ? norm.slice(0, lastSlash).replace(/\//g, "\\")
+            : norm.slice(0, lastSlash)
+          : "";
+      if (folderDir) {
+        menuItems.push({
+          id: "rename-folder",
+          label: isImage
+            ? `Renombrar ${itemsCount} ${itemsCount === 1 ? "imagen" : "imágenes"} en Renombrador`
+            : `Renombrar ${itemsCount} ${itemsCount === 1 ? "vídeo" : "vídeos"} en Renombrador`,
+          icon: "edit" as const,
+          onSelect: () => {
+            window.dispatchEvent(
+              new CustomEvent("prisma-open-renamer", {
+                detail: {
+                  folderPath: folderDir,
+                  filterMode: isImage ? "image" : "video",
+                },
+              })
+            );
+          },
+        });
+      }
+    }
+
+    // 3. Abrir carpeta
     menuItems.push({
       id: "open-folder",
       label: "Abrir y explorar álbum",
@@ -296,7 +327,7 @@ export function VisualLibrary({
       onSelect: () => handleNavigateFolder(folder.id),
     });
 
-    // 3. Reproducir vídeos si corresponde
+    // 4. Reproducir vídeos si corresponde
     if (!isImage && itemsCount > 0) {
       menuItems.push({
         id: "play-folder-videos",
@@ -306,7 +337,7 @@ export function VisualLibrary({
       });
     }
 
-    // 4. Mostrar en el explorador de archivos si no es virtual
+    // 5. Mostrar en el explorador de archivos si no es virtual
     if (!isVirtual && firstItem) {
       menuItems.push({
         id: "show-in-explorer",
@@ -366,6 +397,31 @@ export function VisualLibrary({
             title: target.item.title,
             kind: isImage ? "image" : "video",
           }),
+      },
+      {
+        id: "open-in-renamer",
+        label: "Abrir carpeta en Renombrador",
+        icon: "edit" as const,
+        onSelect: () => {
+          const norm = target.item.path.replace(/\\/g, "/");
+          const lastSlash = norm.lastIndexOf("/");
+          const folderDir =
+            lastSlash > 0
+              ? target.item.path.includes("\\")
+                ? norm.slice(0, lastSlash).replace(/\//g, "\\")
+                : norm.slice(0, lastSlash)
+              : "";
+          if (folderDir) {
+            window.dispatchEvent(
+              new CustomEvent("prisma-open-renamer", {
+                detail: {
+                  folderPath: folderDir,
+                  filterMode: isImage ? "image" : "video",
+                },
+              })
+            );
+          }
+        },
       },
       {
         id: "convert",

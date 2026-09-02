@@ -701,11 +701,11 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
               <p>Consulta los atajos rápidos de teclado para controlar la reproducción de vídeos, visor de imágenes y música con máxima agilidad.</p>
 
               <div className="shortcuts-reference-grid">
-                {/* Categoría: Reproducción */}
+                {/* Categoría: Reproductor de Vídeo */}
                 <div className="shortcuts-category-card">
                   <h4>
-                    <Icon name="play" />
-                    <span>Reproducción y Tiempo</span>
+                    <Icon name="video" />
+                    <span>Vídeo y Reproducción</span>
                   </h4>
                   <div className="shortcuts-list">
                     <div className="shortcut-row">
@@ -730,21 +730,82 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
                       </div>
                     </div>
                     <div className="shortcut-row">
-                      <span className="shortcut-row-label">Vídeo anterior</span>
+                      <span className="shortcut-row-label">Vídeo anterior / siguiente</span>
                       <div className="shortcut-row-keys">
                         <kbd className="shortcut-kbd-pill">P</kbd>
+                        <kbd className="shortcut-kbd-pill">N</kbd>
                       </div>
                     </div>
                     <div className="shortcut-row">
-                      <span className="shortcut-row-label">Vídeo siguiente</span>
+                      <span className="shortcut-row-label">Cola de proyección (Abrir / Cerrar)</span>
                       <div className="shortcut-row-keys">
-                        <kbd className="shortcut-kbd-pill">N</kbd>
+                        <kbd className="shortcut-kbd-pill">Q</kbd>
                       </div>
                     </div>
                     <div className="shortcut-row">
                       <span className="shortcut-row-label">Barajar cola (One-shot)</span>
                       <div className="shortcut-row-keys">
                         <kbd className="shortcut-kbd-pill">S</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Añadir / Quitar de favoritos</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">D</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Mover vídeo a la papelera</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">Supr</kbd>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Categoría: Reproductor de Música */}
+                <div className="shortcuts-category-card">
+                  <h4>
+                    <Icon name="music" />
+                    <span>Música y Pistas</span>
+                  </h4>
+                  <div className="shortcuts-list">
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Reproducir / Pausar</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">Espacio</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Retroceder / Avanzar 5 seg.</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">←</kbd>
+                        <kbd className="shortcut-kbd-pill">→</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Pista anterior / siguiente</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">P</kbd>
+                        <kbd className="shortcut-kbd-pill">N</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Alternar panel de Letras</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">L</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Cola de reproducción</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">Q</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Silenciar / Restaurar</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">M</kbd>
                       </div>
                     </div>
                   </div>
@@ -754,11 +815,11 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
                 <div className="shortcuts-category-card">
                   <h4>
                     <Icon name="volume" />
-                    <span>Audio y Pistas</span>
+                    <span>Audio y Canales</span>
                   </h4>
                   <div className="shortcuts-list">
                     <div className="shortcut-row">
-                      <span className="shortcut-row-label">Alternar pista de audio</span>
+                      <span className="shortcut-row-label">Alternar pista (Multi-audio)</span>
                       <div className="shortcut-row-keys">
                         <kbd className="shortcut-kbd-pill">B</kbd>
                       </div>
@@ -827,7 +888,7 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
                   </div>
                 </div>
 
-                {/* Categoría: Visor de Imágenes y Galería */}
+                {/* Categoría: Visor de Imágenes */}
                 <div className="shortcuts-category-card">
                   <h4>
                     <Icon name="image" />
@@ -835,10 +896,10 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
                   </h4>
                   <div className="shortcuts-list">
                     <div className="shortcut-row">
-                      <span className="shortcut-row-label">Restablecer tamaño normal (Escala)</span>
+                      <span className="shortcut-row-label">Imagen anterior / siguiente</span>
                       <div className="shortcut-row-keys">
-                        <kbd className="shortcut-kbd-pill">R</kbd>
-                        <kbd className="shortcut-kbd-pill">Ctrl + 0</kbd>
+                        <kbd className="shortcut-kbd-pill">←</kbd>
+                        <kbd className="shortcut-kbd-pill">→</kbd>
                       </div>
                     </div>
                     <div className="shortcut-row">
@@ -849,10 +910,10 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
                       </div>
                     </div>
                     <div className="shortcut-row">
-                      <span className="shortcut-row-label">Imagen anterior / siguiente</span>
+                      <span className="shortcut-row-label">Restablecer escala normal</span>
                       <div className="shortcut-row-keys">
-                        <kbd className="shortcut-kbd-pill">←</kbd>
-                        <kbd className="shortcut-kbd-pill">→</kbd>
+                        <kbd className="shortcut-kbd-pill">R</kbd>
+                        <kbd className="shortcut-kbd-pill">Ctrl + 0</kbd>
                       </div>
                     </div>
                     <div className="shortcut-row">
@@ -862,14 +923,80 @@ export function AppSettings({ music, images, videos, onPlay, theme, onThemeChang
                       </div>
                     </div>
                     <div className="shortcut-row">
-                      <span className="shortcut-row-label">Editar / Renombrar</span>
+                      <span className="shortcut-row-label">Información y Metadatos EXIF</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">I</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Editor de Imagen</span>
                       <div className="shortcut-row-keys">
                         <kbd className="shortcut-kbd-pill">E</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Comparador de Fotos</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">C</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Renombrar archivo</span>
+                      <div className="shortcut-row-keys">
                         <kbd className="shortcut-kbd-pill">F2</kbd>
                       </div>
                     </div>
                     <div className="shortcut-row">
+                      <span className="shortcut-row-label">Mover a la papelera</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">Supr</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
                       <span className="shortcut-row-label">Cerrar visor</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">Esc</kbd>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Categoría: Edición y Comparador */}
+                <div className="shortcuts-category-card">
+                  <h4>
+                    <Icon name="sliders" />
+                    <span>Edición y Comparador</span>
+                  </h4>
+                  <div className="shortcuts-list">
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Deshacer trazo (Doodle)</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">Ctrl + Z</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Guardar cambios editados</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">Ctrl + S</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Modos comparador (1 a 4)</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">1</kbd>
+                        <kbd className="shortcut-kbd-pill">2</kbd>
+                        <kbd className="shortcut-kbd-pill">3</kbd>
+                        <kbd className="shortcut-kbd-pill">4</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Intercambiar foto primaria</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">S</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Salir de herramienta</span>
                       <div className="shortcut-row-keys">
                         <kbd className="shortcut-kbd-pill">Esc</kbd>
                       </div>

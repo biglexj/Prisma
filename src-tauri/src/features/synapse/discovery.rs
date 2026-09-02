@@ -83,7 +83,10 @@ impl SynapseDiscoveryService {
                                         };
 
                                         if let Ok(mut dev_list) = devices_clone.lock() {
-                                            if let Some(idx) = dev_list.iter().position(|d| d.device_id == node.device_id || d.ip_address == node.ip_address) {
+                                            if let Some(idx) = dev_list.iter().position(|d| {
+                                                d.device_id.eq_ignore_ascii_case(&node.device_id)
+                                                    || (d.ip_address == node.ip_address && d.target_app.eq_ignore_ascii_case(&node.target_app))
+                                            }) {
                                                 dev_list[idx] = node;
                                             } else {
                                                 dev_list.push(node);
@@ -171,13 +174,7 @@ pub fn send_file_to_device_sync(
     let _ = stream.set_read_timeout(Some(Duration::from_secs(60)));
 
     let request_header = format!(
-        "POST /api/v1/synapse/upload HTTP/1.1\r\n\
-        Host: {addr}\r\n\
-        X-File-Name: {encoded_file_name}\r\n\
-        X-Media-Type: {media_type}\r\n\
-        Content-Type: application/octet-stream\r\n\
-        Content-Length: {file_size}\r\n\
-        Connection: close\r\n\r\n"
+        "POST /api/v1/synapse/upload HTTP/1.1\r\nHost: {addr}\r\nX-File-Name: {encoded_file_name}\r\nX-Media-Type: {media_type}\r\nContent-Type: application/octet-stream\r\nContent-Length: {file_size}\r\nConnection: close\r\n\r\n"
     );
 
     stream

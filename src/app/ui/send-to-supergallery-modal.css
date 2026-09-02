@@ -1,10 +1,10 @@
 .send-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  z-index: 10000;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 200005;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -111,6 +111,12 @@
   gap: 0.85rem;
 }
 
+.send-modal-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .send-modal-section-label {
   font-size: 0.82rem;
   font-weight: 600;
@@ -119,30 +125,96 @@
   letter-spacing: 0.04em;
 }
 
+.send-modal-live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--accent, #a855f7);
+}
+
+.send-modal-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent, #a855f7);
+  box-shadow: 0 0 8px var(--accent, #a855f7);
+  animation: sendLivePulse 1.5s infinite ease-in-out;
+}
+
+@keyframes sendLivePulse {
+  0%, 100% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+
 .send-modal-empty {
-  padding: 2rem 1rem;
+  padding: 2.2rem 1.25rem;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.75rem;
   background: var(--bg-card, rgba(0, 0, 0, 0.02));
-  border-radius: 1rem;
+  border-radius: 1.25rem;
   border: 1px dashed var(--border-soft, rgba(0, 0, 0, 0.12));
 }
 
-.send-modal-spinner {
-  width: 1.75rem;
-  height: 1.75rem;
-  border: 2.5px solid var(--border-soft, rgba(0, 0, 0, 0.15));
-  border-top-color: var(--accent, #a855f7);
-  border-radius: 50%;
-  animation: sendSpin 0.9s linear infinite;
+.send-modal-radar-wrap {
+  position: relative;
+  width: 4rem;
+  height: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.25rem;
 }
 
-@keyframes sendSpin {
-  to {
-    transform: rotate(360deg);
+.send-modal-radar-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--accent, #a855f7);
+  opacity: 0;
+  animation: sendRadarWave 2s cubic-bezier(0.1, 0.2, 0.3, 1) infinite;
+}
+
+.send-modal-radar-ring:nth-child(2) {
+  animation-delay: 0.65s;
+}
+
+.send-modal-radar-ring:nth-child(3) {
+  animation-delay: 1.3s;
+}
+
+.send-modal-radar-core {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--accent-soft, rgba(168, 85, 247, 0.15));
+  color: var(--accent, #a855f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  z-index: 2;
+  box-shadow: 0 0 12px var(--accent-soft, rgba(168, 85, 247, 0.25));
+}
+
+@keyframes sendRadarWave {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
   }
 }
 

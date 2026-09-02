@@ -496,8 +496,26 @@
 /* ── Tabla de Atajos de Teclado ── */
 .shortcuts-reference-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+}
+
+@media (max-width: 1380px) {
+  .shortcuts-reference-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .shortcuts-reference-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .shortcuts-reference-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .shortcuts-category-card {
@@ -533,6 +551,7 @@
   gap: 12px;
   padding: 6px 0;
   border-bottom: 1px solid var(--outline-variant);
+  min-width: 0;
 }
 
 .shortcut-row:last-child {
@@ -543,12 +562,15 @@
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--on-surface);
+  line-height: 1.3;
 }
 
 .shortcut-row-keys {
   display: flex;
   align-items: center;
   gap: 5px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .shortcut-kbd-pill {
@@ -565,6 +587,8 @@
   font-size: 0.74rem;
   font-weight: 800;
   box-shadow: 0 2px 0 var(--outline-variant);
+  white-space: nowrap;
+  user-select: none;
 }
 
 .about-hero-card {

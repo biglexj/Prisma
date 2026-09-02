@@ -41,6 +41,20 @@ pub fn playback_toggle_pause(
 }
 
 #[tauri::command]
+pub fn playback_pause(
+    state: State<'_, PlaybackProbeState>,
+) -> Result<PlaybackSnapshot, String> {
+    state.pause()
+}
+
+#[tauri::command]
+pub fn playback_resume(
+    state: State<'_, PlaybackProbeState>,
+) -> Result<PlaybackSnapshot, String> {
+    state.resume()
+}
+
+#[tauri::command]
 pub fn playback_seek(
     seconds: f64,
     state: State<'_, PlaybackProbeState>,
@@ -67,4 +81,27 @@ pub fn playback_set_speed(
 #[tauri::command]
 pub fn playback_snapshot(state: State<'_, PlaybackProbeState>) -> Result<PlaybackSnapshot, String> {
     state.with_backend(|backend| backend.snapshot())
+}
+
+#[tauri::command]
+pub fn playback_set_dsp_config(
+    config: crate::features::playback::model::DspConfig,
+    state: State<'_, PlaybackProbeState>,
+) -> Result<(), String> {
+    state.set_dsp_config(&config)
+}
+
+#[tauri::command]
+pub fn playback_get_audio_devices(
+    state: State<'_, PlaybackProbeState>,
+) -> Result<Vec<crate::features::playback::model::AudioDeviceItem>, String> {
+    state.get_audio_devices()
+}
+
+#[tauri::command]
+pub fn playback_set_audio_device(
+    device_name: String,
+    state: State<'_, PlaybackProbeState>,
+) -> Result<(), String> {
+    state.set_audio_device(&device_name)
 }

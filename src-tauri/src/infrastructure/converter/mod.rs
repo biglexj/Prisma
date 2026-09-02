@@ -174,6 +174,16 @@ pub fn convert_image(
     output_path: &Path,
     opts: &ImageConvertOptions,
 ) -> Result<(), String> {
+    let fmt = opts.target_format.to_lowercase();
+
+    // Intentar primero conversión nativa rápida y pura en Rust para JPG, PNG y WEBP
+    if matches!(fmt.as_str(), "jpg" | "jpeg" | "png" | "webp") {
+        if let Ok(()) = convert_image_native(input_path, output_path, opts) {
+            return Ok(());
+        }
+    }
+
+    // Fallback a FFmpeg (necesario para AVIF o formatos especiales)
     let ffmpeg = find_ffmpeg_binary().ok_or("FFmpeg no está disponible en el sistema")?;
     let input_clean = input_path.to_str().unwrap_or("").trim_start_matches(r"\\?\");
     let output_clean = output_path.to_str().unwrap_or("").trim_start_matches(r"\\?\");
@@ -204,11 +214,9 @@ pub fn convert_image(
     }
 
     // Calidad y formato
-    let fmt = opts.target_format.to_lowercase();
     match fmt.as_str() {
         "jpg" | "jpeg" => {
             let q = opts.quality.unwrap_or(85).clamp(1, 100);
-            // FFmpeg usa q:v 1-31 (donde 1 es mejor)
             let q_val = ((100 - q) * 30 / 100).max(1);
             cmd.arg("-q:v").arg(q_val.to_string());
         }
@@ -243,6 +251,63 @@ pub fn convert_image(
     if !output.status.success() {
         let err_text = String::from_utf8_lossy(&output.stderr);
         return Err(format!("FFmpeg falló al convertir imagen: {err_text}"));
+    }
+
+    Ok(())
+}
+
+fn convert_image_native(
+    input_path: &Path,
+    output_path: &Path,
+    opts: &ImageConvertOptions,
+) -> Result<(), String> {
+    let fmt = opts.target_format.to_lowercase();
+    let target_format = match fmt.as_str() {
+        "jpg" | "jpeg" => image::ImageFormat::Jpeg,
+        "png" => image::ImageFormat::Png,
+        "webp" => image::ImageFormat::WebP,
+        _ => return Err(format!("Formato no soportado nativamente: {fmt}")),
+    };
+
+    let img = image::open(input_path).map_err(|e| format!("Error abriendo imagen: {e}"))?;
+
+    let processed_img = match (opts.resize_width, opts.resize_height) {
+        (Some(w), Some(h)) => {
+            if opts.keep_aspect_ratio.unwrap_or(true) {
+                img.resize(w, h, image::imageops::FilterType::Lanczos3)
+            } else {
+                img.resize_exact(w, h, image::imageops::FilterType::Lanczos3)
+            }
+        }
+        (Some(w), None) => {
+            let ratio = w as f64 / img.width() as f64;
+            let h = (img.height() as f64 * ratio).round().max(1.0) as u32;
+            img.resize_exact(w, h, image::imageops::FilterType::Lanczos3)
+        }
+        (None, Some(h)) => {
+            let ratio = h as f64 / img.height() as f64;
+            let w = (img.width() as f64 * ratio).round().max(1.0) as u32;
+            img.resize_exact(w, h, image::imageops::FilterType::Lanczos3)
+        }
+        (None, None) => img,
+    };
+
+    if let Some(parent) = output_path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+
+    match target_format {
+        image::ImageFormat::Jpeg => {
+            let q = opts.quality.unwrap_or(85).clamp(1, 100) as u8;
+            let file = std::fs::File::create(output_path).map_err(|e| format!("Error creando archivo: {e}"))?;
+            let mut writer = std::io::BufWriter::new(file);
+            let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut writer, q);
+            encoder.encode_image(&processed_img).map_err(|e| format!("Error codificando JPEG: {e}"))?;
+        }
+        _ => {
+            processed_img.save_with_format(output_path, target_format)
+                .map_err(|e| format!("Error guardando imagen: {e}"))?;
+        }
     }
 
     Ok(())

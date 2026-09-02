@@ -112,6 +112,12 @@ impl QuickLookState {
         let payload = QuickLookPayload::with_selection(path_str, media_type, selection_index, selection_total);
         let (target_w, target_h) = resolve_media_size(media_type, path);
 
+        if matches!(media_type, QuickLookMediaType::Audio | QuickLookMediaType::Video) {
+            if let Some(playback_state) = self.app_handle.try_state::<crate::app::state::PlaybackProbeState>() {
+                let _ = playback_state.pause();
+            }
+        }
+
         let _ = self.app_handle.emit("quicklook://preview", &payload);
 
         if let Some(window) = self.app_handle.get_webview_window("quicklook") {
@@ -245,6 +251,12 @@ impl QuickLookState {
                 let payload = QuickLookPayload::with_selection(path_str, media_type, sel_idx, sel_tot);
                 let (target_w, target_h) = resolve_media_size(media_type, &selected_path);
 
+                if matches!(media_type, QuickLookMediaType::Audio | QuickLookMediaType::Video) {
+                    if let Some(playback_state) = state.app_handle.try_state::<crate::app::state::PlaybackProbeState>() {
+                        let _ = playback_state.pause();
+                    }
+                }
+
                 let _ = state.app_handle.emit("quicklook://preview", &payload);
 
                 if let Some(window) = state.app_handle.get_webview_window("quicklook") {
@@ -354,6 +366,12 @@ impl QuickLookState {
                 let payload = QuickLookPayload::with_selection(path_str, media_type, sel_idx, sel_tot);
                 let (target_w, target_h) = resolve_media_size(media_type, &selected_path);
 
+                if matches!(media_type, QuickLookMediaType::Audio | QuickLookMediaType::Video) {
+                    if let Some(playback_state) = state.app_handle.try_state::<crate::app::state::PlaybackProbeState>() {
+                        let _ = playback_state.pause();
+                    }
+                }
+
                 let _ = state.app_handle.emit("quicklook://preview", &payload);
 
                 if let Some(window) = state.app_handle.get_webview_window("quicklook") {
@@ -417,8 +435,6 @@ impl QuickLookState {
     }
 
     pub fn open_in_main(&self, path: String, current_time: Option<f64>) {
-        self.hide();
-
         if let Some(main_window) = self.app_handle.get_webview_window("main") {
             let _ = main_window.unminimize();
             let _ = main_window.show();
@@ -426,6 +442,8 @@ impl QuickLookState {
             let payload = OpenMediaPayload { path, current_time };
             let _ = main_window.emit("prisma://open-media", payload);
         }
+
+        self.hide();
     }
 
     pub fn get_current_payload(&self) -> Option<QuickLookPayload> {

@@ -19,6 +19,7 @@ export type AppView =
   | "favorites"
   | "playlists"
   | "history"
+  | "renamer"
   | (string & {});
 
 interface AppSidebarProps {
@@ -39,6 +40,7 @@ interface SidebarItem {
 const principalItems: SidebarItem[] = [
   { icon: "home", label: "Inicio", view: "home" },
   { icon: "disc", label: "Escuchar", view: "player" },
+  { icon: "equalizer", label: "Ecualizador", view: "equalizer" },
 ];
 
 const libraryItems: SidebarItem[] = [
@@ -73,7 +75,8 @@ export function AppSidebar({
   ];
 
   const dynamicToolItems: SidebarItem[] = [
-    { icon: "sliders", label: "Conversor", view: "converter" },
+    { icon: "convert", label: "Conversor", view: "converter" },
+    { icon: "edit", label: "Renombrador", view: "renamer" },
     { icon: "download", label: "Luna Fetch", view: "luna_fetch" },
     { icon: "layers", label: "Gallery-DL", view: "gallery_dl" },
     ...(auroraOnlineServicesEnabled && auroraWallpapersEnabled

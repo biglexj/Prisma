@@ -192,6 +192,8 @@ export function usePlaybackController() {
       }
       return run(playbackClient.togglePause);
     },
+    pause: () => run(playbackClient.pause),
+    resume: () => run(playbackClient.resume),
     next,
     seek: (seconds: number) => run(() => playbackClient.seek(seconds)),
     setVolume: (volume: number) => run(() => playbackClient.setVolume(volume)),

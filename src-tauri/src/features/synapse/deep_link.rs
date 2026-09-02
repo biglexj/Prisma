@@ -34,7 +34,11 @@ pub fn url_decode(input: &str) -> String {
 /// Parsea un esquema URI `prisma://...` o `aurora-synapse://prisma/...`
 pub fn parse_prisma_uri(uri_str: &str) -> Option<ParsedPrismaUri> {
     let trimmed = uri_str.trim();
-    if !trimmed.starts_with("prisma://") && !trimmed.starts_with("aurora-synapse://prisma/") {
+    let is_valid_scheme = trimmed.starts_with("prisma://")
+        || trimmed.starts_with("aurora-synapse://prisma/")
+        || trimmed.starts_with("aurora-synapse://prisma?")
+        || (trimmed.starts_with("aurora-synapse://prisma") && trimmed.contains('?'));
+    if !is_valid_scheme {
         return None;
     }
 
