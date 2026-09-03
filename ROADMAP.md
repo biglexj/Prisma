@@ -8,6 +8,12 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [x] **Investigación y Calibración del Motor DSP de Audio (Algoritmo FxSound sin Distorsión)**:
+  - Descargar y analizar el repositorio de código abierto de FxSound (`temp/fxsound`) para estudiar su arquitectura de procesamiento de señal (Dynamic Boost `Maximizer`, `Aural` exciter, `Wide` 3D surround, ecualización y limitador transparente).
+  - Implementar en `mpv.rs` la cadena de ganancia y limitación dinámica avanzada en 2 fases (*soft-knee upward compression + lookahead peak limiter a -0.17 dBFS con ventana de 7 ms*) y reordenar las etapas para lograr aumento de volumen y pegada cristalina sin clipping ni distorsión por sobrecarga.
+- [ ] **Modo DSP Global de Sistema (Adaptación de `audiopassthru` / WASAPI Loopback para la siguiente versión)**:
+  - Adaptar el módulo `audiopassthru` analizado en FxSound (`temp/fxsound/audiopassthru`) para interceptar y procesar el audio de todo el sistema Windows (YouTube en Chrome/Edge, Spotify, navegadores y videojuegos).
+  - Implementar un backend en Rust con captura WASAPI Loopback / Virtual Device Endpoint para alimentar la cadena DSP de Prisma en tiempo real desde la bandeja del sistema (*System Tray*).
 - [ ] **Expansión de Conversión Multimedia con FFmpeg**: Extracción de audio (Video → MP3, FLAC, AAC, WAV) y transcodificación por lotes de vídeo en `PrismaConvertView`.
 - [x] **v1.0.7 — Ecualizador y Procesamiento DSP de Audio**: Suite de ecualización gráfica de 10 bandas con curva spline interactiva, 5 procesadores de señal DSP (Claridad, Ambiente, Sonido Envolvente, Refuerzo Dinámico y Graves), selector de dispositivos de salida de audio y acceso rápido desde System Tray y Reproductor (estilo FxSound).
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.

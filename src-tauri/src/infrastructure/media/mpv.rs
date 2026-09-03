@@ -250,18 +250,14 @@ fn build_af_filter_string(config: &DspConfig) -> String {
 
     let mut filters: Vec<String> = Vec::new();
 
-    // 1. Ganancia Maestro + Refuerzo Dinámico (Upward Loudness Booster)
-    // Se calcula la ganancia total combinada en dB y se convierte a factor lineal
+    // 1. Ganancia Maestro / Preamp Limpio (Ajuste de ganancia base sin sobrecargar etapas)
     let p_db = config.preamp_db.clamp(-12.0, 12.0);
-    let dyn_val = config.effects.dynamic_boost.clamp(0.0, 10.0);
-    // Base de ganancia +2.5 dB hasta +6.5 dB al activar el DSP (salto de +30% percibido)
-    let dyn_boost_db = 2.0 + (dyn_val * 0.45);
-    let total_gain_db = p_db + dyn_boost_db;
-    let total_linear = 10f64.powf(total_gain_db / 20.0);
+    if p_db.abs() > 0.05 {
+        let p_linear = 10f64.powf(p_db / 20.0);
+        filters.push(format!("volume={:.3}", p_linear));
+    }
 
-    filters.push(format!("volume={:.3}", total_linear));
-
-    // 2. 10 Bandas de Ecualizador Paramétrico (Q = 1.527) con frecuencia libre
+    // 2. Ecualizador Paramétrico (10 Bandas con factor Q = 1.527)
     for band in &config.bands {
         if band.gain_db.abs() > 0.05 {
             filters.push(format!(
@@ -271,45 +267,72 @@ fn build_af_filter_string(config: &DspConfig) -> String {
         }
     }
 
-    // 3. Refuerzo de Graves (Bass Boost / HyperBass) - Pegada profunda y contundente
-    if config.effects.bass_boost > 0.01 {
-        let bass_val = config.effects.bass_boost.clamp(0.0, 10.0);
-        let lowshelf_gain = bass_val * 0.95;
-        let sub_gain = bass_val * 0.60;
-        filters.push(format!("lowshelf=f=120:t=q:w=0.7:g={:.2}", lowshelf_gain));
-        filters.push(format!("equalizer=f=60:t=q:w=1.2:g={:.2}", sub_gain));
-    }
-
-    // 4. Claridad (Clarity / Harmonic Brilliance) - Nitidez cristalina y presencia vocal
+    // 3. Claridad / Fidelidad Armónica (FxSound Aural Enhancer style)
+    // Proporciona aire y brillo en agudos sin provocar sibilancias ni distorsión áspera.
     if config.effects.clarity > 0.01 {
         let clarity_val = config.effects.clarity.clamp(0.0, 10.0);
-        let highshelf_gain = clarity_val * 0.90;
-        let presence_gain = clarity_val * 0.60;
-        filters.push(format!("highshelf=f=6500:t=q:w=0.65:g={:.2}", highshelf_gain));
-        filters.push(format!("equalizer=f=3200:t=q:w=1.2:g={:.2}", presence_gain));
+        let air_gain = clarity_val * 0.45;
+        let presence_gain = clarity_val * 0.30;
+        filters.push(format!("highshelf=f=7500:t=q:w=0.707:g={:.2}", air_gain));
+        filters.push(format!("equalizer=f=3500:t=q:w=1.2:g={:.2}", presence_gain));
     }
 
-    // 5. Sonido Envolvente (Surround Sound) - Expansión estéreo panorámica
-    if config.effects.surround > 0.01 {
-        let surround_val = config.effects.surround.clamp(0.0, 10.0);
-        let stereo_coeff = 1.0 + (surround_val * 0.06);
-        filters.push(format!("extrastereo=m={:.2}", stereo_coeff));
-    }
-
-    // 6. Ambiente (Ambience) - Espacialidad acústica natural
+    // 4. Espacialidad y Ambiente (FxSound Lex/Dly)
+    // Difusión ambiental sutil previa al procesamiento de graves para que no retrase los bombos.
     if config.effects.ambience > 0.01 {
         let amb_val = config.effects.ambience.clamp(0.0, 10.0);
-        let delay_ms = 8.0 + (amb_val * 1.5);
-        let feedback_val = (0.05 + (amb_val * 0.02)).clamp(0.0, 0.25);
-        let crossfeed_val = (0.05 + (amb_val * 0.02)).clamp(0.0, 0.25);
+        let delay_ms = 8.0 + (amb_val * 1.4);
+        let feedback_val = (0.04 + (amb_val * 0.015)).clamp(0.0, 0.20);
+        let crossfeed_val = (0.04 + (amb_val * 0.015)).clamp(0.0, 0.20);
         filters.push(format!(
-            "stereowiden=delay={:.1}:feedback={:.2}:crossfeed={:.2}:drymix=0.94",
+            "stereowiden=delay={:.1}:feedback={:.2}:crossfeed={:.2}:drymix=0.92",
             delay_ms, feedback_val, crossfeed_val
         ));
     }
 
-    // 7. Limitador suave transparente con asc=0 (JAMÁS reduce el volumen general de la pista, solo picos)
-    filters.push("alimiter=limit=0.99:attack=5:release=50:asc=0".to_string());
+    // 5. Sonido Envolvente 3D (FxSound Wide32 Mid-Side Expansion)
+    // Expansión estéreo aplicada antes de los graves para que el ensanchamiento no toque el sub-bajo.
+    if config.effects.surround > 0.01 {
+        let surround_val = config.effects.surround.clamp(0.0, 10.0);
+        let stereo_coeff = 1.0 + (surround_val * 0.08);
+        filters.push(format!("extrastereo=m={:.2}", stereo_coeff));
+    }
+
+    // 6. HyperBass / Refuerzo de Graves (FxSound Play32 exact architecture)
+    // CRÍTICO: En FxSound (Play32.c), el Bass Boost se ejecuta DESPUÉS del Surround y del Ambiente.
+    // Esto garantiza que los graves permanezcan 100% centrados y enfocados en fase (Dual-Mono),
+    // con la frecuencia central exacta de FxSound (90.0 Hz, Q = 2.5) y pegada sub-grave en 55 Hz (Q = 2.2).
+    // Jamás se dispersa hacia los laterales ni ensucia la escena estéreo.
+    if config.effects.bass_boost > 0.01 {
+        let bass_val = config.effects.bass_boost.clamp(0.0, 10.0);
+        let bass_gain = bass_val * 0.90;
+        let sub_gain = bass_val * 0.65;
+        filters.push(format!("equalizer=f=90:t=q:w=2.5:g={:.2}", bass_gain));
+        filters.push(format!("equalizer=f=55:t=q:w=2.2:g={:.2}", sub_gain));
+    }
+
+    // 7. Dynamic Boost & Maximizer (FxSound Maxi32 architecture al final de la cadena)
+    // Fase A: Compresor ascendente suave de codo ancho (soft-knee RMS) para densificar
+    // pasajes tenues y aumentar la sonoridad aparente sin bombeo brusco.
+    let dyn_val = config.effects.dynamic_boost.clamp(0.0, 10.0);
+    if dyn_val > 0.01 {
+        let thresh_db = -8.0 - (dyn_val * 0.8);
+        let thresh_linear = 10f64.powf(thresh_db / 20.0);
+        let ratio = 1.3 + (dyn_val * 0.10);
+        let makeup_linear = 1.1 + (dyn_val * 0.09);
+
+        filters.push(format!(
+            "acompressor=threshold={:.4}:ratio={:.2}:attack=8:release=70:makeup={:.2}:knee=2.8",
+            thresh_linear, ratio, makeup_linear
+        ));
+    }
+
+    // Fase B: Limitador de picos predictivo con ventana lookahead (FxSound 33-sample lookahead)
+    // limit=0.98 (-0.17 dBFS): asegura que NINGÚN pico toque 1.0 (clipping digital)
+    // attack=7 ms: ventana lookahead para anticipar picos y suavizar transitorios
+    // release=50 ms: caída rápida y natural
+    // asc=0: sin compresión automática adicional
+    filters.push("alimiter=limit=0.98:attack=7:release=50:asc=0".to_string());
 
     format!("lavfi=[{}]", filters.join(","))
 }

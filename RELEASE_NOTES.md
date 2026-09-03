@@ -15,17 +15,19 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
-## [1.0.7] - 2026-08-31
+## [1.0.7] - 2026-09-03
  
 ### Resumen
-Actualización **Prisma v1.0.7** centrada en la evolución completa del **Renombrador Masivo Multimedia**, la integración profunda y bidireccional con el protocolo de sincronización **Aurora Synapse** (handoff, control remoto y enrutamiento inteligente), la incorporación de un motor nativo de conversión de imágenes ultrarrápido en Rust (sin dependencias externas para WebP, JPG y PNG), la adopción de la nueva iconografía oficial del ecosistema y la estandarización de scripts de compilación.
+Llega **Prisma v1.0.7**, una de las mayores actualizaciones del producto, encabezada por la nueva **Suite de Ecualización y Procesamiento DSP de Audio de Alta Fidelidad** con tecnología de refuerzo acústico sin distorsión (inspirada en la arquitectura de FxSound), **micro-interacciones fluidas y reproducción sin interrupciones** en toda la biblioteca de música y vídeo, el **Renombrador Masivo Multimedia** con reglas apiladas e intuitivas, la sincronización profunda con el ecosistema **Aurora Synapse** (handoff, control remoto y enrutamiento inteligente), el nuevo motor nativo de conversión de imágenes ultrarrápido en Rust, y la estandarización global de scripts y comandos de desarrollo.
 
 ### Detalles
+- **Suite de Ecualización Gráfica y Procesamiento DSP de Audio**: Ecualizador de 10 bandas de alta precisión con curva spline interactiva y 5 procesadores de señal en tiempo real: Claridad armónica (*Aural Exciter*), pegada de graves (*HyperBass*), expansión estéreo 3D (*Wide Mid-Side*), ambiente acústico y refuerzo dinámico (*Dynamic Boost*). Incluye selector instantáneo de dispositivos de salida de audio y acceso directo desde el reproductor y la bandeja del sistema (*System Tray*).
+- **Refuerzo Dinámico Limpio sin Distorsión (Arquitectura FxSound)**: Implementación de una etapa de compresión ascendente de codo ancho (*soft-knee RMS*) y limitador predictivo *lookahead* a -0.17 dBFS (con ventana de 7 ms). Aumenta la sonoridad percibida y el impacto acústico de la música y vídeos sin sobrecargar la señal, eliminando completamente el *clipping* digital y la distorsión a volumen alto.
+- **Experiencia de Reproducción Unificada y Micro-animaciones**: Botón flotante circular rosa de aparición suave exclusivamente en hover sobre las carátulas de música y miniaturas de vídeo. Incorpora micro-animación elástica de pulsación (*pop bounce*) y onda expansiva luminosa (*ripple ring*) al reproducir. La reproducción de pistas, álbumes y carpetas inicia en segundo plano sin expulsar al usuario al panel "Escuchar", permitiendo navegar libremente mientras suena la música.
 - **Renombrador Masivo con Reglas Apiladas e Intuitivas**: Nueva distribución visual basada en una línea por componente ("un elemento por línea"), brindando espacio completo a selectores y contadores de caracteres sin recortes. Incorpora menús desplegables de ancho completo con alineación milimétrica y panel de plantillas rápidas combinadas con insignias de conteo de pasos.
 - **Sincronización Avanzada con Aurora Synapse**: Soporte integral para deep links y URIs canónicas en Windows, receptor de continuidad de reproducción (Handoff) desde dispositivos móviles, servidor local HTTP de alta velocidad para carátulas, letras sincronizadas y telemetría, y emisión automática de beacons UDP para descubrimiento en red local.
 - **Motor de Conversión de Imágenes Nativo**: Conversión y redimensionado de imágenes de alto rendimiento procesado directamente en memoria en Rust (`Lanczos3`) para formatos WebP, PNG y JPG, eliminando incompatibilidades de códecs y reduciendo drásticamente los tiempos de procesamiento.
-- **Iconografía Oficial del Ecosistema**: Actualización integral de los identificadores visuales y logos de las aplicaciones hermanas del ecosistema con gráficos en formato web optimizado de alta definición.
-- **Estandarización de Scripts y Alias de Compilación**: Adopción del estándar global de comandos en `package.json` con alias predecibles (`build:web`, `build:desktop`, `compile`, `release:local`, `release:publish`) para agilizar flujos locales y automatizados.
+- **Iconografía Oficial y Estandarización de Scripts**: Actualización integral de los identificadores visuales del ecosistema y adopción del estándar global de comandos en `package.json` (`build:web`, `build:desktop`, `compile`, `release`) para una experiencia de desarrollo homogénea.
 
 ## [1.0.6] - 2026-08-29
 

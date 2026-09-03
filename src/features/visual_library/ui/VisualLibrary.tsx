@@ -94,6 +94,14 @@ export function VisualLibrary({
   const [exifViewingPath, setExifViewingPath] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
+  const [activatingPath, setActivatingPath] = useState<string | null>(null);
+
+  const triggerActivation = (path: string) => {
+    setActivatingPath(path);
+    window.setTimeout(() => {
+      setActivatingPath((curr) => (curr === path ? null : curr));
+    }, 600);
+  };
   const favorites = useFavorites();
   const mediaRename = useMediaRename({ onRefresh });
   const mediaDelete = useMediaDelete({
@@ -738,15 +746,21 @@ export function VisualLibrary({
                 {section.items.map((item, idx) => (
                   <VisualCard
                     index={idx}
+                    isActivating={activatingPath === item.path}
                     isFavorite={favorites.isFavorite(item.path)}
                     isImage={isImage}
                     item={item}
                     key={item.path}
-                    onClick={() =>
-                      isImage
-                        ? handleSelectImage(item, nonExcludedItems)
-                        : onOpenVideo(item.path, nonExcludedItems)
-                    }
+                    onClick={() => {
+                      if (!isImage) {
+                        triggerActivation(item.path);
+                      }
+                      if (isImage) {
+                        handleSelectImage(item, nonExcludedItems);
+                      } else {
+                        onOpenVideo(item.path, nonExcludedItems);
+                      }
+                    }}
                     onContextMenu={(event) => handleCardContextMenu(event, item)}
                     onDeleteRequest={() => handleCardDeleteRequest(item)}
                     onToggleFavorite={() => favorites.toggleFavorite(item.path, kind)}
@@ -793,15 +807,21 @@ export function VisualLibrary({
                 {sortedDirectItems.map((item, idx) => (
                   <VisualCard
                     index={idx}
+                    isActivating={activatingPath === item.path}
                     isFavorite={favorites.isFavorite(item.path)}
                     isImage={isImage}
                     item={item}
                     key={item.path}
-                    onClick={() =>
-                      isImage
-                        ? handleSelectImage(item, sortedDirectItems)
-                        : onOpenVideo(item.path, sortedDirectItems)
-                    }
+                    onClick={() => {
+                      if (!isImage) {
+                        triggerActivation(item.path);
+                      }
+                      if (isImage) {
+                        handleSelectImage(item, sortedDirectItems);
+                      } else {
+                        onOpenVideo(item.path, sortedDirectItems);
+                      }
+                    }}
                     onContextMenu={(event) => handleCardContextMenu(event, item)}
                     onDeleteRequest={() => handleCardDeleteRequest(item)}
                     onToggleFavorite={() => favorites.toggleFavorite(item.path, kind)}
@@ -936,6 +956,7 @@ interface VisualCardProps {
   index: number;
   isImage: boolean;
   isFavorite: boolean;
+  isActivating?: boolean;
   onClick: () => void;
   onContextMenu?: (event: React.MouseEvent) => void;
   onDeleteRequest?: () => void;
@@ -947,6 +968,7 @@ function VisualCard({
   index,
   isImage,
   isFavorite,
+  isActivating,
   onClick,
   onContextMenu,
   onDeleteRequest,
@@ -976,7 +998,7 @@ function VisualCard({
   return (
     <div className={`visual-media-card-wrapper ${layoutClass}`}>
       <button
-        className="visual-media-card"
+        className={`visual-media-card ${isActivating ? "is-activating" : ""}`}
         onClick={onClick}
         onContextMenu={onContextMenu}
         onKeyDown={(event) => {

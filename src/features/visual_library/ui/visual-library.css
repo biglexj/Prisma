@@ -435,7 +435,7 @@
   background: var(--surface-container-lowest);
   cursor: pointer;
   text-align: left;
-  transition: transform 180ms ease, box-shadow 180ms ease;
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 200ms ease;
 }
 
 .visual-media-card:hover,
@@ -445,7 +445,23 @@
 }
 
 .visual-media-card:active {
-  transform: scale(0.98);
+  transform: scale(0.96);
+}
+
+.visual-media-card.is-activating {
+  animation: visualCardPulseBounce 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes visualCardPulseBounce {
+  0% {
+    transform: scale(0.95);
+  }
+  45% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .visual-media-frame {
@@ -551,26 +567,83 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.9);
+  transform: translate(-50%, -50%) scale(0.85);
   display: grid;
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   place-items: center;
   border-radius: 50%;
   color: var(--on-primary);
-  background: var(--primary);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: var(--primary, #e05273);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 5;
 }
 
-.visual-media-card:hover .visual-play {
-  transform: translate(-50%, -50%) scale(1.08);
+.visual-play::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--primary, #e05273);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .visual-play svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   margin-left: 2px;
+  opacity: 1 !important;
+  color: #fff !important;
+}
+
+.visual-media-card:hover .visual-play,
+.visual-media-card:focus-visible .visual-play {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.visual-media-card:active .visual-play {
+  transform: translate(-50%, -50%) scale(0.88);
+}
+
+.visual-media-card.is-activating .visual-play {
+  opacity: 1;
+  pointer-events: auto;
+  animation: playBtnPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.visual-media-card.is-activating .visual-play::after {
+  animation: playBtnRipple 0.6s ease-out forwards;
+}
+
+@keyframes playBtnPop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.24);
+    box-shadow: 0 0 28px var(--primary, #e05273);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  }
+}
+
+@keyframes playBtnRipple {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
 }
 
 .visual-media-card>strong,

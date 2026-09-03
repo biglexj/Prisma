@@ -99,6 +99,14 @@ export function MusicLibrary({
   });
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activatingPath, setActivatingPath] = useState<string | null>(null);
+
+  const triggerActivation = (path: string) => {
+    setActivatingPath(path);
+    window.setTimeout(() => {
+      setActivatingPath((curr) => (curr === path ? null : curr));
+    }, 600);
+  };
 
   const handleManualRefresh = async () => {
     if (isRefreshing || loading) return;
@@ -253,6 +261,9 @@ export function MusicLibrary({
 
   const handlePlayFolder = (folderItems: MusicLibraryItem[], name: string) => {
     if (folderItems.length === 0) return;
+    if (folderItems[0]) {
+      triggerActivation(folderItems[0].path);
+    }
     const queueItems = folderItems.map(toQueueItem);
     const cleanName = name
       .replace(/^Álbum:\s*/i, "")
@@ -276,6 +287,9 @@ export function MusicLibrary({
 
   const handlePlayItemInList = (list: MusicLibraryItem[], index: number, queueName?: string) => {
     const targetItem = list[index];
+    if (targetItem) {
+      triggerActivation(targetItem.path);
+    }
     const defaultName = targetItem?.relativeFolder
       ? targetItem.relativeFolder.replace(/^Álbum:\s*/i, "").split(/[/\\]/).filter(Boolean).pop() || targetItem.relativeFolder
       : "Música";
@@ -286,8 +300,8 @@ export function MusicLibrary({
       onPlayFolder(cleanName, queueItems, index);
     } else if (onPlayQueue) {
       onPlayQueue(queueItems, index, cleanName);
-    } else {
-      onPlay(list[index].path);
+    } else if (targetItem) {
+      onPlay(targetItem.path);
     }
   };
 
@@ -832,12 +846,16 @@ export function MusicLibrary({
               <div className="music-auto-grid">
                 {selectedAlbum.items.map((item) => (
                   <MusicCard
+                    isActivating={activatingPath === item.path}
                     isFavorite={favorites.isFavorite(item.path)}
                     isPlaying={isPlaying && currentPlayingPath === item.path}
                     item={item}
                     key={item.path}
                     onAddToQueue={onAddToQueue ? () => onAddToQueue([toQueueItem(item)]) : undefined}
-                    onClick={() => onPlay(item.path)}
+                    onClick={() => {
+                      triggerActivation(item.path);
+                      onPlay(item.path);
+                    }}
                     onContextMenu={(event) => handleCardContextMenu(event, item)}
                     onDeleteRequest={() => handleCardDeleteRequest(item)}
                     onToggleFavorite={() => favorites.toggleFavorite(item.path)}
@@ -851,6 +869,7 @@ export function MusicLibrary({
                 <MusicAlbumCard
                   albumName={album.displayName}
                   artistName={album.artist}
+                  isActivating={album.items.some((it) => it.path === activatingPath)}
                   isFavorite={favorites.isFavorite(album.representative.path)}
                   isPlaying={isPlaying && album.items.some((it) => it.path === currentPlayingPath)}
                   item={album.representative}
@@ -887,6 +906,7 @@ export function MusicLibrary({
                 {treeLevel.subfolders.map((folder) => (
                   <MusicFolderCard
                     folder={folder}
+                    isActivating={folder.allRecursiveItems.some((it) => it.path === activatingPath)}
                     key={folder.id}
                     onContextMenu={(event) => handleFolderContextMenu(event, folder)}
                     onOpen={() => handleNavigateFolder(folder.id)}
@@ -903,6 +923,7 @@ export function MusicLibrary({
               <div className="music-auto-grid">
                 {sortedDirectItems.slice(0, VISIBLE_ITEM_LIMIT).map((item, idx) => (
                   <MusicCard
+                    isActivating={activatingPath === item.path}
                     isFavorite={favorites.isFavorite(item.path)}
                     isPlaying={isPlaying && currentPlayingPath === item.path}
                     item={item}
@@ -1004,6 +1025,7 @@ interface MusicCardProps {
   item: MusicLibraryItem;
   isFavorite: boolean;
   isPlaying?: boolean;
+  isActivating?: boolean;
   onClick: () => void;
   onAddToQueue?: () => void;
   onToggleFavorite?: () => void;
@@ -1011,13 +1033,13 @@ interface MusicCardProps {
   onDeleteRequest?: () => void;
 }
 
-function MusicCard({ item, isFavorite, isPlaying, onClick, onAddToQueue, onToggleFavorite, onContextMenu, onDeleteRequest }: MusicCardProps) {
+function MusicCard({ item, isFavorite, isPlaying, isActivating, onClick, onAddToQueue, onToggleFavorite, onContextMenu, onDeleteRequest }: MusicCardProps) {
   const { title, artist } = resolveLibraryTrackInfo(item);
 
   return (
     <div className="music-media-card-wrapper">
       <button
-        className="music-media-card"
+        className={`music-media-card ${isActivating ? "is-activating" : ""}`}
         onClick={onClick}
         onContextMenu={onContextMenu}
         onKeyDown={(event) => {
@@ -1047,22 +1069,12 @@ function MusicCard({ item, isFavorite, isPlaying, onClick, onAddToQueue, onToggl
             </span>
           ) : null}
 
-          <span className="music-hover-overlay">
-            <i className="music-play-badge">
-              <Icon name="play" />
-            </i>
-            <div className="music-hover-info">
-              <strong className="music-hover-title" title={title}>
-                {title}
-              </strong>
-              {artist ? (
-                <span className="music-hover-artist" title={artist}>
-                  {artist}
-                </span>
-              ) : null}
-            </div>
-          </span>
+          <i className="music-play-badge">
+            <Icon name="play" />
+          </i>
         </span>
+        <strong className="music-card-title">{title}</strong>
+        <small className="music-card-artist">{artist || "Pista local"}</small>
       </button>
 
       <div className="music-card-actions-bar">
@@ -1103,6 +1115,7 @@ interface MusicAlbumCardProps {
   songCount: number;
   isFavorite: boolean;
   isPlaying?: boolean;
+  isActivating?: boolean;
   onOpenAlbum: () => void;
   onPlayAlbum: () => void;
   onAddToQueue?: () => void;
@@ -1118,6 +1131,7 @@ function MusicAlbumCard({
   songCount,
   isFavorite,
   isPlaying,
+  isActivating,
   onOpenAlbum,
   onPlayAlbum,
   onAddToQueue,
@@ -1131,7 +1145,7 @@ function MusicAlbumCard({
   return (
     <div className="music-media-card-wrapper">
       <button
-        className="music-media-card"
+        className={`music-media-card ${isActivating ? "is-activating" : ""}`}
         onClick={onOpenAlbum}
         onContextMenu={onContextMenu}
         onKeyDown={(event) => {
@@ -1162,31 +1176,24 @@ function MusicAlbumCard({
             </span>
           ) : null}
 
-          <span className="music-hover-overlay">
-            <span
-              className="music-play-badge"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPlayAlbum();
-              }}
-              role="button"
-              tabIndex={0}
-              title="Reproducir álbum directamente"
-            >
-              <Icon name="play" />
-            </span>
-            <div className="music-hover-info">
-              <strong className="music-hover-title" title={albumName}>
-                {albumName}
-              </strong>
-              {displayArtist ? (
-                <span className="music-hover-artist" title={displayArtist}>
-                  {displayArtist}
-                </span>
-              ) : null}
-            </div>
-          </span>
+          <i
+            className="music-play-badge"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPlayAlbum();
+            }}
+            role="button"
+            tabIndex={0}
+            title="Reproducir álbum directamente"
+          >
+            <Icon name="play" />
+          </i>
         </span>
+        <strong className="music-card-title">{albumName}</strong>
+        <small className="music-card-artist">
+          {displayArtist ? `${displayArtist} • ` : ""}
+          {songCount} {songCount === 1 ? "canción" : "canciones"}
+        </small>
       </button>
 
       <div className="music-card-actions-bar">
@@ -1222,19 +1229,20 @@ function MusicAlbumCard({
 
 interface MusicFolderCardProps {
   folder: HierarchicalFolder<MusicLibraryItem>;
+  isActivating?: boolean;
   onContextMenu?: (event: React.MouseEvent) => void;
   onOpen: () => void;
   onPlay: () => void;
 }
 
-function MusicFolderCard({ folder, onContextMenu, onOpen, onPlay }: MusicFolderCardProps) {
+function MusicFolderCard({ folder, isActivating, onContextMenu, onOpen, onPlay }: MusicFolderCardProps) {
   const isFavorites = folder.isVirtual && folder.virtualType === "favorites";
   const isAll = folder.isVirtual && folder.virtualType === "all";
   const firstCoverItem = folder.allRecursiveItems[0];
 
   return (
     <div
-      className={`music-folder-card ${isFavorites ? "is-virtual-favorites" : ""} ${isAll ? "is-virtual-all" : ""}`}
+      className={`music-folder-card ${isActivating ? "is-activating" : ""} ${isFavorites ? "is-virtual-favorites" : ""} ${isAll ? "is-virtual-all" : ""}`}
       onClick={onOpen}
       onContextMenu={onContextMenu}
       title={`Carpeta ${folder.displayName}`}

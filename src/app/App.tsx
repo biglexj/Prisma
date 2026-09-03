@@ -864,11 +864,9 @@ export function App() {
               onOpenFolders={() => setActiveView("folders")}
               onPlay={playMusicItem}
               onPlayQueue={(items, idx, name) => {
-                setActiveView("player");
                 playback.playQueue(items, idx, name);
               }}
               onPlayFolder={(folderName, items, idx) => {
-                setActiveView("player");
                 playback.playFolder(folderName, items, idx);
               }}
               confirmDeletion={confirmDeletion}
@@ -1050,7 +1048,6 @@ export function App() {
             <PlaylistsView
               onPlayMusic={playMusicItem}
               onPlayQueue={(items, idx, name) => {
-                setActiveView("player");
                 playback.playQueue(items, idx, name);
               }}
               onPlayVideo={playVideoItem}
