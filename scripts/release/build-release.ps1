@@ -138,13 +138,18 @@ if ($SkipAuroraUpload) {
                 $sha256Hash = (Get-FileHash -Path $installerTarget -Algorithm SHA256).Hash.ToLower()
                 Write-Host "  SHA-256: $sha256Hash" -ForegroundColor DarkGray
 
+                $vParts = $Version.Split('.')
+                $calcVersionCode = if ($vParts.Length -ge 3) {
+                    [int]$vParts[0] * 10000 + [int]$vParts[1] * 100 + [int]$vParts[2]
+                } else { 10 }
+
                 # ── Registrar release en Aurora (PUT) con URL de GitHub como downloadUrl ──
                 #    Aurora NO recibe el EXE, solo la metadata del lanzamiento.
                 $releaseBody = @{
                     slug           = $slug
                     downloadUrl    = $githubAssetUrl
                     versionName    = $Version
-                    versionCode    = 1
+                    versionCode    = $calcVersionCode
                     releaseNotes   = $releaseMsg
                     sha256Checksum = $sha256Hash
                 } | ConvertTo-Json -Depth 5
