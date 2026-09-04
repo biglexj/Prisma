@@ -9,6 +9,7 @@ interface FolderBreadcrumbHeaderProps {
   onNavigate: (path: string | null) => void;
   onPlayFolder?: (path: string) => void;
   onAddFolderToQueue?: (path: string) => void;
+  onDownloadLyrics?: (path: string) => void;
   itemCount?: number;
   className?: string;
 }
@@ -25,6 +26,7 @@ export function FolderBreadcrumbHeader({
   onNavigate,
   onPlayFolder,
   onAddFolderToQueue,
+  onDownloadLyrics,
   itemCount,
   className = "",
 }: FolderBreadcrumbHeaderProps) {
@@ -155,6 +157,17 @@ export function FolderBreadcrumbHeader({
           >
             <Icon name="queue" />
             <span>+ Cola</span>
+          </button>
+        ) : null}
+
+        {currentPath && onDownloadLyrics && itemCount && itemCount > 0 ? (
+          <button
+            className="breadcrumb-action-btn"
+            onClick={() => onDownloadLyrics(currentPath)}
+            title="Buscar letras sincronizadas (.lrc para karaoke) de esta carpeta"
+          >
+            <Icon name="music" />
+            <span>Letras .lrc</span>
           </button>
         ) : null}
       </div>

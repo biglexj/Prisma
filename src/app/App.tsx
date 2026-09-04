@@ -7,8 +7,10 @@ import { useSystemSettings } from "./useSystemSettings";
 
 import { HomeDashboard } from "../features/home/ui/HomeDashboard";
 import { useMusicLibrary } from "../features/music_library/useMusicLibrary";
+import { useMusicArtwork } from "../features/music_library/useMusicArtwork";
 import { usePlaybackController } from "../features/playback/usePlaybackController";
 import { PlaybackPreview } from "../features/playback/ui/components/PlaybackPreview";
+import { useAlbumPalette } from "../features/playback/ui/useAlbumPalette";
 import { MusicLibrary } from "../features/music_library/ui/MusicLibrary";
 import { VisualLibrary } from "../features/visual_library/ui/VisualLibrary";
 import { VideoPlayer } from "../features/visual_library/ui/VideoPlayer";
@@ -36,6 +38,7 @@ import { WallpapersView } from "../features/wallpapers/ui/WallpapersView";
 import { BatchRenamerView } from "../features/renamer/ui/BatchRenamerView";
 import { DspEqualizerView } from "../features/dsp/ui/DspEqualizerView";
 import { DspEqualizerModal } from "../features/dsp/ui/DspEqualizerModal";
+import { DspProvider } from "../features/dsp/DspContext";
 import { Icon, type IconName } from "../shared/ui/Icon";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
@@ -62,7 +65,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   wallpapers: "Wallpapers Aurora",
 };
 
-export function App() {
+function AppContent() {
   const [activeView, setActiveView] = useState<AppView>("home");
   const [isEqualizerModalOpen, setIsEqualizerModalOpen] = useState(false);
   const [activeVideoPath, setActiveVideoPath] = useState<string | null>(null);
@@ -75,13 +78,32 @@ export function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [synapseToastFile, setSynapseToastFile] = useState<SynapseReceivedFile | null>(null);
   const [sendModalFile, setSendModalFile] = useState<{ path: string; title?: string } | null>(null);
-  const { theme, setTheme } = useTheme();
+  const {
+    theme,
+    setTheme,
+    accentColor,
+    setAccentColor,
+    dynamicMusicTheme,
+    setDynamicMusicTheme,
+    applyMusicPalette,
+    isMusicPaletteActive,
+  } = useTheme();
   const { confirmDeletion, sidebarDensity, auroraOnlineServicesEnabled } = useSystemSettings();
   const playback = usePlaybackController();
   const library = useMusicLibrary();
   const imageLibrary = useVisualLibrary("image");
   const videoLibrary = useVisualLibrary("video");
   const { libraries: customLibrariesList } = useCustomLibraries();
+
+  // Sincronización del tema dinámico reactivo global con la pista en reproducción activa
+  const isAudioPlaying = (!playback.snapshot.paused && Boolean(playback.snapshot.path || playback.queue.currentItem)) || false;
+  const currentPlayingAudioPath = isAudioPlaying ? (playback.snapshot.path || playback.queue.currentItem?.path || null) : null;
+  const currentArtwork = useMusicArtwork(currentPlayingAudioPath, Boolean(currentPlayingAudioPath));
+  const currentAlbumPalette = useAlbumPalette(currentArtwork);
+
+  useEffect(() => {
+    applyMusicPalette(isAudioPlaying ? currentAlbumPalette : null);
+  }, [isAudioPlaying, currentAlbumPalette, applyMusicPalette]);
 
   // Coordinación de reproducción entre QuickLook y la aplicación principal
   const wasPlayingBeforeQuickLookRef = useRef<boolean>(false);
@@ -114,7 +136,7 @@ export function App() {
 
     // Detener y limpiar cualquier vídeo previo activo para evitar audio simultáneo
     if (document.pictureInPictureElement) {
-      void document.exitPictureInPicture().catch(() => {});
+      void document.exitPictureInPicture().catch(() => { });
     }
     setActiveVideoPath(null);
     setActiveVideoSessionItems([]);
@@ -215,7 +237,7 @@ export function App() {
     } else {
       setActiveVideoSessionItems(itemsToUse);
     }
-    
+
     // Si ya estamos en PiP, mantenerse en la vista actual (ej. galería) y reemplazar el vídeo en la ventana flotante.
     // Si no estamos en PiP, navegar a la pantalla completa del reproductor.
     if (!isPip) {
@@ -233,7 +255,7 @@ export function App() {
 
     if (isPlaylist) {
       if (document.pictureInPictureElement) {
-        void document.exitPictureInPicture().catch(() => {});
+        void document.exitPictureInPicture().catch(() => { });
       }
       setActiveVideoPath(null);
       setActiveVideoSessionItems([]);
@@ -266,7 +288,7 @@ export function App() {
         });
     } else if (isAudio) {
       if (document.pictureInPictureElement) {
-        void document.exitPictureInPicture().catch(() => {});
+        void document.exitPictureInPicture().catch(() => { });
       }
       setActiveVideoPath(null);
       setActiveVideoSessionItems([]);
@@ -281,7 +303,7 @@ export function App() {
       playVideoItem(filePath, undefined, initialTime);
     } else if (isImage) {
       if (document.pictureInPictureElement) {
-        void document.exitPictureInPicture().catch(() => {});
+        void document.exitPictureInPicture().catch(() => { });
       }
       setActiveVideoPath(null);
       setActiveVideoSessionItems([]);
@@ -289,10 +311,10 @@ export function App() {
       setActiveInitialImagePath(filePath);
       setActiveView("images");
     } else if (isDocumentOrProject) {
-      void invoke("quick_look_show_file", { path: filePath }).catch(() => {});
+      void invoke("quick_look_show_file", { path: filePath }).catch(() => { });
     } else {
       if (document.pictureInPictureElement) {
-        void document.exitPictureInPicture().catch(() => {});
+        void document.exitPictureInPicture().catch(() => { });
       }
       setActiveVideoPath(null);
       setActiveVideoSessionItems([]);
@@ -323,12 +345,12 @@ export function App() {
         setActiveView("video_player");
         try {
           const win = getCurrentWebviewWindow();
-          void win.unminimize().catch(() => {});
-          void win.show().catch(() => {});
-          void win.setFocus().catch(() => {});
+          void win.unminimize().catch(() => { });
+          void win.show().catch(() => { });
+          void win.setFocus().catch(() => { });
           // Solicitar atención y asegurar foco de ventana nativa de Windows
-          void win.requestUserAttention(1).catch(() => {});
-        } catch {}
+          void win.requestUserAttention(1).catch(() => { });
+        } catch { }
         if (typeof window !== "undefined") {
           window.focus();
         }
@@ -341,7 +363,7 @@ export function App() {
       .then((filePath) => {
         if (filePath) handleOpenFile(filePath);
       })
-      .catch(() => {});
+      .catch(() => { });
 
     const unlistenPromise = listen<string | { path: string; currentTime?: number; title?: string; artist?: string }>("prisma://open-media", (event) => {
       if (resumeTimeoutRef.current) {
@@ -509,23 +531,23 @@ export function App() {
           } else if (activeView === "images") {
             window.dispatchEvent(new CustomEvent("prisma-gallery-fullscreen"));
           } else if (document.fullscreenElement) {
-            void document.exitFullscreen().catch(() => {});
+            void document.exitFullscreen().catch(() => { });
           } else {
-            void document.documentElement.requestFullscreen().catch(() => {});
+            void document.documentElement.requestFullscreen().catch(() => { });
           }
           break;
         }
         case "escape": {
           window.dispatchEvent(new CustomEvent("prisma-gallery-escape"));
           if (document.fullscreenElement) {
-            void document.exitFullscreen().catch(() => {});
+            void document.exitFullscreen().catch(() => { });
           } else if (activeView === "video_player") {
             setActiveView(videoReturnView);
           }
           break;
         }
         case "quick_look": {
-          void invoke("quick_look_toggle").catch(() => {});
+          void invoke("quick_look_toggle").catch(() => { });
           break;
         }
         case "lyrics":
@@ -656,7 +678,7 @@ export function App() {
       path: currentPath,
       artworkUrl: null,
     };
-    void invoke("synapse_update_playback", { status }).catch(() => {});
+    void invoke("synapse_update_playback", { status }).catch(() => { });
   }, [
     playback.snapshot.paused,
     playback.snapshot.path,
@@ -722,7 +744,7 @@ export function App() {
           wasVideoPlayingBeforeQuickLookRef.current = false;
           const videoEl = document.querySelector<HTMLVideoElement>("video.video-player-media, video");
           if (videoEl && videoEl.paused) {
-            void videoEl.play().catch(() => {});
+            void videoEl.play().catch(() => { });
           }
         }
       }, 100);
@@ -738,84 +760,84 @@ export function App() {
     };
   }, []);
 
-    const activeCustomLib = customLibrariesList.find((l) => `custom_${l.id}` === activeView);
-    const searchPlaceholder =
-      activeView === "images"
-        ? "Buscar en tus imágenes…"
-        : activeView === "videos"
+  const activeCustomLib = customLibrariesList.find((l) => `custom_${l.id}` === activeView);
+  const searchPlaceholder =
+    activeView === "images"
+      ? "Buscar en tus imágenes…"
+      : activeView === "videos"
         ? "Buscar en tus vídeos…"
         : activeView === "music"
-        ? "Buscar en tu música…"
-        : activeCustomLib
-        ? `Buscar en ${activeCustomLib.label}…`
-        : "Buscar en Prisma…";
+          ? "Buscar en tu música…"
+          : activeCustomLib
+            ? `Buscar en ${activeCustomLib.label}…`
+            : "Buscar en Prisma…";
 
-    const searchIcon: IconName =
-      activeView === "images"
-        ? "image"
-        : activeView === "videos"
+  const searchIcon: IconName =
+    activeView === "images"
+      ? "image"
+      : activeView === "videos"
         ? "video"
         : activeView === "music"
-        ? "music"
-        : activeCustomLib
-        ? (activeCustomLib.icon as IconName) || "folder"
-        : "search";
+          ? "music"
+          : activeCustomLib
+            ? (activeCustomLib.icon as IconName) || "folder"
+            : "search";
 
-    return (
-      <div
-        className={`studio-shell ${activeView === "video_player" ? "is-cinema-mode" : ""}`}
-        data-sidebar-density={sidebarDensity}
-      >
+  return (
+    <div
+      className={`studio-shell ${activeView === "video_player" ? "is-cinema-mode" : ""}`}
+      data-sidebar-density={sidebarDensity}
+    >
+      {activeView !== "video_player" ? (
+        <AppSidebar
+          activeView={activeView}
+          backend={playback.capabilities?.backend ?? "Conectando…"}
+          enabled={playback.enabled}
+          density={sidebarDensity}
+          onNavigate={(view) => {
+            setActiveView(view);
+          }}
+        />
+      ) : null}
+
+      <div className="studio-workspace">
         {activeView !== "video_player" ? (
-          <AppSidebar
-            activeView={activeView}
-            backend={playback.capabilities?.backend ?? "Conectando…"}
-            enabled={playback.enabled}
-            density={sidebarDensity}
-            onNavigate={(view) => {
-              setActiveView(view);
-            }}
-          />
+          <header className="workspace-header">
+            <div className="workspace-header-title">
+              <span className="workspace-kicker">PRISMA</span>
+              <strong>
+                {VIEW_TITLES[activeView] ||
+                  (activeView.startsWith("custom_")
+                    ? customLibrariesList.find((l) => l.id === activeView.replace("custom_", ""))?.label ?? ""
+                    : "")}
+              </strong>
+            </div>
+
+            <div className="workspace-header-actions">
+              <div className="header-search">
+                <Icon name={searchIcon} />
+                <input
+                  aria-label="Buscar"
+                  placeholder={searchPlaceholder}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery ? (
+                  <button
+                    aria-label="Limpiar búsqueda"
+                    className="header-search-clear"
+                    onClick={() => setSearchQuery("")}
+                    type="button"
+                  >
+                    <Icon name="x" />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </header>
         ) : null}
 
-        <div className="studio-workspace">
-          {activeView !== "video_player" ? (
-            <header className="workspace-header">
-              <div className="workspace-header-title">
-                <span className="workspace-kicker">PRISMA</span>
-                <strong>
-                  {VIEW_TITLES[activeView] ||
-                    (activeView.startsWith("custom_")
-                      ? customLibrariesList.find((l) => l.id === activeView.replace("custom_", ""))?.label ?? ""
-                      : "")}
-                </strong>
-              </div>
-
-              <div className="workspace-header-actions">
-                <div className="header-search">
-                  <Icon name={searchIcon} />
-                  <input
-                    aria-label="Buscar"
-                    placeholder={searchPlaceholder}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  {searchQuery ? (
-                    <button
-                      aria-label="Limpiar búsqueda"
-                      className="header-search-clear"
-                      onClick={() => setSearchQuery("")}
-                      type="button"
-                    >
-                      <Icon name="x" />
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            </header>
-          ) : null}
-
-          <main className={`studio-content ${activeView === "video_player" ? "is-cinema-mode" : ""}`}>
+        <main className={`studio-content ${activeView === "video_player" ? "is-cinema-mode" : ""}`}>
           {activeView === "home" ? (
             <HomeDashboard
               error={library.error ?? imageLibrary.error ?? videoLibrary.error}
@@ -966,15 +988,15 @@ export function App() {
                 activeView === "video_player"
                   ? { display: "contents" }
                   : {
-                      position: "fixed",
-                      top: "-9999px",
-                      left: "-9999px",
-                      width: "1px",
-                      height: "1px",
-                      opacity: 0,
-                      pointerEvents: "none",
-                      zIndex: -1,
-                    }
+                    position: "fixed",
+                    top: "-9999px",
+                    left: "-9999px",
+                    width: "1px",
+                    height: "1px",
+                    opacity: 0,
+                    pointerEvents: "none",
+                    zIndex: -1,
+                  }
               }
             >
               <VideoPlayer
@@ -1009,6 +1031,11 @@ export function App() {
               onPlay={playMusicItem}
               onThemeChange={setTheme}
               theme={theme}
+              accentColor={accentColor}
+              onAccentColorChange={setAccentColor}
+              dynamicMusicTheme={dynamicMusicTheme}
+              onDynamicMusicThemeChange={setDynamicMusicTheme}
+              isMusicPaletteActive={isMusicPaletteActive}
               videos={videoLibrary}
             />
           ) : null}
@@ -1085,5 +1112,13 @@ export function App() {
         onClose={() => setIsEqualizerModalOpen(false)}
       />
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <DspProvider>
+      <AppContent />
+    </DspProvider>
   );
 }

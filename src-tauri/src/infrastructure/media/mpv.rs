@@ -226,7 +226,9 @@ fn enumerate_windows_audio_endpoints() -> Vec<(String, String)> {
                             if let Ok(props) = device.OpenPropertyStore(STGM_READ) {
                                 if let Ok(val) = props.GetValue(&pkey) {
                                     let desc = val.to_string();
-                                    if !desc.is_empty() && !desc.starts_with('{') {
+                                    let lower = desc.to_lowercase();
+                                    let is_prisma = lower.contains("fxsound") || lower.contains("prisma");
+                                    if !desc.is_empty() && !desc.starts_with('{') && !is_prisma {
                                         let wasapi_name = format!("wasapi/{}", desc);
                                         list.push((wasapi_name, desc));
                                     }

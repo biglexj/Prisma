@@ -92,7 +92,7 @@ export function AppSidebar({
         </div>
         <div className="sidebar-copy">
           <strong>Prisma</strong>
-          <span>Multimedia local</span>
+          <span>Tu espacio de multimedia</span>
         </div>
       </div>
 

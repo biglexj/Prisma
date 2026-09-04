@@ -37,8 +37,14 @@
   box-shadow: 0 12px 30px color-mix(in srgb, var(--album-accent) 25%, transparent) !important;
 }
 
+.preview-screen.has-album-palette .preview-transport .preview-play span,
+.preview-screen.has-album-palette .preview-transport .preview-play svg {
+  color: var(--album-on-accent) !important;
+  fill: currentColor !important;
+}
+
 .preview-screen.has-album-palette .preview-transport .preview-play:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--album-accent) 85%, black) !important;
+  filter: brightness(1.08);
   box-shadow: 0 14px 34px color-mix(in srgb, var(--album-accent) 40%, transparent) !important;
 }
 

@@ -19,6 +19,10 @@ import { resolveLibraryTrackInfo } from "../model/trackInfo";
 import { playlistsSaveFromItems } from "../../collections/tauri/client";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
 import { TagEditorModal } from "../../tags/ui/TagEditorModal";
+import { MusicCard } from "./MusicCard";
+import { MusicAlbumCard } from "./MusicAlbumCard";
+import { MusicFolderCard } from "./MusicFolderCard";
+import { BatchLyricsModal } from "./BatchLyricsModal";
 import "./music-library.css";
 
 const VISIBLE_ITEM_LIMIT = 400;
@@ -89,6 +93,10 @@ export function MusicLibrary({
   const [sortDirection, setSortDirection] = useState<MusicSortDirection>(() => sessionMusicState.sortDirection);
   const [randomSeed, setRandomSeed] = useState(1);
   const [editingTagPaths, setEditingTagPaths] = useState<string[] | null>(null);
+  const [batchLyricsTarget, setBatchLyricsTarget] = useState<{
+    folderName: string;
+    items: MusicLibraryItem[];
+  } | null>(null);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
@@ -451,7 +459,22 @@ export function MusicLibrary({
       onSelect: () => handleNavigateFolder(folder.id),
     });
 
-    // 6. Mostrar en explorador si no es virtual
+    // 6. Buscar letras sincronizadas (.lrc para karaoke)
+    if (itemsCount > 0 && !isVirtual) {
+      menuItems.push({
+        id: "download-lyrics-folder",
+        label: "Buscar letras sincronizadas (.lrc)...",
+        icon: "music" as const,
+        onSelect: () => {
+          setBatchLyricsTarget({
+            folderName: folder.displayName,
+            items: folder.allRecursiveItems,
+          });
+        },
+      });
+    }
+
+    // 7. Mostrar en explorador si no es virtual
     if (!isVirtual && firstItem) {
       menuItems.push({
         id: "show-in-explorer",
@@ -529,6 +552,24 @@ export function MusicLibrary({
         icon: "folder-open" as const,
         onSelect: () => {
           void invoke("show_in_file_manager", { path: target.item.path }).catch(() => {});
+        },
+      },
+      {
+        id: "download-lyrics-track",
+        label: "Buscar letra sincronizada (.lrc)",
+        icon: "music" as const,
+        onSelect: () => {
+          const matched = items.find((it) => it.path === target.item.path);
+          const fullItem: MusicLibraryItem = matched || {
+            path: target.item.path,
+            title: target.item.title,
+            sourcePath: target.item.path,
+            relativeFolder: "",
+          };
+          setBatchLyricsTarget({
+            folderName: target.item.title,
+            items: [fullItem],
+          });
         },
       },
       {
@@ -896,6 +937,12 @@ export function MusicLibrary({
               onNavigate={(path) => handleNavigateFolder(path ?? "")}
               onPlayFolder={() => handlePlayFolder(treeLevel.allRecursiveItems, treeLevel.currentDisplayName)}
               onAddFolderToQueue={onAddToQueue ? () => handleAddFolderToQueue(treeLevel.allRecursiveItems) : undefined}
+              onDownloadLyrics={() => {
+                setBatchLyricsTarget({
+                  folderName: treeLevel.currentDisplayName,
+                  items: treeLevel.allRecursiveItems,
+                });
+              }}
             />
           ) : null}
 
@@ -1017,277 +1064,15 @@ export function MusicLibrary({
         onClose={() => setEditingTagPaths(null)}
         onSaved={() => onRefresh && onRefresh()}
       />
+
+      <BatchLyricsModal
+        isOpen={Boolean(batchLyricsTarget)}
+        folderName={batchLyricsTarget?.folderName || ""}
+        items={batchLyricsTarget?.items || []}
+        onClose={() => setBatchLyricsTarget(null)}
+        onFinished={() => onRefresh && onRefresh()}
+      />
     </section>
   );
 }
 
-interface MusicCardProps {
-  item: MusicLibraryItem;
-  isFavorite: boolean;
-  isPlaying?: boolean;
-  isActivating?: boolean;
-  onClick: () => void;
-  onAddToQueue?: () => void;
-  onToggleFavorite?: () => void;
-  onContextMenu?: (event: React.MouseEvent) => void;
-  onDeleteRequest?: () => void;
-}
-
-function MusicCard({ item, isFavorite, isPlaying, isActivating, onClick, onAddToQueue, onToggleFavorite, onContextMenu, onDeleteRequest }: MusicCardProps) {
-  const { title, artist } = resolveLibraryTrackInfo(item);
-
-  return (
-    <div className="music-media-card-wrapper">
-      <button
-        className={`music-media-card ${isActivating ? "is-activating" : ""}`}
-        onClick={onClick}
-        onContextMenu={onContextMenu}
-        onKeyDown={(event) => {
-          if (
-            onDeleteRequest &&
-            (event.key === "Delete" ||
-              event.key === "Del" ||
-              event.key === "Supr" ||
-              event.code === "Delete")
-          ) {
-            event.preventDefault();
-            event.stopPropagation();
-            onDeleteRequest();
-          }
-        }}
-        title={artist ? `${artist} — ${title}` : title}
-      >
-        <span className={`music-media-frame ${isPlaying ? "is-now-playing" : ""}`}>
-          <span className="music-frame-placeholder">
-            <Icon name="music" />
-          </span>
-          <MusicArtwork alt={title} className="music-card-artwork" path={item.path} />
-
-          {isPlaying ? (
-            <span className="music-card-playing-indicator" title="Reproduciendo ahora">
-              <i /><i /><i />
-            </span>
-          ) : null}
-
-          <i className="music-play-badge">
-            <Icon name="play" />
-          </i>
-        </span>
-        <strong className="music-card-title">{title}</strong>
-        <small className="music-card-artist">{artist || "Pista local"}</small>
-      </button>
-
-      <div className="music-card-actions-bar">
-        {onToggleFavorite ? (
-          <button
-            className={`music-card-fav-btn ${isFavorite ? "is-favorite" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite();
-            }}
-            title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
-          >
-            <Icon name="heart" />
-          </button>
-        ) : null}
-
-        {onAddToQueue ? (
-          <button
-            className="music-card-queue-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddToQueue();
-            }}
-            title="Añadir a la cola"
-          >
-            <Icon name="queue" />
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-interface MusicAlbumCardProps {
-  item: MusicLibraryItem;
-  albumName: string;
-  artistName?: string;
-  songCount: number;
-  isFavorite: boolean;
-  isPlaying?: boolean;
-  isActivating?: boolean;
-  onOpenAlbum: () => void;
-  onPlayAlbum: () => void;
-  onAddToQueue?: () => void;
-  onToggleFavorite?: () => void;
-  onContextMenu?: (event: React.MouseEvent) => void;
-  onDeleteRequest?: () => void;
-}
-
-function MusicAlbumCard({
-  item,
-  albumName,
-  artistName,
-  songCount,
-  isFavorite,
-  isPlaying,
-  isActivating,
-  onOpenAlbum,
-  onPlayAlbum,
-  onAddToQueue,
-  onToggleFavorite,
-  onContextMenu,
-  onDeleteRequest,
-}: MusicAlbumCardProps) {
-  const parsed = resolveLibraryTrackInfo(item);
-  const displayArtist = artistName || item.artist || parsed.artist;
-
-  return (
-    <div className="music-media-card-wrapper">
-      <button
-        className={`music-media-card ${isActivating ? "is-activating" : ""}`}
-        onClick={onOpenAlbum}
-        onContextMenu={onContextMenu}
-        onKeyDown={(event) => {
-          if (
-            onDeleteRequest &&
-            (event.key === "Delete" ||
-              event.key === "Del" ||
-              event.key === "Supr" ||
-              event.code === "Delete")
-          ) {
-            event.preventDefault();
-            event.stopPropagation();
-            onDeleteRequest();
-          }
-        }}
-        title={
-          displayArtist
-            ? `${displayArtist} — ${albumName} (${songCount} ${songCount === 1 ? "canción" : "canciones"})`
-            : `${albumName} (${songCount} ${songCount === 1 ? "canción" : "canciones"})`
-        }
-      >
-        <span className={`music-media-frame ${isPlaying ? "is-now-playing" : ""}`}>
-          <MusicArtwork alt={albumName} className="music-card-artwork" path={item.path} />
-
-          {isPlaying ? (
-            <span className="music-card-playing-indicator" title="Reproduciendo ahora">
-              <i /><i /><i />
-            </span>
-          ) : null}
-
-          <i
-            className="music-play-badge"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPlayAlbum();
-            }}
-            role="button"
-            tabIndex={0}
-            title="Reproducir álbum directamente"
-          >
-            <Icon name="play" />
-          </i>
-        </span>
-        <strong className="music-card-title">{albumName}</strong>
-        <small className="music-card-artist">
-          {displayArtist ? `${displayArtist} • ` : ""}
-          {songCount} {songCount === 1 ? "canción" : "canciones"}
-        </small>
-      </button>
-
-      <div className="music-card-actions-bar">
-        {onToggleFavorite ? (
-          <button
-            className={`music-card-fav-btn ${isFavorite ? "is-favorite" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite();
-            }}
-            title={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
-          >
-            <Icon name="heart" />
-          </button>
-        ) : null}
-
-        {onAddToQueue ? (
-          <button
-            className="music-card-queue-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddToQueue();
-            }}
-            title="Añadir álbum a la cola"
-          >
-            <Icon name="queue" />
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-interface MusicFolderCardProps {
-  folder: HierarchicalFolder<MusicLibraryItem>;
-  isActivating?: boolean;
-  onContextMenu?: (event: React.MouseEvent) => void;
-  onOpen: () => void;
-  onPlay: () => void;
-}
-
-function MusicFolderCard({ folder, isActivating, onContextMenu, onOpen, onPlay }: MusicFolderCardProps) {
-  const isFavorites = folder.isVirtual && folder.virtualType === "favorites";
-  const isAll = folder.isVirtual && folder.virtualType === "all";
-  const firstCoverItem = folder.allRecursiveItems[0];
-
-  return (
-    <div
-      className={`music-folder-card ${isActivating ? "is-activating" : ""} ${isFavorites ? "is-virtual-favorites" : ""} ${isAll ? "is-virtual-all" : ""}`}
-      onClick={onOpen}
-      onContextMenu={onContextMenu}
-      title={`Carpeta ${folder.displayName}`}
-    >
-      <div className="music-folder-cover-frame">
-        {isFavorites ? (
-          <div className="music-virtual-card-art is-favorites">
-            <Icon name="star" />
-          </div>
-        ) : isAll ? (
-          <div className="music-virtual-card-art is-all">
-            <Icon name="disc" />
-          </div>
-        ) : firstCoverItem ? (
-          <MusicArtwork alt={folder.displayName} className="music-folder-cover-img" path={firstCoverItem.path} />
-        ) : (
-          <span className="music-folder-empty-cover">
-            <Icon name="folder" />
-          </span>
-        )}
-
-        <div className="music-folder-hover-overlay">
-          {folder.allRecursiveItems.length > 0 ? (
-            <button
-              className="music-folder-play-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPlay();
-              }}
-              title="Reproducir álbum"
-            >
-              <Icon name="play" />
-            </button>
-          ) : null}
-        </div>
-      </div>
-      <div className="music-folder-info">
-        <strong className="music-folder-title">
-          {isFavorites ? "⭐ Favoritos" : folder.displayName}
-        </strong>
-        <span className="music-folder-count">
-          {folder.allRecursiveItems.length}{" "}
-          {folder.allRecursiveItems.length === 1 ? "canción" : "canciones"}
-        </span>
-      </div>
-    </div>
-  );
-}

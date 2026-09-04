@@ -28,6 +28,25 @@ pub struct DspConfig {
     pub effects: DspEffectsConfig,
 }
 
+impl From<&DspConfig> for crate::infrastructure::media::passthru::dsp_engine::DspParameters {
+    fn from(cfg: &DspConfig) -> Self {
+        let mut eq_gains = [0.0f32; 10];
+        for (i, band) in cfg.bands.iter().enumerate().take(10) {
+            eq_gains[i] = band.gain_db as f32;
+        }
+        Self {
+            enabled: cfg.enabled,
+            preamp_db: cfg.preamp_db as f32,
+            band_gains_db: eq_gains,
+            clarity: cfg.effects.clarity as f32,
+            ambience: cfg.effects.ambience as f32,
+            surround: cfg.effects.surround as f32,
+            dynamic_boost: cfg.effects.dynamic_boost as f32,
+            bass_boost: cfg.effects.bass_boost as f32,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AudioDeviceItem {

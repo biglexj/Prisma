@@ -87,7 +87,10 @@ pub fn playback_snapshot(state: State<'_, PlaybackProbeState>) -> Result<Playbac
 pub fn playback_set_dsp_config(
     config: crate::features::playback::model::DspConfig,
     state: State<'_, PlaybackProbeState>,
+    passthru: State<'_, std::sync::Arc<crate::infrastructure::media::passthru::PassthruService>>,
 ) -> Result<(), String> {
+    let params = (&config).into();
+    passthru.set_dsp_params(params);
     state.set_dsp_config(&config)
 }
 
@@ -105,3 +108,50 @@ pub fn playback_set_audio_device(
 ) -> Result<(), String> {
     state.set_audio_device(&device_name)
 }
+
+#[tauri::command]
+pub fn global_passthru_get_status(
+    passthru: State<'_, std::sync::Arc<crate::infrastructure::media::passthru::PassthruService>>,
+) -> crate::infrastructure::media::passthru::GlobalPassthruStatus {
+    passthru.get_status()
+}
+
+#[tauri::command]
+pub fn global_passthru_toggle(
+    enabled: bool,
+    capture_device_id: Option<String>,
+    render_device_id: Option<String>,
+    passthru: State<'_, std::sync::Arc<crate::infrastructure::media::passthru::PassthruService>>,
+) -> Result<crate::infrastructure::media::passthru::GlobalPassthruStatus, String> {
+    if enabled {
+        passthru.start(capture_device_id, render_device_id)?;
+    } else {
+        passthru.stop()?;
+    }
+    Ok(passthru.get_status())
+}
+
+#[tauri::command]
+pub fn global_passthru_list_endpoints(
+) -> Result<Vec<crate::infrastructure::media::passthru::AudioEndpointInfo>, String> {
+    crate::infrastructure::media::passthru::PassthruService::list_endpoints()
+}
+
+#[tauri::command]
+pub fn global_passthru_set_volume(
+    volume: f32,
+    passthru: State<'_, std::sync::Arc<crate::infrastructure::media::passthru::PassthruService>>,
+) -> Result<(), String> {
+    passthru.set_volume(volume)
+}
+
+#[tauri::command]
+pub fn playback_set_system_default_device(
+    device_id: String,
+    _passthru: State<'_, std::sync::Arc<crate::infrastructure::media::passthru::PassthruService>>,
+) -> Result<(), String> {
+    crate::infrastructure::media::passthru::PassthruService::set_system_default_endpoint(&device_id)?;
+    Ok(())
+}
+
+

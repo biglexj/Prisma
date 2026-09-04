@@ -24,6 +24,23 @@ export interface AudioDeviceItem {
   isActive: boolean;
 }
 
+export interface AudioEndpointInfo {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  isVirtual: boolean;
+}
+
+export interface GlobalPassthruStatus {
+  isRunning: boolean;
+  hasSignal?: boolean;
+  volume?: number;
+  activeCaptureDevice?: string | null;
+  activeRenderDevice?: string | null;
+  sampleRate: number;
+  latencyMs: number;
+}
+
 export interface DspPreset {
   id: string;
   name: string;

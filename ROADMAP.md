@@ -8,21 +8,13 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [x] **Investigación y Calibración del Motor DSP de Audio (Algoritmo FxSound sin Distorsión)**:
-  - Descargar y analizar el repositorio de código abierto de FxSound (`temp/fxsound`) para estudiar su arquitectura de procesamiento de señal (Dynamic Boost `Maximizer`, `Aural` exciter, `Wide` 3D surround, ecualización y limitador transparente).
-  - Implementar en `mpv.rs` la cadena de ganancia y limitación dinámica avanzada en 2 fases (*soft-knee upward compression + lookahead peak limiter a -0.17 dBFS con ventana de 7 ms*) y reordenar las etapas para lograr aumento de volumen y pegada cristalina sin clipping ni distorsión por sobrecarga.
-- [ ] **Modo DSP Global de Sistema (Adaptación de `audiopassthru` / WASAPI Loopback para la siguiente versión)**:
-  - Adaptar el módulo `audiopassthru` analizado en FxSound (`temp/fxsound/audiopassthru`) para interceptar y procesar el audio de todo el sistema Windows (YouTube en Chrome/Edge, Spotify, navegadores y videojuegos).
-  - Implementar un backend en Rust con captura WASAPI Loopback / Virtual Device Endpoint para alimentar la cadena DSP de Prisma en tiempo real desde la bandeja del sistema (*System Tray*).
 - [ ] **Expansión de Conversión Multimedia con FFmpeg**: Extracción de audio (Video → MP3, FLAC, AAC, WAV) y transcodificación por lotes de vídeo en `PrismaConvertView`.
-- [x] **v1.0.7 — Ecualizador y Procesamiento DSP de Audio**: Suite de ecualización gráfica de 10 bandas con curva spline interactiva, 5 procesadores de señal DSP (Claridad, Ambiente, Sonido Envolvente, Refuerzo Dinámico y Graves), selector de dispositivos de salida de audio y acceso rápido desde System Tray y Reproductor (estilo FxSound).
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
 
 ---
 
 ## 🟡 Intermedio (Prioridad Media/Baja)
 
-- [ ] Soporte para descarga automática de letras desde proveedores públicos en línea (lrclib / Musixmatch fallback).
 - [ ] Atajos de teclado totalmente reconfigurables desde la interfaz de Configuración.
 - [ ] Integración de marca de agua por lotes en el Convertidor Prisma.
 
@@ -37,6 +29,16 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.0.8**
+  - **Modo DSP Global de Sistema, Graves Dual-Mono, Ruteo Universal, Descargador de Letras Sincronizadas y Continuidad Acústica**:
+    - Motor nativo puro en Rust de captura y renderizado en tiempo real con latencia ultrabaja (~10 ms) mediante WASAPI Loopback para interceptar y procesar el audio de todo Windows (YouTube en Chrome/Edge, Spotify, navegadores y videojuegos).
+    - Análisis y calibración matemática inspirada en la arquitectura FxSound con limitador predictivo *lookahead* a -0.17 dBFS y compresión suave RMS sin clipping ni distorsión por sobrecarga.
+    - Algoritmo de pegada de graves centrado en fase (*Dual-Mono HyperBass* a 90 Hz $Q=2.5$ y 55 Hz $Q=2.2$ tras el ensanchamiento estéreo), eliminando fugas hacia los laterales.
+    - Ruteo universal compatible con `MIXLINE`, DACs, altavoces y auriculares, con exclusión del propio endpoint de Prisma para evitar bucles.
+    - Descargador masivo por lotes de letras sincronizadas con timestamps (`.lrc` para Karaoke) vía LRCLIB, con limpieza automática de títulos, omisión de pistas existentes, escritura de archivos compañeros en UTF-8 y panel de monitoreo interactivo.
+    - Arquitectura persistente `DspProvider` y sincronización en memoria en Rust (`matches_devices`) para reproducción ininterrumpida sin micro-cortes al navegar entre pestañas.
+    - Motor Web Audio API de alta fidelidad conectado al reproductor de vídeo HTML5 con preservación de filtros en modo Picture-in-Picture.
+    - Actualización oficial del lema e identidad: *Prisma · Tu espacio de multimedia* y *Prisma Audio Enhancer (Prisma Audio Engine)*.
 - [x] **v1.0.7**
   - **Renombrador Masivo con Reglas Apiladas, Sincronización Synapse LAN/P2P, Motor Nativo Rust y Estandarización de Scripts**: Rediseño ergonómico del Renombrador Masivo con disposición "un elemento por línea", menús desplegables de ancho completo y panel de plantillas; soporte integral de deep links y Handoff móvil en Aurora Synapse con balizas UDP automáticas; motor de conversión de imágenes nativo en Rust puro (`Lanczos3`) para WebP/PNG/JPG; iconografía oficial actualizada y adopción del estándar universal de scripts y alias de compilación en `package.json`.
 - [x] **v1.0.6**

@@ -1,6 +1,6 @@
 import React, { useId, useMemo, useRef, useState } from "react";
 import { EQ_BAND_RANGES, EQ_FREQUENCIES, type DspEffectsConfig } from "../model/types";
-import { useDspController } from "../useDspController";
+import { useDsp } from "../DspContext";
 import { Icon } from "../../../shared/ui/Icon";
 import "./dsp-equalizer.css";
 
@@ -149,8 +149,8 @@ interface DspEqualizerViewProps {
 }
 
 export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }: DspEqualizerViewProps) {
-  const dsp = useDspController();
-  const isVisualizerActive = dsp.enabled && isPlaying;
+  const dsp = useDsp();
+  const isVisualizerActive = dsp.enabled && (isPlaying || dsp.globalPassthruEnabled);
   const [isDeviceMenuOpen, setIsDeviceMenuOpen] = useState(false);
   const [isPresetMenuOpen, setIsPresetMenuOpen] = useState(false);
   const [newPresetName, setNewPresetName] = useState("");
@@ -289,7 +289,34 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
     }
   };
 
-  const activeDevice = dsp.devices.find((d) => d.name === dsp.selectedDevice) || dsp.devices[0];
+  // Lista de todos los dispositivos de salida de Windows (auriculares, altavoces, MIXLINE, etc.)
+  // Excluye exclusivamente el propio canal de captura de Prisma para evitar bucles de retroalimentación
+  const displayEndpoints = useMemo(() => {
+    const rawList =
+      dsp.audioEndpoints.length > 0
+        ? dsp.audioEndpoints
+        : dsp.devices.map((d) => ({
+            id: d.name,
+            name: d.description,
+            isDefault: d.isActive,
+            isVirtual: false,
+          }));
+
+    return rawList.filter((ep) => {
+      const lower = ep.name.toLowerCase();
+      return (
+        !lower.includes("prisma audio") &&
+        !lower.includes("prisma audio engine") &&
+        !lower.includes("fxsound")
+      );
+    });
+  }, [dsp.audioEndpoints, dsp.devices]);
+
+  const activeEndpoint =
+    displayEndpoints.find(
+      (ep) => ep.id === dsp.selectedRenderDeviceId || ep.name === dsp.selectedDevice
+    ) || displayEndpoints[0];
+
   const activePreset = dsp.allPresets.find((p) => p.id === dsp.activePresetId);
 
   const handleSavePresetSubmit = (e: React.FormEvent) => {
@@ -408,33 +435,52 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
             >
               <Icon name="volume" />
               <span className="dsp-dropdown-label dsp-device-label">
-                {activeDevice ? activeDevice.description : "Dispositivo de audio"}
+                {activeEndpoint ? activeEndpoint.name : "Dispositivo de salida"}
               </span>
               <Icon name="chevronDown" />
             </button>
 
             {isDeviceMenuOpen && (
               <div className="dsp-dropdown-menu dsp-device-menu">
-                <div className="dsp-dropdown-header">Dispositivo de Salida (Windows)</div>
+                <div className="dsp-dropdown-header">Escuchar por (Salida)</div>
                 <div className="dsp-dropdown-list">
-                  {dsp.devices.map((dev) => (
-                    <button
-                      className={`dsp-dropdown-item ${dev.name === dsp.selectedDevice ? "active" : ""}`}
-                      key={dev.name}
-                      onClick={() => {
-                        void dsp.selectAudioDevice(dev.name);
-                        setIsDeviceMenuOpen(false);
-                      }}
-                      type="button"
-                    >
-                      <span className="dsp-device-item-name">{dev.description}</span>
-                      {dev.name === dsp.selectedDevice && <span className="dsp-check-badge">✓</span>}
-                    </button>
-                  ))}
+                  {displayEndpoints.map((ep) => {
+                    const isSelected = ep.name === activeEndpoint?.name || ep.id === activeEndpoint?.id;
+                    return (
+                      <button
+                        className={`dsp-dropdown-item ${isSelected ? "active" : ""}`}
+                        key={ep.id}
+                        onClick={() => {
+                          void dsp.selectAudioDevice(ep.name, ep.id);
+                          setIsDeviceMenuOpen(false);
+                        }}
+                        type="button"
+                      >
+                        <span className="dsp-device-item-name">{ep.name}</span>
+                        {isSelected && <span className="dsp-check-badge">✓</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
           </div>
+
+          {/* Selector de Modo: Global (Sistema) vs Solo Prisma */}
+          <button
+            className={`dsp-mode-toggle-btn ${dsp.globalPassthruEnabled ? "mode-global" : "mode-local"}`}
+            onClick={() => void dsp.toggleGlobalPassthru()}
+            disabled={dsp.isGlobalLoading}
+            title={
+              dsp.globalPassthruEnabled
+                ? "Modo Global Activo: Procesando todo Windows (YouTube, Spotify, etc.)"
+                : "Modo Local: Procesando solo el reproductor interno de Prisma"
+            }
+            type="button"
+          >
+            <span className={`dsp-mode-dot ${dsp.globalPassthruEnabled ? "active" : ""}`} />
+            <span>{dsp.globalPassthruEnabled ? "🌐 Global" : "🎵 Solo Prisma"}</span>
+          </button>
 
           {/* Botón Power Maestro (Bypass) */}
           <button

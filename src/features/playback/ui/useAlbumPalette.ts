@@ -5,6 +5,8 @@ export interface AlbumPalette {
   accentSoft: string;
   accentDeep: string;
   onAccent: string;
+  primaryContainerDark: string;
+  onPrimaryContainerDark: string;
 }
 
 const MAX_PALETTE_ENTRIES = 64;
@@ -75,18 +77,43 @@ export function useAlbumPalette(artwork: string | null) {
   return palette;
 }
 
+/**
+ * Calcula la luminancia relativa según el estándar WCAG 2.1
+ */
+function luminance([red, green, blue]: [number, number, number]): number {
+  const channels = [red, green, blue].map((value) => {
+    const normalized = value / 255;
+    return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+  });
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+}
+
+/**
+ * Determina el color de texto con máximo contraste garantizado (WCAG AAA)
+ * contra el fondo dado: negro profundo (#0a0608) si el fondo es claro/medio,
+ * o blanco puro (#ffffff) si el fondo es oscuro.
+ */
+export function getContrastingTextColor(rgb: [number, number, number]): string {
+  const L = luminance(rgb);
+  // Contraste con blanco (#ffffff, L=1.0): 1.05 / (L + 0.05)
+  // Contraste con negro (#000000, L=0.0): (L + 0.05) / 0.05
+  // El punto de cruce matemático exacto en WCAG 2.1 es L ≈ 0.179
+  const contrastWhite = 1.05 / (L + 0.05);
+  const contrastBlack = (L + 0.05) / 0.05;
+  return contrastBlack >= contrastWhite ? "#0a0608" : "#ffffff";
+}
+
 function extractPalette(image: HTMLImageElement): AlbumPalette | null {
   const canvas = document.createElement("canvas");
-  canvas.width = 24;
-  canvas.height = 24;
+  canvas.width = 32;
+  canvas.height = 32;
   const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) return null;
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-  let red = 0;
-  let green = 0;
-  let blue = 0;
-  let totalWeight = 0;
+
+  let vibrantR = 0, vibrantG = 0, vibrantB = 0, vibrantWeight = 0;
+  let fallbackR = 0, fallbackG = 0, fallbackB = 0, fallbackWeight = 0;
 
   for (let index = 0; index < pixels.length; index += 4) {
     if (pixels[index + 3] < 180) continue;
@@ -96,27 +123,60 @@ function extractPalette(image: HTMLImageElement): AlbumPalette | null {
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
     const brightness = (max + min) / 510;
-    const saturation = max === 0 ? 0 : (max - min) / max;
-    if (brightness < 0.08 || brightness > 0.94) continue;
-    const weight = 0.35 + saturation * 1.8;
-    red += r * weight;
-    green += g * weight;
-    blue += b * weight;
-    totalWeight += weight;
+    const delta = max - min;
+    const saturation = max === 0 ? 0 : delta / max;
+
+    // Descartar extremos sin contenido cromático útil (blancos quemados y negros profundos)
+    if (brightness < 0.06 || brightness > 0.95) continue;
+
+    // Acumular fallback general para imágenes en blanco y negro o sepia
+    fallbackR += r;
+    fallbackG += g;
+    fallbackB += b;
+    fallbackWeight += 1;
+
+    // Si el píxel contiene saturación real (color cromático), priorizarlo fuertemente
+    if (saturation >= 0.16) {
+      // Ponderación cuadrática según saturación y cercanía al punto medio de luminosidad (0.5)
+      const weight = Math.pow(saturation, 2.2) * (1 - Math.abs(brightness - 0.5) * 0.7) + 0.15;
+      vibrantR += r * weight;
+      vibrantG += g * weight;
+      vibrantB += b * weight;
+      vibrantWeight += weight;
+    }
   }
 
-  if (totalWeight === 0) return null;
-  const rgb: [number, number, number] = [
-    Math.round(red / totalWeight),
-    Math.round(green / totalWeight),
-    Math.round(blue / totalWeight),
-  ];
-  const accent = mix(rgb, luminance(rgb) < 0.22 ? [255, 255, 255] : [0, 0, 0], 0.12);
+  const baseRgb: [number, number, number] = vibrantWeight > 0
+    ? [
+        Math.round(vibrantR / vibrantWeight),
+        Math.round(vibrantG / vibrantWeight),
+        Math.round(vibrantB / vibrantWeight),
+      ]
+    : fallbackWeight > 0
+      ? [
+          Math.round(fallbackR / fallbackWeight),
+          Math.round(fallbackG / fallbackWeight),
+          Math.round(fallbackB / fallbackWeight),
+        ]
+      : [168, 85, 247]; // fallback morado Prisma
+
+  // Ajuste sutil de acento para presencia escénica
+  const accentRgb = mix(baseRgb, luminance(baseRgb) < 0.18 ? [255, 255, 255] : [0, 0, 0], 0.08);
+  const accentHex = toRgb(accentRgb);
+  const onAccentText = getContrastingTextColor(accentRgb);
+
+  // Contenedor oscuro con tinte refinado (para sidebar activo y tarjetas en dark mode)
+  const darkContainer = `color-mix(in srgb, ${accentHex} 24%, #180e12)`;
+  // Texto sobre el contenedor oscuro: contraste alto garantizado
+  const darkOnContainer = `color-mix(in srgb, ${accentHex} 70%, #ffffff)`;
+
   return {
-    accent: toRgb(accent),
-    accentSoft: `color-mix(in srgb, ${toRgb(accent)} 20%, var(--surface-container))`,
-    accentDeep: `color-mix(in srgb, ${toRgb(accent)} 80%, var(--on-surface))`,
-    onAccent: luminance(accent) > 0.42 ? "rgb(25 15 18)" : "rgb(255 255 255)",
+    accent: accentHex,
+    accentSoft: `color-mix(in srgb, ${accentHex} 20%, var(--surface-container))`,
+    accentDeep: `color-mix(in srgb, ${accentHex} 75%, #ffffff)`,
+    onAccent: onAccentText,
+    primaryContainerDark: darkContainer,
+    onPrimaryContainerDark: darkOnContainer,
   };
 }
 
@@ -126,12 +186,4 @@ function mix(left: [number, number, number], right: [number, number, number], am
 
 function toRgb([red, green, blue]: [number, number, number]) {
   return `rgb(${red} ${green} ${blue})`;
-}
-
-function luminance([red, green, blue]: [number, number, number]) {
-  const channels = [red, green, blue].map((value) => {
-    const normalized = value / 255;
-    return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
-  });
-  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
 }

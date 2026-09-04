@@ -266,6 +266,46 @@
   padding: 4px;
 }
 
+/* ── Mode Toggle Button (Global vs Solo Prisma) ── */
+.dsp-mode-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container);
+  color: var(--on-surface);
+}
+
+.dsp-mode-toggle-btn:hover {
+  transform: translateY(-1px);
+  background: var(--surface-container-high);
+}
+
+.dsp-mode-toggle-btn.mode-global {
+  background: rgba(33, 150, 243, 0.12);
+  border-color: rgba(33, 150, 243, 0.4);
+  color: #2196f3;
+}
+
+.dsp-mode-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--outline-variant);
+  transition: all 0.2s ease;
+}
+
+.dsp-mode-dot.active {
+  background: #2196f3;
+  box-shadow: 0 0 8px rgba(33, 150, 243, 0.8);
+}
+
 /* ── Power Button ── */
 .dsp-power-btn {
   display: inline-flex;
@@ -838,3 +878,4 @@
   color: var(--primary);
   background: rgba(233, 30, 99, 0.16);
 }
+

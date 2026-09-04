@@ -15,6 +15,20 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.0.8] - 2026-09-03
+
+### Resumen
+Presentamos **Prisma v1.0.8**, que introduce el **Modo DSP Global de Sistema**: ahora la suite completa de ecualización de 10 bandas, claridad armónica, pegada de graves centrada sin fuga lateral (*Dual-Mono HyperBass*), expansión estéreo 3D y refuerzo dinámico sin distorsión se aplica **a todo Windows** (YouTube en Chrome/Edge, Spotify, Discord, videojuegos y reproductores externos) directamente en segundo plano, con soporte de ruteo para `MIXLINE` y dispositivos virtuales, continuidad acústica ininterrumpida al navegar entre pestañas, integración Web Audio en el visor de vídeo y nueva identidad oficial de la aplicación.
+
+### Detalles
+- **Modo DSP Global de Sistema (WASAPI Loopback Capture & Render)**: Motor nativo en Rust puro de captura y renderizado en tiempo real con latencia ultrabaja (~10 ms) y soporte de hilo crítico multimedia de Windows. Captura el flujo de audio del sistema operativo, lo procesa mediante el pipeline DSP de Prisma y lo entrega limpio a los altavoces o auriculares físicos seleccionados sin depender de aplicaciones externas.
+- **Ruteo de Salida Universal y Soporte para MIXLINE**: El selector de dispositivos de salida en el ecualizador lista todos los endpoints de audio activos de Windows, permitiendo redirigir el sonido procesado a interfaces de streaming como `MIXLINE`, altavoces, monitores o auriculares, excluyendo únicamente el canal de captura de Prisma para prevenir bucles de retroalimentación.
+- **Continuidad Acústica Sin Pausas entre Pestañas**: Arquitectura persistente de audio con sincronización en caliente en memoria (`matches_devices`). Al alternar entre Inicio, Escuchar, Ecualizador, Música y Vídeos, el motor no recrea los hilos ni reinicia el flujo de audio, garantizando reproducción continua sin micro-cortes.
+- **DSP en Reproductor de Vídeo y Modo PiP (Web Audio API)**: Cadena Web Audio de 10 bandas y procesadores acústicos conectada directamente al elemento de vídeo HTML5, conservando ecualización y refuerzo dinámico incluso al proyectar en ventana flotante Picture-in-Picture.
+- **Graves Compactos y Centrados (Dual-Mono HyperBass)**: Reordenamiento y calibración matemática del filtro de sub-bajos a 90 Hz ($Q = 2.5$) y 55 Hz ($Q = 2.2$) colocado tras el procesamiento de ensanchamiento estéreo. Elimina la dispersión o fuga hacia los laterales, logrando un golpe de graves sólido, seco y contundente en el centro.
+- **Descargador de Letras Sincronizadas (.lrc para Karaoke)**: Herramienta inteligente de búsqueda y descarga masiva por lotes para carpetas y álbumes completos. Consulta en tiempo real catálogos de letras sincronizadas con marcas de tiempo (LRCLIB), limpia sufijos y etiquetas de títulos automáticamente, detecta y omite pistas que ya cuentan con letras locales, y guarda archivos `.lrc` compañeros en UTF-8 listos para karaoke en Prisma y reproductores externos. Incorpora panel flotante con barra de progreso interactiva, estadísticas de descarga y acceso directo desde los menús de carpetas y pistas.
+- **Identidad Oficial del Ecosistema**: Actualización oficial del lema a *«Prisma · Tu espacio de multimedia»* e integración en Windows bajo la denominación *«Prisma Audio Enhancer (Prisma Audio Engine)»*.
+
 ## [1.0.7] - 2026-09-03
  
 ### Resumen

@@ -11,6 +11,7 @@ import { useFavorites } from "../../../shared/useFavorites";
 import { useMediaDelete } from "../../../shared/useMediaDelete";
 import { MediaProgressBar } from "../../../shared/ui/MediaProgressBar";
 import { VideoToolsMenu } from "./components/VideoToolsMenu";
+import { useVideoAudioDsp } from "./useVideoAudioDsp";
 import "./video-player.css";
 
 interface VideoPlayerProps {
@@ -120,6 +121,7 @@ export function VideoPlayer({
   const isFav = path ? favorites.isFavorite(path) : false;
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  useVideoAudioDsp(videoRef);
   const controlsTimeoutRef = useRef<number | null>(null);
   const fastForwardIntervalRef = useRef<number | null>(null);
   const audioMenuRef = useRef<HTMLDivElement | null>(null);
@@ -547,6 +549,23 @@ export function VideoPlayer({
       setIsPipActive(true);
       // Notificar a App.tsx para que muestre la vista de origen (galería)
       onPipChange?.(true);
+
+      // Sincronizar el icono de Prisma en la ventana flotante nativa de PiP en Windows
+      void invoke("visual_library_sync_pip_icon").catch(() => {});
+
+      // Sincronizar MediaSession de Chromium con el icono y título de Prisma
+      if ("mediaSession" in navigator) {
+        const videoName = path ? path.split(/[/\\]/).pop() || "Prisma Video" : "Prisma Video";
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: videoName,
+          artist: "Prisma",
+          artwork: [
+            { src: "/icon/icon.png", sizes: "512x512", type: "image/png" },
+            { src: "/icon.png", sizes: "512x512", type: "image/png" },
+            { src: "/favicon.ico", sizes: "256x256", type: "image/x-icon" },
+          ],
+        });
+      }
     };
 
     const onLeave = () => {

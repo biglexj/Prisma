@@ -1,6 +1,7 @@
 #[cfg(feature = "mpv")]
 mod mpv;
 mod unavailable;
+pub mod passthru;
 
 use crate::features::playback::backend::PlaybackBackend;
 

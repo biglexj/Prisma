@@ -105,6 +105,189 @@
   }
 }
 
+/* ── Tokens de Colores de Énfasis (Paletas de Acento) ─────────── */
+
+/* 1. Morado Prisma (Predeterminado / Violet) */
+:root[data-accent="purple"] {
+  --primary: #8b5cf6;
+  --on-primary: #ffffff;
+  --primary-container: #ede9fe;
+  --on-primary-container: #4c1d95;
+  --secondary-container: #f3e8ff;
+  --shell-gradient: radial-gradient(circle at 100% 0%, rgb(237 233 254 / 46%), transparent 32rem);
+  --transport-play-hover: #7c3aed;
+}
+
+.dark[data-accent="purple"],
+[data-theme="dark"][data-accent="purple"] {
+  --primary: #c084fc;
+  --on-primary: #3b0764;
+  --primary-container: #6b21a8;
+  --on-primary-container: #f3e8ff;
+  --secondary-container: #4c1d95;
+  --shell-gradient: radial-gradient(circle at 100% 0%, rgb(107 33 168 / 22%), transparent 32rem);
+  --transport-play-hover: #a855f7;
+}
+
+/* 2. Rosa Aurora (Clásico) */
+:root[data-accent="rose"] {
+  --primary: #c90045;
+  --on-primary: #ffffff;
+  --primary-container: #ffd9df;
+  --on-primary-container: #3f0012;
+  --secondary-container: #f5dedf;
+  --shell-gradient: radial-gradient(circle at 100% 0%, rgb(255 217 223 / 46%), transparent 32rem);
+  --transport-play-hover: #ad003b;
+}
+
+.dark[data-accent="rose"],
+[data-theme="dark"][data-accent="rose"] {
+  --primary: #ffb1c0;
+  --on-primary: #650025;
+  --primary-container: #8f003a;
+  --on-primary-container: #ffd9df;
+  --secondary-container: #5c3f44;
+  --shell-gradient: radial-gradient(circle at 100% 0%, rgb(143 0 58 / 18%), transparent 32rem);
+  --transport-play-hover: #d4547a;
+}
+
+/* 3. Azul Eléctrico */
+:root[data-accent="blue"] {
+  --primary: #2563eb;
+  --on-primary: #ffffff;
+  --primary-container: #dbeafe;
+  --on-primary-container: #1e3a8a;
+  --secondary-container: #e0e7ff;
+  --shell-gradient: radial-gradient(circle at 100% 0%, rgb(219 234 254 / 46%), transparent 32rem);
+  --transport-play-hover: #1d4ed8;
+}
+
+.dark[data-accent="blue"],
+[data-theme="dark"][data-accent="blue"] {
+  --primary: #60a5fa;
+  --on-primary: #172554;
+  --primary-container: #1e40af;
+  --on-primary-container: #dbeafe;
+  --secondary-container: #1e3a8a;
+  --shell-gradient: radial-gradient(circle at 100% 0%, rgb(30 64 175 / 22%), transparent 32rem);
+  --transport-play-hover: #3b82f6;
+}
+
+/* 4. Verde Esmeralda */
+:root[data-accent="emerald"] {
+  --primary: #059669;
+  --on-primary: #ffffff;
+  --primary-container: #d1fae5;
+  --on-primary-container: #064e3b;
+  --secondary-container: #ecfdf5;
+  --shell-gradient: radial-gradient(circle at 100% 0%, rgb(209 250 229 / 46%), transparent 32rem);
+  --transport-play-hover: #047857;
+}
+
+.dark[data-accent="emerald"],
+[data-theme="dark"][data-accent="emerald"] {
+  --primary: #34d399;
+  --on-primary: #064e3b;
+  --primary-container: #065f46;
+  --on-primary-container: #d1fae5;
+  --secondary-container: #044332;
+  --shell-gradient: radial-gradient(circle at 100% 0%, rgb(6 95 70 / 22%), transparent 32rem);
+  --transport-play-hover: #10b981;
+}
+
+/* 5. Ámbar Cálido */
+:root[data-accent="amber"] {
+  --primary: #d97706;
+  --on-primary: #ffffff;
+  --primary-container: #fef3c7;
+  --on-primary-container: #78350f;
+  --secondary-container: #fffbeb;
+  --shell-gradient: radial-gradient(circle at 100% 0%, rgb(254 243 199 / 46%), transparent 32rem);
+  --transport-play-hover: #b45309;
+}
+
+.dark[data-accent="amber"],
+[data-theme="dark"][data-accent="amber"] {
+  --primary: #fbbf24;
+  --on-primary: #78350f;
+  --primary-container: #92400e;
+  --on-primary-container: #fef3c7;
+  --secondary-container: #713f12;
+  --shell-gradient: radial-gradient(circle at 100% 0%, rgb(146 64 14 / 22%), transparent 32rem);
+  --transport-play-hover: #f59e0b;
+}
+
+/* 6. Cyan Neón */
+:root[data-accent="cyan"] {
+  --primary: #0891b2;
+  --on-primary: #ffffff;
+  --primary-container: #cffafe;
+  --on-primary-container: #164e63;
+  --secondary-container: #e0f2fe;
+  --shell-gradient: radial-gradient(circle at 100% 0%, rgb(207 250 254 / 46%), transparent 32rem);
+  --transport-play-hover: #0e7490;
+}
+
+.dark[data-accent="cyan"],
+[data-theme="dark"][data-accent="cyan"] {
+  --primary: #22d3ee;
+  --on-primary: #164e63;
+  --primary-container: #155e75;
+  --on-primary-container: #cffafe;
+  --secondary-container: #083344;
+  --shell-gradient: radial-gradient(circle at 100% 0%, rgb(21 94 117 / 22%), transparent 32rem);
+  --transport-play-hover: #06b6d4;
+}
+
+/* Soporte para modo sistema en data-accent */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"][data-accent="purple"] {
+    --primary: #c084fc;
+    --on-primary: #3b0764;
+    --primary-container: #6b21a8;
+    --on-primary-container: #f3e8ff;
+    --secondary-container: #4c1d95;
+    --shell-gradient: radial-gradient(circle at 100% 0%, rgb(107 33 168 / 22%), transparent 32rem);
+    --transport-play-hover: #a855f7;
+  }
+  :root[data-theme="system"][data-accent="blue"] {
+    --primary: #60a5fa;
+    --on-primary: #172554;
+    --primary-container: #1e40af;
+    --on-primary-container: #dbeafe;
+    --secondary-container: #1e3a8a;
+    --shell-gradient: radial-gradient(circle at 100% 0%, rgb(30 64 175 / 22%), transparent 32rem);
+    --transport-play-hover: #3b82f6;
+  }
+  :root[data-theme="system"][data-accent="emerald"] {
+    --primary: #34d399;
+    --on-primary: #064e3b;
+    --primary-container: #065f46;
+    --on-primary-container: #d1fae5;
+    --secondary-container: #044332;
+    --shell-gradient: radial-gradient(circle at 100% 0%, rgb(6 95 70 / 22%), transparent 32rem);
+    --transport-play-hover: #10b981;
+  }
+  :root[data-theme="system"][data-accent="amber"] {
+    --primary: #fbbf24;
+    --on-primary: #78350f;
+    --primary-container: #92400e;
+    --on-primary-container: #fef3c7;
+    --secondary-container: #713f12;
+    --shell-gradient: radial-gradient(circle at 100% 0%, rgb(146 64 14 / 22%), transparent 32rem);
+    --transport-play-hover: #f59e0b;
+  }
+  :root[data-theme="system"][data-accent="cyan"] {
+    --primary: #22d3ee;
+    --on-primary: #164e63;
+    --primary-container: #155e75;
+    --on-primary-container: #cffafe;
+    --secondary-container: #083344;
+    --shell-gradient: radial-gradient(circle at 100% 0%, rgb(21 94 117 / 22%), transparent 32rem);
+    --transport-play-hover: #06b6d4;
+  }
+}
+
 * {
   box-sizing: border-box;
   scrollbar-width: thin;

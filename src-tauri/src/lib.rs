@@ -12,9 +12,11 @@ use app::commands::music_library::{
     music_library_rescan_folder,
 };
 use app::commands::playback::{
-    get_initial_file, playback_capabilities, playback_get_audio_devices, playback_load,
-    playback_next, playback_pause, playback_previous, playback_resume, playback_seek,
-    playback_set_audio_device, playback_set_dsp_config, playback_set_speed, playback_set_volume,
+    get_initial_file, global_passthru_get_status, global_passthru_list_endpoints,
+    global_passthru_set_volume, global_passthru_toggle, playback_capabilities,
+    playback_get_audio_devices, playback_load, playback_next, playback_pause, playback_previous,
+    playback_resume, playback_seek, playback_set_audio_device, playback_set_dsp_config,
+    playback_set_speed, playback_set_system_default_device, playback_set_volume,
     playback_snapshot, playback_toggle_pause,
 };
 use app::commands::playlists::{
@@ -61,7 +63,7 @@ use app::commands::visual_library::{
     visual_library_image_preview, visual_library_list_excluded_folders,
     visual_library_list_folders, visual_library_list_items,
     visual_library_remove_excluded_folder, visual_library_remove_folder,
-    visual_library_rescan_folder,
+    visual_library_rescan_folder, visual_library_sync_pip_icon,
 };
 use app::commands::wallpapers::{wallpaper_save_and_apply, wallpaper_set_desktop};
 use app::state::{FavoritesState, InitialFileState, MusicLibraryState, PlaybackProbeState, VisualLibraryState};
@@ -169,6 +171,7 @@ pub fn run() {
         .manage(PlaybackProbeState::new())
         .manage(InitialFileState(std::sync::Mutex::new(initial_file_for_main)))
         .manage(RenamerState::default())
+        .manage(std::sync::Arc::new(crate::infrastructure::media::passthru::PassthruService::new()))
         .setup(move |app| {
             let mut data_directory = app.path().app_data_dir()?;
             if is_dev_mode {
@@ -214,7 +217,7 @@ pub fn run() {
 
             if let Some(main_window) = app.get_webview_window("main") {
                 if is_dev_mode {
-                    let _ = main_window.set_title("Prisma (Dev) · Multimedia local");
+                    let _ = main_window.set_title("Prisma (Dev) · Tu espacio de multimedia");
                 }
                 if is_autostart || is_media_initial_file {
                     let _ = main_window.hide();
@@ -239,7 +242,7 @@ pub fn run() {
 
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("Prisma · Multimedia local")
+                .tooltip("Prisma · Tu espacio de multimedia")
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| {
@@ -360,6 +363,7 @@ pub fn run() {
             visual_library_remove_excluded_folder,
             visual_library_list_items,
             visual_library_image_preview,
+            visual_library_sync_pip_icon,
             media_delete_items,
             media_rename_item,
             media_save_image,
@@ -385,6 +389,11 @@ pub fn run() {
             playback_set_dsp_config,
             playback_get_audio_devices,
             playback_set_audio_device,
+            playback_set_system_default_device,
+            global_passthru_get_status,
+            global_passthru_toggle,
+            global_passthru_list_endpoints,
+            global_passthru_set_volume,
             playlists_list,
             playlists_read,
             playlists_create,

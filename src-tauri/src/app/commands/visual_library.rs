@@ -556,3 +556,113 @@ pub async fn video_extract_audio_track(path: String, track_index: usize) -> Resu
     .map_err(|e| format!("Error al extraer pista de audio: {e}"))?
 }
 
+#[tauri::command]
+pub fn visual_library_sync_pip_icon(app: tauri::AppHandle) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use tauri::Manager;
+        use windows::Win32::Foundation::{BOOL, HWND, LPARAM, WPARAM};
+        use windows::Win32::UI::WindowsAndMessaging::{
+            EnumWindows, GetClassNameW, GetWindowTextW, SendMessageTimeoutW,
+            ICON_BIG, ICON_SMALL, SMTO_ABORTIFHUNG, WM_GETICON, WM_SETICON,
+        };
+
+        std::thread::spawn(move || {
+            // Se espera 120ms para que Chromium instancie la ventana flotante PiP
+            std::thread::sleep(std::time::Duration::from_millis(120));
+
+            unsafe {
+                let mut hicon_big: usize = 0;
+                let mut hicon_small: usize = 0;
+
+                if let Some(main_win) = app.get_webview_window("main") {
+                    if let Ok(hwnd) = main_win.hwnd() {
+                        let h = HWND(hwnd.0 as _);
+                        let mut res = 0;
+                        let _ = SendMessageTimeoutW(
+                            h,
+                            WM_GETICON,
+                            WPARAM(ICON_BIG as usize),
+                            LPARAM(0),
+                            SMTO_ABORTIFHUNG,
+                            500,
+                            Some(&mut res),
+                        );
+                        hicon_big = res;
+                        let _ = SendMessageTimeoutW(
+                            h,
+                            WM_GETICON,
+                            WPARAM(ICON_SMALL as usize),
+                            LPARAM(0),
+                            SMTO_ABORTIFHUNG,
+                            500,
+                            Some(&mut res),
+                        );
+                        hicon_small = res;
+                    }
+                }
+
+                if hicon_big == 0 && hicon_small == 0 {
+                    return;
+                }
+
+                struct EnumData {
+                    icon_big: usize,
+                    icon_small: usize,
+                }
+
+                let mut data = EnumData {
+                    icon_big: hicon_big,
+                    icon_small: if hicon_small != 0 { hicon_small } else { hicon_big },
+                };
+
+                unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
+                    unsafe {
+                        let data = &*(lparam.0 as *const EnumData);
+
+                        let mut class_buf = [0u16; 256];
+                        let len_c = GetClassNameW(hwnd, &mut class_buf);
+                        let class_name = String::from_utf16_lossy(&class_buf[..len_c as usize]);
+
+                        let mut text_buf = [0u16; 256];
+                        let len_t = GetWindowTextW(hwnd, &mut text_buf);
+                        let title = String::from_utf16_lossy(&text_buf[..len_t as usize]).to_lowercase();
+
+                        if class_name.contains("Chrome_WidgetWin")
+                            || title.contains("imagen en imagen")
+                            || title.contains("picture in picture")
+                            || title.contains("picture-in-picture")
+                        {
+                            let mut res = 0;
+                            let _ = SendMessageTimeoutW(
+                                hwnd,
+                                WM_SETICON,
+                                WPARAM(ICON_BIG as usize),
+                                LPARAM(data.icon_big as isize),
+                                SMTO_ABORTIFHUNG,
+                                500,
+                                Some(&mut res),
+                            );
+                            let _ = SendMessageTimeoutW(
+                                hwnd,
+                                WM_SETICON,
+                                WPARAM(ICON_SMALL as usize),
+                                LPARAM(data.icon_small as isize),
+                                SMTO_ABORTIFHUNG,
+                                500,
+                                Some(&mut res),
+                            );
+                        }
+
+                        BOOL(1)
+                    }
+                }
+
+                let _ = EnumWindows(Some(enum_windows_proc), LPARAM(&mut data as *mut _ as isize));
+            }
+        });
+    }
+    Ok(())
+}
+
+

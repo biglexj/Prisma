@@ -1,7 +1,7 @@
 {
   "name": "prisma",
   "private": true,
-  "version": "1.0.7",
+  "version": "1.0.8",
   "type": "module",
   "scripts": {
     "predev": "bun run scripts/free-port.ts 1421",
@@ -29,7 +29,10 @@
     "posttauri:build": "bun scripts/copy-build-releases.ts",
     "release": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -LocalOnly",
     "release:local": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -LocalOnly",
-    "release:publish": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1"
+    "release:publish": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1",
+    "driver:install": "powershell -ExecutionPolicy Bypass -File ./scripts/driver/install-prisma-driver.ps1",
+    "driver:clean": "powershell -ExecutionPolicy Bypass -File ./scripts/driver/uninstall-prisma-driver.ps1",
+    "driver:uninstall": "powershell -ExecutionPolicy Bypass -File ./scripts/driver/uninstall-prisma-driver.ps1"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
