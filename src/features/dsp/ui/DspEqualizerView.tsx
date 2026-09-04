@@ -540,6 +540,35 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
 
           {!isMasterControlsView ? (
             <div className="dsp-effects-list">
+              {/* 0. Ganancia / Preamp Maestro */}
+              <div className="dsp-effect-row">
+                <div className="dsp-effect-label-row">
+                  <span className="dsp-effect-name">
+                    <Icon name="sliders" /> Ganancia
+                  </span>
+                  <span
+                    className="dsp-effect-val-pill dsp-gain-pill"
+                    title="Doble clic para restablecer a 0.0 dB"
+                    onClick={() => dsp.setPreampDb(0)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {dsp.preampDb > 0 ? `+${dsp.preampDb.toFixed(1)} dB` : `${dsp.preampDb.toFixed(1)} dB`}
+                  </span>
+                </div>
+                <input
+                  className="dsp-slider dsp-gain-slider"
+                  max={12}
+                  min={-12}
+                  onChange={(e) => dsp.setPreampDb(parseFloat(e.target.value))}
+                  onDoubleClick={() => dsp.setPreampDb(0)}
+                  step={0.5}
+                  type="range"
+                  value={dsp.preampDb}
+                  title="Realce de volumen de salida (-12 dB a +12 dB). Doble clic para 0 dB"
+                />
+                <span className="dsp-effect-desc">Realce de volumen y potencia de salida general</span>
+              </div>
+
               {/* 1. Claridad */}
               <div className="dsp-effect-row">
                 <div className="dsp-effect-label-row">
@@ -676,9 +705,10 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
                 </div>
                 <input
                   className="dsp-slider"
-                  max={6}
+                  max={12}
                   min={-12}
                   onChange={(e) => dsp.setPreampDb(parseFloat(e.target.value))}
+                  onDoubleClick={() => dsp.setPreampDb(0)}
                   step={0.5}
                   type="range"
                   value={dsp.preampDb}

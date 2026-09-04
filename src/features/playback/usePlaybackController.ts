@@ -148,6 +148,37 @@ export function usePlaybackController() {
             lastCompletedPathRef.current !== snap.path
           ) {
             lastCompletedPathRef.current = snap.path;
+
+            // Modo: Detener el reproductor al finalizar la canción
+            if (queue.stopOnSongEnd) {
+              void run(() => playbackClient.pause());
+              return;
+            }
+
+            // Modo: Cargar siguiente canción y pausar
+            if (queue.pauseOnSongEnd) {
+              if (queue.activeQueue.items.length > 0) {
+                const res = queue.advanceNext();
+                if (res) {
+                  if (res.replay) {
+                    void run(async () => {
+                      await playbackClient.seek(0);
+                      return playbackClient.pause();
+                    });
+                  } else {
+                    void run(async () => {
+                      await loadPath(res.item.path);
+                      return playbackClient.pause();
+                    });
+                  }
+                  return;
+                }
+              }
+              void run(() => playbackClient.pause());
+              return;
+            }
+
+            // Modo predeterminado: Reproducir siguiente canción
             next();
           }
         })
@@ -155,7 +186,15 @@ export function usePlaybackController() {
     }, interval);
 
     return () => window.clearInterval(timer);
-  }, [capabilities?.available, snapshot.path, snapshot.paused, next]);
+  }, [
+    capabilities?.available,
+    snapshot.path,
+    snapshot.paused,
+    next,
+    queue,
+    run,
+    loadPath,
+  ]);
 
   const chooseFile = useCallback(async () => {
     const selection = await open({

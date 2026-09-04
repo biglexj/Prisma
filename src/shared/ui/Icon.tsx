@@ -2,6 +2,7 @@ import type { ReactNode, SVGProps } from "react";
 
 export type IconName =
   | "arrow-left"
+  | "arrow-right"
   | "chevron-down"
   | "chevron-left"
   | "chevron-right"
@@ -33,6 +34,7 @@ export type IconName =
   | "queue"
   | "refresh"
   | "repeat"
+  | "repeat-one"
   | "search"
   | "settings"
   | "shuffle"
@@ -128,6 +130,7 @@ const paths: Record<IconName, ReactNode> = {
   globe: <><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></>,
   code: <><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></>,
   "arrow-left": <path d="M19 12H5m0 0 7 7m-7-7 7-7" />,
+  "arrow-right": <path d="M5 12h14m0 0-7-7m7 7-7 7" />,
   "chevron-down": <path d="m6 9 6 6 6-6" />,
   "chevron-left": <path d="m15 18-6-6 6-6" />,
   "chevron-right": <path d="m9 18 6-6-6-6" />,
@@ -161,6 +164,13 @@ const paths: Record<IconName, ReactNode> = {
   queue: <path d="M4 6h12 M4 12h9 M4 18h6 M18 14v6 M15 17h6" />,
   refresh: <path d="M20 7v5h-5 M4 17v-5h5 M6.1 8a7 7 0 0 1 11.2-2L20 9 M4 15l2.7 3a7 7 0 0 0 11.2-2" />,
   repeat: <path d="m17 2 4 4-4 4 M3 11V9a3 3 0 0 1 3-3h15 M7 22l-4-4 4-4 M21 13v2a3 3 0 0 1-3 3H3" />,
+  "repeat-one": (
+    <>
+      <path d="m17 2 4 4-4 4 M3 11V9a3 3 0 0 1 3-3h15 M7 22l-4-4 4-4 M21 13v2a3 3 0 0 1-3 3H3" />
+      <path d="M11 10.5h1v4" strokeWidth="2.1" />
+      <path d="M10 11.5l1-1" strokeWidth="2.1" />
+    </>
+  ),
   search: <><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></>,
   settings: <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />,
   shuffle: <path d="M16 3h5v5 M4 20 21 3 M21 16v5h-5 M15 15l6 6 M4 4l5 5" />,

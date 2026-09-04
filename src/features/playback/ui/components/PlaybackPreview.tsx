@@ -15,6 +15,7 @@ import { parseTrackInfo } from "../../../music_library/model/trackInfo";
 import { useScrollRestoration } from "../../../../shared/useScrollRestoration";
 import { MediaProgressBar } from "../../../../shared/ui/MediaProgressBar";
 import { TagEditorModal } from "../../../tags/ui/TagEditorModal";
+import { PlaybackSettingsModal } from "./PlaybackSettingsModal";
 import "./album-adaptive.css";
 import "./playback-queue.css";
 import { cleanPath, formatSession, formatTime, mediaTitle } from "../formatters";
@@ -59,6 +60,7 @@ export function PlaybackPreview({
   const [viewMode, setViewMode] = useState<"cover" | "lyrics" | "queue">("cover");
   const [isFullscreenLyrics, setIsFullscreenLyrics] = useState(false);
   const [tagEditorOpen, setTagEditorOpen] = useState(false);
+  const [isPlaybackSettingsOpen, setIsPlaybackSettingsOpen] = useState(false);
   useScrollRestoration(`view:player:${viewMode}`);
   const currentQueueItem = queueState?.queue.items[queueState.queue.currentIndex];
   const effectivePath = snapshot.path || currentQueueItem?.path || null;
@@ -348,6 +350,30 @@ export function PlaybackPreview({
             >
               <Icon name="shuffle" />
             </button>
+            <button
+              className={`preview-playback-mode-btn ${queueState?.repeatMode !== "off" ? "is-active" : ""}`}
+              onClick={() => setIsPlaybackSettingsOpen(true)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                queueState?.toggleRepeat();
+              }}
+              title={
+                queueState?.repeatMode === "one"
+                  ? "Repetir canción (Clic para configuración, clic derecho para alternar)"
+                  : queueState?.repeatMode === "all"
+                    ? "Repetir cola (Clic para configuración, clic derecho para alternar)"
+                    : "Reproducir siguiente canción (Clic para configuración, clic derecho para alternar)"
+              }
+              aria-label="Configuración de reproducción"
+            >
+              {queueState?.repeatMode === "one" ? (
+                <Icon name="repeat-one" />
+              ) : queueState?.repeatMode === "all" ? (
+                <Icon name="repeat" />
+              ) : (
+                <Icon name="arrow-right" />
+              )}
+            </button>
             <div className="session-indicator">
               <span>{queueCount > 0 ? "COLA" : "SESIÓN"}</span>
               <strong>{queueCount > 0 ? `${(queueState?.queue.currentIndex ?? 0) + 1} de ${queueCount}` : formatSession(snapshot.session)}</strong>
@@ -365,15 +391,6 @@ export function PlaybackPreview({
               />
               <span>{Math.round(snapshot.volume)}%</span>
             </label>
-            <button
-              className={queueState?.repeatMode !== "off" ? "is-active" : ""}
-              onClick={queueState?.toggleRepeat}
-              title={`Repetición: ${queueState?.repeatMode ?? "off"}`}
-              aria-label="Repetición"
-            >
-              <Icon name="repeat" />
-              {queueState?.repeatMode === "one" ? <span className="repeat-indicator">1</span> : null}
-            </button>
             <button
               disabled={!hasMedia}
               onClick={() => {
@@ -467,6 +484,14 @@ export function PlaybackPreview({
           onClose={() => setIsFullscreenLyrics(false)}
         />
       ) : null}
+
+      {queueState && (
+        <PlaybackSettingsModal
+          isOpen={isPlaybackSettingsOpen}
+          onClose={() => setIsPlaybackSettingsOpen(false)}
+          queueState={queueState}
+        />
+      )}
     </section>
   );
 }

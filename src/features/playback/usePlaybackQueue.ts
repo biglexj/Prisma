@@ -91,6 +91,11 @@ export interface PlaybackQueueState {
   setShuffleMode: (enabled: boolean) => void;
   setJumpToNextQueue: (enabled: boolean) => void;
   setLoopQueues: (enabled: boolean) => void;
+  pauseOnSongEnd: boolean;
+  stopOnSongEnd: boolean;
+  setPauseOnSongEnd: (enabled: boolean) => void;
+  setStopOnSongEnd: (enabled: boolean) => void;
+  setSongEndMode: (mode: "stop" | "pause" | "next") => void;
 }
 
 export function usePlaybackQueue(): PlaybackQueueState {
@@ -670,6 +675,30 @@ export function usePlaybackQueue(): PlaybackQueueState {
     setSettings((prev) => ({ ...prev, loopQueues: enabled }));
   }, []);
 
+  const setPauseOnSongEnd = useCallback((enabled: boolean) => {
+    setSettings((prev) => ({
+      ...prev,
+      pauseOnSongEnd: enabled,
+      stopOnSongEnd: enabled ? false : prev.stopOnSongEnd,
+    }));
+  }, []);
+
+  const setStopOnSongEnd = useCallback((enabled: boolean) => {
+    setSettings((prev) => ({
+      ...prev,
+      stopOnSongEnd: enabled,
+      pauseOnSongEnd: enabled ? false : prev.pauseOnSongEnd,
+    }));
+  }, []);
+
+  const setSongEndMode = useCallback((mode: "stop" | "pause" | "next") => {
+    setSettings((prev) => ({
+      ...prev,
+      stopOnSongEnd: mode === "stop",
+      pauseOnSongEnd: mode === "pause",
+    }));
+  }, []);
+
   const playableQueues = useMemo(() => queues.filter((q) => q.items.length > 0), [queues]);
   const currentQIdx = playableQueues.findIndex((q) => q.id === activeQueueId);
   const hasNextQueue = currentQIdx >= 0 && currentQIdx < playableQueues.length - 1;
@@ -732,5 +761,10 @@ export function usePlaybackQueue(): PlaybackQueueState {
     setShuffleMode,
     setJumpToNextQueue,
     setLoopQueues,
+    pauseOnSongEnd: settings.pauseOnSongEnd,
+    stopOnSongEnd: settings.stopOnSongEnd,
+    setPauseOnSongEnd,
+    setStopOnSongEnd,
+    setSongEndMode,
   };
 }
