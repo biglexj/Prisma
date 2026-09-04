@@ -15,6 +15,17 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.0.9] - 2026-09-04
+
+### Resumen
+Presentamos **Prisma v1.0.9**, una actualización orientada a la precisión visual y la captura de contenidos multimedia en el visor de vídeo. Esta versión introduce la **Captura de Fotogramas a Resolución Nativa** (estilo VLC Snapshot) con soporte multiformato para PNG, WebP y JPEG, la navegación cuadro a cuadro intuitiva con los nuevos atajos canónicos **F** y **Shift + F**, un panel de ajustes dedicado para definir la carpeta de guardado y formato preferido, y un sistema flotante de confirmación visual con miniatura, acceso directo en el Explorador de Windows y posicionamiento elevado sobre la barra de tiempo.
+
+### Detalles
+- **Captura de Fotogramas a Resolución Nativa (Snapshot estilo VLC)**: Extracción directa del fotograma activo con fidelidad píxel por píxel sin compresión degradante ni recortes. Permite capturar al instante pulsando el botón de obturador en la barra de control, mediante el menú de herramientas o con el atajo de teclado global `Shift + S`. Los archivos se generan automáticamente con nombres descriptivos y timestamp exacto (`Prisma_snap_[título]_[tiempo].[ext]`).
+- **Navegación Cuadro a Cuadro ("F de Fotograma")**: Nueva ergonomía de control para analizar escenas con máxima precisión: pulsa `F` para avanzar exactamente 1 fotograma (+1f) y `Shift + F` para retroceder 1 fotograma (-1f). Se mantiene la compatibilidad complementaria con `E` / `Shift + E` y las teclas coma (`,`) y punto (`.`), mientras que la pantalla completa se gestiona mediante `F11`, `Alt + Enter` o doble clic.
+- **Configuración de Carpeta de Destino y Formato de Assets**: Nueva sección en Ajustes > General que permite personalizar libremente el directorio donde se almacenarán las capturas (con enlace por defecto a la biblioteca de Imágenes del sistema) y seleccionar el formato de exportación preferido entre PNG (sin pérdidas), WebP (alta fidelidad compacta) o JPEG.
+- **Notificación Flotante con Miniatura y Apertura en Explorador**: Cada captura despliega una notificación elegante sobre el visor con vista previa en miniatura, marca de tiempo y botón «Mostrar», que abre directamente la carpeta en el Explorador de archivos resaltando el archivo recién creado. La notificación ha sido calibrada verticalmente por encima de la barra de reproducción para garantizar un acceso libre y sin obstrucciones.
+
 ## [1.0.8] - 2026-09-03
 
 ### Resumen

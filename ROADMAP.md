@@ -29,6 +29,12 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.0.9**
+  - **Captura de Fotogramas (Snapshot estilo VLC), Navegación Cuadro a Cuadro y Destino de Assets**:
+    - Captura nativa del fotograma activo de vídeo a resolución completa (sin pérdida ni degradación) en formatos PNG, WebP y JPEG, con nombres estructurados y timestamp (`Prisma_snap_[título]_[tiempo].[ext]`).
+    - Navegación cuadro a cuadro precisa con atajos <kbd>F</kbd> (+1 fotograma) y <kbd>Shift</kbd> + <kbd>F</kbd> (-1 fotograma), junto con soporte secundario <kbd>E</kbd> / <kbd>Shift + E</kbd> y teclas coma / punto (<kbd>,</kbd> / <kbd>.</kbd>).
+    - Configuración en Ajustes > General para seleccionar la carpeta de destino personalizada (o restablecer a Imágenes de Windows) y el formato predeterminado mediante chips interactivos.
+    - Notificación flotante con miniatura, tiempo exacto y botón «Mostrar» calibrada verticalmente sobre la barra de reproducción para evitar bloqueos del depurador de tiempo, e integración nativa con Windows Explorer mediante `/select,` para resaltar el archivo recién guardado.
 - [x] **v1.0.8**
   - **Modo DSP Global de Sistema, Graves Dual-Mono, Ruteo Universal, Descargador de Letras Sincronizadas y Continuidad Acústica**:
     - Motor nativo puro en Rust de captura y renderizado en tiempo real con latencia ultrabaja (~10 ms) mediante WASAPI Loopback para interceptar y procesar el audio de todo Windows (YouTube en Chrome/Edge, Spotify, navegadores y videojuegos).

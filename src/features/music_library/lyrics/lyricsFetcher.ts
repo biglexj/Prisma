@@ -25,7 +25,7 @@ interface LrclibRecord {
 }
 
 const LRCLIB_BASE_URL = "https://lrclib.net/api";
-const APP_USER_AGENT = "Prisma-Desktop/1.0.8 (https://github.com/biglexj/Prisma)";
+const APP_USER_AGENT = "Prisma-Desktop/1.0.9 (https://github.com/biglexj/Prisma)";
 
 /**
  * Limpia sufijos comunes en títulos de canciones descargadas (ej: "[Official Video]", "(Audio)", etc.)

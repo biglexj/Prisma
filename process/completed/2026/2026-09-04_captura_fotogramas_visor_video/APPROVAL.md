@@ -1,18 +1,18 @@
 # Captura de Fotogramas en Visor de Vídeo (Snapshot estilo VLC) y Configuración de Assets — Aprobación
 
-- Estado: `PENDING`
+- Estado: `APPROVED`
 
 ## Controles
 
-- [ ] Validación técnica del agente.
-- [ ] Validación funcional del tester.
-- [ ] Aprobación final de Biglex.
-- [ ] `ROADMAP.md` actualizado.
-- [ ] Sesión cerrada con resumen breve.
+- [x] Validación técnica del agente.
+- [x] Validación funcional del tester.
+- [x] Aprobación final de Biglex.
+- [x] `ROADMAP.md` actualizado.
+- [x] Sesión cerrada con resumen breve.
 
 ## Decisión
 
-- [ ] `APPROVED`
+- [x] `APPROVED`
 - [ ] `REWORK`
 - [ ] `CANCELLED`
 - [ ] `SUPERSEDED`
