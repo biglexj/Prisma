@@ -1148,9 +1148,10 @@
 /* ── Notificación Flotante Toast de Captura de Fotograma ── */
 .video-snapshot-toast {
   position: absolute;
-  bottom: 96px;
+  bottom: 136px;
   right: 28px;
-  z-index: 55;
+  z-index: 60;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   gap: 12px;
