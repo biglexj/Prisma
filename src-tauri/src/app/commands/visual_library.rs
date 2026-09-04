@@ -157,7 +157,8 @@ pub async fn show_in_file_manager(path: String) -> Result<(), String> {
             let target = Path::new(&win_path);
             if target.is_file() {
                 let _ = Command::new("explorer")
-                    .arg(format!("/select,{}", win_path))
+                    .arg("/select,")
+                    .arg(&win_path)
                     .spawn();
             } else if target.is_dir() {
                 let _ = Command::new("explorer")
