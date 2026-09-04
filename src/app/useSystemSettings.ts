@@ -26,6 +26,8 @@ interface SystemSettings {
   auroraOnlineServicesEnabled: boolean;
   auroraWallpapersEnabled: boolean;
   auroraServerUrl: string;
+  videoSnapshotFolder?: string;
+  videoSnapshotFormat?: "png" | "webp" | "jpeg";
 }
 
 const STORAGE_KEY = "prisma.system-settings.v1";
@@ -42,6 +44,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
   auroraOnlineServicesEnabled: false,
   auroraWallpapersEnabled: true,
   auroraServerUrl: "https://www.biglexj.com",
+  videoSnapshotFolder: "",
+  videoSnapshotFormat: "png",
 };
 
 function loadStoredSettings(): SystemSettings {
@@ -109,6 +113,8 @@ export function useSystemSettings() {
               auroraOnlineServicesEnabled: stored.auroraOnlineServicesEnabled ?? prev.auroraOnlineServicesEnabled,
               auroraWallpapersEnabled: stored.auroraWallpapersEnabled ?? prev.auroraWallpapersEnabled,
               auroraServerUrl: stored.auroraServerUrl ?? prev.auroraServerUrl,
+              videoSnapshotFolder: stored.videoSnapshotFolder ?? prev.videoSnapshotFolder,
+              videoSnapshotFormat: stored.videoSnapshotFormat ?? prev.videoSnapshotFormat,
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
             return synced;
@@ -244,6 +250,24 @@ export function useSystemSettings() {
     });
   }, []);
 
+  const setVideoSnapshotFolder = useCallback((folder: string) => {
+    setSettings((prev) => {
+      const next = { ...prev, videoSnapshotFolder: folder };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, []);
+
+  const setVideoSnapshotFormat = useCallback((format: "png" | "webp" | "jpeg") => {
+    setSettings((prev) => {
+      const next = { ...prev, videoSnapshotFormat: format };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, []);
+
   return {
     isLoaded,
     quickLookShortcut: settings.quickLookShortcut,
@@ -255,6 +279,8 @@ export function useSystemSettings() {
     auroraOnlineServicesEnabled: settings.auroraOnlineServicesEnabled,
     auroraWallpapersEnabled: settings.auroraWallpapersEnabled,
     auroraServerUrl: settings.auroraServerUrl,
+    videoSnapshotFolder: settings.videoSnapshotFolder || "",
+    videoSnapshotFormat: settings.videoSnapshotFormat || "png",
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
@@ -264,5 +290,7 @@ export function useSystemSettings() {
     setAuroraOnlineServicesEnabled,
     setAuroraWallpapersEnabled,
     setAuroraServerUrl,
+    setVideoSnapshotFolder,
+    setVideoSnapshotFormat,
   };
 }

@@ -14,6 +14,9 @@ import {
 } from "../useSystemSettings";
 import { ProgressBarSettingsPanel } from "./ProgressBarSettingsPanel";
 import { Icon } from "../../shared/ui/Icon";
+import { open } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
+import { getDefaultPicturesDir } from "../../shared/mediaOperations";
 import "./app-settings.css";
 
 interface AppSettingsProps {
@@ -108,6 +111,8 @@ export function AppSettings({
     auroraOnlineServicesEnabled,
     auroraWallpapersEnabled,
     auroraServerUrl,
+    videoSnapshotFolder,
+    videoSnapshotFormat,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
@@ -117,7 +122,46 @@ export function AppSettings({
     setAuroraOnlineServicesEnabled,
     setAuroraWallpapersEnabled,
     setAuroraServerUrl,
+    setVideoSnapshotFolder,
+    setVideoSnapshotFormat,
   } = useSystemSettings();
+
+  const [defaultPicturesDir, setDefaultPicturesDir] = useState<string>("");
+
+  useEffect(() => {
+    void getDefaultPicturesDir()
+      .then((dir) => {
+        if (dir) setDefaultPicturesDir(dir);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSelectSnapshotFolder = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: "Seleccionar carpeta para capturas de vídeo y assets",
+        defaultPath: videoSnapshotFolder || defaultPicturesDir || undefined,
+      });
+      if (typeof selected === "string" && selected.trim()) {
+        setVideoSnapshotFolder(selected.trim());
+      }
+    } catch (err) {
+      console.error("Error al seleccionar carpeta de capturas:", err);
+    }
+  };
+
+  const handleOpenSnapshotFolder = () => {
+    const target = videoSnapshotFolder || defaultPicturesDir;
+    if (target) {
+      void invoke("show_in_file_manager", { path: target }).catch(() => {});
+    }
+  };
+
+  const handleResetSnapshotFolder = () => {
+    setVideoSnapshotFolder("");
+  };
 
 
 
@@ -312,6 +356,103 @@ export function AppSettings({
                         </div>
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                {/* ── Capturas de Vídeo y Assets ── */}
+                <div className="settings-card">
+                  <div className="settings-card-header-row">
+                    <div>
+                      <h3>Capturas de Vídeo y Assets</h3>
+                      <p>
+                        Configura el directorio donde se guardan los fotogramas capturados (snapshots) del visor de vídeos al presionar <kbd className="shortcut-kbd-pill">Shift + S</kbd> o el botón de cámara.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="snapshot-folder-config-box">
+                    <div className="snapshot-folder-path-display">
+                      <div className="snapshot-folder-header-row">
+                        <span className="snapshot-folder-label">Carpeta de destino</span>
+                        <span className={`snapshot-folder-badge ${videoSnapshotFolder ? "is-custom" : "is-default"}`}>
+                          {videoSnapshotFolder ? "Personalizada" : "Predeterminada (Imágenes)"}
+                        </span>
+                      </div>
+                      <div className="snapshot-folder-path-text" title={videoSnapshotFolder || defaultPicturesDir}>
+                        <Icon name="folder" />
+                        <span>{videoSnapshotFolder || defaultPicturesDir || "Carpeta Imágenes del sistema"}</span>
+                      </div>
+                    </div>
+
+                    <div className="snapshot-folder-actions-row">
+                      <button
+                        type="button"
+                        className="snapshot-action-btn primary"
+                        onClick={handleSelectSnapshotFolder}
+                      >
+                        <Icon name="folder-open" />
+                        <span>Cambiar carpeta...</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="snapshot-action-btn secondary"
+                        onClick={handleOpenSnapshotFolder}
+                        title="Abrir carpeta en el Explorador de Windows"
+                      >
+                        <Icon name="external-link" />
+                        <span>Abrir carpeta</span>
+                      </button>
+                      {videoSnapshotFolder ? (
+                        <button
+                          type="button"
+                          className="snapshot-action-btn tertiary"
+                          onClick={handleResetSnapshotFolder}
+                          title="Restablecer a la carpeta de Imágenes predeterminada"
+                        >
+                          <Icon name="undo" />
+                          <span>Restablecer</span>
+                        </button>
+                      ) : null}
+                    </div>
+
+                    <div className="settings-section-divider" />
+
+                    <h4 className="settings-subheading" style={{ marginTop: 12 }}>Formato de Imagen</h4>
+                    <div className="snapshot-format-options">
+                      <button
+                        type="button"
+                        className={`snapshot-format-chip ${videoSnapshotFormat === "png" ? "is-selected" : ""}`}
+                        onClick={() => setVideoSnapshotFormat("png")}
+                      >
+                        <Icon name={videoSnapshotFormat === "png" ? "check" : "camera"} />
+                        <div className="snapshot-format-info">
+                          <strong>PNG</strong>
+                          <small>Máxima calidad sin pérdidas (Estilo VLC)</small>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className={`snapshot-format-chip ${videoSnapshotFormat === "webp" ? "is-selected" : ""}`}
+                        onClick={() => setVideoSnapshotFormat("webp")}
+                      >
+                        <Icon name={videoSnapshotFormat === "webp" ? "check" : "sparkles"} />
+                        <div className="snapshot-format-info">
+                          <strong>WebP</strong>
+                          <small>Ultra compacto y moderno (Alta fidelidad)</small>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className={`snapshot-format-chip ${videoSnapshotFormat === "jpeg" ? "is-selected" : ""}`}
+                        onClick={() => setVideoSnapshotFormat("jpeg")}
+                      >
+                        <Icon name={videoSnapshotFormat === "jpeg" ? "check" : "image"} />
+                        <div className="snapshot-format-info">
+                          <strong>JPEG</strong>
+                          <small>Archivo ligero y universal</small>
+                        </div>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -522,6 +663,35 @@ export function AppSettings({
                       <span className="shortcut-row-label">Cola de proyección (Abrir / Cerrar)</span>
                       <div className="shortcut-row-keys">
                         <kbd className="shortcut-kbd-pill">Q</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Tomar captura de fotograma (Snapshot)</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">Shift + S</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Avanzar 1 fotograma (Frame forward)</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">F</kbd>
+                        <kbd className="shortcut-kbd-pill">E</kbd>
+                        <kbd className="shortcut-kbd-pill">.</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Retroceder 1 fotograma (Frame backward)</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">Shift + F</kbd>
+                        <kbd className="shortcut-kbd-pill">Shift + E</kbd>
+                        <kbd className="shortcut-kbd-pill">,</kbd>
+                      </div>
+                    </div>
+                    <div className="shortcut-row">
+                      <span className="shortcut-row-label">Pantalla completa</span>
+                      <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">F11</kbd>
+                        <kbd className="shortcut-kbd-pill">Alt + Enter</kbd>
                       </div>
                     </div>
                     <div className="shortcut-row">

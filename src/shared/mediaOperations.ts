@@ -41,3 +41,34 @@ export function saveEditedImage(
     customFileName: customFileName?.trim() || null,
   });
 }
+
+export interface SaveSnapshotResult {
+  savedPath: string;
+  fileName: string;
+  folder: string;
+}
+
+export interface SaveSnapshotParams {
+  videoPath: string;
+  imageBase64: string;
+  outputFolder?: string;
+  timestampSecs?: number;
+  format?: "png" | "webp" | "jpeg";
+}
+
+/** Guarda una captura de pantalla de un fotograma de vídeo en disco. */
+export function saveVideoSnapshot(params: SaveSnapshotParams): Promise<SaveSnapshotResult> {
+  return invoke<SaveSnapshotResult>("video_save_snapshot", {
+    videoPath: params.videoPath,
+    imageBase64: params.imageBase64,
+    outputFolder: params.outputFolder?.trim() || null,
+    timestampSecs: typeof params.timestampSecs === "number" ? params.timestampSecs : null,
+    format: params.format || "png",
+  });
+}
+
+/** Obtiene la ruta canónica del directorio de imágenes del sistema. */
+export function getDefaultPicturesDir(): Promise<string> {
+  return invoke<string>("media_get_default_pictures_dir");
+}
+

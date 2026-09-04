@@ -264,3 +264,163 @@ pub async fn media_save_image(
     .await
     .map_err(|e| format!("Error al procesar guardado de imagen: {e}"))?
 }
+
+/// Resultado de guardar una captura de pantalla de vídeo (snapshot).
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SaveSnapshotResult {
+    pub saved_path: String,
+    pub file_name: String,
+    pub folder: String,
+}
+
+/// Obtiene el directorio predeterminado de imágenes del sistema.
+#[tauri::command]
+pub fn media_get_default_pictures_dir(app: tauri::AppHandle) -> Result<String, String> {
+    use tauri::Manager;
+    if let Ok(pic_dir) = app.path().picture_dir() {
+        return Ok(clean_path_str(&pic_dir.to_string_lossy()));
+    }
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(userprofile) = std::env::var("USERPROFILE") {
+            let p = std::path::PathBuf::from(userprofile).join("Pictures");
+            return Ok(clean_path_str(&p.to_string_lossy()));
+        }
+    }
+    Ok(clean_path_str("."))
+}
+
+/// Guarda un fotograma capturado de un vídeo (snapshot) en la carpeta configurada o en Imágenes por defecto.
+#[tauri::command]
+pub async fn video_save_snapshot(
+    app: tauri::AppHandle,
+    video_path: String,
+    image_base64: String,
+    output_folder: Option<String>,
+    timestamp_secs: Option<f64>,
+    format: Option<String>,
+) -> Result<SaveSnapshotResult, String> {
+    use std::path::PathBuf;
+    use tauri::Manager;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        // 1. Limpiar y decodificar Base64
+        let raw_b64 = if let Some(idx) = image_base64.find(";base64,") {
+            &image_base64[idx + 8..]
+        } else if let Some(stripped) = image_base64.strip_prefix("data:image/") {
+            if let Some(idx) = stripped.find(',') {
+                &stripped[idx + 1..]
+            } else {
+                &image_base64
+            }
+        } else {
+            &image_base64
+        };
+
+        let image_bytes = STANDARD
+            .decode(raw_b64.trim())
+            .map_err(|e| format!("No se pudieron decodificar los datos del fotograma: {e}"))?;
+
+        if image_bytes.is_empty() {
+            return Err("El fotograma capturado está vacío.".to_string());
+        }
+
+        // 2. Determinar la carpeta de destino
+        let target_dir: PathBuf = if let Some(folder) = output_folder.filter(|f| !f.trim().is_empty()) {
+            let clean = clean_path_str(&folder);
+            PathBuf::from(clean)
+        } else {
+            // Predeterminado: Carpeta Imágenes del sistema
+            if let Ok(pic_dir) = app.path().picture_dir() {
+                pic_dir
+            } else {
+                #[cfg(target_os = "windows")]
+                {
+                    if let Ok(userprofile) = std::env::var("USERPROFILE") {
+                        PathBuf::from(userprofile).join("Pictures")
+                    } else {
+                        PathBuf::from(".")
+                    }
+                }
+                #[cfg(not(target_os = "windows"))]
+                PathBuf::from(".")
+            }
+        };
+
+        if !target_dir.exists() {
+            std::fs::create_dir_all(&target_dir)
+                .map_err(|e| format!("No se pudo crear el directorio de destino {}: {e}", target_dir.display()))?;
+        }
+
+        // 3. Obtener stem del vídeo original
+        let clean_video = clean_path_str(&video_path);
+        let src_video_path = Path::new(&clean_video);
+        let video_stem = src_video_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("video");
+
+        // Sanitizar el stem para nombre de archivo seguro
+        let sanitized_stem: String = video_stem
+            .chars()
+            .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' || c == ' ' { c } else { '_' })
+            .collect();
+        let clean_stem = sanitized_stem.trim();
+        let effective_stem = if clean_stem.is_empty() { "video" } else { clean_stem };
+
+        // 4. Formatear timestamp de posición (ej. 01h23m45s)
+        let time_tag = if let Some(secs) = timestamp_secs {
+            let total_secs = secs.max(0.0) as u64;
+            let hours = total_secs / 3600;
+            let mins = (total_secs % 3600) / 60;
+            let s = total_secs % 60;
+            if hours > 0 {
+                format!("{:02}h{:02}m{:02}s", hours, mins, s)
+            } else {
+                format!("{:02}m{:02}s", mins, s)
+            }
+        } else {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            format!("{now}")
+        };
+
+        // 5. Extensión
+        let ext = match format.as_deref().map(|s| s.to_lowercase()).as_deref() {
+            Some("webp") => "webp",
+            Some("jpg") | Some("jpeg") => "jpg",
+            _ => "png",
+        };
+
+        // 6. Generar nombre único evitando colisiones
+        let base_file_name = format!("Prisma_snap_{effective_stem}_{time_tag}.{ext}");
+        let mut target_file_path = target_dir.join(&base_file_name);
+        let mut final_file_name = base_file_name;
+        let mut counter = 1;
+
+        while target_file_path.exists() {
+            final_file_name = format!("Prisma_snap_{effective_stem}_{time_tag}_{counter}.{ext}");
+            target_file_path = target_dir.join(&final_file_name);
+            counter += 1;
+        }
+
+        // 7. Guardar a disco
+        std::fs::write(&target_file_path, &image_bytes)
+            .map_err(|e| format!("Error al escribir el fotograma capturado: {e}"))?;
+
+        let clean_saved = clean_path_str(&target_file_path.to_string_lossy());
+        let clean_folder = clean_path_str(&target_dir.to_string_lossy());
+
+        Ok(SaveSnapshotResult {
+            saved_path: clean_saved,
+            file_name: final_file_name,
+            folder: clean_folder,
+        })
+    })
+    .await
+    .map_err(|e| format!("Error al procesar la captura de fotograma: {e}"))?
+}
+

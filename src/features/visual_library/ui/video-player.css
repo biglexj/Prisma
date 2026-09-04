@@ -1119,4 +1119,184 @@
   text-overflow: ellipsis;
 }
 
+/* ── Botones de Paso de Fotograma (Frame by frame) ── */
+.video-step-btn .btn-label-icon {
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
 
+/* ── Destello de Obturador de Cámara (Shutter Flash) ── */
+.video-snapshot-flash {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.52);
+  pointer-events: none;
+  z-index: 45;
+  animation: video-shutter-flash 240ms cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+@keyframes video-shutter-flash {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ── Notificación Flotante Toast de Captura de Fotograma ── */
+.video-snapshot-toast {
+  position: absolute;
+  bottom: 96px;
+  right: 28px;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 14px;
+  background: rgba(18, 18, 24, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3);
+  animation: video-toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  max-width: 440px;
+}
+
+@keyframes video-toast-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.video-snapshot-toast-thumb {
+  width: 58px;
+  height: 38px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #000000;
+  flex-shrink: 0;
+}
+
+.video-snapshot-toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.video-snapshot-toast-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 750;
+  color: #ffffff;
+}
+
+.video-snapshot-toast-title svg {
+  width: 14px;
+  height: 14px;
+  color: var(--primary, #a855f7);
+}
+
+.video-snapshot-toast-filename {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.65);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.video-snapshot-toast-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+
+.video-snapshot-toast-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 100ms ease;
+}
+
+.video-snapshot-toast-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+.video-snapshot-toast-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.video-snapshot-toast-close {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.video-snapshot-toast-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.video-snapshot-toast-close svg {
+  width: 14px;
+  height: 14px;
+}
+
+.video-snapshot-toast.is-error {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(36, 12, 16, 0.96);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(239, 68, 68, 0.35);
+}
+
+.video-snapshot-toast.is-error .video-snapshot-toast-title {
+  color: #f87171;
+}
+
+.video-snapshot-toast-icon-error {
+  width: 54px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.video-snapshot-toast-icon-error svg {
+  width: 18px;
+  height: 18px;
+}

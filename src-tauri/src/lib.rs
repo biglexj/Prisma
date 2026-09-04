@@ -37,7 +37,10 @@ use app::commands::custom_libraries::{
     custom_libraries_remove_excluded_folder, custom_libraries_remove_folder, custom_libraries_save,
     custom_libraries_save_text_file, custom_libraries_scan_items, custom_libraries_toggle_active,
 };
-use app::commands::media::{media_delete_items, media_rename_item, media_save_image};
+use app::commands::media::{
+    media_delete_items, media_get_default_pictures_dir, media_rename_item, media_save_image,
+    video_save_snapshot,
+};
 use app::commands::quick_look::{
     autostart_get_status, autostart_set, get_minimize_to_tray, is_minimize_to_tray_enabled,
     quick_look_close_window, quick_look_get_current, quick_look_get_detached_payload,
@@ -367,6 +370,8 @@ pub fn run() {
             media_delete_items,
             media_rename_item,
             media_save_image,
+            media_get_default_pictures_dir,
+            video_save_snapshot,
             show_in_file_manager,
             open_in_file_manager,
             open_path_with_default_app,

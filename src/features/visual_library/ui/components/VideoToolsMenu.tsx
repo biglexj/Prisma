@@ -5,6 +5,7 @@ export interface VideoToolsMenuProps {
   onConvert: () => void;
   onShowInFolder: () => void;
   onSendToMobile: () => void;
+  onCapture?: () => void;
   onOpenChange?: (isOpen: boolean) => void;
 }
 
@@ -12,6 +13,7 @@ export function VideoToolsMenu({
   onConvert,
   onShowInFolder,
   onSendToMobile,
+  onCapture,
   onOpenChange,
 }: VideoToolsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -72,6 +74,20 @@ export function VideoToolsMenu({
         <div className="viewer-tools-dropdown-panel" role="menu">
           <div className="viewer-tools-section">
             <div className="viewer-tools-section-title">Herramientas de Vídeo</div>
+
+            {onCapture ? (
+              <button
+                className="viewer-tools-item"
+                onClick={() => handleAction(onCapture)}
+                role="menuitem"
+              >
+                <Icon name="camera" />
+                <div className="viewer-tools-item-content">
+                  <span className="viewer-tools-item-title">Capturar fotograma</span>
+                  <span className="viewer-tools-item-desc">Guardar fotograma actual (Shift+S)</span>
+                </div>
+              </button>
+            ) : null}
 
             <button
               className="viewer-tools-item"

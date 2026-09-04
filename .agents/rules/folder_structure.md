@@ -48,7 +48,7 @@ Prisma/                             # Raíz del repositorio
 ├── scratch/                        # Scripts utilitarios de mantenimiento (solo raíz)
 ├── temp/                           # Archivos temporales de trabajo (ignorado en .gitignore)
 ├── test/                           # Scripts de prueba temporales (ignorado en .gitignore)
-├── agent.md                        # Instrucciones principales del agente (raíz)
+├── .agents/rules/base.md                        # Instrucciones principales del agente (raíz)
 ├── LICENSE                         # Licencia MIT
 ├── NOTICE.md                       # Avisos legales y atribuciones
 ├── README.md                       # Documentación pública del proyecto

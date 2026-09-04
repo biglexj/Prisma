@@ -5,37 +5,37 @@ trigger: always_on
 # Perfil de Documentación Core — Prisma
 
 - Última revisión: 2026-08-11
-- Tipo principal: `desktop` (`Core-Docs/types/desktop`)
-- Plataformas: `windows` (`Core-Docs/platforms/windows`)
-- Stack: `react`, `typescript`, `tauri`, `rust` (`Core-Docs/stacks/react`)
+- Tipo principal: `desktop` (`Docs/types/desktop`)
+- Plataformas: `windows` (`Docs/platforms/windows`)
+- Stack: `react`, `typescript`, `tauri`, `rust` (`Docs/stacks/react`)
 - Funciones activas: `playback`, `music_library`, `visual_library`, `design-system`, `storage`, `single-instance`, `aurora-synapse`
 
 ## Regla de selección
 
 Antes de aplicar la Documentación Core, consultar únicamente:
 
-1. Las reglas globales pertinentes (`Core-Docs/global`).
-2. El tipo principal en `Core-Docs/types/desktop`.
-3. La plataforma distribuida en `Core-Docs/platforms/windows`.
-4. El stack utilizado en `Core-Docs/stacks/react`.
-5. Las funciones realmente adoptadas en `Core-Docs/features`.
+1. Las reglas globales pertinentes (`Docs/global`).
+2. El tipo principal en `Docs/types/desktop`.
+3. La plataforma distribuida en `Docs/platforms/windows`.
+4. El stack utilizado en `Docs/stacks/react`.
+5. Las funciones realmente adoptadas en `Docs/features`.
 
 No aplicar una capacidad por semejanza. Instancia única, bandeja, autoactualización, instalador, IA y otras funciones deben figurar expresamente como activas.
 
 ## Documentos Core seleccionados
 
-- `Core-Docs/global/agents`
-- `Core-Docs/global/architecture`
-- `Core-Docs/global/documentation`
-- `Core-Docs/global/design`
-- `Core-Docs/global/quality`
-- `Core-Docs/global/releases`
-- `Core-Docs/types/desktop`
-- `Core-Docs/platforms/windows`
-- `Core-Docs/stacks/react`
-- `Core-Docs/features/design-system`
-- `Core-Docs/features/storage`
-- `Core-Docs/features/aurora-synapse`
+- `Docs/global/agents`
+- `Docs/global/architecture`
+- `Docs/global/documentation`
+- `Docs/global/design`
+- `Docs/global/quality`
+- `Docs/global/releases`
+- `Docs/types/desktop`
+- `Docs/platforms/windows`
+- `Docs/stacks/react`
+- `Docs/features/design-system`
+- `Docs/features/storage`
+- `Docs/features/aurora-synapse`
 
 ## Excepciones locales
 

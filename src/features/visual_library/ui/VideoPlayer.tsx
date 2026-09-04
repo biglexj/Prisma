@@ -12,6 +12,8 @@ import { useMediaDelete } from "../../../shared/useMediaDelete";
 import { MediaProgressBar } from "../../../shared/ui/MediaProgressBar";
 import { VideoToolsMenu } from "./components/VideoToolsMenu";
 import { useVideoAudioDsp } from "./useVideoAudioDsp";
+import { useVideoSnapshot } from "../hooks/useVideoSnapshot";
+import { useSystemSettings } from "../../../app/useSystemSettings";
 import "./video-player.css";
 
 interface VideoPlayerProps {
@@ -122,6 +124,26 @@ export function VideoPlayer({
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   useVideoAudioDsp(videoRef);
+
+  const { videoSnapshotFolder, videoSnapshotFormat } = useSystemSettings();
+  const {
+    isCapturing,
+    isFlashing,
+    snapshotToast,
+    takeSnapshot,
+    stepFrameForward,
+    stepFrameBackward,
+    dismissToast,
+    openSnapshotInFolder,
+  } = useVideoSnapshot({
+    videoRef,
+    videoPath: path,
+    videoTitle: path ? mediaTitle(path) : undefined,
+    videoSnapshotFolder,
+    videoSnapshotFormat,
+    onSeek: (newTime) => setPosition(newTime),
+    onPauseStateChange: (isPaused) => setPaused(isPaused),
+  });
   const controlsTimeoutRef = useRef<number | null>(null);
   const fastForwardIntervalRef = useRef<number | null>(null);
   const audioMenuRef = useRef<HTMLDivElement | null>(null);
@@ -215,6 +237,12 @@ export function VideoPlayer({
           setShuffleToastText(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
           setTimeout(() => setShuffleToastText(null), 1800);
         },
+      },
+      {
+        id: "snapshot",
+        label: "Capturar fotograma (Shift+S)",
+        icon: "camera" as const,
+        onSelect: () => void takeSnapshot(),
       },
       {
         id: "show",
@@ -839,6 +867,55 @@ export function VideoPlayer({
         }
       }
 
+      // Pantalla completa (F11 / Alt + Enter)
+      if (e.key === "F11" || (e.altKey && e.key === "Enter")) {
+        e.preventDefault();
+        toggleFullscreen();
+        return;
+      }
+
+      // Atajo de captura de fotograma (estilo VLC Shift + S)
+      if (e.shiftKey && (e.key === "S" || e.key === "s")) {
+        e.preventDefault();
+        void takeSnapshot();
+        return;
+      }
+
+      // Navegación fotograma a fotograma:
+      // F (avanzar) y Shift + F (retroceder) ("F de Fotograma", solicitado expresamente)
+      // Soporte complementario VLC (E / Shift + E) y universal (, / .)
+      if (e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          stepFrameBackward();
+        } else {
+          stepFrameForward();
+        }
+        return;
+      }
+
+      if (e.key.toLowerCase() === "e") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          stepFrameBackward();
+        } else {
+          stepFrameForward();
+        }
+        return;
+      }
+
+      // Compatibilidad universal con teclas coma (,) y punto (.)
+      if (e.key === ",") {
+        e.preventDefault();
+        stepFrameBackward();
+        return;
+      }
+      if (e.key === ".") {
+        e.preventDefault();
+        stepFrameForward();
+        return;
+      }
+
       switch (e.key.toLowerCase()) {
         case " ":
         case "k":
@@ -891,10 +968,6 @@ export function VideoPlayer({
         case "p":
           e.preventDefault();
           handlePrevious();
-          break;
-        case "f":
-          e.preventDefault();
-          toggleFullscreen();
           break;
         case "s":
           e.preventDefault();
@@ -1133,6 +1206,7 @@ export function VideoPlayer({
                     })
                   );
                 }}
+                onCapture={() => void takeSnapshot()}
                 onOpenChange={(isOpen) => setIsToolsMenuOpen(isOpen)}
               />
             </>
@@ -1208,6 +1282,7 @@ export function VideoPlayer({
                 onTimeUpdate={(e) => {
                   setPosition(e.currentTarget.currentTime || 0);
                 }}
+                crossOrigin="anonymous"
                 playsInline
                 ref={videoRef}
                 src={videoSrc}
@@ -1242,6 +1317,64 @@ export function VideoPlayer({
           {isFastForwarding ? (
             <div className="video-ffw-indicator">
               <span>⏩ 3.0x Velocidad Rápida</span>
+            </div>
+          ) : null}
+
+          {/* Destello de obturador de cámara (shutter flash) */}
+          {isFlashing ? <div className="video-snapshot-flash" aria-hidden="true" /> : null}
+
+          {/* Notificación Toast flotante de captura con miniatura */}
+          {snapshotToast && snapshotToast.visible ? (
+            <div
+              className={`video-snapshot-toast ${snapshotToast.isError ? "is-error" : ""}`}
+              role="status"
+              aria-live="polite"
+            >
+              {snapshotToast.thumbUrl ? (
+                <img
+                  src={snapshotToast.thumbUrl}
+                  alt="Miniatura del fotograma capturado"
+                  className="video-snapshot-toast-thumb"
+                />
+              ) : (
+                <div className="video-snapshot-toast-icon-error">
+                  <Icon name="close" />
+                </div>
+              )}
+              <div className="video-snapshot-toast-body">
+                <div className="video-snapshot-toast-title">
+                  <Icon name={snapshotToast.isError ? "info" : "camera"} />
+                  <span>
+                    {snapshotToast.isError
+                      ? "Error de captura"
+                      : `Fotograma capturado (${snapshotToast.timestampStr})`}
+                  </span>
+                </div>
+                <span className="video-snapshot-toast-filename" title={snapshotToast.fileName}>
+                  {snapshotToast.isError
+                    ? snapshotToast.errorMessage || snapshotToast.fileName
+                    : snapshotToast.fileName}
+                </span>
+              </div>
+              <div className="video-snapshot-toast-actions">
+                {!snapshotToast.isError ? (
+                  <button
+                    className="video-snapshot-toast-btn"
+                    onClick={() => openSnapshotInFolder(snapshotToast.savedPath)}
+                    title="Mostrar en el Explorador de Windows"
+                  >
+                    <Icon name="folder-open" />
+                    <span>Mostrar</span>
+                  </button>
+                ) : null}
+                <button
+                  className="video-snapshot-toast-close"
+                  onClick={dismissToast}
+                  title="Cerrar notificación"
+                >
+                  <Icon name="close" />
+                </button>
+              </div>
             </div>
           ) : null}
         </div>
@@ -1441,12 +1574,32 @@ export function VideoPlayer({
             </button>
 
             <button
+              aria-label="Retroceder 1 fotograma"
+              className="video-icon-btn video-step-btn"
+              disabled={!hasMedia}
+              onClick={stepFrameBackward}
+              title="Retroceder 1 fotograma (Shift+F / Shift+E / ,)"
+            >
+              <span className="btn-label-icon">-1f</span>
+            </button>
+
+            <button
               className="video-play-btn"
               disabled={!hasMedia}
               onClick={togglePlay}
             >
               <Icon name={paused ? "play" : "pause"} />
               <span>{paused ? "Reproducir" : "Pausar"}</span>
+            </button>
+
+            <button
+              aria-label="Avanzar 1 fotograma"
+              className="video-icon-btn video-step-btn"
+              disabled={!hasMedia}
+              onClick={stepFrameForward}
+              title="Avanzar 1 fotograma (F / E / .)"
+            >
+              <span className="btn-label-icon">+1f</span>
             </button>
 
             <button
@@ -1506,6 +1659,16 @@ export function VideoPlayer({
             </div>
 
             <button
+              aria-label="Capturar fotograma"
+              className={`video-icon-btn video-snapshot-btn ${isCapturing ? "is-active" : ""}`}
+              disabled={!hasMedia || isCapturing}
+              onClick={() => void takeSnapshot()}
+              title="Capturar fotograma (Shift+S)"
+            >
+              <Icon name="camera" />
+            </button>
+
+            <button
               aria-label="Picture-in-Picture (Ventana flotante)"
               className={`video-icon-btn ${isPipActive ? "is-active" : ""}`}
               onClick={togglePiP}
@@ -1518,7 +1681,7 @@ export function VideoPlayer({
               aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               className="video-icon-btn"
               onClick={toggleFullscreen}
-              title={isFullscreen ? "Salir de pantalla completa (F / Esc)" : "Pantalla completa (F)"}
+              title={isFullscreen ? "Salir de pantalla completa (F11 / Esc)" : "Pantalla completa (F11 / Alt+Enter)"}
             >
               <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen"} />
             </button>
