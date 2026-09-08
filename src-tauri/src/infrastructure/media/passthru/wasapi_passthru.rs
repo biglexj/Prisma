@@ -146,7 +146,7 @@ impl WasapiBridge {
         let params_shared = Arc::new(Mutex::new(initial_params));
         let volume_req = Arc::new(AtomicI32::new(-1));
         let status = Arc::new(Mutex::new(GlobalPassthruStatus {
-            is_running: true,
+            is_running: false,
             has_signal: false,
             volume: 1.0,
             active_capture_device: Some(capture_device_name),
@@ -174,14 +174,16 @@ impl WasapiBridge {
                 run_passthru_loop(
                     loop_capture_id,
                     loop_render_id,
-                    thread_running,
+                    thread_running.clone(),
                     thread_params,
                     thread_status.clone(),
                     thread_volume_req,
                 );
 
+                thread_running.store(false, Ordering::SeqCst);
                 if let Ok(mut st) = thread_status.lock() {
                     st.is_running = false;
+                    st.has_signal = false;
                 }
 
                 unsafe {
@@ -424,6 +426,7 @@ fn run_passthru_loop(
         eprintln!("[Prisma Passthru] ¡Conectado y transmitiendo en tiempo real!");
 
         if let Ok(mut st) = status.lock() {
+            st.is_running = true;
             st.sample_rate = wfx.nSamplesPerSec;
             st.latency_ms = if sample_rate > 0.0 {
                 (render_buf_frames as f32 / sample_rate) * 1000.0
@@ -461,9 +464,14 @@ fn run_passthru_loop(
         let mut local_interleaved: Vec<f32> = Vec::with_capacity(4096);
         let mut resampled_interleaved: Vec<f32> = Vec::with_capacity(4096);
         let mut had_signal = false;
+        let mut last_signal = std::time::Instant::now();
 
         // 6. Bucle de procesamiento en tiempo real
         while running.load(Ordering::Relaxed) {
+            if render_client.GetCurrentPadding().is_err() { break; }
+            if last_signal.elapsed() > Duration::from_millis(250) {
+                if let Ok(mut st) = status.lock() { st.has_signal = false; }
+            }
             // Actualizar parámetros si hubo cambios desde el frontend
             if let Ok(guard) = params_shared.try_lock() {
                 dsp.update_parameters(guard.clone());
@@ -516,8 +524,7 @@ fn run_passthru_loop(
             let packet_length = match capture_service.GetNextPacketSize() {
                 Ok(s) => s,
                 Err(_) => {
-                    thread::sleep(Duration::from_millis(2));
-                    continue;
+                    break;
                 }
             };
 
@@ -534,7 +541,7 @@ fn run_passthru_loop(
                 .GetBuffer(&mut p_data, &mut num_frames_read, &mut flags, None, None)
                 .is_ok()
             {
-                if num_frames_read > 0 && !p_data.is_null() {
+                if num_frames_read > 0 && (!p_data.is_null() || flags & AUDCLNT_BUFFERFLAGS_SILENT.0 as u32 != 0) {
                     let total_samples = (num_frames_read as usize) * channels;
                     local_interleaved.clear();
 
@@ -551,7 +558,11 @@ fn run_passthru_loop(
                         }
                     }
 
+                    if let Ok(mut st) = status.lock() {
+                        st.has_signal = !is_silent && local_interleaved.iter().any(|v| v.abs() > 0.0001);
+                    }
                     if !is_silent {
+                        last_signal = std::time::Instant::now();
                         if !had_signal {
                             had_signal = true;
                             if let Ok(mut st) = status.lock() {
@@ -657,6 +668,8 @@ fn run_passthru_loop(
                     }
                 }
                 let _ = capture_service.ReleaseBuffer(num_frames_read);
+            } else {
+                break;
             }
         }
 

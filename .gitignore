@@ -12,3 +12,5 @@ src-tauri/vendor/libmpv/
 /scratch/
 /releases/
 /release/
+
+src-tauri/vendor/ffmpeg/

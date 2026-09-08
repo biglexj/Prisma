@@ -176,20 +176,8 @@ pub mod windows_hook {
             || vk_code == 0x21 // VK_PRIOR (PageUp)
             || vk_code == 0x22; // VK_NEXT (PageDown)
 
-        if preview_active && is_nav_key {
+        if preview_active && is_nav_key && unsafe { is_explorer_or_desktop_focused() } {
             if !unsafe { is_text_edit_focused() } {
-                // Comprobar si la ventana en primer plano es QuickLook
-                let fg = unsafe { GetForegroundWindow() };
-                let mut pid = 0u32;
-                if !fg.0.is_null() {
-                    unsafe { GetWindowThreadProcessId(fg, Some(&mut pid)) };
-                }
-                let my_pid = unsafe { windows::Win32::System::Threading::GetCurrentProcessId() };
-                if pid != 0 && pid == my_pid {
-                    // QuickLook está enfocado: reenviar pulsación a la ventana de Explorer recordada
-                    shell_selection::forward_key_to_last_explorer(vk_code);
-                }
-
                 if let Ok(guard) = GLOBAL_CALLBACK.lock() {
                     if let Some(ref cb) = *guard {
                         cb(TriggerEvent::Navigation);

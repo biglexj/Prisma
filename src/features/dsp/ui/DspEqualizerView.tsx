@@ -150,7 +150,7 @@ interface DspEqualizerViewProps {
 
 export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }: DspEqualizerViewProps) {
   const dsp = useDsp();
-  const isVisualizerActive = dsp.enabled && (isPlaying || dsp.globalPassthruEnabled);
+  const isVisualizerActive = dsp.enabled && (dsp.globalPassthruEnabled ? Boolean(dsp.globalPassthruStatus?.isRunning && dsp.globalPassthruStatus?.hasSignal) : isPlaying);
   const [isDeviceMenuOpen, setIsDeviceMenuOpen] = useState(false);
   const [isPresetMenuOpen, setIsPresetMenuOpen] = useState(false);
   const [newPresetName, setNewPresetName] = useState("");
@@ -479,7 +479,7 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
             type="button"
           >
             <span className={`dsp-mode-dot ${dsp.globalPassthruEnabled ? "active" : ""}`} />
-            <span>{dsp.globalPassthruEnabled ? "🌐 Global" : "🎵 Solo Prisma"}</span>
+            <span>{dsp.globalPassthruEnabled ? (dsp.globalPassthruStatus?.isRunning ? "🌐 Global" : "Reconectando…") : "🎵 Solo Prisma"}</span>
           </button>
 
           {/* Botón Power Maestro (Bypass) */}
@@ -502,8 +502,10 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
         </div>
       </div>
 
+      {dsp.globalError && <p role="status">{dsp.globalError}</p>}
+
       {/* ── Top Spectrum Visualizer Animation (Curva Orgánica Dinámica) ── */}
-      <div className={`dsp-visualizer-bar ${isVisualizerActive ? "active" : "inactive"}`}>
+      <div title="Indicador animado de actividad de audio; no representa un análisis de frecuencias" className={`dsp-visualizer-bar ${isVisualizerActive ? "active" : "inactive"}`}>
         {SPECTRUM_BARS.map((bar) => (
           <div
             className={`dsp-viz-column ${bar.animType}`}

@@ -28,6 +28,7 @@ pub struct GlobalPassthruStatus {
 }
 
 pub struct PassthruService {
+    route_restore: Mutex<Option<(String, String)>>,
     pub current_params: Arc<Mutex<DspParameters>>,
     #[cfg(target_os = "windows")]
     inner: Arc<Mutex<Option<wasapi_passthru::WasapiBridge>>>,
@@ -36,6 +37,7 @@ pub struct PassthruService {
 impl PassthruService {
     pub fn new() -> Self {
         Self {
+            route_restore: Mutex::new(None),
             current_params: Arc::new(Mutex::new(DspParameters::default())),
             #[cfg(target_os = "windows")]
             inner: Arc::new(Mutex::new(None)),
@@ -110,6 +112,10 @@ impl PassthruService {
     pub fn start(&self, capture_device_id: Option<String>, render_device_id: Option<String>) -> Result<(), String> {
         #[cfg(target_os = "windows")]
         {
+            let endpoints = Self::list_endpoints()?;
+            let capture_device_id = Some(endpoints.iter().find(|ep| ep.is_virtual && capture_device_id.as_ref().map_or(true, |id| id == &ep.id))
+                .or_else(|| endpoints.iter().find(|ep| ep.is_virtual))
+                .ok_or("No se encontró el controlador virtual de Prisma. El modo local sigue disponible.")?.id.clone());
             let mut guard = self.inner.lock().map_err(|e| e.to_string())?;
             if let Some(ref bridge) = *guard {
                 if bridge.is_running()
@@ -119,6 +125,19 @@ impl PassthruService {
                     // actualizamos parámetros en caliente sin detener el hilo ni pausar el audio.
                     let initial_params = self.current_params.lock().map_err(|e| e.to_string())?.clone();
                     bridge.update_params(initial_params);
+                    if bridge.get_status().is_running {
+                        let capture = capture_device_id.as_ref().unwrap();
+                        let restore = endpoints.iter().find(|ep| ep.is_default && !ep.is_virtual)
+                            .map(|ep| ep.id.clone()).or_else(|| render_device_id.clone());
+                        if let Some(restore) = restore {
+                            let mut route = self.route_restore.lock().map_err(|e| e.to_string())?;
+                            if !endpoints.iter().any(|ep| ep.id == *capture && ep.is_default) {
+                                Self::set_system_default_endpoint(capture)?;
+                            }
+                            let original = route.as_ref().map(|(_, output)| output.clone()).unwrap_or(restore);
+                            *route = Some((capture.clone(), original));
+                        }
+                    }
                     return Ok(());
                 }
             }
@@ -138,8 +157,16 @@ impl PassthruService {
         #[cfg(target_os = "windows")]
         {
             let mut guard = self.inner.lock().map_err(|e| e.to_string())?;
-            if let Some(mut bridge) = guard.take() {
-                bridge.stop();
+            if let Some(mut bridge) = guard.take() { bridge.stop(); }
+            let mut route = self.route_restore.lock().map_err(|e| e.to_string())?;
+            if let Some((capture, restore)) = route.as_ref() {
+                let endpoints = Self::list_endpoints()?;
+                if endpoints.iter().any(|ep| ep.id == *capture && ep.is_default) {
+                    if let Some(output) = endpoints.iter().find(|ep| ep.id == *restore && !ep.is_virtual).or_else(|| endpoints.iter().find(|ep| !ep.is_virtual)) {
+                        Self::set_system_default_endpoint(&output.id)?;
+                        *route = None;
+                    }
+                } else { *route = None; }
             }
             return Ok(());
         }

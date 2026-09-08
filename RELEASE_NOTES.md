@@ -15,6 +15,21 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.1.0] - 2026-09-06
+
+### Resumen
+Presentamos **Prisma v1.1.0**, una actualización mayor que introduce el **Convertidor Multimedia por Lotes** impulsado por el motor nativo de FFmpeg, incorpora un tratamiento especializado de **Audio Lossless de Máxima Fidelidad (FLAC y WAV)**, y despliega el nuevo selector personalizado **CustomSelect (Material 3 Expressive)** en toda la interfaz de conversión para brindar una experiencia visual refinada, moderna y reactiva.
+
+### Detalles
+- **Convertidor Multimedia por Lotes (Motor Nativo FFmpeg)**: Suite completa de conversión y extracción de medios que permite procesar archivos individuales o carpetas completas en segundo plano:
+  - **Vídeo a Audio**: Extracción directa de bandas sonoras a MP3, FLAC, WAV, AAC, OGG y M4A con gestión de canales de sonido (estéreo o mono).
+  - **Conversor de Vídeo**: Transcodificación multiformato a contenedores MP4, MKV y WebM, con soporte para los códecs H.264 (máxima compatibilidad), HEVC / H.265 (alta compresión), AV1 (nueva generación ultra eficiente) y copia de stream directo sin recodificar (*stream copy*), además de reescalado opcional a 1080p, 720p o 480p preservando la relación de aspecto.
+  - **Transcodificador de Audio**: Conversión entre formatos musicales con control granular de calidad.
+  - **Reglas de Renombrado en Lote**: Inserción de prefijos, sufijos y reemplazo inteligente de texto en los archivos de salida, con opción de definir carpeta de destino personalizada o mantener la ubicación de origen.
+- **Tratamiento Especializado para Audio Lossless (FLAC y WAV)**: Eliminación de selectores de bitrate con pérdida al trabajar con formatos sin pérdida. Al seleccionar FLAC, el conversor aplica compresión lossless óptima (Nivel 8 bit-perfect o Nivel 5 rápido) sin descartar información acústica; al seleccionar WAV, aplica codificación PCM sin compresión a 24 bits Hi-Res (calidad de estudio) o 16 bits (estándar CD). Los formatos con pérdida (MP3, AAC, OGG, M4A) conservan sus perfiles de bitrate dedicados de hasta 320 kbps.
+- **Selector Personalizado Material 3 Expressive (`CustomSelect`)**: Reemplazo integral de los selectores HTML nativos por un componente estilizado que armoniza con la identidad visual del ecosistema. Incorpora elevación contextual sobre tarjetas circundantes (`z-index`), apertura animada con micro-transición fluida, chevron interactivo con rotación suave, marca visual de verificación (`check`) en la opción activa, descripciones complementarias y cierre reactivo mediante clic exterior o la tecla <kbd>Esc</kbd>.
+- **Componente Centralizado Reutilizable**: Promoción de `CustomSelect.tsx` y su hoja de estilos `custom-select.css` al núcleo compartido de la aplicación (`src/shared/ui/`), con compatibilidad nativa para temas dinámicos claro y oscuro y soporte para selección numérica o textual.
+
 ## [1.0.9] - 2026-09-04
 
 ### Resumen

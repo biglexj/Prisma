@@ -1,4 +1,5 @@
 import { Icon } from "../../../shared/ui/Icon";
+import { CustomSelect, type CustomSelectOption } from "../../../shared/ui/CustomSelect";
 import { useMediaConverter } from "../hooks/useMediaConverter";
 import type { ConversionMode } from "../model/types";
 import "./prisma-convert.css";
@@ -8,8 +9,72 @@ const VIDEO_TO_AUDIO_FORMATS = ["mp3", "flac", "wav", "aac", "ogg", "m4a"];
 const VIDEO_FORMATS = ["mp4", "mkv", "webm"];
 const AUDIO_FORMATS = ["mp3", "flac", "wav", "ogg", "aac", "m4a"];
 
+const AUDIO_BITRATE_OPTIONS: CustomSelectOption<string>[] = [
+  { value: "320k", label: "320 kbps (Máxima calidad MP3)", description: "Calidad recomendada" },
+  { value: "256k", label: "256 kbps (Muy alta)", description: "Alta fidelidad" },
+  { value: "192k", label: "192 kbps (Alta calidad)", description: "Balance peso/calidad" },
+  { value: "128k", label: "128 kbps (Estándar)", description: "Archivo liviano" },
+];
+
+const FLAC_QUALITY_OPTIONS: CustomSelectOption<string>[] = [
+  {
+    value: "flac_max",
+    label: "Máxima fidelidad sin pérdida (Nivel 8 · Bit-Perfect)",
+    description: "Compresión lossless óptima sin descarte de datos",
+    icon: "sparkles",
+  },
+  {
+    value: "flac_standard",
+    label: "Fidelidad sin pérdida estándar (Nivel 5)",
+    description: "Compresión lossless balanceada",
+    icon: "music",
+  },
+];
+
+const WAV_QUALITY_OPTIONS: CustomSelectOption<string>[] = [
+  {
+    value: "wav_24",
+    label: "24-bit PCM (Máxima fidelidad Hi-Res)",
+    description: "Audio sin compresión de calidad máster de estudio",
+    icon: "sparkles",
+  },
+  {
+    value: "wav_16",
+    label: "16-bit PCM (Calidad CD estándar)",
+    description: "Audio sin compresión estándar 16-bit 44.1/48 kHz",
+    icon: "music",
+  },
+];
+
+const AUDIO_CHANNELS_OPTIONS: CustomSelectOption<number>[] = [
+  { value: 2, label: "Estéreo (2 canales)" },
+  { value: 1, label: "Mono (1 canal)" },
+];
+
+const VIDEO_CODEC_OPTIONS: CustomSelectOption<string>[] = [
+  { value: "h264", label: "H.264 / AVC (Máxima compatibilidad)" },
+  { value: "hevc", label: "H.265 / HEVC (Alta compresión)" },
+  { value: "av1", label: "AV1 (Nueva generación ultra eficiente)" },
+  { value: "copy", label: "Copiar stream directo (Sin recodificar)" },
+];
+
+const VIDEO_SCALE_OPTIONS: CustomSelectOption<string>[] = [
+  { value: "none", label: "Original" },
+  { value: "1920:1080", label: "1080p (Full HD)" },
+  { value: "1280:720", label: "720p (HD)" },
+  { value: "854:480", label: "480p (SD)" },
+];
+
+const AUDIO_TRANSCODE_BITRATE_OPTIONS: CustomSelectOption<string>[] = [
+  { value: "320k", label: "320 kbps (Máxima calidad)", description: "Calidad recomendada" },
+  { value: "256k", label: "256 kbps (Muy alta)", description: "Alta fidelidad" },
+  { value: "192k", label: "192 kbps (Alta calidad)", description: "Balance peso/calidad" },
+  { value: "128k", label: "128 kbps (Estándar)", description: "Archivo liviano" },
+];
+
 export function PrismaConvertView() {
   const {
+    inputError,
     status,
     mode,
     setMode,
@@ -41,6 +106,32 @@ export function PrismaConvertView() {
     progressPercent,
   } = useMediaConverter();
 
+  const isVideoToAudioFlac = videoToAudioOptions.target_format === "flac";
+  const isVideoToAudioWav = videoToAudioOptions.target_format === "wav";
+  const videoToAudioQualityOptions = isVideoToAudioFlac
+    ? FLAC_QUALITY_OPTIONS
+    : isVideoToAudioWav
+    ? WAV_QUALITY_OPTIONS
+    : AUDIO_BITRATE_OPTIONS;
+  const videoToAudioQualityLabel = isVideoToAudioFlac
+    ? "Calidad de audio (Sin pérdida · FLAC)"
+    : isVideoToAudioWav
+    ? "Calidad de audio (Sin compresión · WAV)"
+    : "Bitrate de audio";
+
+  const isAudioTranscodeFlac = audioTranscodeOptions.target_format === "flac";
+  const isAudioTranscodeWav = audioTranscodeOptions.target_format === "wav";
+  const audioTranscodeQualityOptions = isAudioTranscodeFlac
+    ? FLAC_QUALITY_OPTIONS
+    : isAudioTranscodeWav
+    ? WAV_QUALITY_OPTIONS
+    : AUDIO_TRANSCODE_BITRATE_OPTIONS;
+  const audioTranscodeQualityLabel = isAudioTranscodeFlac
+    ? "Calidad de audio (Sin pérdida · FLAC)"
+    : isAudioTranscodeWav
+    ? "Calidad de audio (Sin compresión · WAV)"
+    : "Bitrate";
+
   return (
     <div className={`convert-root ${isDraggingOver ? "is-drag-over" : ""}`}>
       {isDraggingOver ? (
@@ -71,9 +162,11 @@ export function PrismaConvertView() {
         </div>
       </header>
 
+      {inputError && <p role="alert" style={{ whiteSpace: "pre-line" }}>{inputError}</p>}
       <nav className="convert-mode-tabs" aria-label="Modo de conversión">
         <button
           className={`convert-mode-btn ${mode === "image" ? "is-active" : ""}`}
+          disabled={isRunning}
           onClick={() => setMode("image")}
           type="button"
         >
@@ -83,6 +176,7 @@ export function PrismaConvertView() {
 
         <button
           className={`convert-mode-btn ${mode === "video_to_audio" ? "is-active" : ""}`}
+          disabled={isRunning}
           onClick={() => setMode("video_to_audio")}
           type="button"
         >
@@ -92,6 +186,7 @@ export function PrismaConvertView() {
 
         <button
           className={`convert-mode-btn ${mode === "video_transcode" ? "is-active" : ""}`}
+          disabled={isRunning}
           onClick={() => setMode("video_transcode")}
           type="button"
         >
@@ -101,6 +196,7 @@ export function PrismaConvertView() {
 
         <button
           className={`convert-mode-btn ${mode === "audio_transcode" ? "is-active" : ""}`}
+          disabled={isRunning}
           onClick={() => setMode("audio_transcode")}
           type="button"
         >
@@ -109,7 +205,7 @@ export function PrismaConvertView() {
         </button>
       </nav>
 
-      <div className="convert-panels-grid">
+      <fieldset disabled={isRunning} className="convert-panels-grid" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
         {/* Panel Izquierdo: Opciones de Formato y Procesamiento */}
         <div className="convert-card">
           <span className="convert-card-title">
@@ -200,7 +296,14 @@ export function PrismaConvertView() {
                     <button
                       key={fmt}
                       className={`convert-format-pill ${videoToAudioOptions.target_format === fmt ? "is-active" : ""}`}
-                      onClick={() => setVideoToAudioOptions((prev) => ({ ...prev, target_format: fmt }))}
+                      onClick={() => {
+                        const defaultQuality = fmt === "flac" ? "flac_max" : fmt === "wav" ? "wav_24" : "320k";
+                        setVideoToAudioOptions((prev) => ({
+                          ...prev,
+                          target_format: fmt,
+                          bitrate: defaultQuality,
+                        }));
+                      }}
                       type="button"
                     >
                       {fmt.toUpperCase()}
@@ -211,31 +314,30 @@ export function PrismaConvertView() {
 
               <div className="convert-controls-grid">
                 <div className="convert-control-group">
-                  <label>Bitrate de audio</label>
-                  <select
-                    value={videoToAudioOptions.bitrate || "320k"}
-                    onChange={(e) =>
-                      setVideoToAudioOptions((prev) => ({ ...prev, bitrate: e.target.value }))
+                  <label>{videoToAudioQualityLabel}</label>
+                  <CustomSelect
+                    value={
+                      videoToAudioOptions.bitrate ||
+                      (isVideoToAudioFlac ? "flac_max" : isVideoToAudioWav ? "wav_24" : "320k")
                     }
-                  >
-                    <option value="128k">128 kbps (Estándar)</option>
-                    <option value="192k">192 kbps (Alta calidad)</option>
-                    <option value="256k">256 kbps (Muy alta)</option>
-                    <option value="320k">320 kbps (Máxima calidad MP3)</option>
-                  </select>
+                    options={videoToAudioQualityOptions}
+                    onChange={(val) =>
+                      setVideoToAudioOptions((prev) => ({ ...prev, bitrate: val }))
+                    }
+                    disabled={isRunning}
+                  />
                 </div>
 
                 <div className="convert-control-group">
                   <label>Canales de sonido</label>
-                  <select
+                  <CustomSelect
                     value={videoToAudioOptions.channels || 2}
-                    onChange={(e) =>
-                      setVideoToAudioOptions((prev) => ({ ...prev, channels: parseInt(e.target.value, 10) }))
+                    options={AUDIO_CHANNELS_OPTIONS}
+                    onChange={(val) =>
+                      setVideoToAudioOptions((prev) => ({ ...prev, channels: val }))
                     }
-                  >
-                    <option value={2}>Estéreo (2 canales)</option>
-                    <option value={1}>Mono (1 canal)</option>
-                  </select>
+                    disabled={isRunning}
+                  />
                 </div>
               </div>
             </>
@@ -262,32 +364,26 @@ export function PrismaConvertView() {
               <div className="convert-controls-grid">
                 <div className="convert-control-group">
                   <label>Códec de vídeo</label>
-                  <select
+                  <CustomSelect
                     value={videoTranscodeOptions.video_codec}
-                    onChange={(e) =>
-                      setVideoTranscodeOptions((prev) => ({ ...prev, video_codec: e.target.value }))
+                    options={VIDEO_CODEC_OPTIONS}
+                    onChange={(val) =>
+                      setVideoTranscodeOptions((prev) => ({ ...prev, video_codec: val }))
                     }
-                  >
-                    <option value="h264">H.264 / AVC (Máxima compatibilidad)</option>
-                    <option value="hevc">H.265 / HEVC (Alta compresión)</option>
-                    <option value="av1">AV1 (Nueva generación ultra eficiente)</option>
-                    <option value="copy">Copiar stream directo (Sin recodificar)</option>
-                  </select>
+                    disabled={isRunning}
+                  />
                 </div>
 
                 <div className="convert-control-group">
                   <label>Resolución</label>
-                  <select
+                  <CustomSelect
                     value={videoTranscodeOptions.scale || "none"}
-                    onChange={(e) =>
-                      setVideoTranscodeOptions((prev) => ({ ...prev, scale: e.target.value }))
+                    options={VIDEO_SCALE_OPTIONS}
+                    onChange={(val) =>
+                      setVideoTranscodeOptions((prev) => ({ ...prev, scale: val }))
                     }
-                  >
-                    <option value="none">Original</option>
-                    <option value="1920:1080">1080p (Full HD)</option>
-                    <option value="1280:720">720p (HD)</option>
-                    <option value="854:480">480p (SD)</option>
-                  </select>
+                    disabled={isRunning}
+                  />
                 </div>
               </div>
             </>
@@ -302,7 +398,14 @@ export function PrismaConvertView() {
                     <button
                       key={fmt}
                       className={`convert-format-pill ${audioTranscodeOptions.target_format === fmt ? "is-active" : ""}`}
-                      onClick={() => setAudioTranscodeOptions((prev) => ({ ...prev, target_format: fmt }))}
+                      onClick={() => {
+                        const defaultQuality = fmt === "flac" ? "flac_max" : fmt === "wav" ? "wav_24" : "320k";
+                        setAudioTranscodeOptions((prev) => ({
+                          ...prev,
+                          target_format: fmt,
+                          bitrate: defaultQuality,
+                        }));
+                      }}
                       type="button"
                     >
                       {fmt.toUpperCase()}
@@ -313,18 +416,18 @@ export function PrismaConvertView() {
 
               <div className="convert-controls-grid">
                 <div className="convert-control-group">
-                  <label>Bitrate</label>
-                  <select
-                    value={audioTranscodeOptions.bitrate || "320k"}
-                    onChange={(e) =>
-                      setAudioTranscodeOptions((prev) => ({ ...prev, bitrate: e.target.value }))
+                  <label>{audioTranscodeQualityLabel}</label>
+                  <CustomSelect
+                    value={
+                      audioTranscodeOptions.bitrate ||
+                      (isAudioTranscodeFlac ? "flac_max" : isAudioTranscodeWav ? "wav_24" : "320k")
                     }
-                  >
-                    <option value="128k">128 kbps</option>
-                    <option value="192k">192 kbps</option>
-                    <option value="256k">256 kbps</option>
-                    <option value="320k">320 kbps</option>
-                  </select>
+                    options={audioTranscodeQualityOptions}
+                    onChange={(val) =>
+                      setAudioTranscodeOptions((prev) => ({ ...prev, bitrate: val }))
+                    }
+                    disabled={isRunning}
+                  />
                 </div>
               </div>
             </>
@@ -414,7 +517,7 @@ export function PrismaConvertView() {
             ) : null}
           </div>
         </div>
-      </div>
+      </fieldset>
 
       {/* Cola de Conversión */}
       <div className="convert-card" style={{ flex: 1 }}>
@@ -452,7 +555,7 @@ export function PrismaConvertView() {
             {isRunning ? (
               <button className="convert-btn is-danger" onClick={cancelBatch} type="button">
                 <Icon name="close" />
-                <span>Cancelar proceso</span>
+                <span>Detener después de este archivo</span>
               </button>
             ) : (
               <button

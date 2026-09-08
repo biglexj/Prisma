@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import type {
   AudioTranscodeOptions,
   BatchRenameRules,
@@ -13,19 +13,9 @@ import type {
 } from "../model/types";
 import { converterClient } from "../tauri/client";
 
-const IMAGE_EXTS = [
-  "jpg", "jpeg", "png", "webp", "avif", "bmp", "tiff", "tif", "gif", "svg", "ico",
-  "heic", "heif", "tga", "dds", "psd", "kra", "afphoto", "raw", "cr2", "nef", "arw",
-];
-const VIDEO_EXTS = [
-  "mp4", "mkv", "webm", "avi", "mov", "wmv", "flv", "ts", "m4v", "mpg", "mpeg", "3gp",
-  "vob", "ogv",
-];
-const AUDIO_EXTS = [
-  "mp3", "flac", "wav", "ogg", "aac", "m4a", "opus", "wma", "aiff", "alac", "mid",
-];
-
 export function useMediaConverter() {
+  const [inputError, setInputError] = useState<string | null>(null);
+  const runningRef = useRef(false);
   const [status, setStatus] = useState<FFmpegStatus | null>(null);
   const [mode, setMode] = useState<ConversionMode>("image");
   const [queue, setQueue] = useState<ConversionQueueItem[]>([]);
@@ -138,6 +128,7 @@ export function useMediaConverter() {
 
   // Recalcular la cola cuando cambia el formato de destino o las reglas de renombrado o la carpeta de salida
   useEffect(() => {
+    if (runningRef.current) return;
     const targetExt = getTargetExtension(mode);
     setQueue((prev) => {
       let changed = false;
@@ -158,11 +149,12 @@ export function useMediaConverter() {
       });
       return changed ? next : prev;
     });
-  }, [calculateOutputFilename, customOutputFolder, getTargetExtension, mode]);
+  }, [calculateOutputFilename, customOutputFolder, getTargetExtension, mode, isRunning]);
 
   const addFilesToQueue = useCallback(
-    (filePaths: string[]) => {
-      const targetExt = getTargetExtension(mode);
+    (filePaths: string[], currentMode: ConversionMode = mode) => {
+      if (runningRef.current) return;
+      const targetExt = getTargetExtension(currentMode);
       setQueue((prev) => {
         const next = [...prev];
         filePaths.forEach((path) => {
@@ -189,58 +181,40 @@ export function useMediaConverter() {
   );
 
   const handleIncomingPaths = useCallback(
-    async (paths: string[]) => {
-      const filesToAdd: string[] = [];
-      let detectedMode: ConversionMode | null = null;
-
-      for (const p of paths) {
-        // 1. Intentar escanear si la ruta es una carpeta
+    async (paths: string[], requestedMode: ConversionMode = mode) => {
+      if (runningRef.current) return;
+      setInputError(null);
+      if (queue.length === 0 && paths.length > 0) {
+        const extension = paths[0].split(".").pop()?.toLowerCase() || "";
+        if (["jpg", "jpeg", "png", "webp", "avif", "bmp", "tiff", "gif", "heic"].includes(extension)) requestedMode = "image";
+        else if (["mp4", "mkv", "webm", "avi", "mov", "wmv", "m4v"].includes(extension) && requestedMode !== "video_transcode" && requestedMode !== "video_to_audio") requestedMode = "video_to_audio";
+        else if (["mp3", "flac", "wav", "ogg", "aac", "m4a", "opus"].includes(extension)) requestedMode = "audio_transcode";
+        if (requestedMode !== mode) setMode(requestedMode);
+      }
+      const files: string[] = [];
+      const errors: string[] = [];
+      for (const path of paths) {
         try {
-          const scanned = await converterClient.scanFolder(p, mode);
-          if (scanned && scanned.length > 0) {
-            filesToAdd.push(...scanned);
-            continue;
-          }
-        } catch {
-          // No es carpeta válida, continúa como archivo individual
-        }
-
-        // 2. Comprobar archivo individual y detección de modo sugerido
-        const ext = p.split(".").pop()?.toLowerCase() || "";
-        const isImage = IMAGE_EXTS.includes(ext);
-        const isVideo = VIDEO_EXTS.includes(ext);
-        const isAudio = AUDIO_EXTS.includes(ext);
-
-        if (queue.length === 0 && !detectedMode) {
-          if (isImage && mode !== "image") {
-            detectedMode = "image";
-          } else if (isVideo && mode !== "video_to_audio" && mode !== "video_transcode") {
-            detectedMode = "video_to_audio";
-          } else if (isAudio && mode !== "audio_transcode") {
-            detectedMode = "audio_transcode";
-          }
-        }
-
-        filesToAdd.push(p);
+          const scanned = await converterClient.scanFolder(path, requestedMode);
+          if (!scanned.length) errors.push(`Sin archivos compatibles con este modo: ${path}`);
+          files.push(...scanned);
+        } catch (error) { errors.push(String(error)); }
       }
-
-      if (detectedMode) {
-        setMode(detectedMode);
-      }
-
-      if (filesToAdd.length > 0) {
-        addFilesToQueue(filesToAdd);
-      }
+      if (!runningRef.current) addFilesToQueue(files, requestedMode);
+      if (errors.length) setInputError(errors.join("\n"));
     },
     [addFilesToQueue, mode, queue.length]
   );
 
-  // Escucha nativa de Drag & Drop de Tauri v2
+  const incomingRef = useRef(handleIncomingPaths);
+  incomingRef.current = handleIncomingPaths;
+
+  // Escucha nativa estable sobre el webview que recibe las rutas.
   useEffect(() => {
     let unlistenPromise: Promise<() => void> | undefined;
 
     try {
-      const appWindow = getCurrentWebviewWindow();
+      const appWindow = getCurrentWebview();
       unlistenPromise = appWindow.onDragDropEvent((event) => {
         if (event.payload.type === "over" || event.payload.type === "enter") {
           setIsDraggingOver(true);
@@ -248,12 +222,13 @@ export function useMediaConverter() {
           setIsDraggingOver(false);
           const droppedPaths = event.payload.paths;
           if (droppedPaths && droppedPaths.length > 0) {
-            void handleIncomingPaths(droppedPaths);
+            void incomingRef.current(droppedPaths);
           }
         } else {
           setIsDraggingOver(false);
         }
       });
+      void unlistenPromise.catch((error) => setInputError(`No se pudo activar el arrastre: ${String(error)}`));
     } catch (err) {
       console.warn("No se pudo iniciar listener de DragDrop en Tauri:", err);
     }
@@ -263,7 +238,7 @@ export function useMediaConverter() {
         unlistenPromise.then((unlisten) => unlisten()).catch(() => {});
       }
     };
-  }, [handleIncomingPaths]);
+  }, []);
 
   useEffect(() => {
     const handleAddFile = async (e: Event) => {
@@ -273,26 +248,11 @@ export function useMediaConverter() {
         mode?: ConversionMode;
         isFolder?: boolean;
       }>;
+      if (runningRef.current) return;
       const targetMode = customEvent.detail?.mode || mode;
-      if (customEvent.detail?.mode) {
-        setMode(customEvent.detail.mode);
-      }
-      if (customEvent.detail?.paths && customEvent.detail.paths.length > 0) {
-        void handleIncomingPaths(customEvent.detail.paths);
-      } else if (customEvent.detail?.path) {
-        if (customEvent.detail.isFolder) {
-          try {
-            const scanned = await converterClient.scanFolder(customEvent.detail.path, targetMode);
-            if (scanned && scanned.length > 0) {
-              addFilesToQueue(scanned);
-            }
-          } catch (err) {
-            console.error("Error al escanear carpeta para el conversor:", err);
-          }
-        } else {
-          void handleIncomingPaths([customEvent.detail.path]);
-        }
-      }
+      if (targetMode !== mode) { setQueue([]); setMode(targetMode); }
+      const paths = customEvent.detail?.paths || (customEvent.detail?.path ? [customEvent.detail.path] : []);
+      await handleIncomingPaths(paths, targetMode);
     };
     window.addEventListener("prisma-converter-add-file", handleAddFile);
     return () => window.removeEventListener("prisma-converter-add-file", handleAddFile);
@@ -307,12 +267,12 @@ export function useMediaConverter() {
       });
 
       if (Array.isArray(selected)) {
-        addFilesToQueue(selected);
+        await handleIncomingPaths(selected);
       } else if (typeof selected === "string") {
-        addFilesToQueue([selected]);
+        await handleIncomingPaths([selected]);
       }
     } catch (e) {
-      console.error(e);
+      setInputError(String(e));
     }
   };
 
@@ -325,13 +285,10 @@ export function useMediaConverter() {
       });
 
       if (typeof selected === "string") {
-        const scannedFiles = await converterClient.scanFolder(selected, mode);
-        if (scannedFiles && scannedFiles.length > 0) {
-          addFilesToQueue(scannedFiles);
-        }
+        await handleIncomingPaths([selected]);
       }
     } catch (e) {
-      console.error("Error al escanear carpeta:", e);
+      setInputError(String(e));
     }
   };
 
@@ -347,7 +304,7 @@ export function useMediaConverter() {
         setCustomOutputFolder(selected);
       }
     } catch (e) {
-      console.error(e);
+      setInputError(String(e));
     }
   };
 
@@ -361,7 +318,9 @@ export function useMediaConverter() {
   };
 
   const startBatch = async () => {
-    if (isRunning || queue.length === 0) return;
+    if (runningRef.current || queue.length === 0) return;
+    runningRef.current = true;
+    setInputError(null);
     setIsRunning(true);
     abortControllerRef.current = false;
 
@@ -419,14 +378,15 @@ export function useMediaConverter() {
       }
     }
 
+    if (abortControllerRef.current) setInputError("Lote detenido. Los archivos pendientes se conservan en la cola.");
+    runningRef.current = false;
     setIsRunning(false);
     setCurrentIndex(null);
   };
 
   const cancelBatch = () => {
     abortControllerRef.current = true;
-    setIsRunning(false);
-    setCurrentIndex(null);
+    setInputError("Se detendrá el lote al terminar el archivo actual.");
   };
 
   const completedCount = queue.filter((i) => i.status === "completed").length;
@@ -434,9 +394,10 @@ export function useMediaConverter() {
   const progressPercent = queue.length > 0 ? Math.round((completedCount / queue.length) * 100) : 0;
 
   return {
+    inputError,
     status,
     mode,
-    setMode,
+    setMode: (next: ConversionMode) => { if (!runningRef.current) { setQueue([]); setMode(next); setInputError(null); } },
     queue,
     isRunning,
     currentIndex,

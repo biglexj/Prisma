@@ -19,6 +19,16 @@ function formatBytes(bytes: number): string {
 }
 
 export function QuickLookArchive({ payload }: QuickLookArchiveProps) {
+  const [extracting, setExtracting] = useState(false);
+  const [extractionMessage, setExtractionMessage] = useState("");
+  const extract = async () => {
+    setExtracting(true);
+    try {
+      const destination = await invoke<string>("converter_extract_zip", { path: payload.path });
+      setExtractionMessage(`Extraído en ${destination}`);
+    } catch (error) { setExtractionMessage(String(error)); }
+    finally { setExtracting(false); }
+  };
   const [filter, setFilter] = useState("");
 
   const handleOpenExplorer = () => {
@@ -125,7 +135,9 @@ export function QuickLookArchive({ payload }: QuickLookArchiveProps) {
         </div>
       )}
 
+      {extractionMessage && <p role="status">{extractionMessage}</p>}
       <div className="quicklook-archive-actions">
+        {payload.extension.toLowerCase() === "zip" && <button className="quicklook-secondary-action-btn" type="button" disabled={extracting} onClick={extract}>{extracting ? "Extrayendo…" : "Extraer ZIP"}</button>}
         <button
           className="quicklook-primary-action-btn"
           onClick={handleOpenDefault}

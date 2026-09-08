@@ -204,9 +204,7 @@ pub async fn converter_scan_folder(
 ) -> Result<Vec<String>, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let path = Path::new(&folder_path);
-        if !path.is_dir() {
-            return Err("La ruta especificada no es una carpeta válida".to_string());
-        }
+        if !path.exists() { return Err(format!("No existe: {}", path.display())); }
 
         let image_exts: &[&str] = &[
             "jpg", "jpeg", "png", "webp", "avif", "bmp", "tiff", "tif", "gif", "svg", "ico",
@@ -227,6 +225,12 @@ pub async fn converter_scan_folder(
             _ => &[],
         };
 
+        if path.is_file() {
+            let ext = path.extension().and_then(|v| v.to_str()).unwrap_or("").to_lowercase();
+            return if target_exts.contains(&ext.as_str()) {
+                Ok(vec![path.to_string_lossy().into_owned()])
+            } else { Err(format!("Archivo incompatible con el modo seleccionado: {}", path.display())) };
+        }
         let mut collected = Vec::new();
         let mut stack = vec![path.to_path_buf()];
 
@@ -234,6 +238,7 @@ pub async fn converter_scan_folder(
             if let Ok(entries) = std::fs::read_dir(&current_dir) {
                 for entry in entries.flatten() {
                     let entry_path = entry.path();
+                    if entry.file_type().map(|t| t.is_symlink()).unwrap_or(true) { continue; }
                     if entry_path.is_dir() {
                         stack.push(entry_path);
                     } else if entry_path.is_file() {
@@ -255,4 +260,11 @@ pub async fn converter_scan_folder(
     })
     .await
     .map_err(|e| format!("Error escaneando carpeta: {e}"))?
+}
+
+#[tauri::command]
+pub async fn converter_extract_zip(path: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::infrastructure::converter::extract_zip(Path::new(&path)).map(|p| p.to_string_lossy().into_owned())
+    }).await.map_err(|e| e.to_string())?
 }

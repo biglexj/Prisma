@@ -224,6 +224,18 @@
   cursor: pointer;
 }
 
+/* Elevación de contenedor al desplegar selector personalizado */
+.convert-panels-grid:has(.prisma-custom-select-root.is-open),
+.convert-card:has(.prisma-custom-select-root.is-open) {
+  z-index: 50;
+  position: relative;
+}
+
+.convert-control-group:has(.prisma-custom-select-root.is-open) {
+  z-index: 60;
+  position: relative;
+}
+
 .convert-queue-header {
   display: flex;
   align-items: center;

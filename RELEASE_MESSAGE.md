@@ -1,15 +1,19 @@
-# 📸 Prisma v1.0.9 — Captura de Fotogramas (Snapshot estilo VLC), Navegación Cuadro a Cuadro y Destino de Assets
+# 🔄 Prisma v1.1.0 — Convertidor Multimedia por Lotes, Calidad Lossless Dedicada (FLAC/WAV) y Selectores M3 Expressive
 
-Llega **Prisma v1.0.9**, una actualización pensada para creadores, editores y amantes del detalle visual: ahora puedes capturar al instante cualquier fotograma de vídeo a su **resolución nativa completa** (estilo VLC Snapshot) en formatos PNG, WebP y JPEG, navegar cuadro a cuadro con los nuevos atajos rápidos **F** y **Shift + F**, y personalizar tu carpeta de destino en Ajustes.
+Llega **Prisma v1.1.0**, una actualización mayor que potencia tus flujos de trabajo multimedia: ahora cuentas con un **Convertidor por Lotes** impulsado por el motor nativo de FFmpeg (Vídeo a Audio, Transcodificador de Vídeo y Audio), tratamiento especializado de **Audio Lossless** para FLAC (Nivel 8 Bit-Perfect) y WAV (24-bit PCM), y una experiencia de interfaz renovada con el nuevo selector personalizado **CustomSelect (Material 3 Expressive)** en toda la aplicación.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- 📸 **Captura de Fotogramas a Resolución Nativa (Snapshot estilo VLC)**: Guarda el fotograma exacto que estás viendo sin recortes ni pérdida de nitidez. Usa el nuevo botón de obturador en los controles de vídeo, el menú de herramientas o el atajo <kbd>Shift</kbd> + <kbd>S</kbd>. Se genera automáticamente un archivo con nombre ordenado y marca de tiempo (`Prisma_snap_[título]_[tiempo].[ext]`).
-- 🎞️ **Navegación Cuadro a Cuadro ("F de Fotograma")**: Control milimétrico de la reproducción. Pulsa <kbd>F</kbd> para avanzar 1 fotograma (+1f) y <kbd>Shift</kbd> + <kbd>F</kbd> para retroceder 1 fotograma (-1f). Compatible también con <kbd>E</kbd> / <kbd>Shift + E</kbd> y teclas coma (<kbd>,</kbd>) y punto (<kbd>.</kbd>).
-- 📁 **Carpeta de Destino y Selector de Formatos**: En **Ajustes > General y Sistema**, configura la carpeta donde se guardarán tus capturas (por defecto en la biblioteca de Imágenes de Windows) y elige tu formato preferido entre PNG, WebP o JPEG con chips visuales interactivos.
-- 🔔 **Notificación Toast Elevada con Miniatura y Acceso Rápido**: Al capturar, se muestra un aviso flotante con la miniatura y el botón **«Mostrar»**, que abre Windows Explorer resaltando el archivo exacto. Su posición ha sido calibrada por encima de la barra de progreso para no entorpecer el depurador de tiempo.
+- 🔄 **Convertidor Multimedia por Lotes con FFmpeg**: Procesa archivos o carpetas completas en segundo plano:
+  - **Vídeo a Audio**: Extrae audio a MP3, FLAC, WAV, AAC, OGG y M4A con selección de canales estéreo o mono.
+  - **Conversor de Vídeo**: Transcodifica a MP4, MKV o WebM con códecs H.264, HEVC (H.265), AV1 o copia directa de stream sin pérdida de tiempo, más escalado a 1080p, 720p o 480p.
+  - **Transcodificador de Audio**: Conversión entre formatos musicales con gestión flexible de calidad.
+  - **Reglas de Renombrado en Lote**: Añade prefijos, sufijos o busca y reemplaza texto automáticamente.
+- 🎵 **Tratamiento Especializado para Audio Lossless (FLAC y WAV)**: Decimos adiós a los bitrates con pérdida en formatos puros. Al seleccionar **FLAC**, se aplica automáticamente compresión sin pérdida bit a bit (Nivel 8 máximo o Nivel 5 rápido). Al elegir **WAV**, se utiliza codificación PCM sin compresión de hasta 24 bits Hi-Res (calidad de estudio).
+- 🎨 **Selectores Personalizados Material 3 Expressive (`CustomSelect`)**: Se eliminaron los selectores desplegables estándar del navegador, reemplazándolos por un componente visual estilizado con esquinas redondeadas, elevación dinámica, micro-animaciones fluidas, indicador visual de selección (`check`), descripciones contextuales y control mediante teclado y clic exterior.
+- 🧩 **Componente Centralizado Reutilizable**: Nueva arquitectura modular en `src/shared/ui/` para componentes transversales, totalmente compatible con los temas dinámicos claros y oscuros del ecosistema.
 
 ---
 

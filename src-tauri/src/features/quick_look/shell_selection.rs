@@ -44,19 +44,6 @@ pub mod windows_impl {
         }
     }
 
-    pub fn forward_key_to_last_explorer(vk_code: u16) {
-        unsafe {
-            let val = LAST_EXPLORER_HWND.load(Ordering::SeqCst);
-            if val != 0 {
-                let hwnd = HWND(val as *mut core::ffi::c_void);
-                use windows::Win32::Foundation::{LPARAM, WPARAM};
-                use windows::Win32::UI::WindowsAndMessaging::{PostMessageW, WM_KEYDOWN, WM_KEYUP};
-                let _ = PostMessageW(hwnd, WM_KEYDOWN, WPARAM(vk_code as usize), LPARAM(0));
-                let _ = PostMessageW(hwnd, WM_KEYUP, WPARAM(vk_code as usize), LPARAM(0xC0000001));
-            }
-        }
-    }
-
     #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub struct SelectionInfo {
@@ -69,7 +56,7 @@ pub mod windows_impl {
     pub fn get_active_selection_info() -> Option<SelectionInfo> {
         unsafe {
             let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
-            let result = get_selected_file_internal();
+            let result = get_selected_file_internal(true);
             ql_log!("get_active_selection_info resultado: {:?}", result);
             CoUninitialize();
             result
@@ -81,7 +68,29 @@ pub mod windows_impl {
         get_active_selection_info().map(|s| s.primary_path)
     }
 
-    unsafe fn get_selected_file_internal() -> Option<SelectionInfo> {
+    pub fn foreground_selection_source() -> Option<isize> {
+        unsafe {
+            let fg = GetForegroundWindow();
+            if fg.0.is_null() { return None; }
+            let root = GetAncestor(fg, GA_ROOT);
+            let mut class = [0u16; 256];
+            let len = GetClassNameW(root, &mut class);
+            let name = String::from_utf16_lossy(&class[..len.max(0) as usize]);
+            matches!(name.as_str(), "CabinetWClass" | "ExploreWClass" | "Progman" | "WorkerW").then_some(root.0 as isize)
+        }
+    }
+
+    pub fn get_foreground_selection_info() -> Option<SelectionInfo> {
+        foreground_selection_source()?;
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
+            let result = get_selected_file_internal(false);
+            CoUninitialize();
+            result
+        }
+    }
+
+    unsafe fn get_selected_file_internal(allow_cached: bool) -> Option<SelectionInfo> {
         let fg = unsafe { GetForegroundWindow() };
         if !fg.0.is_null() {
             let mut class_name = [0u16; 256];
@@ -128,6 +137,8 @@ pub mod windows_impl {
                 }
             }
         }
+
+        if !allow_cached { return None; }
 
         // Si la ventana activa no es Explorer (ej. QuickLook o transición de foco), intentar con LAST_EXPLORER_HWND
         let val = LAST_EXPLORER_HWND.load(Ordering::SeqCst);
@@ -498,7 +509,8 @@ pub mod windows_impl {
     pub fn get_active_selection() -> Option<PathBuf> {
         None
     }
-    pub fn forward_key_to_last_explorer(_vk_code: u16) {}
+    pub fn foreground_selection_source() -> Option<isize> { None }
+    pub fn get_foreground_selection_info() -> Option<SelectionInfo> { None }
 }
 
 pub use windows_impl::*;

@@ -8,7 +8,6 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [ ] **Expansión de Conversión Multimedia con FFmpeg**: Extracción de audio (Video → MP3, FLAC, AAC, WAV) y transcodificación por lotes de vídeo en `PrismaConvertView`.
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
 
 ---
@@ -29,6 +28,12 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.1.0**
+  - **Convertidor Multimedia por Lotes, Calidad Lossless Dedicada (FLAC/WAV) y Selectores M3 Expressive**:
+    - Motor ampliado de conversión por lotes con integración FFmpeg nativa para extracción de vídeo a audio multiformato (MP3, FLAC, WAV, AAC, OGG, M4A), transcodificación de vídeo (H.264, HEVC/H.265, AV1, copia directa de stream y reescalado de resolución) y transcodificación de audio.
+    - Soporte canónico y especializado para audio sin pérdida (*Lossless*): eliminación de bitrates con pérdida en FLAC y WAV, aplicando compresión lossless máxima Nivel 8 bit-perfect para FLAC y codificación PCM de 24 bits Hi-Res / 16 bits CD para WAV.
+    - Estandarización del componente de selector personalizado `CustomSelect` (Material 3 Expressive) en todo el Convertidor Prisma, sustituyendo controles predeterminados del sistema por menús desplegables con micro-animaciones fluidas, elevación contextual `z-index`, rotación de chevron y marca de verificación activa.
+    - Formalización de `CustomSelect.tsx` y `custom-select.css` en `src/shared/ui/` como átomo reutilizable centralizado del proyecto con soporte para temas dinámicos claro y oscuro.
 - [x] **v1.0.9**
   - **Captura de Fotogramas (Snapshot estilo VLC), Navegación Cuadro a Cuadro y Destino de Assets**:
     - Captura nativa del fotograma activo de vídeo a resolución completa (sin pérdida ni degradación) en formatos PNG, WebP y JPEG, con nombres estructurados y timestamp (`Prisma_snap_[título]_[tiempo].[ext]`).

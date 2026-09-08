@@ -365,21 +365,8 @@ pub async fn video_get_audio_tracks(path: String) -> Result<Vec<AudioTrackMeta>,
         let clean = path.trim_start_matches(r"\\?\");
 
         // Intentar localizar ffprobe en PATH o en ubicaciones conocidas de Windows
-        let mut ffprobe_candidates = vec![
-            "ffprobe".to_string(),
-            r"C:\Users\biglexj\AppData\Local\Microsoft\WinGet\Links\ffprobe.exe".to_string(),
-            r"C:\Program Files\Krita (x64)\bin\ffprobe.exe".to_string(),
-        ];
+        let ffprobe_candidates: Vec<String> = crate::infrastructure::converter::find_ffprobe_binary().into_iter().map(|p| p.to_string_lossy().into_owned()).collect();
 
-        if let Ok(exe_path) = std::env::current_exe() {
-            if let Some(parent) = exe_path.parent() {
-                ffprobe_candidates.push(parent.join("ffprobe.exe").to_string_lossy().into_owned());
-            }
-        }
-
-        if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
-            ffprobe_candidates.push(format!(r"{}\Microsoft\WinGet\Links\ffprobe.exe", local_appdata));
-        }
 
         let mut output = None;
         for candidate in &ffprobe_candidates {
@@ -484,21 +471,8 @@ pub async fn video_extract_audio_track(path: String, track_index: usize) -> Resu
     tauri::async_runtime::spawn_blocking(move || {
         let clean = path.trim_start_matches(r"\\?\");
 
-        let mut ffprobe_candidates = vec![
-            "ffmpeg".to_string(),
-            r"C:\Users\biglexj\AppData\Local\Microsoft\WinGet\Links\ffmpeg.exe".to_string(),
-            r"C:\Program Files\Krita (x64)\bin\ffmpeg.exe".to_string(),
-        ];
+        let ffprobe_candidates: Vec<String> = crate::infrastructure::converter::find_ffmpeg_binary().into_iter().map(|p| p.to_string_lossy().into_owned()).collect();
 
-        if let Ok(exe_path) = std::env::current_exe() {
-            if let Some(parent) = exe_path.parent() {
-                ffprobe_candidates.push(parent.join("ffmpeg.exe").to_string_lossy().into_owned());
-            }
-        }
-
-        if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
-            ffprobe_candidates.push(format!(r"{}\Microsoft\WinGet\Links\ffmpeg.exe", local_appdata));
-        }
 
         let temp_dir = std::env::temp_dir().join("prisma_audio_tracks");
         let _ = std::fs::create_dir_all(&temp_dir);

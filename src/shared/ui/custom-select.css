@@ -1,0 +1,239 @@
+/* ── Prisma Custom Select (Material 3 Expressive) ── */
+.prisma-custom-select-root {
+  position: relative;
+  width: 100%;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.prisma-custom-select-root.is-open {
+  z-index: 150;
+}
+
+.prisma-custom-select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  min-height: 38px;
+  border-radius: 10px;
+  background: var(--surface-container-high, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.12));
+  color: var(--on-surface, #22191b);
+  font-size: 0.88rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  text-align: left;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.prisma-custom-select-trigger:hover:not(:disabled) {
+  border-color: var(--outline, rgba(255, 255, 255, 0.25));
+  background: var(--surface-container-highest, rgba(255, 255, 255, 0.1));
+}
+
+.prisma-custom-select-root.is-open .prisma-custom-select-trigger {
+  border-color: var(--primary, #6366f1);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary, #6366f1) 25%, transparent);
+}
+
+.prisma-custom-select-trigger:focus-visible {
+  border-color: var(--primary, #6366f1);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary, #6366f1) 30%, transparent);
+}
+
+.prisma-custom-select-root.is-disabled .prisma-custom-select-trigger,
+.prisma-custom-select-trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.prisma-custom-select-value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.prisma-custom-select-value .select-opt-icon {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  color: var(--primary, #6366f1);
+  flex-shrink: 0;
+}
+
+.prisma-custom-select-value .select-opt-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.88rem;
+}
+
+.prisma-custom-select-chevron {
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  min-height: 15px;
+  color: var(--on-surface-variant, #79747e);
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), color 150ms ease;
+  flex-shrink: 0;
+}
+
+.prisma-custom-select-root.is-open .prisma-custom-select-chevron {
+  transform: rotate(180deg);
+  color: var(--primary, #6366f1);
+}
+
+/* Menú desplegable */
+.prisma-custom-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  box-sizing: border-box;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 250;
+  padding: 6px;
+  background: var(--surface-container-high, #1e1e24);
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.15));
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: selectMenuPop 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.prisma-custom-select-root.align-right .prisma-custom-select-menu {
+  left: auto;
+  right: 0;
+  width: max-content;
+  min-width: 100%;
+}
+
+@keyframes selectMenuPop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.prisma-custom-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--on-surface, #22191b);
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+}
+
+.prisma-custom-select-item:hover {
+  background: color-mix(in srgb, var(--primary, #6366f1) 12%, var(--surface-container-highest, rgba(255, 255, 255, 0.06)));
+  color: var(--on-surface, #22191b);
+}
+
+.prisma-custom-select-item.is-selected {
+  background: var(--primary-container, color-mix(in srgb, var(--primary, #6366f1) 22%, transparent));
+  color: var(--on-primary-container, var(--primary, #6366f1));
+  font-weight: 600;
+}
+
+.select-item-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.select-item-icon {
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  min-height: 15px;
+  flex-shrink: 0;
+  color: var(--primary, #6366f1);
+}
+
+.select-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.select-item-label {
+  font-size: 0.84rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-item-desc {
+  font-size: 0.72rem;
+  color: var(--on-surface-variant, #79747e);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-item-check {
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  min-height: 15px;
+  color: var(--primary, #6366f1);
+  flex-shrink: 0;
+}
+
+/* Barra de desplazamiento suave para el menú */
+.prisma-custom-select-menu::-webkit-scrollbar {
+  width: 5px;
+}
+.prisma-custom-select-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+.prisma-custom-select-menu::-webkit-scrollbar-thumb {
+  background: var(--outline-variant, rgba(255, 255, 255, 0.2));
+  border-radius: 999px;
+}
+.prisma-custom-select-menu::-webkit-scrollbar-thumb:hover {
+  background: var(--outline, rgba(255, 255, 255, 0.35));
+}
+
+/* Regla para garantizar que los SVGs dentro del CustomSelect mantengan su tamaño proporcional */
+.prisma-custom-select-root svg {
+  display: inline-block;
+}

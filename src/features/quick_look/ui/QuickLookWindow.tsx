@@ -36,12 +36,15 @@ export function QuickLookWindow() {
 
   useEffect(() => {
     let resolved = false;
+    let disposed = false;
+    let requestVersion = 0;
     const refreshCurrent = () => {
+      const version = ++requestVersion;
       const request = isDetached
         ? quickLookClient.getDetachedPayload(windowLabel)
         : quickLookClient.getCurrent();
       request.then((res) => {
-        if (res) {
+        if (!disposed && version === requestVersion && res) {
           resolved = true;
           setPayload(res);
           setImageDimensions(null);
@@ -71,13 +74,16 @@ export function QuickLookWindow() {
     // Quick Look principal: conservan su propio archivo para poder comparar.
     if (!isDetached) {
       const unlistenGlobalPreviewPromise = listen<QuickLookPayload>("quicklook://preview", (event) => {
-        if (event.payload) {
+        if (!disposed && event.payload) {
+          requestVersion++;
           setPayload(event.payload);
           setImageDimensions(null);
         }
       });
 
       const unlistenGlobalHidePromise = listen("quicklook://hide", () => {
+        requestVersion++;
+        if (disposed) return;
         setPayload(null);
         setImageDimensions(null);
         setPaletteStyle(undefined);
@@ -92,7 +98,8 @@ export function QuickLookWindow() {
     const unlistenWindowPreviewPromise = getCurrentWebviewWindow().listen<QuickLookPayload>(
       "quicklook://preview",
       (event) => {
-        if (event.payload) {
+        if (!disposed && event.payload) {
+          requestVersion++;
           setPayload(event.payload);
           setImageDimensions(null);
         }
@@ -113,6 +120,10 @@ export function QuickLookWindow() {
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
+      disposed = true;
+      requestVersion++;
+      window.clearInterval(startupIntervalId);
+      window.clearTimeout(startupTimeoutId);
       cleanupFns.forEach((fn) => fn());
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
@@ -123,6 +134,7 @@ export function QuickLookWindow() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isComparing) return;
+      if (e.key !== "Escape" && e.target instanceof HTMLElement && e.target.closest('input, textarea, select, [role="slider"], [contenteditable="true"]')) return;
       const isCloseKey =
         e.key === "Escape" || (!isDetached && (e.code === "Space" || e.key === " "));
       if (isCloseKey) {

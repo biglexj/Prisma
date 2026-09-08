@@ -2,6 +2,7 @@
 fn main() {
     verify_native_icons();
     configure_libmpv();
+    configure_ffmpeg();
     tauri_build::build();
 }
 
@@ -98,5 +99,22 @@ fn verify_native_icons() {
         }
 
         println!("cargo:rerun-if-changed={}", icon_path.display());
+    }
+}
+
+fn configure_ffmpeg() {
+    if !cfg!(target_os = "windows") { return; }
+    let source = std::path::PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap()).join("vendor/ffmpeg");
+    let out = std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap());
+    let destination = out.ancestors().nth(3).unwrap().join("ffmpeg");
+    std::fs::create_dir_all(&destination).expect("No se pudo crear la carpeta FFmpeg");
+    for name in ["ffmpeg.exe", "ffprobe.exe", "LICENSE", "README.txt", "manifest.json"] {
+        let input = source.join(name);
+        println!("cargo:rerun-if-changed={}", input.display());
+        if !input.is_file() { panic!("Falta {}. Ejecuta scripts/setup-ffmpeg.ps1", input.display()); }
+        let target = destination.join(name);
+        if std::fs::metadata(&target).ok().and_then(|m| m.modified().ok()) != std::fs::metadata(&input).ok().and_then(|m| m.modified().ok()) {
+            std::fs::copy(input, target).expect("No se pudo copiar FFmpeg");
+        }
     }
 }

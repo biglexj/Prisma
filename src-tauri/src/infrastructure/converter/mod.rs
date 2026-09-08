@@ -60,88 +60,28 @@ pub struct ConversionJob {
     pub progress_percent: Option<f32>,
 }
 
-pub fn find_ffmpeg_binary() -> Option<PathBuf> {
-    let mut candidates = vec![
-        PathBuf::from("ffmpeg.exe"),
-        PathBuf::from("ffmpeg"),
-    ];
-
-    if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
-        candidates.push(PathBuf::from(format!(r"{}\Microsoft\WinGet\Links\ffmpeg.exe", local_appdata)));
+fn media_binary(name: &str) -> Option<PathBuf> {
+    let mut roots = Vec::new();
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() { roots.push(parent.join("ffmpeg")); }
     }
-
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(parent) = exe_path.parent() {
-            candidates.push(parent.join("ffmpeg.exe"));
-            candidates.push(parent.join("bin").join("ffmpeg.exe"));
-        }
-    }
-
-    candidates.push(PathBuf::from(r"C:\Program Files\Krita (x64)\bin\ffmpeg.exe"));
-    candidates.push(PathBuf::from(r"C:\ffmpeg\bin\ffmpeg.exe"));
-
-    for path in candidates {
-        let mut cmd = Command::new(&path);
-        cmd.arg("-version");
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-        }
-
-        if let Ok(out) = cmd.output() {
-            if out.status.success() {
-                return Some(path);
-            }
-        }
-    }
-
-    None
+    roots.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("vendor/ffmpeg"));
+    roots.into_iter().map(|root| root.join(format!("{name}.exe"))).find(|path| path.is_file())
 }
 
-pub fn find_ffprobe_binary() -> Option<PathBuf> {
-    let mut candidates = vec![
-        PathBuf::from("ffprobe.exe"),
-        PathBuf::from("ffprobe"),
-    ];
+pub fn find_ffmpeg_binary() -> Option<PathBuf> { media_binary("ffmpeg") }
+pub fn find_ffprobe_binary() -> Option<PathBuf> { media_binary("ffprobe") }
 
-    if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
-        candidates.push(PathBuf::from(format!(r"{}\Microsoft\WinGet\Links\ffprobe.exe", local_appdata)));
-    }
-
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(parent) = exe_path.parent() {
-            candidates.push(parent.join("ffprobe.exe"));
-            candidates.push(parent.join("bin").join("ffprobe.exe"));
-        }
-    }
-
-    candidates.push(PathBuf::from(r"C:\Program Files\Krita (x64)\bin\ffprobe.exe"));
-    candidates.push(PathBuf::from(r"C:\ffmpeg\bin\ffprobe.exe"));
-
-    for path in candidates {
-        let mut cmd = Command::new(&path);
-        cmd.arg("-version");
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-        }
-
-        if let Ok(out) = cmd.output() {
-            if out.status.success() {
-                return Some(path);
-            }
-        }
-    }
-
-    None
+fn validate_paths(input: &Path, output: &Path) -> Result<(), String> {
+    if !input.is_file() { return Err(format!("No existe el archivo de entrada: {}", input.display())); }
+    if output.exists() { return Err(format!("El destino ya existe; elige otro nombre: {}", output.display())); }
+    Ok(())
 }
 
 pub fn get_ffmpeg_status() -> FFmpegStatus {
     let ffmpeg = find_ffmpeg_binary();
     let ffprobe = find_ffprobe_binary();
-    let is_available = ffmpeg.is_some();
+    let mut is_available = false;
 
     let mut version = None;
     if let Some(ref path) = ffmpeg {
@@ -153,6 +93,7 @@ pub fn get_ffmpeg_status() -> FFmpegStatus {
             cmd.creation_flags(0x08000000);
         }
         if let Ok(output) = cmd.output() {
+            is_available = output.status.success() && ffprobe.is_some();
             if let Ok(v_str) = String::from_utf8(output.stdout) {
                 if let Some(first_line) = v_str.lines().next() {
                     version = Some(first_line.to_string());
@@ -174,10 +115,11 @@ pub fn convert_image(
     output_path: &Path,
     opts: &ImageConvertOptions,
 ) -> Result<(), String> {
+    validate_paths(input_path, output_path)?;
     let fmt = opts.target_format.to_lowercase();
 
     // Intentar primero conversión nativa rápida y pura en Rust para JPG, PNG y WEBP
-    if matches!(fmt.as_str(), "jpg" | "jpeg" | "png" | "webp") {
+    if matches!(fmt.as_str(), "jpg" | "jpeg" | "png") {
         if let Ok(()) = convert_image_native(input_path, output_path, opts) {
             return Ok(());
         }
@@ -193,7 +135,7 @@ pub fn convert_image(
     }
 
     let mut cmd = Command::new(ffmpeg);
-    cmd.arg("-y").arg("-i").arg(input_clean);
+    cmd.arg("-nostdin").arg("-n").arg("-i").arg(input_clean);
 
     // Filtros de escala
     let mut vf_filters = Vec::new();
@@ -299,13 +241,13 @@ fn convert_image_native(
     match target_format {
         image::ImageFormat::Jpeg => {
             let q = opts.quality.unwrap_or(85).clamp(1, 100) as u8;
-            let file = std::fs::File::create(output_path).map_err(|e| format!("Error creando archivo: {e}"))?;
+            let file = std::fs::OpenOptions::new().write(true).create_new(true).open(output_path).map_err(|e| format!("Error creando archivo: {e}"))?;
             let mut writer = std::io::BufWriter::new(file);
             let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut writer, q);
             encoder.encode_image(&processed_img).map_err(|e| format!("Error codificando JPEG: {e}"))?;
         }
         _ => {
-            processed_img.save_with_format(output_path, target_format)
+            processed_img.write_to(&mut std::io::BufWriter::new(std::fs::OpenOptions::new().write(true).create_new(true).open(output_path).map_err(|e| e.to_string())?), target_format)
                 .map_err(|e| format!("Error guardando imagen: {e}"))?;
         }
     }
@@ -318,6 +260,7 @@ pub fn extract_video_audio(
     output_path: &Path,
     opts: &VideoToAudioOptions,
 ) -> Result<(), String> {
+    validate_paths(input_path, output_path)?;
     let ffmpeg = find_ffmpeg_binary().ok_or("FFmpeg no está disponible en el sistema")?;
     let input_clean = input_path.to_str().unwrap_or("").trim_start_matches(r"\\?\");
     let output_clean = output_path.to_str().unwrap_or("").trim_start_matches(r"\\?\");
@@ -327,7 +270,7 @@ pub fn extract_video_audio(
     }
 
     let mut cmd = Command::new(ffmpeg);
-    cmd.arg("-y").arg("-i").arg(input_clean).arg("-vn");
+    cmd.arg("-nostdin").arg("-n").arg("-i").arg(input_clean).arg("-vn");
 
     let fmt = opts.target_format.to_lowercase();
     match fmt.as_str() {
@@ -337,9 +280,18 @@ pub fn extract_video_audio(
         }
         "flac" => {
             cmd.arg("-c:a").arg("flac");
+            let level = match opts.bitrate.as_deref() {
+                Some("flac_standard") => "5",
+                _ => "8",
+            };
+            cmd.arg("-compression_level").arg(level);
         }
         "wav" => {
-            cmd.arg("-c:a").arg("pcm_s16le");
+            let pcm_codec = match opts.bitrate.as_deref() {
+                Some("wav_16") => "pcm_s16le",
+                _ => "pcm_s24le",
+            };
+            cmd.arg("-c:a").arg(pcm_codec);
         }
         "aac" | "m4a" => {
             cmd.arg("-c:a").arg("aac");
@@ -384,6 +336,7 @@ pub fn transcode_video(
     output_path: &Path,
     opts: &VideoTranscodeOptions,
 ) -> Result<(), String> {
+    validate_paths(input_path, output_path)?;
     let ffmpeg = find_ffmpeg_binary().ok_or("FFmpeg no está disponible en el sistema")?;
     let input_clean = input_path.to_str().unwrap_or("").trim_start_matches(r"\\?\");
     let output_clean = output_path.to_str().unwrap_or("").trim_start_matches(r"\\?\");
@@ -393,9 +346,9 @@ pub fn transcode_video(
     }
 
     let mut cmd = Command::new(ffmpeg);
-    cmd.arg("-y").arg("-i").arg(input_clean);
+    cmd.arg("-nostdin").arg("-n").arg("-i").arg(input_clean);
 
-    match opts.video_codec.as_str() {
+    match if opts.target_format == "webm" && !matches!(opts.video_codec.as_str(), "vp9" | "av1" | "copy") { "vp9" } else { opts.video_codec.as_str() } {
         "copy" => {
             cmd.arg("-c:v").arg("copy");
         }
@@ -427,7 +380,7 @@ pub fn transcode_video(
         }
     }
 
-    match opts.audio_codec.as_deref().unwrap_or("copy") {
+    match if opts.target_format == "webm" { "opus" } else { opts.audio_codec.as_deref().unwrap_or("copy") } {
         "copy" => {
             cmd.arg("-c:a").arg("copy");
         }
@@ -470,6 +423,7 @@ pub fn transcode_audio(
     output_path: &Path,
     opts: &AudioTranscodeOptions,
 ) -> Result<(), String> {
+    validate_paths(input_path, output_path)?;
     let ffmpeg = find_ffmpeg_binary().ok_or("FFmpeg no está disponible en el sistema")?;
     let input_clean = input_path.to_str().unwrap_or("").trim_start_matches(r"\\?\");
     let output_clean = output_path.to_str().unwrap_or("").trim_start_matches(r"\\?\");
@@ -479,7 +433,7 @@ pub fn transcode_audio(
     }
 
     let mut cmd = Command::new(ffmpeg);
-    cmd.arg("-y").arg("-i").arg(input_clean);
+    cmd.arg("-nostdin").arg("-n").arg("-i").arg(input_clean);
 
     let fmt = opts.target_format.to_lowercase();
     match fmt.as_str() {
@@ -489,9 +443,18 @@ pub fn transcode_audio(
         }
         "flac" => {
             cmd.arg("-c:a").arg("flac");
+            let level = match opts.bitrate.as_deref() {
+                Some("flac_standard") => "5",
+                _ => "8",
+            };
+            cmd.arg("-compression_level").arg(level);
         }
         "wav" => {
-            cmd.arg("-c:a").arg("pcm_s16le");
+            let pcm_codec = match opts.bitrate.as_deref() {
+                Some("wav_16") => "pcm_s16le",
+                _ => "pcm_s24le",
+            };
+            cmd.arg("-c:a").arg(pcm_codec);
         }
         "aac" | "m4a" => {
             cmd.arg("-c:a").arg("aac");
@@ -530,3 +493,40 @@ pub fn transcode_audio(
 
     Ok(())
 }
+
+/// Extrae ZIP en una carpeta nueva, sin sobrescribir ni aceptar rutas externas.
+pub fn extract_zip(input: &Path) -> Result<PathBuf, String> {
+    use std::io::Read;
+    let file = std::fs::File::open(input).map_err(|e| e.to_string())?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("ZIP no válido: {e}"))?;
+    if archive.len() > 10000 { return Err("El ZIP supera el límite de 10000 entradas".into()); }
+    let mut total = 0u64;
+    for index in 0..archive.len() {
+        let entry = archive.by_index(index).map_err(|e| e.to_string())?;
+        let relative = entry.enclosed_name().ok_or("El ZIP contiene rutas externas")?;
+        if relative.components().any(|c| c.as_os_str().to_string_lossy().contains(':')) || entry.is_symlink() {
+            return Err("El ZIP contiene enlaces o rutas no admitidas".into());
+        }
+        total = total.checked_add(entry.size()).ok_or("Tamaño inválido")?;
+        if total > 4 * 1024 * 1024 * 1024 { return Err("El ZIP supera el límite de extracción de 4 GiB".into()); }
+    }
+    let parent = input.parent().ok_or("La entrada no tiene carpeta")?;
+    let stem = input.file_stem().ok_or("Nombre no válido")?.to_string_lossy();
+    let destination = parent.join(format!("{stem}_extraído"));
+    std::fs::create_dir(&destination).map_err(|e| format!("No se pudo crear una carpeta nueva {}: {e}", destination.display()))?;
+    for index in 0..archive.len() {
+        let entry = archive.by_index(index).map_err(|e| e.to_string())?;
+        let relative = entry.enclosed_name().ok_or("Ruta no válida")?;
+        let target = destination.join(relative);
+        if entry.is_dir() { std::fs::create_dir_all(&target).map_err(|e| e.to_string())?; continue; }
+        if let Some(parent) = target.parent() { std::fs::create_dir_all(parent).map_err(|e| e.to_string())?; }
+        let expected = entry.size();
+        let mut output = std::fs::OpenOptions::new().write(true).create_new(true).open(&target).map_err(|e| e.to_string())?;
+        let copied = std::io::copy(&mut entry.take(expected + 1), &mut output).map_err(|e| format!("Extracción incompleta en {}: {e}", destination.display()))?;
+        if copied != expected { return Err("El tamaño extraído no coincide con el ZIP".into()); }
+    }
+    Ok(destination)
+}
+
+#[cfg(test)]
+mod tests;

@@ -9,6 +9,8 @@ import {
   type DspPreset,
   type GlobalPassthruStatus,
 } from "./model/types";
+import { selectAudioOutput } from "./selectAudioOutput";
+import { reconcileGlobalAudio } from "./reconcileGlobalAudio";
 import { dspClient } from "./tauri/client";
 
 const STORAGE_KEY_ENABLED = "prisma_dsp_enabled";
@@ -47,7 +49,7 @@ export function useDspController() {
       const saved = localStorage.getItem(STORAGE_KEY_CONFIG);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (typeof parsed.preampDb === "number" && parsed.preampDb >= 0) return parsed.preampDb;
+        if (typeof parsed.preampDb === "number" && parsed.preampDb >= -12) return parsed.preampDb;
       }
     } catch {}
     return PRISMA_PRESET.preampDb ?? 1.0;
@@ -150,39 +152,25 @@ export function useDspController() {
     window.dispatchEvent(new CustomEvent("prisma-dsp-change", { detail: currentConfig }));
   }, [enabled, preampDb, bands, frequencies, effects, activePresetId, pushConfigToBackend]);
 
+  const previousEndpoints = useRef<Set<string> | null>(null);
+  const selectedOutputRef = useRef(selectedRenderDeviceId);
+  selectedOutputRef.current = selectedRenderDeviceId;
+  const applyAudioEndpoints = useCallback((endpoints: AudioEndpointInfo[]) => {
+    const chosen = selectAudioOutput(endpoints, previousEndpoints.current, selectedOutputRef.current, localStorage.getItem(STORAGE_KEY_RENDER_DEVICE));
+    previousEndpoints.current = new Set(endpoints.map((ep) => ep.id));
+    setAudioEndpoints((previous) => JSON.stringify(previous) === JSON.stringify(endpoints) ? previous : endpoints);
+    selectedOutputRef.current = chosen?.id ?? null;
+    setSelectedRenderDeviceId(chosen?.id ?? null);
+    setSelectedDevice(chosen?.name ?? "auto");
+    if (chosen) localStorage.setItem(STORAGE_KEY_RENDER_DEVICE, chosen.id);
+  }, []);
+
   // Cargar dispositivos de audio al inicio y sincronizar la salida física
   const refreshAudioDevices = useCallback(async () => {
     setIsAudioLoading(true);
     try {
       const endpoints = await dspClient.globalPassthruListEndpoints();
-      setAudioEndpoints(endpoints);
-
-      // Filtrar únicamente el canal de captura de Prisma (mantener MIXLINE, Voicemod, Alto TS415, etc.)
-      const availableEndpoints = endpoints.filter((ep) => {
-        const lower = ep.name.toLowerCase();
-        return (
-          !lower.includes("prisma audio") &&
-          !lower.includes("prisma audio engine") &&
-          !lower.includes("fxsound")
-        );
-      });
-
-      // Restaurar salida guardada o auto-seleccionar auriculares / altavoces reales
-      const savedRenderId = localStorage.getItem(STORAGE_KEY_RENDER_DEVICE);
-      const matchedSaved = availableEndpoints.find((ep) => ep.id === savedRenderId);
-
-      if (matchedSaved) {
-        setSelectedDevice(matchedSaved.name);
-        setSelectedRenderDeviceId(matchedSaved.id);
-      } else {
-        // Priorizar Alto TS415 o el primer dispositivo disponible
-        const alto = availableEndpoints.find((ep) => ep.name.toLowerCase().includes("alto"));
-        const chosen = alto || availableEndpoints[0];
-        if (chosen) {
-          setSelectedDevice(chosen.name);
-          setSelectedRenderDeviceId(chosen.id);
-        }
-      }
+      applyAudioEndpoints(endpoints);
 
       const list = await dspClient.getAudioDevices();
       setDevices(list);
@@ -191,7 +179,7 @@ export function useDspController() {
     } finally {
       setIsAudioLoading(false);
     }
-  }, []);
+  }, [applyAudioEndpoints]);
 
   useEffect(() => {
     void refreshAudioDevices();
@@ -208,11 +196,6 @@ export function useDspController() {
         if (resolvedId) {
           setSelectedRenderDeviceId(resolvedId);
           localStorage.setItem(STORAGE_KEY_RENDER_DEVICE, resolvedId);
-
-          // Si el passthru global está activo, actualizar la salida física de inmediato
-          if (globalPassthruEnabled) {
-            await dspClient.globalPassthruToggle(true, selectedCaptureDeviceId, resolvedId);
-          }
         }
 
         // Si mpv tiene un dispositivo coincidente, sincronizarlo también
@@ -328,48 +311,24 @@ export function useDspController() {
   const refreshAudioEndpoints = useCallback(async () => {
     try {
       const list = await dspClient.globalPassthruListEndpoints();
-      setAudioEndpoints((prev) => {
-        if (
-          prev.length === list.length &&
-          prev.every((ep, i) => ep.id === list[i]?.id && ep.name === list[i]?.name)
-        ) {
-          return prev;
-        }
-        return list;
-      });
-
-      // Filtrar únicamente el canal de captura de Prisma (mantener MIXLINE, monitores, auriculares, etc.)
-      const availableList = list.filter((ep) => {
-        const lower = ep.name.toLowerCase();
-        return (
-          !lower.includes("prisma audio") &&
-          !lower.includes("prisma audio engine") &&
-          !lower.includes("fxsound")
-        );
-      });
-
-      setSelectedRenderDeviceId((currentRenderId) => {
-        if (currentRenderId && availableList.some((ep) => ep.id === currentRenderId)) {
-          return currentRenderId;
-        }
-        const alto = availableList.find((ep) => ep.name.toLowerCase().includes("alto"));
-        const chosen = alto || availableList[0];
-        if (chosen) {
-          setSelectedDevice(chosen.name);
-          return chosen.id;
-        }
-        return currentRenderId;
-      });
+      const changed = previousEndpoints.current === null || list.length !== previousEndpoints.current.size || list.some((ep) => !previousEndpoints.current?.has(ep.id));
+      applyAudioEndpoints(list);
+      if (changed) setDevices(await dspClient.getAudioDevices());
     } catch (err) {
       console.warn("No se pudieron listar endpoints WASAPI:", err);
     }
-  }, []);
+  }, [applyAudioEndpoints]);
+
+  useEffect(() => {
+    const matching = devices.find((device) => device.description === selectedDevice);
+    if (matching) void dspClient.setAudioDevice(matching.name).catch((error) => console.warn("No se pudo sincronizar la salida del reproductor:", error));
+  }, [devices, selectedDevice]);
 
   // Sincronización automática periódica y por foco con Windows
   useEffect(() => {
     const interval = setInterval(() => {
       void refreshAudioEndpoints();
-    }, 6000);
+    }, 2000);
     const onFocus = () => {
       void refreshAudioEndpoints();
     };
@@ -392,8 +351,7 @@ export function useDspController() {
     try {
       const st = await dspClient.globalPassthruGetStatus();
       setGlobalPassthruStatus(st);
-      const isRunning = Boolean(st.isRunning ?? (st as any)?.is_running);
-      setGlobalPassthruEnabled(isRunning);
+
       if (typeof st.volume === "number") {
         setGlobalVolumeState(st.volume);
       }
@@ -402,31 +360,38 @@ export function useDspController() {
     }
   }, []);
 
-  const toggleGlobalPassthru = useCallback(
-    async (overrideState?: boolean) => {
-      setIsGlobalLoading(true);
-      setGlobalError(null);
-      const nextState = overrideState !== undefined ? overrideState : !globalPassthruEnabled;
+  const toggleGlobalPassthru = useCallback((overrideState?: boolean) => {
+    const next = overrideState ?? !globalPassthruEnabled;
+    localStorage.setItem(STORAGE_KEY_GLOBAL_ENABLED, String(next));
+    setGlobalPassthruEnabled(next);
+  }, [globalPassthruEnabled]);
+
+  // Un único reconciliador mantiene la intención del usuario separada del estado real.
+  const desiredBridge = useRef({ enabled: globalPassthruEnabled, capture: selectedCaptureDeviceId, render: selectedRenderDeviceId });
+  desiredBridge.current = { enabled: globalPassthruEnabled, capture: selectedCaptureDeviceId, render: selectedRenderDeviceId };
+  useEffect(() => {
+    let disposed = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const reconcile = async () => {
       try {
-        const st = await dspClient.globalPassthruToggle(
-          nextState,
-          selectedCaptureDeviceId,
-          selectedRenderDeviceId,
-        );
-        setGlobalPassthruStatus(st);
-        const isRunning = Boolean(st.isRunning ?? (st as any)?.is_running);
-        setGlobalPassthruEnabled(isRunning);
-        localStorage.setItem(STORAGE_KEY_GLOBAL_ENABLED, String(isRunning));
-      } catch (err: unknown) {
-        const msg = typeof err === "string" ? err : (err as Error)?.message || "Error al cambiar Modo Global";
-        setGlobalError(msg);
-        console.error("Error toggleGlobalPassthru:", err);
+        const next = await reconcileGlobalAudio(dspClient, () => desiredBridge.current, () => disposed);
+        if (!disposed) {
+          const desired = desiredBridge.current;
+          setGlobalPassthruStatus(next);
+          setGlobalError(desired.enabled && !desired.render ? "Esperando una salida de audio disponible…" : null);
+        }
+      } catch (error) {
+        if (!disposed) setGlobalError(`Reconectando audio: ${String(error)}`);
       } finally {
-        setIsGlobalLoading(false);
+        if (!disposed) {
+          setIsGlobalLoading(false);
+          timer = setTimeout(reconcile, 1000);
+        }
       }
-    },
-    [globalPassthruEnabled, selectedCaptureDeviceId, selectedRenderDeviceId],
-  );
+    };
+    void reconcile();
+    return () => { disposed = true; clearTimeout(timer); };
+  }, []);
 
   const setCaptureDevice = useCallback((id: string | null) => {
     setSelectedCaptureDeviceId(id);
@@ -452,14 +417,6 @@ export function useDspController() {
     void refreshGlobalStatus();
   }, [refreshAudioEndpoints, refreshGlobalStatus]);
 
-  // Si estaba habilitado en localStorage, arrancar automáticamente
-  useEffect(() => {
-    const wasSavedEnabled = localStorage.getItem(STORAGE_KEY_GLOBAL_ENABLED) === "true";
-    if (wasSavedEnabled) {
-      void toggleGlobalPassthru(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return {
     enabled,

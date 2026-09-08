@@ -19,7 +19,7 @@ macro_rules! ql_log {
 
 use super::keyboard_hook::{is_preview_open, set_preview_open, start_hook, TriggerEvent};
 use super::model::{QuickLookMediaType, QuickLookPayload};
-use super::shell_selection::{get_active_selection_info, SelectionInfo};
+use super::shell_selection::{get_active_selection_info, get_foreground_selection_info, foreground_selection_source, SelectionInfo};
 
 pub const DETACHED_LABEL_PREFIX: &str = "quicklook-extra";
 const MAX_DETACHED_INSTANCES: u32 = 10;
@@ -28,6 +28,7 @@ const MAX_DETACHED_INSTANCES: u32 = 10;
 pub struct QuickLookState {
     app_handle: AppHandle,
     current_path: Arc<Mutex<Option<String>>>,
+    preview_revision: Arc<AtomicU32>,
     last_shown: Arc<Mutex<Option<Instant>>>,
     detached_payloads: Arc<Mutex<HashMap<String, QuickLookPayload>>>,
     detached_counter: Arc<AtomicU32>,
@@ -39,6 +40,7 @@ impl QuickLookState {
         Self {
             app_handle,
             current_path: Arc::new(Mutex::new(None)),
+            preview_revision: Arc::new(AtomicU32::new(0)),
             last_shown: Arc::new(Mutex::new(None)),
             detached_payloads: Arc::new(Mutex::new(HashMap::new())),
             detached_counter: Arc::new(AtomicU32::new(0)),
@@ -97,6 +99,7 @@ impl QuickLookState {
             None => QuickLookMediaType::Generic,
         };
 
+        self.preview_revision.fetch_add(1, Ordering::SeqCst);
         let path_str = path.to_string_lossy().to_string();
 
         {
@@ -161,11 +164,8 @@ impl QuickLookState {
                 let _ = window.unminimize();
             }
 
-            let was_open = is_preview_open();
             set_preview_open(true);
-            if !was_open {
-                self.start_selection_watcher();
-            }
+            self.start_selection_watcher();
             true
         } else {
             ql_log!("ERROR: No se encontró la ventana quicklook en Tauri");
@@ -174,101 +174,51 @@ impl QuickLookState {
     }
 
     pub fn show_file_path(&self, path: &Path) -> bool {
+        *self.current_selection.lock().unwrap() = None;
         self.show_file_path_with_selection(path, None, None)
     }
 
     fn start_selection_watcher(&self) {
         let state = self.clone();
+        let revision = self.preview_revision.load(Ordering::SeqCst);
         std::thread::spawn(move || {
-            while is_preview_open() {
+            while is_preview_open() && state.preview_revision.load(Ordering::SeqCst) == revision {
                 std::thread::sleep(std::time::Duration::from_millis(100));
-                if !is_preview_open() {
-                    break;
-                }
-
-                // Verificar cambios si el foco activo es Explorer, Desktop o QuickLook
-                let explorer_or_desktop = unsafe { super::keyboard_hook::is_explorer_or_desktop_focused() };
-                let fg_is_quicklook = {
-                    #[cfg(windows)]
-                    {
-                        use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
-                        let fg = unsafe { GetForegroundWindow() };
-                        let mut pid = 0u32;
-                        if !fg.0.is_null() {
-                            unsafe { GetWindowThreadProcessId(fg, Some(&mut pid)) };
-                        }
-                        let my_pid = unsafe { windows::Win32::System::Threading::GetCurrentProcessId() };
-                        pid != 0 && pid == my_pid
-                    }
-                    #[cfg(not(windows))]
-                    {
-                        false
-                    }
-                };
-
-                if !explorer_or_desktop && !fg_is_quicklook {
-                    continue;
-                }
-
-                let sel_info = match get_active_selection_info() {
-                    Some(s) => s,
-                    None => continue,
-                };
-
-                let selected_path = sel_info.primary_path.clone();
-                let path_str = selected_path.to_string_lossy().to_string();
-
-                {
-                    let cur = state.current_path.lock().unwrap();
-                    if let Some(ref current) = *cur {
-                        if current == &path_str {
-                            continue;
-                        }
-                    }
-                }
-
-                let media_type = match QuickLookMediaType::from_path(&selected_path) {
-                    Some(mt) => mt,
-                    None => QuickLookMediaType::Generic,
-                };
-
-                {
-                    let mut cur = state.current_path.lock().unwrap();
-                    *cur = Some(path_str.clone());
-                }
-
-                let (sel_idx, sel_tot) = if sel_info.total > 1 {
-                    (Some(sel_info.index), Some(sel_info.total))
-                } else {
-                    (None, None)
-                };
-
-                {
-                    let mut sel = state.current_selection.lock().unwrap();
-                    *sel = Some(sel_info);
-                }
-
-                let payload = QuickLookPayload::with_selection(path_str, media_type, sel_idx, sel_tot);
-                let (target_w, target_h) = resolve_media_size(media_type, &selected_path);
-
-                if matches!(media_type, QuickLookMediaType::Audio | QuickLookMediaType::Video) {
-                    if let Some(playback_state) = state.app_handle.try_state::<crate::app::state::PlaybackProbeState>() {
-                        let _ = playback_state.pause();
-                    }
-                }
-
-                let _ = state.app_handle.emit("quicklook://preview", &payload);
-
-                if let Some(window) = state.app_handle.get_webview_window("quicklook") {
-                    let is_max = crate::app::commands::quick_look::quick_look_is_maximized(window.clone());
-                    if !is_max {
-                        let _ = window.set_size(tauri::LogicalSize::new(target_w, target_h));
-                        let _ = window.center();
-                    }
-                    let _ = window.emit("quicklook://preview", &payload);
-                }
+                state.refresh_selection_from_foreground(revision);
             }
         });
+    }
+
+    fn refresh_selection_from_foreground(&self, revision: u32) {
+        if !is_preview_open() || self.preview_revision.load(Ordering::SeqCst) != revision { return; }
+        let source = foreground_selection_source();
+        if source.is_none() { return; }
+        let Some(info) = get_foreground_selection_info() else { return; };
+        let path = info.primary_path.clone();
+        let path_str = path.to_string_lossy().to_string();
+        let expected_path = self.current_path.lock().unwrap().clone();
+        if expected_path.as_deref() == Some(path_str.as_str()) { return; }
+        let media_type = QuickLookMediaType::from_path(&path).unwrap_or(QuickLookMediaType::Generic);
+        let (index, total) = if info.total > 1 { (Some(info.index), Some(info.total)) } else { (None, None) };
+        // Leer metadatos puede tardar (por ejemplo, archivos MTP). Validar de nuevo al publicar.
+        let payload = QuickLookPayload::with_selection(path_str.clone(), media_type, index, total);
+        let (width, height) = resolve_media_size(media_type, &path);
+        let mut current = self.current_path.lock().unwrap();
+        if !selection_update_is_current(is_preview_open(), revision, self.preview_revision.load(Ordering::SeqCst), source, foreground_selection_source())
+            || *current != expected_path { return; }
+        *current = Some(path_str);
+        *self.current_selection.lock().unwrap() = Some(info);
+        drop(current);
+        if matches!(media_type, QuickLookMediaType::Audio | QuickLookMediaType::Video) {
+            if let Some(playback) = self.app_handle.try_state::<crate::app::state::PlaybackProbeState>() { let _ = playback.pause(); }
+        }
+        if let Some(window) = self.app_handle.get_webview_window("quicklook") {
+            if !crate::app::commands::quick_look::quick_look_is_maximized(window.clone()) {
+                let _ = window.set_size(tauri::LogicalSize::new(width, height));
+                let _ = window.center();
+            }
+            let _ = window.emit("quicklook://preview", &payload);
+        }
     }
 
     pub fn show_current_selection(&self) {
@@ -312,80 +262,7 @@ impl QuickLookState {
     }
 
     pub fn handle_navigation(&self) {
-        let state = self.clone();
-        std::thread::spawn(move || {
-            let delays_ms = [35, 80, 150];
-            for delay in delays_ms {
-                std::thread::sleep(std::time::Duration::from_millis(delay));
-                if !is_preview_open() {
-                    return;
-                }
-
-                let sel_info = match get_active_selection_info() {
-                    Some(s) => s,
-                    None => continue,
-                };
-
-                let selected_path = sel_info.primary_path.clone();
-                let path_str = selected_path.to_string_lossy().to_string();
-
-                let mut is_different = false;
-                {
-                    let mut cur = state.current_path.lock().unwrap();
-                    if let Some(ref current) = *cur {
-                        if current != &path_str {
-                            *cur = Some(path_str.clone());
-                            is_different = true;
-                        }
-                    } else {
-                        *cur = Some(path_str.clone());
-                        is_different = true;
-                    }
-                }
-
-                if !is_different {
-                    continue;
-                }
-
-                let media_type = match QuickLookMediaType::from_path(&selected_path) {
-                    Some(mt) => mt,
-                    None => QuickLookMediaType::Generic,
-                };
-
-                let (sel_idx, sel_tot) = if sel_info.total > 1 {
-                    (Some(sel_info.index), Some(sel_info.total))
-                } else {
-                    (None, None)
-                };
-
-                {
-                    let mut sel = state.current_selection.lock().unwrap();
-                    *sel = Some(sel_info);
-                }
-
-                let payload = QuickLookPayload::with_selection(path_str, media_type, sel_idx, sel_tot);
-                let (target_w, target_h) = resolve_media_size(media_type, &selected_path);
-
-                if matches!(media_type, QuickLookMediaType::Audio | QuickLookMediaType::Video) {
-                    if let Some(playback_state) = state.app_handle.try_state::<crate::app::state::PlaybackProbeState>() {
-                        let _ = playback_state.pause();
-                    }
-                }
-
-                let _ = state.app_handle.emit("quicklook://preview", &payload);
-
-                if let Some(window) = state.app_handle.get_webview_window("quicklook") {
-                    let is_max = crate::app::commands::quick_look::quick_look_is_maximized(window.clone());
-                    if !is_max {
-                        let _ = window.set_size(tauri::LogicalSize::new(target_w, target_h));
-                        let _ = window.center();
-                    }
-                    let _ = window.emit("quicklook://preview", &payload);
-                }
-
-                return;
-            }
-        });
+        self.refresh_selection_from_foreground(self.preview_revision.load(Ordering::SeqCst));
     }
 
     #[allow(dead_code)]
@@ -404,7 +281,9 @@ impl QuickLookState {
     }
 
     pub fn hide(&self) {
+        self.preview_revision.fetch_add(1, Ordering::SeqCst);
         set_preview_open(false);
+        *self.current_selection.lock().unwrap() = None;
         crate::app::commands::quick_look::reset_maximize_state();
         {
             let mut cur = self.current_path.lock().unwrap();
@@ -596,5 +475,26 @@ fn resolve_media_size(media_type: QuickLookMediaType, path: &Path) -> (f64, f64)
         QuickLookMediaType::Project => (820.0, 580.0),
         QuickLookMediaType::Playlist => (680.0, 520.0),
         QuickLookMediaType::Generic => (560.0, 380.0),
+    }
+}
+
+fn selection_update_is_current(open: bool, requested: u32, current: u32, source: Option<isize>, foreground: Option<isize>) -> bool {
+    open && requested == current && source.is_some() && source == foreground
+}
+
+#[cfg(test)]
+mod selection_watch_tests {
+    use super::selection_update_is_current;
+    #[test]
+    fn only_the_same_foreground_explorer_can_update_preview() {
+        assert!(selection_update_is_current(true, 1, 1, Some(10), Some(10)));
+        assert!(!selection_update_is_current(true, 1, 1, Some(10), None)); // Quick Look o navegador.
+        assert!(!selection_update_is_current(true, 1, 1, Some(10), Some(20)));
+        assert!(!selection_update_is_current(true, 1, 1, None, None));
+    }
+    #[test]
+    fn old_reads_cannot_replace_a_reopened_or_closed_preview() {
+        assert!(!selection_update_is_current(true, 1, 2, Some(10), Some(10)));
+        assert!(!selection_update_is_current(false, 1, 1, Some(10), Some(10)));
     }
 }
