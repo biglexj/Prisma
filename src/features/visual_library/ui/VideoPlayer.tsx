@@ -14,6 +14,7 @@ import { VideoToolsMenu } from "./components/VideoToolsMenu";
 import { useVideoAudioDsp } from "./useVideoAudioDsp";
 import { useVideoSnapshot } from "../hooks/useVideoSnapshot";
 import { useSystemSettings } from "../../../app/useSystemSettings";
+import { useDsp } from "../../dsp/DspContext";
 import "./video-player.css";
 
 interface VideoPlayerProps {
@@ -28,6 +29,7 @@ interface VideoPlayerProps {
   onPlayingChange?: (isPlaying: boolean) => void;
   confirmDeletion?: boolean;
   onRefresh?: () => void | Promise<void>;
+  onOpenEqualizer?: () => void;
 }
 
 type AudioChannelMode = "stereo" | "mono";
@@ -59,6 +61,7 @@ export function VideoPlayer({
   onPlayingChange,
   confirmDeletion = true,
   onRefresh,
+  onOpenEqualizer,
 }: VideoPlayerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isFastForwarding, setIsFastForwarding] = useState(false);
@@ -148,6 +151,46 @@ export function VideoPlayer({
   const fastForwardIntervalRef = useRef<number | null>(null);
   const audioMenuRef = useRef<HTMLDivElement | null>(null);
   const subMenuRef = useRef<HTMLDivElement | null>(null);
+  const outputMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const dsp = useDsp();
+  const [showOutputMenu, setShowOutputMenu] = useState(false);
+
+  // Lista de todos los dispositivos de salida de Windows
+  const displayEndpoints = useMemo(() => {
+    const rawList =
+      dsp.audioEndpoints.length > 0
+        ? dsp.audioEndpoints
+        : dsp.devices.map((d) => ({
+            id: d.name,
+            name: d.description,
+            isDefault: d.isActive,
+            isVirtual: false,
+          }));
+
+    return rawList.filter((ep) => {
+      const lower = ep.name.toLowerCase();
+      return (
+        !lower.includes("prisma audio") &&
+        !lower.includes("prisma audio engine") &&
+        !lower.includes("fxsound")
+      );
+    });
+  }, [dsp.audioEndpoints, dsp.devices]);
+
+  const activeEndpoint =
+    displayEndpoints.find(
+      (ep) => ep.id === dsp.selectedRenderDeviceId || ep.name === dsp.selectedDevice,
+    ) || displayEndpoints[0];
+
+  const handleSelectOutputDevice = async (name: string, id: string) => {
+    await dsp.selectAudioDevice(name, id);
+    window.dispatchEvent(
+      new CustomEvent("prisma-audio-sink-change", {
+        detail: { deviceName: name, deviceId: id },
+      }),
+    );
+  };
 
   const hasMedia = Boolean(path);
   const title = path ? mediaTitle(path) : "Sin vídeo seleccionado";
@@ -641,12 +684,15 @@ export function VideoPlayer({
       if (subMenuRef.current && !subMenuRef.current.contains(e.target as Node)) {
         setShowSubMenu(false);
       }
+      if (outputMenuRef.current && !outputMenuRef.current.contains(e.target as Node)) {
+        setShowOutputMenu(false);
+      }
     };
-    if (showAudioMenu || showSubMenu) {
+    if (showAudioMenu || showSubMenu || showOutputMenu) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showAudioMenu, showSubMenu]);
+  }, [showAudioMenu, showSubMenu, showOutputMenu]);
 
   const handleNext = () => {
     setShowControls(true);
@@ -798,7 +844,7 @@ export function VideoPlayer({
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
     }
-    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist && !isToolsMenuOpen && !isHoveringHeaderRef.current) {
+    if (!paused && !showAudioMenu && !showSubMenu && !showOutputMenu && !showPlaylist && !isToolsMenuOpen && !isHoveringHeaderRef.current) {
       controlsTimeoutRef.current = window.setTimeout(() => {
         if (!isToolsMenuOpen && !isHoveringHeaderRef.current) {
           setShowControls(false);
@@ -808,7 +854,7 @@ export function VideoPlayer({
   };
 
   const handleMouseLeave = () => {
-    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist && !isToolsMenuOpen && !isHoveringHeaderRef.current) {
+    if (!paused && !showAudioMenu && !showSubMenu && !showOutputMenu && !showPlaylist && !isToolsMenuOpen && !isHoveringHeaderRef.current) {
       if (controlsTimeoutRef.current) {
         window.clearTimeout(controlsTimeoutRef.current);
       }
@@ -817,7 +863,7 @@ export function VideoPlayer({
   };
 
   useEffect(() => {
-    if (showAudioMenu || showSubMenu || showPlaylist || paused || isToolsMenuOpen) {
+    if (showAudioMenu || showSubMenu || showOutputMenu || showPlaylist || paused || isToolsMenuOpen) {
       setShowControls(true);
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
     } else {
@@ -826,7 +872,7 @@ export function VideoPlayer({
         setShowControls(false);
       }, 3500);
     }
-  }, [showAudioMenu, showSubMenu, showPlaylist, paused, isToolsMenuOpen]);
+  }, [showAudioMenu, showSubMenu, showOutputMenu, showPlaylist, paused, isToolsMenuOpen]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -995,6 +1041,8 @@ export function VideoPlayer({
             setShowAudioMenu(false);
           } else if (showSubMenu) {
             setShowSubMenu(false);
+          } else if (showOutputMenu) {
+            setShowOutputMenu(false);
           } else if (isFullscreen) {
             toggleFullscreen();
           } else {
@@ -1656,6 +1704,100 @@ export function VideoPlayer({
                 value={volume}
               />
               <span className="video-volume-value">{volume}%</span>
+            </div>
+
+            {/* Selector de Dispositivo de Salida de Audio & Ecualizador */}
+            <div className="video-popover-anchor" ref={outputMenuRef}>
+              <button
+                aria-label="Dispositivo de salida de audio y ecualizador"
+                className={`video-icon-btn ${showOutputMenu ? "is-active" : ""}`}
+                onClick={() => {
+                  setShowOutputMenu((prev) => !prev);
+                  setShowAudioMenu(false);
+                  setShowSubMenu(false);
+                }}
+                title={
+                  activeEndpoint
+                    ? `Salida: ${activeEndpoint.name} (Clic para cambiar / ecualizador)`
+                    : "Selector de salida de audio"
+                }
+              >
+                <Icon name="equalizer" />
+              </button>
+
+              {showOutputMenu ? (
+                <div className="video-audio-output-popover">
+                  <div className="video-audio-output-header">
+                    <Icon name="headphones" />
+                    <span>Salida de audio</span>
+                    {displayEndpoints.length > 0 && (
+                      <span className="video-audio-output-badge">
+                        {displayEndpoints.length}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="video-audio-output-list">
+                    {displayEndpoints.length > 0 ? (
+                      displayEndpoints.map((ep) => {
+                        const isSelected =
+                          ep.name === activeEndpoint?.name || ep.id === activeEndpoint?.id;
+                        return (
+                          <button
+                            className={`video-audio-output-item ${isSelected ? "is-active" : ""}`}
+                            key={ep.id}
+                            onClick={() => {
+                              void handleSelectOutputDevice(ep.name, ep.id);
+                            }}
+                            type="button"
+                          >
+                            <span className="video-audio-output-item-icon">
+                              <Icon
+                                name={
+                                  ep.name.toLowerCase().includes("headphone") ||
+                                  ep.name.toLowerCase().includes("auricular") ||
+                                  ep.name.toLowerCase().includes("headset")
+                                    ? "headphones"
+                                    : "volume"
+                                }
+                              />
+                            </span>
+                            <span className="video-audio-output-item-name" title={ep.name}>
+                              {ep.name}
+                            </span>
+                            {isSelected && (
+                              <span className="video-audio-output-check">
+                                <Icon name="check" />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <p className="video-audio-popover-empty">
+                        No se detectaron dispositivos de salida
+                      </p>
+                    )}
+                  </div>
+
+                  {onOpenEqualizer && (
+                    <>
+                      <div className="video-audio-output-divider" />
+                      <button
+                        className="video-audio-output-eq-btn"
+                        onClick={() => {
+                          setShowOutputMenu(false);
+                          onOpenEqualizer();
+                        }}
+                        type="button"
+                      >
+                        <Icon name="equalizer" />
+                        <span>Abrir Ecualizador DSP</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : null}
             </div>
 
             <button

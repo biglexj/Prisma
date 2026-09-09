@@ -840,6 +840,178 @@
   line-height: 1;
 }
 
+/* ── Popover de Selección de Salida de Audio & Ecualizador (Lado Derecho) ── */
+.video-audio-output-popover {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  right: 0;
+  left: auto;
+  min-width: 270px;
+  max-width: 330px;
+  background: rgba(20, 16, 22, 0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  padding: 10px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  animation: popoverFadeIn 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.video-audio-output-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.video-audio-output-header svg {
+  width: 14px;
+  height: 14px;
+  color: var(--primary, #e05273);
+}
+
+.video-audio-output-badge {
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.video-audio-output-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.video-audio-output-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.video-audio-output-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.video-audio-output-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.video-audio-output-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  min-height: 38px;
+  border-radius: 11px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 130ms ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.video-audio-output-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.video-audio-output-item.is-active {
+  background: var(--primary, #e05273);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 2px 10px rgba(224, 82, 115, 0.4);
+}
+
+.video-audio-output-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.video-audio-output-item-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.video-audio-output-item-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.82rem;
+}
+
+.video-audio-output-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.video-audio-output-check svg {
+  width: 14px;
+  height: 14px;
+}
+
+.video-audio-output-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 4px 0;
+}
+
+.video-audio-output-eq-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.video-audio-output-eq-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.video-audio-output-eq-btn svg {
+  width: 15px;
+  height: 15px;
+  color: var(--primary, #e05273);
+}
+
 /* ── Toast de Barajado / Notificaciones ── */
 .video-toast-indicator {
   position: absolute;

@@ -212,7 +212,56 @@ export function useVideoAudioDsp(videoRef: React.RefObject<HTMLVideoElement | nu
       }
     } catch {}
 
-    // Escuchar eventos en tiempo real desde el ecualizador
+    // Sincronizar dispositivo de salida de audio físico (altavoces, auriculares)
+    const applyAudioSink = async (deviceName?: string) => {
+      const nodes = dspNodesRef.current;
+      if (!nodes) return;
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioOutputs = devices.filter((d) => d.kind === "audiooutput");
+
+        let targetDeviceId = "";
+        if (deviceName && deviceName !== "auto" && deviceName !== "default") {
+          const match = audioOutputs.find(
+            (d) =>
+              d.label.toLowerCase().includes(deviceName.toLowerCase()) ||
+              deviceName.toLowerCase().includes(d.label.toLowerCase()),
+          );
+          if (match) {
+            targetDeviceId = match.deviceId;
+          }
+        }
+
+        // 1. AudioContext setSinkId (Chromium 110+ / WebView2)
+        if (typeof (nodes.audioCtx as unknown as { setSinkId?: (id: string) => Promise<void> }).setSinkId === "function") {
+          await (nodes.audioCtx as unknown as { setSinkId: (id: string) => Promise<void> }).setSinkId(targetDeviceId);
+        }
+        // 2. Video HTMLMediaElement setSinkId
+        if (video && typeof (video as unknown as { setSinkId?: (id: string) => Promise<void> }).setSinkId === "function") {
+          await (video as unknown as { setSinkId: (id: string) => Promise<void> }).setSinkId(targetDeviceId);
+        }
+      } catch (err) {
+        console.warn("[Prisma Video DSP] No se pudo conmutar el dispositivo de salida:", err);
+      }
+    };
+
+    // Aplicar dispositivo de salida inicial si existe guardado
+    try {
+      const savedRenderDevice = localStorage.getItem("prisma_dsp_render_device");
+      if (savedRenderDevice) {
+        void applyAudioSink(savedRenderDevice);
+      }
+    } catch {}
+
+    const handleSinkChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ deviceName?: string; deviceId?: string }>;
+      if (customEvent.detail?.deviceName) {
+        void applyAudioSink(customEvent.detail.deviceName);
+      }
+    };
+
+    // Escuchar eventos en tiempo real desde el ecualizador y selector de salida
     const handleDspChange = (e: Event) => {
       const customEvent = e as CustomEvent<DspConfig>;
       if (customEvent.detail) {
@@ -221,8 +270,10 @@ export function useVideoAudioDsp(videoRef: React.RefObject<HTMLVideoElement | nu
     };
 
     window.addEventListener("prisma-dsp-change", handleDspChange);
+    window.addEventListener("prisma-audio-sink-change", handleSinkChange);
     return () => {
       window.removeEventListener("prisma-dsp-change", handleDspChange);
+      window.removeEventListener("prisma-audio-sink-change", handleSinkChange);
     };
   }, [videoRef]);
 }
