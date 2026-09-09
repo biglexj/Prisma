@@ -1374,7 +1374,7 @@ export function VideoPlayer({
           {/* Notificación Toast flotante de captura con miniatura */}
           {snapshotToast && snapshotToast.visible ? (
             <div
-              className={`video-snapshot-toast ${snapshotToast.isError ? "is-error" : ""}`}
+              className={`video-snapshot-toast ${snapshotToast.isError ? "is-error" : ""} ${!showControls ? "controls-hidden" : ""}`}
               role="status"
               aria-live="polite"
             >

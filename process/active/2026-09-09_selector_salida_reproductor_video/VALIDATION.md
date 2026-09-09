@@ -10,6 +10,7 @@
 - [ ] V04 — Tester — Cambio de dispositivo de salida en plena reproducción de vídeo. Esperado: el audio conmuta al dispositivo seleccionado sin interrupciones.
 - [ ] V05 — Tester — Apertura del Ecualizador DSP desde el botón de acceso directo del popover. Esperado: el modal del ecualizador se despliega permitiendo modificar efectos y bandas.
 - [ ] V06 — Dispositivo — Comportamiento al desconectar o reconectar auriculares. Esperado: la lista se actualiza dinámicamente mediante el hook de endpoints.
+- [x] V07 — Agente — Comprobación de posición dinámica del toast de captura con controles inactivos. Esperado: cuando los controles están ocultos (`controls-hidden`), el toast se sitúa a `bottom: 28px` evitando el espacio vacío inferior, y transiciona a `136px` al mostrarse los controles.
 
 ## Registro de fallos
 
