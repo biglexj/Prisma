@@ -103,6 +103,7 @@ pub struct QuickLookPayload {
     pub selection_total: Option<usize>,
     pub extension: String,
     pub modified_date: Option<String>,
+    pub video_poster_url: Option<String>,
 }
 
 impl QuickLookPayload {
@@ -245,6 +246,19 @@ impl QuickLookPayload {
                 (None, None, None, None, None, None, None)
             };
 
+        let video_poster_url = if media_type == QuickLookMediaType::Video {
+            #[cfg(target_os = "windows")]
+            {
+                crate::infrastructure::media_preview::load_video_thumbnail_data_url(path)
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                None
+            }
+        } else {
+            None
+        };
+
         Self {
             path: clean_path_str,
             file_name,
@@ -278,6 +292,7 @@ impl QuickLookPayload {
             selection_total,
             extension: ext,
             modified_date,
+            video_poster_url,
         }
     }
 }
@@ -331,22 +346,55 @@ fn extract_audio_metadata(path: &Path) -> (Option<String>, Option<String>, Optio
     (title, artist, duration_seconds)
 }
 
+pub fn get_video_dimensions_ffprobe(path: &Path) -> Option<(u32, u32)> {
+    let ffprobe = crate::infrastructure::converter::find_ffprobe_binary()?;
+    let output = std::process::Command::new(ffprobe)
+        .args([
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height",
+            "-of",
+            "csv=s=x:p=0",
+        ])
+        .arg(path)
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let text = String::from_utf8_lossy(&output.stdout);
+    let mut parts = text.trim().split('x');
+    let w = parts.next()?.parse::<u32>().ok()?;
+    let h = parts.next()?.parse::<u32>().ok()?;
+
+    if w > 0 && w <= 8192 && h > 0 && h <= 8192 {
+        Some((w, h))
+    } else {
+        None
+    }
+}
+
 #[cfg(target_os = "windows")]
-pub fn get_video_dimensions(path: &Path) -> Option<(u32, u32)> {
+pub fn get_video_dimensions_shell(path: &Path) -> Option<(u32, u32)> {
     use windows::core::HSTRING;
     use windows::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED};
     use windows::Win32::UI::Shell::SHCreateItemFromParsingName;
     use windows::Win32::UI::Shell::IShellItem2;
     use windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY;
 
-    // PKEY_Video_FrameWidth: {64440490-4C8B-11D1-8B70-080036B11A03}, 3
+    // PKEY_Video_FrameWidth: {64440491-4C8B-11D1-8B70-080036B11A03}, 3
     const PKEY_VIDEO_FRAME_WIDTH: PROPERTYKEY = PROPERTYKEY {
-        fmtid: windows::core::GUID::from_u128(0x64440490_4c8b_11d1_8b70_080036b11a03),
+        fmtid: windows::core::GUID::from_u128(0x64440491_4c8b_11d1_8b70_080036b11a03),
         pid: 3,
     };
-    // PKEY_Video_FrameHeight: {64440490-4C8B-11D1-8B70-080036B11A03}, 4
+    // PKEY_Video_FrameHeight: {64440491-4C8B-11D1-8B70-080036B11A03}, 4
     const PKEY_VIDEO_FRAME_HEIGHT: PROPERTYKEY = PROPERTYKEY {
-        fmtid: windows::core::GUID::from_u128(0x64440490_4c8b_11d1_8b70_080036b11a03),
+        fmtid: windows::core::GUID::from_u128(0x64440491_4c8b_11d1_8b70_080036b11a03),
         pid: 4,
     };
 
@@ -382,12 +430,22 @@ pub fn get_video_dimensions(path: &Path) -> Option<(u32, u32)> {
             CoUninitialize();
         }
 
-        if width > 0 && height > 0 {
+        if width > 0 && width <= 8192 && height > 0 && height <= 8192 {
             Some((width, height))
         } else {
             None
         }
     }
+}
+
+pub fn get_video_dimensions(path: &Path) -> Option<(u32, u32)> {
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(dims) = get_video_dimensions_shell(path) {
+            return Some(dims);
+        }
+    }
+    get_video_dimensions_ffprobe(path)
 }
 
 pub fn extract_kra_preview(path: &Path) -> Option<String> {
@@ -678,6 +736,15 @@ mod tests {
         assert_eq!(format_file_size(2048), "2 KB");
         assert_eq!(format_file_size(15 * 1024 * 1024), "15.0 MB");
         assert_eq!(format_file_size(2 * 1024 * 1024 * 1024), "2.00 GB");
+    }
+
+    #[test]
+    fn test_video_dimensions_detection() {
+        let p = std::path::Path::new(r"D:\Vídeos\Partidos\Render\Triunfo.mp4");
+        if p.exists() {
+            let dims = get_video_dimensions(p);
+            assert_eq!(dims, Some((1080, 1920)));
+        }
     }
 }
 

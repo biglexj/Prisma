@@ -11,11 +11,15 @@ interface QuickLookVideoProps {
   payload: QuickLookPayload;
   onDimensionsLoad?: (dims: { width: number; height: number }) => void;
   onTimeUpdate?: (seconds: number) => void;
+  onOpenInMain?: () => void;
 }
 
-export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate }: QuickLookVideoProps) {
+export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpenInMain }: QuickLookVideoProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
+  const [isReady, setIsReady] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoop, setIsLoop] = useState<boolean>(() => {
     try {
       return localStorage.getItem("prisma:quicklook_loop") === "true";
@@ -33,23 +37,25 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate }: Quic
     const video = videoRef.current;
     if (!video) return;
 
-    video.src = convertFileSrc(payload.path);
+    setHasError(false);
+    setErrorMessage(null);
+    setIsReady(false);
+
+    // Cache-buster con tamaño y fecha de modificación para evitar que Chromium
+    // sirva byte-ranges obsoletos cuando el archivo fue sobrescrito (ej. DaVinci Resolve)
+    const fileSrc = convertFileSrc(payload.path);
+    const cacheKey = payload.fileSizeBytes
+      ? `?v=${payload.fileSizeBytes}_${encodeURIComponent(payload.modifiedDate || "")}`
+      : `?t=${Date.now()}`;
+    video.src = `${fileSrc}${cacheKey}`;
+
     video.volume = isMuted ? 0 : volume;
     video.muted = isMuted;
     video.loop = isLoop;
     video.currentTime = 0;
     setPosition(0);
 
-    const playPromise = video.play();
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => setIsPlaying(true))
-        .catch(() => setIsPlaying(false));
-    }
-
     // Detener vídeo al cerrar/ocultar la ventana Quick Look (X o click fuera).
-    // Las instancias desacopladas no reaccionan al hide global: se pausan al
-    // cerrar su propia ventana (cleanup) para poder comparar en paralelo.
     const isPrimary = getCurrentWebviewWindow().label === "quicklook";
     const unlistenHide = isPrimary
       ? listen("quicklook://hide", () => {
@@ -62,18 +68,19 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate }: Quic
 
     return () => {
       video.pause();
-      video.src = "";
+      // Liberar completamente el stream de red y los handles de archivo en Chromium/WebView2
+      video.removeAttribute("src");
+      video.load();
       unlistenHide.then((u) => u());
     };
-  }, [payload.path]);
+  }, [payload.path, payload.fileSizeBytes, payload.modifiedDate]);
 
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
 
     if (video.paused) {
-      void video.play();
-      setIsPlaying(true);
+      void video.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
     } else {
       video.pause();
       setIsPlaying(false);
@@ -179,14 +186,59 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate }: Quic
     }
   };
 
+  const handleCanPlay = () => {
+    setIsReady(true);
+    const video = videoRef.current;
+    if (video && video.paused && isPlaying) {
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => setIsPlaying(true))
+          .catch(() => setIsPlaying(false));
+      }
+    }
+  };
+
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const video = e.currentTarget;
+    const err = video.error;
+    let message = "No se pudo reproducir este archivo de vídeo.";
+    if (err) {
+      if (err.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+        message = "El códec o formato no es compatible con el visor ligero (HTML5).";
+      } else if (err.code === MediaError.MEDIA_ERR_DECODE) {
+        message = "Error al decodificar vídeo. El archivo puede estar siendo renderizado o incompleto.";
+      } else if (err.code === MediaError.MEDIA_ERR_NETWORK) {
+        message = "Error de acceso al archivo en disco.";
+      }
+    }
+    setHasError(true);
+    setErrorMessage(message);
+    setIsPlaying(false);
+  };
+
+  const handleRetry = () => {
+    setHasError(false);
+    setErrorMessage(null);
+    setIsReady(false);
+    const video = videoRef.current;
+    if (!video) return;
+    const fileSrc = convertFileSrc(payload.path);
+    video.src = `${fileSrc}?retry=${Date.now()}`;
+    video.load();
+    void video.play().then(() => setIsPlaying(true)).catch(() => {});
+  };
+
   return (
     <div className="quicklook-video-content">
       <video
         ref={videoRef}
-        className="quicklook-video-element"
+        className={`quicklook-video-element ${isReady ? "is-ready" : ""}`}
         loop={isLoop}
         playsInline
+        poster={payload.videoPosterUrl || undefined}
         onClick={togglePlay}
+        onCanPlay={handleCanPlay}
         onDurationChange={(e) => setDuration(e.currentTarget.duration || 0)}
         onEnded={() => {
           if (isLoop) {
@@ -200,6 +252,8 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate }: Quic
             setIsPlaying(false);
           }
         }}
+        onError={handleVideoError}
+        onLoadedData={() => setIsReady(true)}
         onLoadedMetadata={handleLoadedMetadata}
         onPause={() => setIsPlaying(false)}
         onPlay={() => setIsPlaying(true)}
@@ -209,6 +263,36 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate }: Quic
           onTimeUpdate?.(t);
         }}
       />
+
+      {hasError && (
+        <div className="quicklook-video-error-state">
+          <div className="quicklook-video-error-icon">
+            <Icon name="info" />
+          </div>
+          <span className="quicklook-video-error-title">{errorMessage || "Error al reproducir vídeo"}</span>
+          <span className="quicklook-video-error-desc">
+            Si el archivo está siendo exportado por DaVinci Resolve u otra aplicación, espera a que termine el renderizado y pulsa reintentar.
+          </span>
+          <div className="quicklook-video-error-actions">
+            <button
+              type="button"
+              className="quicklook-btn-retry"
+              onClick={handleRetry}
+            >
+              <Icon name="rotate-ccw" /> Reintentar
+            </button>
+            {onOpenInMain && (
+              <button
+                type="button"
+                className="quicklook-btn-retry quicklook-btn-accent"
+                onClick={onOpenInMain}
+              >
+                <Icon name="external-link" /> Abrir en reproductor completo
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="quicklook-video-overlay-bar">
         <button

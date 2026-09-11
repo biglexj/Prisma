@@ -77,7 +77,7 @@ export function QuickLookHeader({
 
   const effectiveDims =
     imageDimensions ||
-    (payload.width && payload.height
+    (payload.width && payload.height && payload.width > 0 && payload.width <= 8192 && payload.height > 0 && payload.height <= 8192
       ? { width: payload.width, height: payload.height }
       : null);
 

@@ -303,8 +303,9 @@ export function QuickLookWindow() {
                 />
               ) : payload.mediaType === "video" ? (
                 <QuickLookVideo
-                  key={payload.path}
+                  key={`${payload.path}-${payload.fileSizeBytes}-${payload.modifiedDate || ""}`}
                   onDimensionsLoad={setImageDimensions}
+                  onOpenInMain={handleOpenInMain}
                   onTimeUpdate={(t) => {
                     playbackTimeRef.current = t;
                   }}

@@ -462,7 +462,7 @@ fn resolve_media_size(media_type: QuickLookMediaType, path: &Path) -> (f64, f64)
 
                 (fitted_w, fitted_h + header_h)
             } else {
-                (850.0, 520.0)
+                (560.0, 360.0)
             }
         }
         QuickLookMediaType::Pdf => (840.0, 720.0),
