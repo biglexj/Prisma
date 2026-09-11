@@ -1018,7 +1018,8 @@ function AppContent() {
                   setActiveVideoPath(path);
                   setActiveVideoInitialTime(undefined);
                 }}
-                onOpenEqualizer={() => setIsEqualizerModalOpen(true)}
+                isEqualizerOpen={isEqualizerModalOpen}
+                onOpenEqualizer={() => setIsEqualizerModalOpen((prev) => !prev)}
                 path={activeVideoPath}
                 videoItems={activeVideoSessionItems.length > 0 ? activeVideoSessionItems : videoLibrary.items}
               />

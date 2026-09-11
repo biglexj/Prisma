@@ -207,6 +207,13 @@ export function useDspController() {
         if (matchingMpv) {
           await dspClient.setAudioDevice(matchingMpv.name);
         }
+
+        // Sincronizar en tiempo real con el reproductor de vídeo / elemento <video>
+        window.dispatchEvent(
+          new CustomEvent("prisma-audio-sink-change", {
+            detail: { deviceName: resolvedName, deviceId: resolvedId },
+          }),
+        );
       } catch (err) {
         console.error("Error al cambiar dispositivo de audio:", err);
       }
