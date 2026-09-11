@@ -340,165 +340,169 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
         </div>
 
         <div className="dsp-header-controls">
-          {/* Selector de Presets */}
-          <div className="dsp-dropdown-container">
-            <button
-              className="dsp-dropdown-trigger"
-              onClick={() => {
-                setIsPresetMenuOpen((prev) => !prev);
-                setIsDeviceMenuOpen(false);
-              }}
-              type="button"
-            >
-              <Icon name="music" />
-              <span className="dsp-dropdown-label">{activePreset ? activePreset.name : "Personalizado"}</span>
-              <Icon name="chevronDown" />
-            </button>
+          <div className="dsp-header-controls-left">
+            {/* Selector de Presets */}
+            <div className="dsp-dropdown-container">
+              <button
+                className="dsp-dropdown-trigger"
+                onClick={() => {
+                  setIsPresetMenuOpen((prev) => !prev);
+                  setIsDeviceMenuOpen(false);
+                }}
+                type="button"
+              >
+                <Icon name="music" />
+                <span className="dsp-dropdown-label">{activePreset ? activePreset.name : "Personalizado"}</span>
+                <Icon name="chevronDown" />
+              </button>
 
-            {isPresetMenuOpen && (
-              <div className="dsp-dropdown-menu">
-                <div className="dsp-dropdown-header">Presets Acústicos</div>
-                <div className="dsp-dropdown-list">
-                  {dsp.allPresets.map((preset) => (
-                    <button
-                      className={`dsp-dropdown-item ${dsp.activePresetId === preset.id ? "active" : ""}`}
-                      key={preset.id}
-                      onClick={() => {
-                        dsp.applyPreset(preset);
-                        setIsPresetMenuOpen(false);
-                      }}
-                      type="button"
-                    >
-                      <span className="dsp-preset-name">{preset.name}</span>
-                      {preset.isBuiltIn && <span className="dsp-builtin-badge">Stock</span>}
-                      {!preset.isBuiltIn && (
+              {isPresetMenuOpen && (
+                <div className="dsp-dropdown-menu">
+                  <div className="dsp-dropdown-header">Presets Acústicos</div>
+                  <div className="dsp-dropdown-list">
+                    {dsp.allPresets.map((preset) => (
+                      <button
+                        className={`dsp-dropdown-item ${dsp.activePresetId === preset.id ? "active" : ""}`}
+                        key={preset.id}
+                        onClick={() => {
+                          dsp.applyPreset(preset);
+                          setIsPresetMenuOpen(false);
+                        }}
+                        type="button"
+                      >
+                        <span className="dsp-preset-name">{preset.name}</span>
+                        {preset.isBuiltIn && <span className="dsp-builtin-badge">Stock</span>}
+                        {!preset.isBuiltIn && (
+                          <button
+                            className="dsp-delete-preset-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              dsp.deleteCustomPreset(preset.id);
+                            }}
+                            title="Eliminar preset"
+                            type="button"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="dsp-dropdown-footer">
+                    {!isSavingPreset ? (
+                      <button
+                        className="dsp-action-link"
+                        onClick={() => setIsSavingPreset(true)}
+                        type="button"
+                      >
+                        + Guardar como nuevo preset...
+                      </button>
+                    ) : (
+                      <form className="dsp-save-preset-form" onSubmit={handleSavePresetSubmit}>
+                        <input
+                          autoFocus
+                          className="dsp-preset-input"
+                          onChange={(e) => setNewPresetName(e.target.value)}
+                          placeholder="Nombre del preset..."
+                          type="text"
+                          value={newPresetName}
+                        />
+                        <button className="dsp-save-confirm-btn" type="submit">
+                          Guardar
+                        </button>
                         <button
-                          className="dsp-delete-preset-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            dsp.deleteCustomPreset(preset.id);
-                          }}
-                          title="Eliminar preset"
+                          className="dsp-save-cancel-btn"
+                          onClick={() => setIsSavingPreset(false)}
                           type="button"
                         >
                           ✕
                         </button>
-                      )}
-                    </button>
-                  ))}
+                      </form>
+                    )}
+                  </div>
                 </div>
-                <div className="dsp-dropdown-footer">
-                  {!isSavingPreset ? (
-                    <button
-                      className="dsp-action-link"
-                      onClick={() => setIsSavingPreset(true)}
-                      type="button"
-                    >
-                      + Guardar como nuevo preset...
-                    </button>
-                  ) : (
-                    <form className="dsp-save-preset-form" onSubmit={handleSavePresetSubmit}>
-                      <input
-                        autoFocus
-                        className="dsp-preset-input"
-                        onChange={(e) => setNewPresetName(e.target.value)}
-                        placeholder="Nombre del preset..."
-                        type="text"
-                        value={newPresetName}
-                      />
-                      <button className="dsp-save-confirm-btn" type="submit">
-                        Guardar
-                      </button>
-                      <button
-                        className="dsp-save-cancel-btn"
-                        onClick={() => setIsSavingPreset(false)}
-                        type="button"
-                      >
-                        ✕
-                      </button>
-                    </form>
-                  )}
+              )}
+            </div>
+
+            {/* Selector de Dispositivo de Salida de Audio */}
+            <div className="dsp-dropdown-container">
+              <button
+                className="dsp-dropdown-trigger dsp-device-trigger"
+                onClick={() => {
+                  setIsDeviceMenuOpen((prev) => !prev);
+                  setIsPresetMenuOpen(false);
+                }}
+                type="button"
+              >
+                <Icon name="volume" />
+                <span className="dsp-dropdown-label dsp-device-label">
+                  {activeEndpoint ? activeEndpoint.name : "Dispositivo de salida"}
+                </span>
+                <Icon name="chevronDown" />
+              </button>
+
+              {isDeviceMenuOpen && (
+                <div className="dsp-dropdown-menu dsp-device-menu">
+                  <div className="dsp-dropdown-header">Escuchar por (Salida)</div>
+                  <div className="dsp-dropdown-list">
+                    {displayEndpoints.map((ep) => {
+                      const isSelected = ep.name === activeEndpoint?.name || ep.id === activeEndpoint?.id;
+                      return (
+                        <button
+                          className={`dsp-dropdown-item ${isSelected ? "active" : ""}`}
+                          key={ep.id}
+                          onClick={() => {
+                            void dsp.selectAudioDevice(ep.name, ep.id);
+                            setIsDeviceMenuOpen(false);
+                          }}
+                          type="button"
+                        >
+                          <span className="dsp-device-item-name">{ep.name}</span>
+                          {isSelected && <span className="dsp-check-badge">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Selector de Dispositivo de Salida de Audio */}
-          <div className="dsp-dropdown-container">
+          <div className="dsp-header-controls-right">
+            {/* Selector de Modo: Global (Sistema) vs Solo Prisma */}
             <button
-              className="dsp-dropdown-trigger dsp-device-trigger"
-              onClick={() => {
-                setIsDeviceMenuOpen((prev) => !prev);
-                setIsPresetMenuOpen(false);
-              }}
+              className={`dsp-mode-toggle-btn ${dsp.globalPassthruEnabled ? "mode-global" : "mode-local"}`}
+              onClick={() => void dsp.toggleGlobalPassthru()}
+              disabled={dsp.isGlobalLoading}
+              title={
+                dsp.globalPassthruEnabled
+                  ? "Modo Global Activo: Procesando todo Windows (YouTube, Spotify, etc.)"
+                  : "Modo Local: Procesando solo el reproductor interno de Prisma"
+              }
               type="button"
             >
-              <Icon name="volume" />
-              <span className="dsp-dropdown-label dsp-device-label">
-                {activeEndpoint ? activeEndpoint.name : "Dispositivo de salida"}
-              </span>
-              <Icon name="chevronDown" />
+              <span className={`dsp-mode-dot ${dsp.globalPassthruEnabled ? "active" : ""}`} />
+              <span>{dsp.globalPassthruEnabled ? (dsp.globalPassthruStatus?.isRunning ? "🌐 Global" : "Reconectando…") : "🎵 Solo Prisma"}</span>
             </button>
 
-            {isDeviceMenuOpen && (
-              <div className="dsp-dropdown-menu dsp-device-menu">
-                <div className="dsp-dropdown-header">Escuchar por (Salida)</div>
-                <div className="dsp-dropdown-list">
-                  {displayEndpoints.map((ep) => {
-                    const isSelected = ep.name === activeEndpoint?.name || ep.id === activeEndpoint?.id;
-                    return (
-                      <button
-                        className={`dsp-dropdown-item ${isSelected ? "active" : ""}`}
-                        key={ep.id}
-                        onClick={() => {
-                          void dsp.selectAudioDevice(ep.name, ep.id);
-                          setIsDeviceMenuOpen(false);
-                        }}
-                        type="button"
-                      >
-                        <span className="dsp-device-item-name">{ep.name}</span>
-                        {isSelected && <span className="dsp-check-badge">✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+            {/* Botón Power Maestro (Bypass) */}
+            <button
+              className={`dsp-power-btn ${dsp.enabled ? "on" : "off"}`}
+              onClick={dsp.toggleEnabled}
+              title={dsp.enabled ? "Desactivar DSP (Bypass)" : "Activar DSP"}
+              type="button"
+            >
+              <span className="dsp-power-indicator" />
+              <span>{dsp.enabled ? "POWER ON" : "BYPASS"}</span>
+            </button>
+
+            {/* Botón Cerrar si es Modal */}
+            {isModal && onClose && (
+              <button className="dsp-modal-close-btn" onClick={onClose} type="button">
+                ✕
+              </button>
             )}
           </div>
-
-          {/* Selector de Modo: Global (Sistema) vs Solo Prisma */}
-          <button
-            className={`dsp-mode-toggle-btn ${dsp.globalPassthruEnabled ? "mode-global" : "mode-local"}`}
-            onClick={() => void dsp.toggleGlobalPassthru()}
-            disabled={dsp.isGlobalLoading}
-            title={
-              dsp.globalPassthruEnabled
-                ? "Modo Global Activo: Procesando todo Windows (YouTube, Spotify, etc.)"
-                : "Modo Local: Procesando solo el reproductor interno de Prisma"
-            }
-            type="button"
-          >
-            <span className={`dsp-mode-dot ${dsp.globalPassthruEnabled ? "active" : ""}`} />
-            <span>{dsp.globalPassthruEnabled ? (dsp.globalPassthruStatus?.isRunning ? "🌐 Global" : "Reconectando…") : "🎵 Solo Prisma"}</span>
-          </button>
-
-          {/* Botón Power Maestro (Bypass) */}
-          <button
-            className={`dsp-power-btn ${dsp.enabled ? "on" : "off"}`}
-            onClick={dsp.toggleEnabled}
-            title={dsp.enabled ? "Desactivar DSP (Bypass)" : "Activar DSP"}
-            type="button"
-          >
-            <span className="dsp-power-indicator" />
-            <span>{dsp.enabled ? "POWER ON" : "BYPASS"}</span>
-          </button>
-
-          {/* Botón Cerrar si es Modal */}
-          {isModal && onClose && (
-            <button className="dsp-modal-close-btn" onClick={onClose} type="button">
-              ✕
-            </button>
-          )}
         </div>
       </div>
 

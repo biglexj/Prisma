@@ -1006,6 +1006,7 @@ function AppContent() {
                   // Limpiar sesión completamente al volver (Esc): desmonta el <video> y detiene el audio
                   setIsPip(false);
                   setIsVideoPlaying(false);
+                  setIsEqualizerModalOpen(false);
                   setActiveVideoPath(null);
                   setActiveVideoInitialTime(undefined);
                   setActiveVideoSessionItems([]);

@@ -993,6 +993,8 @@ export function VideoPlayer({
           e.preventDefault();
           if (mediaDelete.menu) {
             mediaDelete.closeMenu();
+          } else if (isEqualizerOpen) {
+            onOpenEqualizer?.();
           } else if (showPlaylist) {
             setShowPlaylist(false);
           } else if (showAudioMenu) {
