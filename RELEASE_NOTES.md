@@ -15,6 +15,18 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.1.1] - 2026-09-11
+
+### Resumen
+Presentamos **Prisma v1.1.1**, una versión de estabilidad y afinamiento centrada en perfeccionar la previsualización rápida (**Quick Look**) para archivos de vídeo. Esta actualización resuelve la detección de proporciones y dimensiones nativas en Windows, elimina el parpadeo negro inicial mediante extracción nativa de póster en el primer fotograma, garantiza la reproducción inmediata de vídeos re-renderizados o sobrescritos desde herramientas de edición externa (como DaVinci Resolve) y optimiza la huella de almacenamiento en compilación.
+
+### Detalles
+- **Detección Precisa de Dimensiones en Quick Look**: Corrección en la lectura de propiedades de vídeo del sistema para garantizar el dimensionamiento exacto de la ventana sin deformaciones ni anchos desproporcionados, complementado con validación de límites de seguridad y detección secundaria automatizada.
+- **Apertura Inmediata Sin Parpadeos (Póster de Fotograma)**: Incorporación de generación de póster nativo instantáneo al abrir la previsualización, permitiendo visualizar el primer cuadro del vídeo de inmediato mientras el motor multimedia se inicializa con transiciones fluidas.
+- **Soporte para Vídeos Sobrescritos (DaVinci Resolve / Editores)**: Invalidación dinámica de caché en streaming local y liberación inmediata de recursos del archivo al cerrar o pausar el visor, permitiendo previsualizar al instante vídeos modificados o re-exportados con el mismo nombre sin bloqueos de archivo ni pantallas negras.
+- **Tarjeta de Estado Resiliente en Quick Look**: Incorporación de un panel informativo amigable con botón de reintento y acceso directo para «Abrir en reproductor completo» ante contenidos con formatos o flujos avanzados.
+- **Optimización de Almacenamiento y Compilación**: Estandarización de perfiles ligeros para dependencias nativas, recuperando espacio sustancial en disco y mejorando los tiempos de respuesta generales.
+
 ## [1.1.0] - 2026-09-10
 
 ### Resumen

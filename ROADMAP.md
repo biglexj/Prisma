@@ -28,6 +28,13 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.1.1**
+  - **Quick Look: Precisión de Dimensiones, Apertura Fluida con Póster Nativo, Cache-Busting y Soporte para Archivos Sobrescritos**:
+    - Corrección del GUID de `PKEY_VIDEO_FRAME_WIDTH`/`HEIGHT` en Windows Shell (`0x64440491`), límites de seguridad de resolución y fallback nativo a `ffprobe` para prevenir ventanas desproporcionadas.
+    - Generación nativa de póster en el primer fotograma (`video_poster_url`) para apertura instantánea y eliminación del parpadeo negro, con tamaño de ventana inicial discreto y adaptativo (`560x360`).
+    - Cache-busting dinámico (`?v=${size}_${modified}`) y liberación de streams para resolver la pantalla negra al previsualizar vídeos re-renderizados o sobrescritos desde DaVinci Resolve.
+    - Tarjeta de error amigable con botón de reintento y acción «Abrir en reproductor completo».
+    - Adopción de perfiles ligeros `[profile.dev]` y scripts `cargo sweep` según la Documentación Core, liberando más de 39 GB en el directorio `target/`.
 - [x] **v1.1.0**
   - **Convertidor Multimedia por Lotes, Calidad Lossless Dedicada (FLAC/WAV) y Selectores M3 Expressive**:
     - Motor ampliado de conversión por lotes con integración FFmpeg nativa para extracción de vídeo a audio multiformato (MP3, FLAC, WAV, AAC, OGG, M4A), transcodificación de vídeo (H.264, HEVC/H.265, AV1, copia directa de stream y reescalado de resolución) y transcodificación de audio.

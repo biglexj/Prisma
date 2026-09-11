@@ -1,6 +1,6 @@
 # QuickLook: Corrección de Dimensiones, Caché y Reproducción de Vídeo Sobrescrito — Tareas
 
-- Estado: `IN_PROGRESS`
+- Estado: `COMPLETED`
 
 ## Ejecución
 
