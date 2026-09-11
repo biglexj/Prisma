@@ -13,7 +13,8 @@ Llega **Prisma v1.1.0**, una actualización mayor que potencia tus flujos de tra
   - **Reglas de Renombrado en Lote**: Añade prefijos, sufijos o busca y reemplaza texto automáticamente.
 - 🎵 **Tratamiento Especializado para Audio Lossless (FLAC y WAV)**: Decimos adiós a los bitrates con pérdida en formatos puros. Al seleccionar **FLAC**, se aplica automáticamente compresión sin pérdida bit a bit (Nivel 8 máximo o Nivel 5 rápido). Al elegir **WAV**, se utiliza codificación PCM sin compresión de hasta 24 bits Hi-Res (calidad de estudio).
 - 🎨 **Selectores Personalizados Material 3 Expressive (`CustomSelect`)**: Se eliminaron los selectores desplegables estándar del navegador, reemplazándolos por un componente visual estilizado con esquinas redondeadas, elevación dinámica, micro-animaciones fluidas, indicador visual de selección (`check`), descripciones contextuales y control mediante teclado y clic exterior.
-- 🧩 **Componente Centralizado Reutilizable**: Nueva arquitectura modular en `src/shared/ui/` para componentes transversales, totalmente compatible con los temas dinámicos claros y oscuros del ecosistema.
+- 🎛️ **Ecualizador DSP & Salida de Audio Unificada en Vídeo**: Control acústico total y conmutación de altavoces o auriculares en tiempo real desde la barra de reproducción de vídeo, con soporte `setSinkId`, elevación visual de capas y sincronización perfecta con el ecualizador musical.
+- 🧩 **Componente Centralizado Reutilizable & Mejoras de UI**: Nueva arquitectura modular en `src/shared/ui/` para componentes transversales, reposicionamiento dinámico adaptativo del toast de capturas a 28 px sin controles y mayor robustez en Quick Look.
 
 ---
 

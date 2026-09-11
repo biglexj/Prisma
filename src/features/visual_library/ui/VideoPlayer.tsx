@@ -1668,7 +1668,12 @@ export function VideoPlayer({
                 aria-label="Abrir Ecualizador & Procesador DSP de Audio"
                 className={`video-icon-btn ${isEqualizerOpen ? "is-active" : ""}`}
                 disabled={!hasMedia}
-                onClick={onOpenEqualizer}
+                onClick={() => {
+                  if (document.fullscreenElement) {
+                    void document.exitFullscreen().catch(() => {});
+                  }
+                  onOpenEqualizer();
+                }}
                 title="Abrir Ecualizador & Procesador DSP de Audio"
               >
                 <Icon name="equalizer" />

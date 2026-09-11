@@ -34,6 +34,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
     - Soporte canónico y especializado para audio sin pérdida (*Lossless*): eliminación de bitrates con pérdida en FLAC y WAV, aplicando compresión lossless máxima Nivel 8 bit-perfect para FLAC y codificación PCM de 24 bits Hi-Res / 16 bits CD para WAV.
     - Estandarización del componente de selector personalizado `CustomSelect` (Material 3 Expressive) en todo el Convertidor Prisma, sustituyendo controles predeterminados del sistema por menús desplegables con micro-animaciones fluidas, elevación contextual `z-index`, rotación de chevron y marca de verificación activa.
     - Formalización de `CustomSelect.tsx` y `custom-select.css` en `src/shared/ui/` como átomo reutilizable centralizado del proyecto con soporte para temas dinámicos claro y oscuro.
+    - Unificación del control del Ecualizador DSP en `VideoPlayer` con conmutación física de salida de audio en tiempo real (`setSinkId`), elevación de capas a prueba de solapamientos (`z-index: 100010`) y desconexión segura de pantalla completa al abrir ajustes acústicos.
+    - Perfeccionamiento dinámico del toast de captura de fotogramas (`.video-snapshot-toast`), adaptando su anclaje a 28 px sin controles y 136 px con controles activos, más optimizaciones de rendimiento en Quick Look.
 - [x] **v1.0.9**
   - **Captura de Fotogramas (Snapshot estilo VLC), Navegación Cuadro a Cuadro y Destino de Assets**:
     - Captura nativa del fotograma activo de vídeo a resolución completa (sin pérdida ni degradación) en formatos PNG, WebP y JPEG, con nombres estructurados y timestamp (`Prisma_snap_[título]_[tiempo].[ext]`).
