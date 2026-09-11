@@ -145,21 +145,23 @@ if ($SkipAuroraUpload) {
 
                 # ── Registrar release en Aurora (PUT) con URL de GitHub como downloadUrl ──
                 #    Aurora NO recibe el EXE, solo la metadata del lanzamiento.
-                $releaseBody = @{
+                $releaseBodyObj = [ordered]@{
+                    id             = "f5c6e834-0bc1-49b8-b807-681b49fce8f1"
                     slug           = $slug
                     downloadUrl    = $githubAssetUrl
                     versionName    = $Version
                     versionCode    = $calcVersionCode
                     releaseNotes   = $releaseMsg
                     sha256Checksum = $sha256Hash
-                } | ConvertTo-Json -Depth 5
+                }
+                $jsonBytes = [System.Text.Encoding]::UTF8.GetBytes(($releaseBodyObj | ConvertTo-Json))
 
                 Invoke-RestMethod -Uri "$baseUrl/api/admin/developer-apps" -Method PUT `
                                   -Headers @{
-                                      "Content-Type" = "application/json"
-                                      Authorization  = "Bearer $serviceKey"
+                                      Authorization = "Bearer $serviceKey"
                                   } `
-                                  -Body $releaseBody | Out-Null
+                                  -ContentType "application/json; charset=utf-8" `
+                                  -Body $jsonBytes | Out-Null
 
                 Write-Host ""
                 Write-Host "══════════════════════════════════════════" -ForegroundColor Cyan
