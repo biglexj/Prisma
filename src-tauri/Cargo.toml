@@ -54,6 +54,9 @@ windows = { version = "0.58", features = [
     "Win32_UI_WindowsAndMessaging",
 ] }
 
+[profile.dev]
+debug = 1
 
-
+[profile.dev.package."*"]
+debug = false
 

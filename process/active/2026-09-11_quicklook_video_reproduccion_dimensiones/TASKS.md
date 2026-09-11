@@ -12,6 +12,7 @@
 - [x] T06 — Actualizar `QuickLookVideo.tsx` con cache-busting, poster nativo, liberación de streams y tarjeta de reintento/error.
 - [x] T07 — Actualizar `QuickLookWindow.tsx` para remontar por `path + size + modified` y sanear `QuickLookHeader.tsx`.
 - [x] T08 — Ejecutar comprobaciones automatizadas (cargo check, cargo test, bun run build).
-- [x] T09 — Preparar la validación y actualizar `VALIDATION.md`.
+- [x] T09 — Adoptar regla de Documentación Core (`Docs/stacks/rust` y `target-directory-bloat.md`): `[profile.dev]` ligero y scripts `sweep`.
+- [x] T10 — Preparar la validación y actualizar `VALIDATION.md`.
 
 Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.

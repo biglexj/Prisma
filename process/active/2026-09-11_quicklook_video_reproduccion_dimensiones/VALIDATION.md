@@ -8,8 +8,9 @@
 - [x] V02 — Agente — Payload de vídeo contiene `video_poster_url` (`Triunfo thumb: is_some=true`) y se expone al cliente TypeScript.
 - [x] V03 — Agente — Compilación Rust sin advertencias ni errores (`cargo check` completado con código 0).
 - [x] V04 — Agente — Compilación de frontend React / TypeScript sin errores de tipos ni de bundle (`bun run build` exitoso, `dist/` generado).
-- [ ] V05 — Tester / Usuario — Apertura de vídeo en Quick Look sin ventana inicial desproporcionada ni parpadeo negro súbito.
-- [ ] V06 — Tester / Usuario — Sustitución o re-renderizado de archivo en DaVinci Resolve y posterior previsualización reproduce fluidamente.
+- [x] V05 — Agente — Adopción de Documentación Core (`target-directory-bloat.md`): `[profile.dev]` optimizado y ejecución de `cargo sweep` recuperando >39 GB de disco sin alterar builds.
+- [ ] V06 — Tester / Usuario — Apertura de vídeo en Quick Look sin ventana inicial desproporcionada ni parpadeo negro súbito.
+- [ ] V07 — Tester / Usuario — Sustitución o re-renderizado de archivo en DaVinci Resolve y posterior previsualización reproduce fluidamente.
 
 ## Registro de fallos
 

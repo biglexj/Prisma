@@ -33,6 +33,7 @@ No aplicar una capacidad por semejanza. Instancia única, bandeja, autoactualiza
 - `Docs/types/desktop`
 - `Docs/platforms/windows`
 - `Docs/stacks/react`
+- `Docs/stacks/rust`
 - `Docs/features/design-system`
 - `Docs/features/storage`
 - `Docs/features/aurora-synapse`
