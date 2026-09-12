@@ -1,23 +1,25 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Icon } from "../../../../shared/ui/Icon";
 import { toSafeAssetUrl, cleanPath } from "../../../../shared/mediaTree";
 import { deleteMediaItems } from "../../../../shared/mediaOperations";
 import { visualLibraryClient } from "../../tauri/client";
+import { musicLibraryClient } from "../../../music_library/tauri/client";
 import type {
   DuplicateGroup,
   DuplicateCandidate,
   VisualLibraryItem,
-  VisualMediaKind,
 } from "../../model/types";
+import { DuplicateGroupCard, type DuplicateScanKind } from "./DuplicateGroupCard";
 import { ImageComparisonModal } from "../comparison/ImageComparisonModal";
 import "./duplicates-scanner.css";
 
 interface DuplicatesScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  kind?: VisualMediaKind;
+  kind?: DuplicateScanKind;
   onOpenComparison?: (original: VisualLibraryItem, duplicate: VisualLibraryItem) => void;
   onRefreshLibrary?: () => void;
   embedded?: boolean;
@@ -38,7 +40,7 @@ export function DuplicatesScannerModal({
   onRefreshLibrary,
   embedded = false,
 }: DuplicatesScannerModalProps) {
-  const [activeKind, setActiveKind] = useState<VisualMediaKind>(kind);
+  const [activeKind, setActiveKind] = useState<DuplicateScanKind>(kind);
 
   useEffect(() => {
     if (kind) {
@@ -141,58 +143,108 @@ export function DuplicatesScannerModal({
   );
 
   useEffect(() => {
-    let unlistenPromise: Promise<() => void> | undefined;
+    const unlistens: UnlistenFn[] = [];
+    let isCancelled = false;
 
-    try {
-      const appWindow = getCurrentWebviewWindow();
-      unlistenPromise = appWindow.onDragDropEvent((event) => {
-        if (event.payload.type === "over" || event.payload.type === "enter") {
-          setIsDraggingOver(true);
-          if (event.payload.position) {
-            const dpr = window.devicePixelRatio || 1;
-            const clientX = event.payload.position.x / dpr;
-            const clientY = event.payload.position.y / dpr;
-            const el = document.elementFromPoint(clientX, clientY);
-            if (el) {
-              if (el.closest(".is-base") || el.closest("[data-drop-zone='base']")) {
-                setHoveredDropZone("base");
-                hoveredDropZoneRef.current = "base";
-              } else if (el.closest(".is-target") || el.closest("[data-drop-zone='target']")) {
-                setHoveredDropZone("target");
-                hoveredDropZoneRef.current = "target";
-              } else if (el.closest(".is-single") || el.closest("[data-drop-zone='single']")) {
-                setHoveredDropZone("single");
-                hoveredDropZoneRef.current = "single";
-              } else if (scanMode === "two_folders") {
-                const twoPanel = el.closest(".duplicates-two-folders-panel");
-                if (twoPanel) {
-                  const rect = twoPanel.getBoundingClientRect();
-                  const zone = clientX < rect.left + rect.width / 2 ? "base" : "target";
-                  setHoveredDropZone(zone);
-                  hoveredDropZoneRef.current = zone;
-                }
-              }
+    // 1. Escucha de evento drop nativo de Tauri v2
+    listen<{ paths?: string[]; position?: { x: number; y: number } }>("tauri://drag-drop", (event) => {
+      if (isCancelled) return;
+      setIsDraggingOver(false);
+      const dropZone = hoveredDropZoneRef.current;
+      setHoveredDropZone(null);
+      hoveredDropZoneRef.current = null;
+      if (event.payload?.paths && event.payload.paths.length > 0) {
+        applyDroppedPaths(event.payload.paths, dropZone);
+      }
+    }).then((unlisten) => {
+      if (isCancelled) unlisten();
+      else unlistens.push(unlisten);
+    }).catch(() => {});
+
+    // 2. Escucha de drag-enter
+    listen("tauri://drag-enter", () => {
+      if (isCancelled) return;
+      setIsDraggingOver(true);
+    }).then((unlisten) => {
+      if (isCancelled) unlisten();
+      else unlistens.push(unlisten);
+    }).catch(() => {});
+
+    // 3. Escucha de drag-leave
+    listen("tauri://drag-leave", () => {
+      if (isCancelled) return;
+      setIsDraggingOver(false);
+      setHoveredDropZone(null);
+      hoveredDropZoneRef.current = null;
+    }).then((unlisten) => {
+      if (isCancelled) unlisten();
+      else unlistens.push(unlisten);
+    }).catch(() => {});
+
+    // 4. Escucha de drag-over
+    listen<{ position?: { x: number; y: number } }>("tauri://drag-over", (event) => {
+      if (isCancelled) return;
+      setIsDraggingOver(true);
+      if (event.payload?.position) {
+        const dpr = window.devicePixelRatio || 1;
+        const clientX = event.payload.position.x / dpr;
+        const clientY = event.payload.position.y / dpr;
+        const el = document.elementFromPoint(clientX, clientY);
+        if (el) {
+          if (el.closest(".is-base") || el.closest("[data-drop-zone='base']")) {
+            setHoveredDropZone("base");
+            hoveredDropZoneRef.current = "base";
+          } else if (el.closest(".is-target") || el.closest("[data-drop-zone='target']")) {
+            setHoveredDropZone("target");
+            hoveredDropZoneRef.current = "target";
+          } else if (el.closest(".is-single") || el.closest("[data-drop-zone='single']")) {
+            setHoveredDropZone("single");
+            hoveredDropZoneRef.current = "single";
+          } else if (scanMode === "two_folders") {
+            const twoPanel = el.closest(".duplicates-two-folders-panel");
+            if (twoPanel) {
+              const rect = twoPanel.getBoundingClientRect();
+              const zone = clientX < rect.left + rect.width / 2 ? "base" : "target";
+              setHoveredDropZone(zone);
+              hoveredDropZoneRef.current = zone;
             }
           }
-        } else if (event.payload.type === "drop") {
+        }
+      }
+    }).then((unlisten) => {
+      if (isCancelled) unlisten();
+      else unlistens.push(unlisten);
+    }).catch(() => {});
+
+    // Fallback secundario con getCurrentWebview()
+    try {
+      const webview = getCurrentWebview();
+      webview.onDragDropEvent((event) => {
+        if (isCancelled) return;
+        if (event.payload.type === "enter" || event.payload.type === "over") {
+          setIsDraggingOver(true);
+        } else if (event.payload.type === "drop" && event.payload.paths) {
           setIsDraggingOver(false);
-          const dropZone = hoveredDropZoneRef.current;
+          applyDroppedPaths(event.payload.paths, hoveredDropZoneRef.current);
           setHoveredDropZone(null);
           hoveredDropZoneRef.current = null;
-          applyDroppedPaths(event.payload.paths, dropZone);
-        } else {
+        } else if (event.payload.type === "leave") {
           setIsDraggingOver(false);
           setHoveredDropZone(null);
           hoveredDropZoneRef.current = null;
         }
-      });
-    } catch (err) {
-      console.warn("No se pudo iniciar listener de DragDrop en DuplicatesScannerModal:", err);
-    }
+      }).then((unlisten) => {
+        if (isCancelled) unlisten();
+        else unlistens.push(unlisten);
+      }).catch(() => {});
+    } catch {}
 
     return () => {
-      if (unlistenPromise) {
-        unlistenPromise.then((u) => u()).catch(() => {});
+      isCancelled = true;
+      for (const u of unlistens) {
+        try {
+          u();
+        } catch {}
       }
     };
   }, [scanMode, applyDroppedPaths]);
@@ -266,14 +318,26 @@ export function DuplicatesScannerModal({
     setStatusMessage("Escaneando archivos y calculando firmas de similitud...");
     setSelectedPaths(new Set());
     try {
-      const results = await visualLibraryClient.scanDuplicates(activeKind, {
-        paths: scanPaths,
-        minSimilarityPct,
-        checkVisualSimilarity,
-        baseFolder: base,
-        targetFolder: target,
-        preferHigherResolution,
-      });
+      let results: DuplicateGroup[];
+      if (activeKind === "music") {
+        results = await musicLibraryClient.scanDuplicates({
+          paths: scanPaths,
+          minSimilarityPct,
+          checkVisualSimilarity,
+          baseFolder: base,
+          targetFolder: target,
+          preferHigherResolution,
+        });
+      } else {
+        results = await visualLibraryClient.scanDuplicates(activeKind, {
+          paths: scanPaths,
+          minSimilarityPct,
+          checkVisualSimilarity,
+          baseFolder: base,
+          targetFolder: target,
+          preferHigherResolution,
+        });
+      }
       setGroups(results);
       setHasScanned(true);
 
@@ -508,7 +572,7 @@ export function DuplicatesScannerModal({
     title: cand.title,
     sourcePath: cand.path,
     relativeFolder: cand.relativeFolder,
-    kind: activeKind,
+    kind: activeKind === "video" ? "video" : "image",
     modifiedAtMillis: cand.modifiedAtMillis,
     sizeBytes: cand.sizeBytes,
   });
@@ -597,14 +661,33 @@ export function DuplicatesScannerModal({
               <Icon name="layers" />
             </span>
             <div>
-              <h2 className="duplicates-header-title">Buscador y Comparador de Duplicados</h2>
+              <h2 className="duplicates-header-title">
+                {activeKind === "music" ? "Buscador y Comparador de Duplicados (Música)" : "Buscador y Comparador de Duplicados"}
+              </h2>
               <p className="duplicates-header-subtitle">
-                Detección por hash, similitud visual y comparativa cruzada de carpetas ({activeKind === "image" ? "Imágenes" : "Vídeos"})
+                {activeKind === "music"
+                  ? "Detección por hash, metadatos Lofty y comparativa de calidad de audio (Hi-Res)"
+                  : `Detección por hash, similitud visual y comparativa cruzada de carpetas (${activeKind === "image" ? "Imágenes" : "Vídeos"})`}
               </p>
             </div>
           </div>
           <div className="duplicates-header-actions">
             <div className="duplicates-kind-switcher">
+              <button
+                type="button"
+                className={`duplicates-kind-btn ${activeKind === "music" ? "is-active" : ""}`}
+                onClick={() => {
+                  if (activeKind !== "music") {
+                    setActiveKind("music");
+                    setGroups([]);
+                    setHasScanned(false);
+                    setSelectedPaths(new Set());
+                  }
+                }}
+              >
+                <Icon name="music" />
+                <span>Música</span>
+              </button>
               <button
                 type="button"
                 className={`duplicates-kind-btn ${activeKind === "image" ? "is-active" : ""}`}
@@ -672,13 +755,17 @@ export function DuplicatesScannerModal({
               onClick={() => setScanMode("library")}
             >
               <Icon name="layers" />
-              <span>Toda la Biblioteca ({activeKind === "image" ? "Imágenes" : "Vídeos"})</span>
+              <span>Toda la Biblioteca ({activeKind === "music" ? "Música" : activeKind === "image" ? "Imágenes" : "Vídeos"})</span>
             </button>
           </div>
 
           <label
             className="duplicates-upgrade-toggle"
-            title="Conserva la mejor resolución HD/4K y nombres humanos descriptivos sobre volcados mecánicos o hashes"
+            title={
+              activeKind === "music"
+                ? "Conserva pistas Hi-Res (FLAC, ALAC, WAV o mayor bitrate) y nombres limpios sobre pistas comprimidas"
+                : "Conserva la mejor resolución HD/4K y nombres humanos descriptivos sobre volcados mecánicos o hashes"
+            }
           >
             <input
               type="checkbox"
@@ -686,7 +773,11 @@ export function DuplicatesScannerModal({
               onChange={(e) => setPreferHigherResolution(e.target.checked)}
             />
             <Icon name="sparkles" />
-            <span>Priorizar Resolución y Nombres Naturales</span>
+            <span>
+              {activeKind === "music"
+                ? "Priorizar Hi-Res (FLAC / 320kbps) y Nombres Limpios"
+                : "Priorizar Resolución y Nombres Naturales"}
+            </span>
           </label>
         </div>
 
@@ -1025,188 +1116,18 @@ export function DuplicatesScannerModal({
             </div>
           ) : (
             groups.map((group) => (
-              <div key={group.groupId} className="duplicates-group-card">
-                <div className="duplicates-group-header">
-                  <div className="duplicates-group-badge">
-                    <span className={`match-tag is-${group.matchType}`}>
-                      {group.matchType === "exact" ? "Idéntico (100%)" : "Similitud visual"}
-                    </span>
-                    <span className="duplicates-group-title">Grupo #{group.groupId}</span>
-                    {group.hasResolutionUpgrade && (
-                      <span className="resolution-upgrade-pill" title="Este grupo incluye una versión con mayor resolución que la base">
-                        <Icon name="sparkles" />
-                        <span>Mejora de Resolución Disponible</span>
-                      </span>
-                    )}
-                  </div>
-                  <div className="duplicates-group-actions">
-                    {(() => {
-                      const dupPaths = group.duplicates.map((d) => d.path);
-                      const selectedInGroupCount = dupPaths.filter((p) => selectedPaths.has(p)).length;
-                      const allSelectedInGroup = dupPaths.length > 0 && selectedInGroupCount === dupPaths.length;
-                      const someSelectedInGroup = selectedInGroupCount > 0 && !allSelectedInGroup;
-
-                      return (
-                        <button
-                          type="button"
-                          className={`duplicates-group-select-btn ${
-                            allSelectedInGroup ? "is-all-selected" : someSelectedInGroup ? "is-partial-selected" : ""
-                          }`}
-                          onClick={() => toggleGroupSelection(group)}
-                          title={allSelectedInGroup ? "Deseleccionar grupo" : "Seleccionar todos los duplicados de este grupo"}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={allSelectedInGroup}
-                            ref={(el) => {
-                              if (el) el.indeterminate = someSelectedInGroup;
-                            }}
-                            readOnly
-                            className="duplicates-group-select-checkbox"
-                          />
-                          <span>
-                            {allSelectedInGroup
-                              ? "Grupo seleccionado"
-                              : someSelectedInGroup
-                              ? `Seleccionados ${selectedInGroupCount}/${dupPaths.length}`
-                              : "Seleccionar grupo"}
-                          </span>
-                        </button>
-                      );
-                    })()}
-
-                    <span className="duplicates-group-count">
-                      {group.duplicates.length + 1} archivos en este grupo
-                    </span>
-                  </div>
-                </div>
-
-                <div className="duplicates-items-grid">
-                  {/* Item Original / Referencia */}
-                  <div className="duplicate-card is-original">
-                    <div className="duplicate-card-tag is-original-tag">
-                      <Icon name="star" />
-                      <span>{group.original.isFromBaseFolder ? "Original (Carpeta Base)" : "Original / Referencia"}</span>
-                    </div>
-                    <div className="duplicate-card-thumb">
-                      <img
-                        src={toSafeAssetUrl(group.original.path)}
-                        alt={group.original.title}
-                        loading="lazy"
-                        draggable={false}
-                      />
-                    </div>
-                    <div className="duplicate-card-meta">
-                      <span className="duplicate-name" title={group.original.path}>
-                        {group.original.title}
-                      </span>
-                      <div className="duplicate-details">
-                        {group.original.width && group.original.height && (
-                          <span className="dim-badge">
-                            {group.original.width} × {group.original.height} px
-                          </span>
-                        )}
-                        <span className="size-badge">{formatBytes(group.original.sizeBytes)}</span>
-                      </div>
-                      <span className="duplicate-folder-name" title={group.original.path}>
-                        {group.original.relativeFolder || group.original.path}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Lista de Duplicados */}
-                  {group.duplicates.map((dup) => {
-                    const isSelected = selectedPaths.has(dup.path);
-                    return (
-                      <div
-                        key={dup.path}
-                        className={`duplicate-card is-duplicate ${isSelected ? "is-selected" : ""} ${
-                          dup.hasHigherResolution ? "has-resolution-upgrade" : ""
-                        }`}
-                        onClick={() => toggleSelectPath(dup.path)}
-                      >
-                        <div className="duplicate-card-tag is-dup-tag">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {}}
-                            className="duplicate-checkbox"
-                          />
-                          <span>
-                            {dup.isExactMatch
-                              ? "Copia exacta (100%)"
-                              : `${dup.similarityPct.toFixed(1)}% similar`}
-                          </span>
-                        </div>
-
-                        {dup.hasHigherResolution && (
-                          <div className="duplicate-res-badge" title="Este archivo tiene mayor resolución que la versión base">
-                            <Icon name="sparkles" />
-                            <span>Mayor resolución HD/4K</span>
-                          </div>
-                        )}
-
-                        <div className="duplicate-card-thumb">
-                          <img
-                            src={toSafeAssetUrl(dup.path)}
-                            alt={dup.title}
-                            loading="lazy"
-                            draggable={false}
-                          />
-                        </div>
-                        <div className="duplicate-card-meta">
-                          <span className="duplicate-name" title={dup.path}>
-                            {dup.title}
-                          </span>
-                          <div className="duplicate-details">
-                            {dup.width && dup.height && (
-                              <span className={`dim-badge ${dup.hasHigherResolution ? "is-higher-res" : ""}`}>
-                                {dup.width} × {dup.height} px
-                              </span>
-                            )}
-                            <span className="size-badge">{formatBytes(dup.sizeBytes)}</span>
-                          </div>
-                          <span className="duplicate-folder-name" title={dup.path}>
-                            {dup.relativeFolder || dup.path}
-                          </span>
-
-                          {/* Acciones individuales */}
-                          <div className="duplicate-actions" onClick={(e) => e.stopPropagation()}>
-                            {dup.hasHigherResolution && (
-                              <button
-                                type="button"
-                                className="duplicate-btn-upgrade"
-                                onClick={() => handleReplaceBase(group.original.path, dup.path)}
-                                title="Reemplazar la versión base con esta versión de mayor resolución"
-                              >
-                                <Icon name="sparkles" />
-                                <span>Reemplazar base</span>
-                              </button>
-                            )}
-
-                            {activeKind === "image" && (
-                              <button
-                                type="button"
-                                className="duplicate-btn-action"
-                                onClick={() =>
-                                  handleOpenComparison(
-                                    toVisualLibraryItem(group.original),
-                                    toVisualLibraryItem(dup)
-                                  )
-                                }
-                                title="Comparar frente a frente en visor interactivo"
-                              >
-                                <Icon name="split" />
-                                <span>Comparar</span>
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              <DuplicateGroupCard
+                key={group.groupId}
+                group={group}
+                activeKind={activeKind}
+                selectedPaths={selectedPaths}
+                toggleGroupSelection={toggleGroupSelection}
+                toggleSelectPath={toggleSelectPath}
+                handleReplaceBase={handleReplaceBase}
+                handleOpenComparison={handleOpenComparison}
+                toVisualLibraryItem={toVisualLibraryItem}
+                formatBytes={formatBytes}
+              />
             ))
           )}
         </div>

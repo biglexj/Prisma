@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { cleanPath } from "../../shared/mediaTree";
 import type { AppView } from "../ui/AppSidebar";
 
@@ -18,6 +19,7 @@ export function useGlobalFileDrop({
 }: UseGlobalFileDropProps) {
   // Prevenir que Windows Explorer muestre el cursor 🚫 ("no disponible / no soportado")
   // al arrastrar archivos o carpetas sobre la ventana de Prisma.
+  // Usar fase de captura (capture: true) para que ningún elemento hijo interfiera.
   useEffect(() => {
     const handleDragEnter = (e: DragEvent) => {
       e.preventDefault();
@@ -37,14 +39,14 @@ export function useGlobalFileDrop({
       e.preventDefault();
     };
 
-    window.addEventListener("dragenter", handleDragEnter);
-    window.addEventListener("dragover", handleDragOver);
-    window.addEventListener("drop", handleWindowDrop);
+    window.addEventListener("dragenter", handleDragEnter, true);
+    window.addEventListener("dragover", handleDragOver, true);
+    window.addEventListener("drop", handleWindowDrop, true);
 
     return () => {
-      window.removeEventListener("dragenter", handleDragEnter);
-      window.removeEventListener("dragover", handleDragOver);
-      window.removeEventListener("drop", handleWindowDrop);
+      window.removeEventListener("dragenter", handleDragEnter, true);
+      window.removeEventListener("dragover", handleDragOver, true);
+      window.removeEventListener("drop", handleWindowDrop, true);
     };
   }, []);
 
@@ -55,33 +57,57 @@ export function useGlobalFileDrop({
       return;
     }
 
-    let unlistenPromise: Promise<() => void> | undefined;
+    const unlistens: UnlistenFn[] = [];
+    let isCancelled = false;
 
+    const handleDroppedPaths = (paths: string[]) => {
+      if (!paths || paths.length === 0) return;
+      const firstPath = cleanPath(paths[0]);
+
+      if (activeView === "music") {
+        void onAddMusicFolder(firstPath);
+      } else if (activeView === "images") {
+        void onAddImageFolder(firstPath);
+      } else if (activeView === "videos") {
+        void onAddVideoFolder(firstPath);
+      }
+    };
+
+    // 1. Escucha directa mediante canal de eventos global de Tauri v2
+    listen<{ paths?: string[] }>("tauri://drag-drop", (event) => {
+      if (isCancelled) return;
+      if (event.payload?.paths && event.payload.paths.length > 0) {
+        handleDroppedPaths(event.payload.paths);
+      }
+    }).then((unlisten) => {
+      if (isCancelled) unlisten();
+      else unlistens.push(unlisten);
+    }).catch(() => {});
+
+    // 2. Escucha secundaria mediante API nativa de Webview en Tauri v2
     try {
-      const appWindow = getCurrentWebviewWindow();
-      unlistenPromise = appWindow.onDragDropEvent((event) => {
-        if (event.payload.type === "drop") {
-          const rawPaths = event.payload.paths;
-          if (!rawPaths || rawPaths.length === 0) return;
-          const firstPath = cleanPath(rawPaths[0]);
-
-          if (activeView === "music") {
-            void onAddMusicFolder(firstPath);
-          } else if (activeView === "images") {
-            void onAddImageFolder(firstPath);
-          } else if (activeView === "videos") {
-            void onAddVideoFolder(firstPath);
-          }
+      const webview = getCurrentWebview();
+      webview.onDragDropEvent((event) => {
+        if (isCancelled) return;
+        if (event.payload.type === "drop" && event.payload.paths) {
+          handleDroppedPaths(event.payload.paths);
         }
-      });
-    } catch (err) {
-      console.warn("No se pudo iniciar listener de drop en App:", err);
+      }).then((unlisten) => {
+        if (isCancelled) unlisten();
+        else unlistens.push(unlisten);
+      }).catch(() => {});
+    } catch {
+      // Ignorar si el contexto no es webview
     }
 
     return () => {
-      if (unlistenPromise) {
-        unlistenPromise.then((u) => u()).catch(() => {});
+      isCancelled = true;
+      for (const u of unlistens) {
+        try {
+          u();
+        } catch {}
       }
     };
   }, [activeView, onAddMusicFolder, onAddImageFolder, onAddVideoFolder]);
 }
+

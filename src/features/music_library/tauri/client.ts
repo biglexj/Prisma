@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { MusicFolderSource, MusicLibraryItem } from "../model/types";
+import type { DuplicateGroup, DuplicateScanOptions } from "../../visual_library/model/types";
 
 export const musicLibraryClient = {
   listFolders: () =>
@@ -21,4 +22,7 @@ export const musicLibraryClient = {
     invoke<string | null>("music_library_artwork", { path }),
   lyrics: (path: string) =>
     invoke<string | null>("music_library_lyrics", { path }),
+  scanDuplicates: (options: DuplicateScanOptions) =>
+    invoke<DuplicateGroup[]>("music_library_scan_duplicates", { options }),
 };
+

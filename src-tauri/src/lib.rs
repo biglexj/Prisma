@@ -9,7 +9,7 @@ use app::commands::music_library::{
     music_library_add_excluded_folder, music_library_add_folder, music_library_artwork,
     music_library_list_excluded_folders, music_library_list_folders, music_library_list_items,
     music_library_lyrics, music_library_remove_excluded_folder, music_library_remove_folder,
-    music_library_rescan_folder,
+    music_library_rescan_folder, music_library_scan_duplicates,
 };
 use app::commands::playback::{
     get_initial_file, global_passthru_get_status, global_passthru_list_endpoints,
@@ -357,6 +357,7 @@ pub fn run() {
             music_library_list_items,
             music_library_artwork,
             music_library_lyrics,
+            music_library_scan_duplicates,
             visual_library_list_folders,
             visual_library_list_excluded_folders,
             visual_library_add_folder,

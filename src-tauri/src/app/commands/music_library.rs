@@ -135,6 +135,47 @@ pub async fn music_library_lyrics(path: String) -> Result<Option<String>, String
     .map_err(|error| format!("No se pudieron leer las letras: {error}"))?
 }
 
+#[tauri::command]
+pub async fn music_library_scan_duplicates(
+    options: crate::features::visual_library::DuplicateScanOptions,
+    state: State<'_, MusicLibraryState>,
+) -> Result<Vec<crate::features::visual_library::DuplicateGroup>, String> {
+    let scan_paths = {
+        let mut p = Vec::new();
+        if let Some(ref b) = options.base_folder {
+            p.push(b.clone());
+        }
+        if let Some(ref t) = options.target_folder {
+            p.push(t.clone());
+        }
+        if !p.is_empty() {
+            p
+        } else if !options.paths.is_empty() {
+            options.paths.clone()
+        } else {
+            state.paths()?
+        }
+    };
+    let excluded_paths = state.excluded_paths()?;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut seen = HashSet::new();
+        let mut items = Vec::new();
+        for path in scan_paths {
+            if let Ok(scan) = scan_music_folder(Path::new(&path), &excluded_paths) {
+                for item in scan.items {
+                    if seen.insert(item.path.clone()) {
+                        items.push(item);
+                    }
+                }
+            }
+        }
+        Ok(crate::features::music_library::scan_music_duplicates(items, options, None))
+    })
+    .await
+    .map_err(|e| format!("Error en runtime al escanear duplicados de música: {e}"))?
+}
+
 async fn scan_in_background(
     path: String,
     excluded_paths: Vec<String>,
@@ -143,3 +184,4 @@ async fn scan_in_background(
         .await
         .map_err(|error| format!("No se pudo completar el escaneo de música: {error}"))?
 }
+

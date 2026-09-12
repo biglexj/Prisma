@@ -62,3 +62,13 @@
   - [x] Integrar `ImageComparisonModal` de forma autónoma en `DuplicatesScannerModal.tsx`, garantizando que el botón «Comparar» esté siempre disponible y operativo tanto en modal como en vista embebida.
   - [x] Añadir botón de selección/deselección por sección/grupo en cada cabecera de grupo de duplicados con estado tri-state (`[-]`, `[✓]`, `[ ]`), contador reactivo y sincronización con las acciones masivas.
   - [x] Diseñar overlay split para arrastre en modo bi-carpeta (Base vs Depurar) con feedback visual independiente.
+
+- [x] **Fase 10: Drag & Drop Robusto (Fase de Captura + Eventos Nativos) y Pestaña Música en Buscador de Duplicados**
+  - [x] Refactorizar `DuplicatesScannerModal.tsx`: Extraer `DuplicateGroupCard.tsx` para mantener el archivo principal bajo el límite estricto de líneas (< 1050 líneas).
+  - [x] Optimizar `useGlobalFileDrop.ts`: Implementar fase de captura (`capture: true`) en `dragenter`/`dragover` para forzar `dropEffect = "copy"` contra el cursor 🚫 de Windows, y usar `listen("tauri://drag-drop")` nativo.
+  - [x] Añadir pestaña `[🎵 Música]` en el selector de tipo de medios de `DuplicatesScannerModal.tsx` (`[🎵 Música] [🖼️ Imágenes] [🎬 Vídeos]`).
+  - [x] Adaptar opciones de escaneo para música: Toggle `⭐ Priorizar Hi-Res (FLAC / 320kbps) y Nombres Limpios`, escaneo de tags y duración.
+  - [x] Conectar escáner de duplicados de música en Rust (`music_library_scan_duplicates`) con detección híbrida de hash BLAKE3, metadatos Lofty normalizados y scoring Hi-Res.
+  - [x] Verificación de compilación (`bun run tsc --noEmit` y `cargo check`: 0 errores) y pruebas funcionales.
+
+

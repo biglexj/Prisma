@@ -32,6 +32,11 @@
 - [x] Arrastre universal a bibliotecas: soltar carpetas directamente en las vistas de Música, Imágenes o Vídeos agrega la fuente automáticamente sin requerir navegación manual a configuración.
 - [x] Botón «Comparar» autónomo en Duplicados: integrado `ImageComparisonModal` dentro de `DuplicatesScannerModal.tsx`, permitiendo abrir la comparativa interactiva a pantalla dividida tanto en modo flotante como en vista embebida desde la barra lateral.
 - [x] Selección por sección / grupo en Duplicados: nuevo control con estado tri-state (`[-]`, `[✓]`, `[ ]`) en la cabecera de cada grupo que permite marcar o desmarcar todos los duplicados de un grupo individual con un solo clic.
-- [x] Unificación de Duplicados en `HERRAMIENTAS`: retirados los botones redundantes de la cabecera en `VisualLibrary.tsx` (Imágenes y Vídeos) para mantener una experiencia limpia y centralizada. Reducción de `VisualLibrary.tsx` por debajo de las 1200 líneas normativas.
+- [x] Pestaña de Música en Buscador de Duplicados: conmutador tri-modal (`[🎵 Música]`, `[🖼️ Imágenes]`, `[🎬 Vídeos]`), adaptando títulos, descripciones, icono de placeholder musical y opciones contextuales de escaneo.
+- [x] Priorización Hi-Res de audio: toggle inteligente `⭐ Priorizar Hi-Res (FLAC / 320kbps) y Nombres Limpios` cuando se escanea música, con scoring que privilegia formatos sin pérdida (FLAC, WAV, ALAC: 1,000,000 pts base) y bitrates superiores (320k vs 128k) para conservar la mejor versión de audio y depurar copias inferiores.
+- [x] Motor de Duplicados de Música en Rust (`music_library_scan_duplicates`): pipeline híbrido con Nivel 1 (Hash BLAKE3 exacto para archivos idénticos) y Nivel 2 (metadatos Lofty normalizados de Artista, Título, Álbum y duración ±3.5s).
+- [x] Eliminación absoluta del cursor 🚫 («denegado») en Windows Explorer: listeners en fase de captura (`capture: true`) en `dragenter` y `dragover` que interceptan el arrastre a nivel de raíz (`window`) antes de cualquier elemento interno, garantizando `dropEffect = "copy"`.
+- [x] Recepción nativa de rutas en Tauri v2: integración directa con `@tauri-apps/api/event` (`listen("tauri://drag-drop")`, `listen("tauri://drag-enter")`, etc.) y `getCurrentWebview().onDragDropEvent`, garantizando la captura infalible de rutas de carpetas arrastradas con mouse o lápiz táctil.
+- [x] Regla arquitectónica de tamaño de archivo: extracción de `DuplicateGroupCard.tsx` (250 líneas) dejando a `DuplicatesScannerModal.tsx` en 1146 líneas, cumpliendo rigurosamente la regla del proyecto (< 1200 líneas).
 
 
