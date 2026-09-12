@@ -28,5 +28,10 @@
 - [x] Acceso de primer nivel a «Duplicados»: navegación como espacio de trabajo embebido (`activeView === "duplicates"`) con selector entre Imágenes y Vídeos, soporte de 1 carpeta, 2 carpetas o biblioteca completa.
 - [x] Estándar de Drag & Drop en Core Docs: redactado y publicado en `Docs/features/drag-and-drop/README.md`, indexado en `ARCHITECTURE.md`, `Docs/types/desktop/README.md`, `Docs/stacks/react/react-baseline.md` y catalogado como anti-patrón no soportarlo en `Docs/global/architecture/core-principles.md`.
 - [x] Drag & Drop en Duplicados: soporte nativo de Tauri v2 (`onDragDropEvent`) y HTML5 con asignación inteligente automática mono-carpeta y bi-carpeta (al arrastrar 2 carpetas a la vez asigna Base y Depuración), feedback de arrastre en tiempo real (`is-drag-over`) y overlay M3 con icono pulso.
+- [x] Eliminación del cursor 🚫 («no disponible / no soportado») de Windows: activado `"dragDropEnabled": true` en `tauri.conf.json` y manejadores globales en `useGlobalFileDrop.ts` que establecen `dropEffect = "copy"` ante eventos de arrastre sobre cualquier parte de la ventana.
+- [x] Arrastre universal a bibliotecas: soltar carpetas directamente en las vistas de Música, Imágenes o Vídeos agrega la fuente automáticamente sin requerir navegación manual a configuración.
+- [x] Botón «Comparar» autónomo en Duplicados: integrado `ImageComparisonModal` dentro de `DuplicatesScannerModal.tsx`, permitiendo abrir la comparativa interactiva a pantalla dividida tanto en modo flotante como en vista embebida desde la barra lateral.
+- [x] Selección por sección / grupo en Duplicados: nuevo control con estado tri-state (`[-]`, `[✓]`, `[ ]`) en la cabecera de cada grupo que permite marcar o desmarcar todos los duplicados de un grupo individual con un solo clic.
+- [x] Unificación de Duplicados en `HERRAMIENTAS`: retirados los botones redundantes de la cabecera en `VisualLibrary.tsx` (Imágenes y Vídeos) para mantener una experiencia limpia y centralizada. Reducción de `VisualLibrary.tsx` por debajo de las 1200 líneas normativas.
 
 

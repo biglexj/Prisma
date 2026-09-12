@@ -54,3 +54,11 @@
   - [x] Añadir feedback visual Material 3 Expressive (`is-drag-over` en tarjetas individuales de carpeta y overlay flotante centrado con pulso).
   - [x] Soporte de asignación inteligente mono-carpeta y bi-carpeta (soltar 2 carpetas a la vez asigna Base y Depuración).
   - [x] Verificación de TypeScript y Rust (`0 errores`).
+
+- [x] **Fase 9: Drag & Drop Universal, Centralización en Herramientas y Mejoras de Selección por Grupo**
+  - [x] Habilitar `"dragDropEnabled": true` en `tauri.conf.json` para ventana principal.
+  - [x] Crear hook `useGlobalFileDrop.ts` para eliminar el cursor 🚫 («no disponible») de Windows en toda la app y permitir soltar carpetas directamente en Música, Imágenes y Vídeos.
+  - [x] Centralizar Duplicados en `HERRAMIENTAS` de la barra lateral, eliminando los botones redundantes de cabecera en `VisualLibrary.tsx` (Imágenes y Vídeos) y reduciendo el archivo a menos de 1200 líneas.
+  - [x] Integrar `ImageComparisonModal` de forma autónoma en `DuplicatesScannerModal.tsx`, garantizando que el botón «Comparar» esté siempre disponible y operativo tanto en modal como en vista embebida.
+  - [x] Añadir botón de selección/deselección por sección/grupo en cada cabecera de grupo de duplicados con estado tri-state (`[-]`, `[✓]`, `[ ]`), contador reactivo y sincronización con las acciones masivas.
+  - [x] Diseñar overlay split para arrastre en modo bi-carpeta (Base vs Depurar) con feedback visual independiente.

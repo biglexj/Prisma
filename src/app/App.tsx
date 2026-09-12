@@ -42,6 +42,7 @@ import { DuplicatesScannerModal } from "../features/visual_library/ui/duplicates
 import { DspEqualizerView } from "../features/dsp/ui/DspEqualizerView";
 import { DspEqualizerModal } from "../features/dsp/ui/DspEqualizerModal";
 import { DspProvider } from "../features/dsp/DspContext";
+import { useGlobalFileDrop } from "./hooks/useGlobalFileDrop";
 import { Icon, type IconName } from "../shared/ui/Icon";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
@@ -99,6 +100,13 @@ function AppContent() {
   const imageLibrary = useVisualLibrary("image");
   const videoLibrary = useVisualLibrary("video");
   const { libraries: customLibrariesList } = useCustomLibraries();
+
+  useGlobalFileDrop({
+    activeView,
+    onAddMusicFolder: library.addFolder,
+    onAddImageFolder: imageLibrary.addFolder,
+    onAddVideoFolder: videoLibrary.addFolder,
+  });
 
   // Sincronización del tema dinámico reactivo global con la pista en reproducción activa
   const isAudioPlaying = (!playback.snapshot.paused && Boolean(playback.snapshot.path || playback.queue.currentItem)) || false;

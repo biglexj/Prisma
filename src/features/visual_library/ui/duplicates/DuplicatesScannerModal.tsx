@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Icon } from "../../../../shared/ui/Icon";
@@ -11,6 +11,7 @@ import type {
   VisualLibraryItem,
   VisualMediaKind,
 } from "../../model/types";
+import { ImageComparisonModal } from "../comparison/ImageComparisonModal";
 import "./duplicates-scanner.css";
 
 interface DuplicatesScannerModalProps {
@@ -64,6 +65,80 @@ export function DuplicatesScannerModal({
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [hoveredDropZone, setHoveredDropZone] = useState<"single" | "base" | "target" | null>(null);
   const hoveredDropZoneRef = useRef<"single" | "base" | "target" | null>(null);
+  const [internalComparisonPair, setInternalComparisonPair] = useState<{
+    original: VisualLibraryItem;
+    duplicate: VisualLibraryItem;
+  } | null>(null);
+
+  const handleOpenComparison = (original: VisualLibraryItem, duplicate: VisualLibraryItem) => {
+    if (onOpenComparison) {
+      onOpenComparison(original, duplicate);
+    } else {
+      setInternalComparisonPair({ original, duplicate });
+    }
+  };
+
+  const toggleGroupSelection = (group: DuplicateGroup) => {
+    const dupPaths = group.duplicates.map((d) => d.path);
+    if (dupPaths.length === 0) return;
+
+    setSelectedPaths((prev) => {
+      const next = new Set(prev);
+      const allSelected = dupPaths.every((p) => next.has(p));
+      if (allSelected) {
+        for (const p of dupPaths) {
+          next.delete(p);
+        }
+      } else {
+        for (const p of dupPaths) {
+          next.add(p);
+        }
+      }
+      return next;
+    });
+  };
+
+  const applyDroppedPaths = useCallback(
+    (rawPaths: string[], dropZoneHint?: "single" | "base" | "target" | null) => {
+      if (!rawPaths || rawPaths.length === 0) return;
+      const paths = rawPaths.map(cleanPath).filter(Boolean);
+      if (paths.length === 0) return;
+
+      if (scanMode === "two_folders") {
+        if (paths.length >= 2) {
+          setBaseFolder(paths[0]);
+          setTargetFolder(paths[1]);
+          setStatusMessage("¡Ambas carpetas asignadas automáticamente (Base y Depuración)!");
+          return;
+        }
+
+        const chosenZone = dropZoneHint || hoveredDropZoneRef.current;
+        if (chosenZone === "base") {
+          setBaseFolder(paths[0]);
+          setStatusMessage(`Carpeta Base asignada: ${paths[0]}`);
+        } else if (chosenZone === "target") {
+          setTargetFolder(paths[0]);
+          setStatusMessage(`Carpeta a Depurar asignada: ${paths[0]}`);
+        } else {
+          if (!baseFolder) {
+            setBaseFolder(paths[0]);
+            setStatusMessage(`Carpeta Base asignada: ${paths[0]}`);
+          } else {
+            setTargetFolder(paths[0]);
+            setStatusMessage(`Carpeta a Depurar asignada: ${paths[0]}`);
+          }
+        }
+      } else {
+        // Modo 1 carpeta o biblioteca
+        if (scanMode === "library") {
+          setScanMode("single_folder");
+        }
+        setSingleFolder(paths[0]);
+        setStatusMessage(`Carpeta cargada para análisis: ${paths[0]}`);
+      }
+    },
+    [scanMode, baseFolder],
+  );
 
   useEffect(() => {
     let unlistenPromise: Promise<() => void> | undefined;
@@ -73,43 +148,38 @@ export function DuplicatesScannerModal({
       unlistenPromise = appWindow.onDragDropEvent((event) => {
         if (event.payload.type === "over" || event.payload.type === "enter") {
           setIsDraggingOver(true);
+          if (event.payload.position) {
+            const dpr = window.devicePixelRatio || 1;
+            const clientX = event.payload.position.x / dpr;
+            const clientY = event.payload.position.y / dpr;
+            const el = document.elementFromPoint(clientX, clientY);
+            if (el) {
+              if (el.closest(".is-base") || el.closest("[data-drop-zone='base']")) {
+                setHoveredDropZone("base");
+                hoveredDropZoneRef.current = "base";
+              } else if (el.closest(".is-target") || el.closest("[data-drop-zone='target']")) {
+                setHoveredDropZone("target");
+                hoveredDropZoneRef.current = "target";
+              } else if (el.closest(".is-single") || el.closest("[data-drop-zone='single']")) {
+                setHoveredDropZone("single");
+                hoveredDropZoneRef.current = "single";
+              } else if (scanMode === "two_folders") {
+                const twoPanel = el.closest(".duplicates-two-folders-panel");
+                if (twoPanel) {
+                  const rect = twoPanel.getBoundingClientRect();
+                  const zone = clientX < rect.left + rect.width / 2 ? "base" : "target";
+                  setHoveredDropZone(zone);
+                  hoveredDropZoneRef.current = zone;
+                }
+              }
+            }
+          }
         } else if (event.payload.type === "drop") {
           setIsDraggingOver(false);
           const dropZone = hoveredDropZoneRef.current;
           setHoveredDropZone(null);
           hoveredDropZoneRef.current = null;
-
-          const rawPaths = event.payload.paths;
-          if (!rawPaths || rawPaths.length === 0) return;
-
-          if (scanMode === "two_folders") {
-            if (dropZone === "base") {
-              setBaseFolder(cleanPath(rawPaths[0]));
-              setStatusMessage(`Carpeta Base asignada: ${cleanPath(rawPaths[0])}`);
-            } else if (dropZone === "target") {
-              setTargetFolder(cleanPath(rawPaths[0]));
-              setStatusMessage(`Carpeta a Depurar asignada: ${cleanPath(rawPaths[0])}`);
-            } else if (rawPaths.length >= 2) {
-              setBaseFolder(cleanPath(rawPaths[0]));
-              setTargetFolder(cleanPath(rawPaths[1]));
-              setStatusMessage("¡Ambas carpetas asignadas automáticamente (Base y Depuración)!");
-            } else {
-              if (!baseFolder) {
-                setBaseFolder(cleanPath(rawPaths[0]));
-                setStatusMessage(`Carpeta Base asignada: ${cleanPath(rawPaths[0])}`);
-              } else {
-                setTargetFolder(cleanPath(rawPaths[0]));
-                setStatusMessage(`Carpeta a Depurar asignada: ${cleanPath(rawPaths[0])}`);
-              }
-            }
-          } else {
-            // Modo 1 carpeta o biblioteca
-            if (scanMode === "library") {
-              setScanMode("single_folder");
-            }
-            setSingleFolder(cleanPath(rawPaths[0]));
-            setStatusMessage(`Carpeta cargada para análisis: ${cleanPath(rawPaths[0])}`);
-          }
+          applyDroppedPaths(event.payload.paths, dropZone);
         } else {
           setIsDraggingOver(false);
           setHoveredDropZone(null);
@@ -125,7 +195,7 @@ export function DuplicatesScannerModal({
         unlistenPromise.then((u) => u()).catch(() => {});
       }
     };
-  }, [scanMode, baseFolder, targetFolder]);
+  }, [scanMode, applyDroppedPaths]);
 
   if (!isOpen) return null;
 
@@ -447,27 +517,77 @@ export function DuplicatesScannerModal({
     <div
       className={embedded ? "duplicates-workspace-view" : "duplicates-modal-backdrop"}
       onClick={embedded ? undefined : onClose}
+      onDragEnter={(e) => {
+        e.preventDefault();
+        setIsDraggingOver(true);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (e.dataTransfer) {
+          e.dataTransfer.dropEffect = "copy";
+        }
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsDraggingOver(false);
+          setHoveredDropZone(null);
+          hoveredDropZoneRef.current = null;
+        }
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDraggingOver(false);
+        const files = Array.from(e.dataTransfer?.files || []);
+        const paths = files.map((f: any) => f.path || f.webkitRelativePath).filter(Boolean);
+        if (paths.length > 0) {
+          applyDroppedPaths(paths, hoveredDropZoneRef.current);
+        }
+      }}
     >
       <div
         className={embedded ? "duplicates-workspace-card" : "duplicates-modal-card"}
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = "copy";
+          }
+        }}
         style={{ position: "relative" }}
       >
         {/* Overlay Drag & Drop Material 3 Expressive */}
         {isDraggingOver && (
           <div className="duplicates-drop-overlay">
-            <div className="duplicates-drop-card">
-              <div className="duplicates-drop-pulse">
-                <Icon name="folder" />
+            {scanMode === "two_folders" ? (
+              <div className="duplicates-drop-split-container">
+                <div className={`duplicates-drop-split-side is-base ${hoveredDropZone === "base" ? "is-active" : ""}`}>
+                  <div className="duplicates-drop-pulse base">
+                    <Icon name="star" />
+                  </div>
+                  <h3>Carpeta Base</h3>
+                  <p>A proteger y mantener intacta</p>
+                </div>
+                <div className="duplicates-drop-split-divider">
+                  <span>o suelta 2 carpetas a la vez</span>
+                </div>
+                <div className={`duplicates-drop-split-side is-target ${hoveredDropZone === "target" ? "is-active" : ""}`}>
+                  <div className="duplicates-drop-pulse target">
+                    <Icon name="trash" />
+                  </div>
+                  <h3>Carpeta a Depurar</h3>
+                  <p>A comparar y limpiar duplicados</p>
+                </div>
               </div>
-              <h3>Suelta la carpeta aquí</h3>
-              <p>
-                {scanMode === "two_folders"
-                  ? "Si arrastras 2 carpetas a la vez, se asignarán a Base y Depuración."
-                  : "Se analizarán los archivos y subcarpetas para detectar duplicados."}
-              </p>
-            </div>
+            ) : (
+              <div className="duplicates-drop-card">
+                <div className="duplicates-drop-pulse">
+                  <Icon name="folder" />
+                </div>
+                <h3>Suelta tu carpeta aquí</h3>
+                <p>Se analizarán todos los archivos y subcarpetas con detección inteligente</p>
+              </div>
+            )}
           </div>
         )}
         {/* Header */}
@@ -575,6 +695,7 @@ export function DuplicatesScannerModal({
           <div className="duplicates-single-folder-panel">
             <div
               className={`duplicates-folder-card is-single ${hoveredDropZone === "single" ? "is-drag-over" : ""}`}
+              data-drop-zone="single"
               onClick={handlePickSingleFolder}
               onDragEnter={() => {
                 setHoveredDropZone("single");
@@ -588,9 +709,21 @@ export function DuplicatesScannerModal({
               }}
               onDragOver={(e) => {
                 e.preventDefault();
+                if (e.dataTransfer) {
+                  e.dataTransfer.dropEffect = "copy";
+                }
                 if (hoveredDropZoneRef.current !== "single") {
                   setHoveredDropZone("single");
                   hoveredDropZoneRef.current = "single";
+                }
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDraggingOver(false);
+                const files = Array.from(e.dataTransfer?.files || []);
+                const paths = files.map((f: any) => f.path || f.webkitRelativePath).filter(Boolean);
+                if (paths.length > 0) {
+                  applyDroppedPaths(paths, "single");
                 }
               }}
             >
@@ -627,6 +760,7 @@ export function DuplicatesScannerModal({
             {/* Carpeta Base */}
             <div
               className={`duplicates-folder-card is-base ${hoveredDropZone === "base" ? "is-drag-over" : ""}`}
+              data-drop-zone="base"
               onClick={handlePickBaseFolder}
               onDragEnter={() => {
                 setHoveredDropZone("base");
@@ -640,9 +774,21 @@ export function DuplicatesScannerModal({
               }}
               onDragOver={(e) => {
                 e.preventDefault();
+                if (e.dataTransfer) {
+                  e.dataTransfer.dropEffect = "copy";
+                }
                 if (hoveredDropZoneRef.current !== "base") {
                   setHoveredDropZone("base");
                   hoveredDropZoneRef.current = "base";
+                }
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDraggingOver(false);
+                const files = Array.from(e.dataTransfer?.files || []);
+                const paths = files.map((f: any) => f.path || f.webkitRelativePath).filter(Boolean);
+                if (paths.length > 0) {
+                  applyDroppedPaths(paths, "base");
                 }
               }}
             >
@@ -684,6 +830,7 @@ export function DuplicatesScannerModal({
             {/* Carpeta a Depurar */}
             <div
               className={`duplicates-folder-card is-target ${hoveredDropZone === "target" ? "is-drag-over" : ""}`}
+              data-drop-zone="target"
               onClick={handlePickTargetFolder}
               onDragEnter={() => {
                 setHoveredDropZone("target");
@@ -697,9 +844,21 @@ export function DuplicatesScannerModal({
               }}
               onDragOver={(e) => {
                 e.preventDefault();
+                if (e.dataTransfer) {
+                  e.dataTransfer.dropEffect = "copy";
+                }
                 if (hoveredDropZoneRef.current !== "target") {
                   setHoveredDropZone("target");
                   hoveredDropZoneRef.current = "target";
+                }
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDraggingOver(false);
+                const files = Array.from(e.dataTransfer?.files || []);
+                const paths = files.map((f: any) => f.path || f.webkitRelativePath).filter(Boolean);
+                if (paths.length > 0) {
+                  applyDroppedPaths(paths, "target");
                 }
               }}
             >
@@ -880,9 +1039,46 @@ export function DuplicatesScannerModal({
                       </span>
                     )}
                   </div>
-                  <span className="duplicates-group-count">
-                    {group.duplicates.length + 1} archivos en este grupo
-                  </span>
+                  <div className="duplicates-group-actions">
+                    {(() => {
+                      const dupPaths = group.duplicates.map((d) => d.path);
+                      const selectedInGroupCount = dupPaths.filter((p) => selectedPaths.has(p)).length;
+                      const allSelectedInGroup = dupPaths.length > 0 && selectedInGroupCount === dupPaths.length;
+                      const someSelectedInGroup = selectedInGroupCount > 0 && !allSelectedInGroup;
+
+                      return (
+                        <button
+                          type="button"
+                          className={`duplicates-group-select-btn ${
+                            allSelectedInGroup ? "is-all-selected" : someSelectedInGroup ? "is-partial-selected" : ""
+                          }`}
+                          onClick={() => toggleGroupSelection(group)}
+                          title={allSelectedInGroup ? "Deseleccionar grupo" : "Seleccionar todos los duplicados de este grupo"}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={allSelectedInGroup}
+                            ref={(el) => {
+                              if (el) el.indeterminate = someSelectedInGroup;
+                            }}
+                            readOnly
+                            className="duplicates-group-select-checkbox"
+                          />
+                          <span>
+                            {allSelectedInGroup
+                              ? "Grupo seleccionado"
+                              : someSelectedInGroup
+                              ? `Seleccionados ${selectedInGroupCount}/${dupPaths.length}`
+                              : "Seleccionar grupo"}
+                          </span>
+                        </button>
+                      );
+                    })()}
+
+                    <span className="duplicates-group-count">
+                      {group.duplicates.length + 1} archivos en este grupo
+                    </span>
+                  </div>
                 </div>
 
                 <div className="duplicates-items-grid">
@@ -988,19 +1184,19 @@ export function DuplicatesScannerModal({
                               </button>
                             )}
 
-                            {onOpenComparison && (
+                            {activeKind === "image" && (
                               <button
                                 type="button"
                                 className="duplicate-btn-action"
                                 onClick={() =>
-                                  onOpenComparison(
+                                  handleOpenComparison(
                                     toVisualLibraryItem(group.original),
                                     toVisualLibraryItem(dup)
                                   )
                                 }
                                 title="Comparar frente a frente en visor interactivo"
                               >
-                                <Icon name="compare" />
+                                <Icon name="split" />
                                 <span>Comparar</span>
                               </button>
                             )}
@@ -1015,6 +1211,14 @@ export function DuplicatesScannerModal({
           )}
         </div>
       </div>
+
+      {internalComparisonPair && (
+        <ImageComparisonModal
+          initialItem={internalComparisonPair.original}
+          secondItem={internalComparisonPair.duplicate}
+          onClose={() => setInternalComparisonPair(null)}
+        />
+      )}
     </div>
   );
 }
