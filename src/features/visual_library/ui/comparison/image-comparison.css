@@ -190,6 +190,7 @@
   flex: 1;
   position: relative;
   overflow: hidden;
+  touch-action: none;
   background: radial-gradient(circle at center, rgba(255, 255, 255, 0.02) 0%, transparent 70%);
 }
 
@@ -319,6 +320,7 @@
   height: 100%;
   position: relative;
   overflow: hidden;
+  touch-action: none;
 }
 
 .img-compare-curtain-layer {
@@ -348,6 +350,7 @@
   background: #fff;
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.8), 0 0 4px rgba(255, 255, 255, 0.8);
   cursor: ew-resize;
+  touch-action: none;
   z-index: 20;
   display: flex;
   align-items: center;
@@ -432,6 +435,7 @@
 .img-compare-grid-cell {
   position: relative;
   overflow: hidden;
+  touch-action: none;
   background: radial-gradient(circle at center, rgba(255, 255, 255, 0.02) 0%, transparent 80%);
   border: 1px solid var(--color-outline-variant, rgba(255, 255, 255, 0.08));
   border-radius: 8px;
@@ -444,6 +448,7 @@
   position: relative;
   overflow: hidden;
   cursor: pointer;
+  touch-action: none;
   display: flex;
   flex-direction: column;
 }

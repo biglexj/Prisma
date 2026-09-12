@@ -886,6 +886,7 @@ input[type="range"].quicklook-seek-bar::-webkit-slider-thumb {
   justify-content: center;
   position: relative;
   overflow: hidden;
+  touch-action: none;
   padding: 0;
   background: rgba(0, 0, 0, 0.03);
 }

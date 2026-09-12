@@ -112,34 +112,59 @@ export function ImageComparisonModal({
     }
   }, []);
 
-  // Wheel zoom handler
+  // Wheel zoom handler con punto focal exacto en la posición del cursor / lápiz óptico
   const handleSlotWheel = useCallback(
     (e: React.WheelEvent, slotId: string) => {
       e.preventDefault();
       e.stopPropagation();
-      const factor = e.deltaY < 0 ? 1.15 : 0.87;
+      const factor = e.deltaY < 0 ? 1.18 : 0.84;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const mouseRelX = e.clientX - (rect.left + rect.width / 2);
+      const mouseRelY = e.clientY - (rect.top + rect.height / 2);
 
       setSlots((prev) =>
         prev.map((s) => {
           if (!syncZoom && s.id !== slotId) return s;
-          const nextZoom = Math.max(0.5, Math.min(8.0, s.zoom * factor));
+          const oldZoom = s.zoom;
+          const nextZoom = Math.max(0.5, Math.min(10.0, oldZoom * factor));
+
           if (nextZoom <= 1.02) {
             return { ...s, zoom: 1, pan: { x: 0, y: 0 } };
           }
-          return { ...s, zoom: Number(nextZoom.toFixed(2)) };
+
+          const ratio = nextZoom / oldZoom;
+          // Fórmula de zoom focal: P_new = M_rel - ratio * (M_rel - P_old)
+          const newPanX = mouseRelX - ratio * (mouseRelX - s.pan.x);
+          const newPanY = mouseRelY - ratio * (mouseRelY - s.pan.y);
+
+          return {
+            ...s,
+            zoom: Number(nextZoom.toFixed(2)),
+            pan: {
+              x: Math.round(newPanX),
+              y: Math.round(newPanY),
+            },
+          };
         }),
       );
     },
     [syncZoom],
   );
 
-  // Pan start
-  const handlePanStart = (e: React.MouseEvent, slotId: string) => {
-    if (e.button !== 0) return;
+  // Pan start con soporte para ratón, lápiz de tableta gráfica (Huion/Wacom/XP-Pen) y gestos táctiles
+  const handlePanStart = (e: React.PointerEvent, slotId: string) => {
+    if (e.button !== 0 && e.buttons !== 1) return;
     const currentSlot = slots.find((s) => s.id === slotId);
     if (!currentSlot || currentSlot.zoom <= 1) return;
 
     e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
+
     setDraggingSlotId(slotId);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
 
@@ -150,12 +175,13 @@ export function ImageComparisonModal({
     initialPansRef.current = pans;
   };
 
-  // Pan move
-  const handlePanMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (!draggingSlotId) return;
-      const dx = e.clientX - dragStartRef.current.x;
-      const dy = e.clientY - dragStartRef.current.y;
+  // Listener global continuo de movimiento de puntero (tableta gráfica y mouse sin interrupciones)
+  useEffect(() => {
+    if (!draggingSlotId) return;
+
+    const onPointerMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - dragStartRef.current.x;
+      const dy = ev.clientY - dragStartRef.current.y;
 
       setSlots((prev) =>
         prev.map((s) => {
@@ -170,15 +196,24 @@ export function ImageComparisonModal({
           };
         }),
       );
-    },
-    [draggingSlotId, syncZoom],
-  );
+    };
 
-  const handlePanEnd = useCallback(() => {
-    setDraggingSlotId(null);
-  }, []);
+    const onPointerUp = () => {
+      setDraggingSlotId(null);
+    };
 
-  // Curtain slider drag handlers
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+  }, [draggingSlotId, syncZoom]);
+
+  // Curtain slider drag handlers con soporte universal PointerEvent
   const handleCurtainMove = useCallback((clientX: number) => {
     if (!curtainRef.current) return;
     const rect = curtainRef.current.getBoundingClientRect();
@@ -186,24 +221,30 @@ export function ImageComparisonModal({
     setCurtainPosition(Math.max(0, Math.min(100, pos)));
   }, []);
 
-  const handleCurtainMouseDown = (e: React.MouseEvent) => {
+  const handleCurtainPointerDown = (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     isDraggingCurtainRef.current = true;
 
-    const onMouseMove = (ev: MouseEvent) => {
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
+
+    const onPointerMove = (ev: PointerEvent) => {
       if (isDraggingCurtainRef.current) {
         handleCurtainMove(ev.clientX);
       }
     };
-    const onMouseUp = () => {
+    const onPointerUp = () => {
       isDraggingCurtainRef.current = false;
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
     };
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
   };
 
   // Slot replacement / addition
@@ -275,8 +316,6 @@ export function ImageComparisonModal({
     <div
       ref={containerRef}
       className={`img-compare-modal-root ${isFullscreen ? "is-fullscreen" : ""}`}
-      onMouseMove={handlePanMove}
-      onMouseUp={handlePanEnd}
     >
       {/* Top Action Bar */}
       <header className="img-compare-top-bar" onClick={(e) => e.stopPropagation()}>
@@ -423,7 +462,7 @@ export function ImageComparisonModal({
             <div
               className="img-compare-viewport"
               onWheel={(e) => handleSlotWheel(e, slotA.id)}
-              onMouseDown={(e) => handlePanStart(e, slotA.id)}
+              onPointerDown={(e) => handlePanStart(e, slotA.id)}
               style={{ cursor: slotA.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
             >
               <div className="img-compare-slot-header">
@@ -480,7 +519,7 @@ export function ImageComparisonModal({
             <div
               className="img-compare-viewport"
               onWheel={(e) => handleSlotWheel(e, slotB.id)}
-              onMouseDown={(e) => handlePanStart(e, slotB.id)}
+              onPointerDown={(e) => handlePanStart(e, slotB.id)}
               style={{ cursor: slotB.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
             >
               <div className="img-compare-slot-header">
@@ -539,7 +578,7 @@ export function ImageComparisonModal({
             ref={curtainRef}
             className="img-compare-curtain-view"
             onWheel={(e) => handleSlotWheel(e, slotA.id)}
-            onMouseDown={(e) => handlePanStart(e, slotA.id)}
+            onPointerDown={(e) => handlePanStart(e, slotA.id)}
             style={{ cursor: slotA.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
           >
             {/* Layer A (Underneath) */}
@@ -577,7 +616,7 @@ export function ImageComparisonModal({
             <div
               className="img-compare-curtain-divider"
               style={{ left: `${curtainPosition}%` }}
-              onMouseDown={handleCurtainMouseDown}
+              onPointerDown={handleCurtainPointerDown}
             >
               <div className="img-compare-curtain-handle" title="Arrastra hacia los lados para comparar">
                 <Icon name="split" />
@@ -604,7 +643,7 @@ export function ImageComparisonModal({
                 key={slot.id}
                 className="img-compare-grid-cell"
                 onWheel={(e) => handleSlotWheel(e, slot.id)}
-                onMouseDown={(e) => handlePanStart(e, slot.id)}
+                onPointerDown={(e) => handlePanStart(e, slot.id)}
                 style={{ cursor: slot.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
               >
                 <div className="img-compare-slot-header">
@@ -658,7 +697,7 @@ export function ImageComparisonModal({
             className="img-compare-flick-view"
             onClick={() => setActiveFlickIndex((prev) => (prev + 1) % slots.length)}
             onWheel={(e) => handleSlotWheel(e, slots[activeFlickIndex].id)}
-            onMouseDown={(e) => handlePanStart(e, slots[activeFlickIndex].id)}
+            onPointerDown={(e) => handlePanStart(e, slots[activeFlickIndex].id)}
           >
             <div className="img-compare-flick-header">
               <div className="img-compare-flick-badge">

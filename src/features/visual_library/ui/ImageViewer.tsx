@@ -48,7 +48,8 @@ export function ImageViewer({
   const [zoomScale, setZoomScale] = useState(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const initialPanRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isAutoFitActive, setIsAutoFitActive] = useState(false);
   const isAutoFitRef = useRef(false); // Ref para evitar stale closure en onLoad
   const [zoomToast, setZoomToast] = useState<string | null>(null);
@@ -305,59 +306,84 @@ export function ImageViewer({
     showZoomToast(fitScale);
   };
 
+  // Zoom focal y paneo continuo compatible con mouse, lápiz de tableta gráfica (Wacom/Huion/XP-Pen) y touch
   const handleWheel = (e: React.WheelEvent) => {
-    setAutoFit(false);
-    if (e.deltaY < 0) {
-      setZoomScale((prev) => {
-        const step = prev < 0.2 ? 0.02 : prev < 0.5 ? 0.05 : 0.15;
-        const next = Math.min(10, Math.round((prev + step) * 100) / 100);
-        showZoomToast(next);
-        return next;
-      });
-    } else {
-      setZoomScale((prev) => {
-        const step = prev <= 0.15 ? 0.02 : prev <= 0.5 ? 0.05 : 0.15;
-        const next = Math.max(0.05, Math.round((prev - step) * 100) / 100);
-        if (next <= (initialFitScaleRef.current || 1)) setPanOffset({ x: 0, y: 0 });
-        showZoomToast(next);
-        return next;
-      });
-    }
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    const minScaleForPan = Math.min(1, (initialFitScaleRef.current || 1) * 0.98);
-    if (zoomScale <= minScaleForPan || e.button !== 0) return;
     e.preventDefault();
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
-  };
+    e.stopPropagation();
+    setAutoFit(false);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    const minScaleForPan = Math.min(1, (initialFitScaleRef.current || 1) * 0.98);
-    if (!isDragging || zoomScale <= minScaleForPan) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseRelX = e.clientX - (rect.left + rect.width / 2);
+    const mouseRelY = e.clientY - (rect.top + rect.height / 2);
+
+    const oldZoom = zoomScale;
+    const step = oldZoom < 0.2 ? 0.02 : oldZoom < 0.5 ? 0.05 : 0.15;
+    let nextZoom = e.deltaY < 0 ? oldZoom + step : oldZoom - step;
+    nextZoom = Math.max(0.05, Math.min(10, Math.round(nextZoom * 100) / 100));
+
+    const minScale = Math.min(1, (initialFitScaleRef.current || 1) * 0.98);
+
+    if (nextZoom <= minScale) {
+      setZoomScale(nextZoom);
+      setPanOffset({ x: 0, y: 0 });
+      showZoomToast(nextZoom);
+      return;
+    }
+
+    const ratio = nextZoom / oldZoom;
+    const newPanX = mouseRelX - ratio * (mouseRelX - panOffset.x);
+    const newPanY = mouseRelY - ratio * (mouseRelY - panOffset.y);
+
+    setZoomScale(nextZoom);
     setPanOffset({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
+      x: Math.round(newPanX),
+      y: Math.round(newPanY),
     });
+    showZoomToast(nextZoom);
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
+  const handlePointerDown = (e: React.PointerEvent) => {
+    const minScaleForPan = Math.min(1, (initialFitScaleRef.current || 1) * 0.98);
+    if (zoomScale <= minScaleForPan || (e.button !== 0 && e.buttons !== 1)) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
+
+    setIsDragging(true);
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    initialPanRef.current = { ...panOffset };
   };
 
-  // Garantizar que isDragging siempre se desactive si se suelta el ratón fuera del contenedor
   useEffect(() => {
-    const handleGlobalMouseUp = () => {
+    if (!isDragging) return;
+
+    const onPointerMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - dragStartRef.current.x;
+      const dy = ev.clientY - dragStartRef.current.y;
+      setPanOffset({
+        x: Math.round(initialPanRef.current.x + dx),
+        y: Math.round(initialPanRef.current.y + dy),
+      });
+    };
+
+    const onPointerUp = () => {
       setIsDragging(false);
     };
-    window.addEventListener("mouseup", handleGlobalMouseUp);
-    window.addEventListener("pointerup", handleGlobalMouseUp);
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+
     return () => {
-      window.removeEventListener("mouseup", handleGlobalMouseUp);
-      window.removeEventListener("pointerup", handleGlobalMouseUp);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
     };
-  }, []);
+  }, [isDragging]);
 
   // Fullscreen change listener
   useEffect(() => {
@@ -770,9 +796,7 @@ export function ImageViewer({
         className="image-viewer-stage"
         onClick={(event) => event.stopPropagation()}
         onDoubleClick={handleToggleZoom}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
+        onPointerDown={handlePointerDown}
         onWheel={handleWheel}
         style={{
           cursor: zoomScale > Math.min(1, (initialFitScaleRef.current || 1) * 0.98) ? (isDragging ? "grabbing" : "grab") : "default",

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toSafeAssetUrl } from "../../../shared/mediaTree";
 import type { QuickLookPayload } from "../model/types";
 
@@ -11,7 +11,7 @@ interface QuickLookImageProps {
 export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProps) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const isDraggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const initialPanRef = useRef({ x: 0, y: 0 });
 
@@ -61,16 +61,33 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
     }
   };
 
+  // Zoom con punto focal en dirección del cursor / lápiz de tableta gráfica
   const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     const factor = e.deltaY < 0 ? 1.15 : 0.87;
-    setZoom((prev) => {
-      const next = Math.max(0.5, Math.min(5.0, prev * factor));
-      if (next <= 1.05) {
-        setPan({ x: 0, y: 0 });
-        return 1;
-      }
-      return Number(next.toFixed(2));
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseRelX = e.clientX - (rect.left + rect.width / 2);
+    const mouseRelY = e.clientY - (rect.top + rect.height / 2);
+
+    const oldZoom = zoom;
+    const nextZoom = Math.max(0.5, Math.min(6.0, oldZoom * factor));
+
+    if (nextZoom <= 1.04) {
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+      return;
+    }
+
+    const ratio = nextZoom / oldZoom;
+    const newPanX = mouseRelX - ratio * (mouseRelX - pan.x);
+    const newPanY = mouseRelY - ratio * (mouseRelY - pan.y);
+
+    setZoom(Number(nextZoom.toFixed(2)));
+    setPan({
+      x: Math.round(newPanX),
+      y: Math.round(newPanY),
     });
   };
 
@@ -79,38 +96,56 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
     setPan({ x: 0, y: 0 });
   };
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 0 && zoom > 1) {
-      isDraggingRef.current = true;
-      dragStartRef.current = { x: e.clientX, y: e.clientY };
-      initialPanRef.current = { ...pan };
-    }
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if ((e.button !== 0 && e.buttons !== 1) || zoom <= 1) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
+
+    setIsDragging(true);
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    initialPanRef.current = { ...pan };
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDraggingRef.current && zoom > 1) {
-      const dx = e.clientX - dragStartRef.current.x;
-      const dy = e.clientY - dragStartRef.current.y;
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const onPointerMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - dragStartRef.current.x;
+      const dy = ev.clientY - dragStartRef.current.y;
       setPan({
-        x: initialPanRef.current.x + dx,
-        y: initialPanRef.current.y + dy,
+        x: Math.round(initialPanRef.current.x + dx),
+        y: Math.round(initialPanRef.current.y + dy),
       });
-    }
-  };
+    };
 
-  const handleMouseUp = () => {
-    isDraggingRef.current = false;
-  };
+    const onPointerUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+  }, [isDragging]);
 
   return (
     <div
       className="quicklook-image-content"
       onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onPointerDown={handlePointerDown}
       onDoubleClick={handleDoubleClick}
+      style={{
+        cursor: zoom > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in",
+      }}
     >
       <div className="quicklook-image-wrapper">
         <img
@@ -122,8 +157,7 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
           src={imgSrc}
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            cursor: zoom > 1 ? "grab" : "zoom-in",
-            transition: isDraggingRef.current ? "none" : "transform 0.12s ease-out",
+            transition: isDragging ? "none" : "transform 0.12s ease-out",
           }}
         />
       </div>
