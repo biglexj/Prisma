@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Icon } from "../../../../shared/ui/Icon";
 import { toSafeAssetUrl, cleanPath } from "../../../../shared/mediaTree";
 import { deleteMediaItems } from "../../../../shared/mediaOperations";
@@ -60,6 +61,71 @@ export function DuplicatesScannerModal({
   const [isMoving, setIsMoving] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [hoveredDropZone, setHoveredDropZone] = useState<"single" | "base" | "target" | null>(null);
+  const hoveredDropZoneRef = useRef<"single" | "base" | "target" | null>(null);
+
+  useEffect(() => {
+    let unlistenPromise: Promise<() => void> | undefined;
+
+    try {
+      const appWindow = getCurrentWebviewWindow();
+      unlistenPromise = appWindow.onDragDropEvent((event) => {
+        if (event.payload.type === "over" || event.payload.type === "enter") {
+          setIsDraggingOver(true);
+        } else if (event.payload.type === "drop") {
+          setIsDraggingOver(false);
+          const dropZone = hoveredDropZoneRef.current;
+          setHoveredDropZone(null);
+          hoveredDropZoneRef.current = null;
+
+          const rawPaths = event.payload.paths;
+          if (!rawPaths || rawPaths.length === 0) return;
+
+          if (scanMode === "two_folders") {
+            if (dropZone === "base") {
+              setBaseFolder(cleanPath(rawPaths[0]));
+              setStatusMessage(`Carpeta Base asignada: ${cleanPath(rawPaths[0])}`);
+            } else if (dropZone === "target") {
+              setTargetFolder(cleanPath(rawPaths[0]));
+              setStatusMessage(`Carpeta a Depurar asignada: ${cleanPath(rawPaths[0])}`);
+            } else if (rawPaths.length >= 2) {
+              setBaseFolder(cleanPath(rawPaths[0]));
+              setTargetFolder(cleanPath(rawPaths[1]));
+              setStatusMessage("¡Ambas carpetas asignadas automáticamente (Base y Depuración)!");
+            } else {
+              if (!baseFolder) {
+                setBaseFolder(cleanPath(rawPaths[0]));
+                setStatusMessage(`Carpeta Base asignada: ${cleanPath(rawPaths[0])}`);
+              } else {
+                setTargetFolder(cleanPath(rawPaths[0]));
+                setStatusMessage(`Carpeta a Depurar asignada: ${cleanPath(rawPaths[0])}`);
+              }
+            }
+          } else {
+            // Modo 1 carpeta o biblioteca
+            if (scanMode === "library") {
+              setScanMode("single_folder");
+            }
+            setSingleFolder(cleanPath(rawPaths[0]));
+            setStatusMessage(`Carpeta cargada para análisis: ${cleanPath(rawPaths[0])}`);
+          }
+        } else {
+          setIsDraggingOver(false);
+          setHoveredDropZone(null);
+          hoveredDropZoneRef.current = null;
+        }
+      });
+    } catch (err) {
+      console.warn("No se pudo iniciar listener de DragDrop en DuplicatesScannerModal:", err);
+    }
+
+    return () => {
+      if (unlistenPromise) {
+        unlistenPromise.then((u) => u()).catch(() => {});
+      }
+    };
+  }, [scanMode, baseFolder, targetFolder]);
 
   if (!isOpen) return null;
 
@@ -386,7 +452,24 @@ export function DuplicatesScannerModal({
         className={embedded ? "duplicates-workspace-card" : "duplicates-modal-card"}
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
+        style={{ position: "relative" }}
       >
+        {/* Overlay Drag & Drop Material 3 Expressive */}
+        {isDraggingOver && (
+          <div className="duplicates-drop-overlay">
+            <div className="duplicates-drop-card">
+              <div className="duplicates-drop-pulse">
+                <Icon name="folder" />
+              </div>
+              <h3>Suelta la carpeta aquí</h3>
+              <p>
+                {scanMode === "two_folders"
+                  ? "Si arrastras 2 carpetas a la vez, se asignarán a Base y Depuración."
+                  : "Se analizarán los archivos y subcarpetas para detectar duplicados."}
+              </p>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <header className="duplicates-modal-header">
           <div className="duplicates-header-info">
@@ -490,15 +573,35 @@ export function DuplicatesScannerModal({
         {/* Panel para Escanear 1 Carpeta (con todas sus subcarpetas) */}
         {scanMode === "single_folder" && (
           <div className="duplicates-single-folder-panel">
-            <div className="duplicates-folder-card is-single" onClick={handlePickSingleFolder}>
+            <div
+              className={`duplicates-folder-card is-single ${hoveredDropZone === "single" ? "is-drag-over" : ""}`}
+              onClick={handlePickSingleFolder}
+              onDragEnter={() => {
+                setHoveredDropZone("single");
+                hoveredDropZoneRef.current = "single";
+              }}
+              onDragLeave={() => {
+                if (hoveredDropZoneRef.current === "single") {
+                  setHoveredDropZone(null);
+                  hoveredDropZoneRef.current = null;
+                }
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (hoveredDropZoneRef.current !== "single") {
+                  setHoveredDropZone("single");
+                  hoveredDropZoneRef.current = "single";
+                }
+              }}
+            >
               <div className="folder-card-label">
                 <Icon name="folder" />
                 <span>Carpeta a Analizar (incluye subcarpetas)</span>
               </div>
               <div className="folder-card-picker">
                 <Icon name="folder-open" />
-                <span className="folder-path-text" title={singleFolder || "Haz clic para seleccionar una carpeta..."}>
-                  {singleFolder || "Seleccionar cualquier carpeta de la PC o disco externo (ej. Telefono o Descargas)..."}
+                <span className="folder-path-text" title={singleFolder || "Arrastra una carpeta aquí o haz clic para examinar..."}>
+                  {singleFolder || "Arrastra una carpeta aquí o haz clic para examinar..."}
                 </span>
                 <button
                   type="button"
@@ -512,7 +615,7 @@ export function DuplicatesScannerModal({
                 </button>
               </div>
               <p className="folder-card-hint">
-                Se analizarán todos los archivos y subcarpetas. La inteligencia de nombres prioriza nombres humanos sobre hashes o volcados mecánicos (como <code>file_00000000...</code>).
+                Arrastra una carpeta desde el explorador de archivos o examina. Se analizarán todos los archivos y subcarpetas con inteligencia de nombres naturales.
               </p>
             </div>
           </div>
@@ -522,15 +625,35 @@ export function DuplicatesScannerModal({
         {scanMode === "two_folders" && (
           <div className="duplicates-two-folders-panel">
             {/* Carpeta Base */}
-            <div className="duplicates-folder-card is-base" onClick={handlePickBaseFolder}>
+            <div
+              className={`duplicates-folder-card is-base ${hoveredDropZone === "base" ? "is-drag-over" : ""}`}
+              onClick={handlePickBaseFolder}
+              onDragEnter={() => {
+                setHoveredDropZone("base");
+                hoveredDropZoneRef.current = "base";
+              }}
+              onDragLeave={() => {
+                if (hoveredDropZoneRef.current === "base") {
+                  setHoveredDropZone(null);
+                  hoveredDropZoneRef.current = null;
+                }
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (hoveredDropZoneRef.current !== "base") {
+                  setHoveredDropZone("base");
+                  hoveredDropZoneRef.current = "base";
+                }
+              }}
+            >
               <div className="folder-card-label">
                 <Icon name="star" />
                 <span>Carpeta Base (A Proteger / Intacta)</span>
               </div>
               <div className="folder-card-picker">
                 <Icon name="folder" />
-                <span className="folder-path-text" title={baseFolder || "Haz clic para seleccionar carpeta base..."}>
-                  {baseFolder || "Seleccionar carpeta base (ej. Proyecto o Biblioteca)..."}
+                <span className="folder-path-text" title={baseFolder || "Arrastra carpeta base aquí o haz clic para examinar..."}>
+                  {baseFolder || "Arrastra carpeta base aquí o haz clic para examinar..."}
                 </span>
                 <button
                   type="button"
@@ -544,7 +667,7 @@ export function DuplicatesScannerModal({
                 </button>
               </div>
               <p className="folder-card-hint">
-                Los archivos aquí se eligen como referencia original y se mantienen protegidos.
+                Arrastra la carpeta base aquí. Los archivos aquí se eligen como referencia original y se mantienen protegidos.
               </p>
             </div>
 
@@ -559,15 +682,35 @@ export function DuplicatesScannerModal({
             </button>
 
             {/* Carpeta a Depurar */}
-            <div className="duplicates-folder-card is-target" onClick={handlePickTargetFolder}>
+            <div
+              className={`duplicates-folder-card is-target ${hoveredDropZone === "target" ? "is-drag-over" : ""}`}
+              onClick={handlePickTargetFolder}
+              onDragEnter={() => {
+                setHoveredDropZone("target");
+                hoveredDropZoneRef.current = "target";
+              }}
+              onDragLeave={() => {
+                if (hoveredDropZoneRef.current === "target") {
+                  setHoveredDropZone(null);
+                  hoveredDropZoneRef.current = null;
+                }
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (hoveredDropZoneRef.current !== "target") {
+                  setHoveredDropZone("target");
+                  hoveredDropZoneRef.current = "target";
+                }
+              }}
+            >
               <div className="folder-card-label">
                 <Icon name="trash" />
                 <span>Carpeta a Depurar (A Limpiar / Origen)</span>
               </div>
               <div className="folder-card-picker">
                 <Icon name="smartphone" />
-                <span className="folder-path-text" title={targetFolder || "Haz clic para seleccionar carpeta a depurar..."}>
-                  {targetFolder || "Seleccionar carpeta a depurar (ej. Copia del Teléfono)..."}
+                <span className="folder-path-text" title={targetFolder || "Arrastra carpeta a depurar aquí o haz clic para examinar..."}>
+                  {targetFolder || "Arrastra carpeta a depurar aquí o haz clic para examinar..."}
                 </span>
                 <button
                   type="button"
@@ -581,7 +724,7 @@ export function DuplicatesScannerModal({
                 </button>
               </div>
               <p className="folder-card-hint">
-                Los archivos que coincidan con la base se marcarán para depurar, mover o actualizar.
+                Arrastra la carpeta a depurar aquí. Los archivos que coincidan con la base se marcarán para depurar, mover o actualizar.
               </p>
             </div>
           </div>

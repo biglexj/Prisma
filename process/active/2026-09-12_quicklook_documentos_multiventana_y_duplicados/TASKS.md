@@ -47,3 +47,10 @@
   - [x] Integrar `duplicates` como vista de primer nivel en `AppSidebar.tsx` bajo la sección `HERRAMIENTAS`, filtrando dinámicamente según `enabledTools`.
   - [x] Integrar vista de espacio de trabajo de Duplicados en `App.tsx` (`DuplicatesScannerModal` con `embedded={true}`) permitiendo alternar entre Imágenes y Vídeos.
   - [x] Verificación de TypeScript (`bun run tsc --noEmit`) y Rust (`cargo check`).
+- [x] **Fase 8: Estándar Drag & Drop Mandatorio en Core Docs e Implementación en Duplicados**
+  - [x] Redactar y publicar estándar canónico `Docs/features/drag-and-drop/README.md` para Tauri v2 y aplicaciones Web.
+  - [x] Indexar el estándar en `Docs/ARCHITECTURE.md`, `Docs/types/desktop/README.md`, `Docs/stacks/react/react-baseline.md` y `Docs/global/architecture/core-principles.md`.
+  - [x] Implementar soporte de arrastrar y soltar nativo de Tauri v2 (`appWindow.onDragDropEvent`) y HTML5 en `DuplicatesScannerModal.tsx`.
+  - [x] Añadir feedback visual Material 3 Expressive (`is-drag-over` en tarjetas individuales de carpeta y overlay flotante centrado con pulso).
+  - [x] Soporte de asignación inteligente mono-carpeta y bi-carpeta (soltar 2 carpetas a la vez asigna Base y Depuración).
+  - [x] Verificación de TypeScript y Rust (`0 errores`).

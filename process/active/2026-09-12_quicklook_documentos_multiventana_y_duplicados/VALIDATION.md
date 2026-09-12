@@ -26,5 +26,7 @@
 - [x] Pestaña «Herramientas» en Configuración: integrada como la 4ª pestaña entre «Carpetas de Biblioteca» y «Barra de Progreso», con tarjetas interactivas M3 para cada herramienta integrada (Conversor, Renombrador, Duplicados, Luna Fetch, Gallery-DL, Wallpapers Aurora).
 - [x] Visibilidad modular en Barra Lateral: conmutación en tiempo real de cada herramienta en el bloque `HERRAMIENTAS` de la barra lateral, sincronizada en `localStorage` y entre ventanas.
 - [x] Acceso de primer nivel a «Duplicados»: navegación como espacio de trabajo embebido (`activeView === "duplicates"`) con selector entre Imágenes y Vídeos, soporte de 1 carpeta, 2 carpetas o biblioteca completa.
+- [x] Estándar de Drag & Drop en Core Docs: redactado y publicado en `Docs/features/drag-and-drop/README.md`, indexado en `ARCHITECTURE.md`, `Docs/types/desktop/README.md`, `Docs/stacks/react/react-baseline.md` y catalogado como anti-patrón no soportarlo en `Docs/global/architecture/core-principles.md`.
+- [x] Drag & Drop en Duplicados: soporte nativo de Tauri v2 (`onDragDropEvent`) y HTML5 con asignación inteligente automática mono-carpeta y bi-carpeta (al arrastrar 2 carpetas a la vez asigna Base y Depuración), feedback de arrastre en tiempo real (`is-drag-over`) y overlay M3 con icono pulso.
 
 
