@@ -56,6 +56,8 @@ export interface DuplicateCandidate {
   modifiedAtMillis: number;
   similarityPct: number;
   isExactMatch: boolean;
+  isFromBaseFolder?: boolean;
+  hasHigherResolution?: boolean;
 }
 
 export interface DuplicateGroup {
@@ -63,6 +65,7 @@ export interface DuplicateGroup {
   matchType: "exact" | "perceptual";
   original: DuplicateCandidate;
   duplicates: DuplicateCandidate[];
+  hasResolutionUpgrade?: boolean;
 }
 
 export interface DuplicateScanOptions {
@@ -70,4 +73,7 @@ export interface DuplicateScanOptions {
   minSimilarityPct: number;
   checkVisualSimilarity: boolean;
   minSizeBytes?: number;
+  baseFolder?: string;
+  targetFolder?: string;
+  preferHigherResolution?: boolean;
 }

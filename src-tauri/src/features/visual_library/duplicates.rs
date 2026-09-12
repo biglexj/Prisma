@@ -18,6 +18,10 @@ pub struct DuplicateCandidate {
     pub modified_at_millis: u128,
     pub similarity_pct: f64,
     pub is_exact_match: bool,
+    #[serde(default)]
+    pub is_from_base_folder: bool,
+    #[serde(default)]
+    pub has_higher_resolution: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,6 +31,8 @@ pub struct DuplicateGroup {
     pub match_type: String, // "exact" | "perceptual"
     pub original: DuplicateCandidate,
     pub duplicates: Vec<DuplicateCandidate>,
+    #[serde(default)]
+    pub has_resolution_upgrade: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,6 +42,20 @@ pub struct DuplicateScanOptions {
     pub min_similarity_pct: f64, // e.g. 85.0 to 100.0
     pub check_visual_similarity: bool,
     pub min_size_bytes: Option<u64>,
+    #[serde(default)]
+    pub base_folder: Option<String>,
+    #[serde(default)]
+    pub target_folder: Option<String>,
+    #[serde(default)]
+    pub prefer_higher_resolution: bool,
+}
+
+/// Obtiene rápidamente dimensiones de imagen sin decodificar el raster completo
+fn get_image_dims(path: &Path) -> (Option<u32>, Option<u32>) {
+    match image::image_dimensions(path) {
+        Ok((w, h)) => (Some(w), Some(h)),
+        Err(_) => (None, None),
+    }
 }
 
 /// Computa un hash de 64 bits usando dHash (Difference Hash) en escala de grises.
@@ -99,6 +119,57 @@ fn full_file_hash(path: &Path) -> Option<u64> {
     Some(hasher.finish())
 }
 
+fn assemble_duplicate_group(
+    group_id: String,
+    match_type: String,
+    mut candidates: Vec<DuplicateCandidate>,
+    base_folder: &Option<String>,
+    prefer_higher_resolution: bool,
+) -> DuplicateGroup {
+    if let Some(base) = base_folder {
+        let norm_base = base.replace('\\', "/").to_lowercase().trim_end_matches('/').to_string();
+        for c in &mut candidates {
+            let norm_path = c.path.replace('\\', "/").to_lowercase();
+            c.is_from_base_folder = norm_path.starts_with(&norm_base);
+        }
+    }
+
+    // Ordenar para elegir la referencia (original a conservar):
+    // 1. Si hay base_folder, los elementos de base_folder tienen prioridad de conservación.
+    // 2. Desempate: fecha de modificación más antigua.
+    candidates.sort_by(|a, b| {
+        if base_folder.is_some() {
+            match (b.is_from_base_folder, a.is_from_base_folder) {
+                (true, false) => return std::cmp::Ordering::Greater,
+                (false, true) => return std::cmp::Ordering::Less,
+                _ => {}
+            }
+        }
+        a.modified_at_millis.cmp(&b.modified_at_millis)
+    });
+
+    let original = candidates.remove(0);
+    let orig_pixels = (original.width.unwrap_or(0) as u64) * (original.height.unwrap_or(0) as u64);
+
+    let mut has_resolution_upgrade = false;
+    for dup in &mut candidates {
+        let dup_pixels = (dup.width.unwrap_or(0) as u64) * (dup.height.unwrap_or(0) as u64);
+        // Si el duplicado tiene mayor resolución que el original de referencia
+        if prefer_higher_resolution && dup_pixels > orig_pixels && dup_pixels > 0 {
+            dup.has_higher_resolution = true;
+            has_resolution_upgrade = true;
+        }
+    }
+
+    DuplicateGroup {
+        group_id,
+        match_type,
+        original,
+        duplicates: candidates,
+        has_resolution_upgrade,
+    }
+}
+
 pub fn scan_duplicates(
     items: Vec<crate::features::visual_library::VisualLibraryItem>,
     options: DuplicateScanOptions,
@@ -160,41 +231,39 @@ pub fn scan_duplicates(
                 }
 
                 exact_counter += 1;
-                let original_item = exact_matches[0];
-                grouped_paths.insert(original_item.path.clone());
-
-                let mut dups = Vec::new();
-                for &dup_item in &exact_matches[1..] {
-                    grouped_paths.insert(dup_item.path.clone());
-                    dups.push(DuplicateCandidate {
-                        path: dup_item.path.clone(),
-                        title: dup_item.title.clone(),
-                        relative_folder: dup_item.relative_folder.clone(),
-                        size_bytes: dup_item.size_bytes,
-                        width: None,
-                        height: None,
-                        modified_at_millis: dup_item.modified_at_millis,
+                let mut cluster = Vec::new();
+                for &it in &exact_matches {
+                    grouped_paths.insert(it.path.clone());
+                    let (w, h) = get_image_dims(Path::new(&it.path));
+                    cluster.push(DuplicateCandidate {
+                        path: it.path.clone(),
+                        title: it.title.clone(),
+                        relative_folder: it.relative_folder.clone(),
+                        size_bytes: it.size_bytes,
+                        width: w,
+                        height: h,
+                        modified_at_millis: it.modified_at_millis,
                         similarity_pct: 100.0,
                         is_exact_match: true,
+                        is_from_base_folder: false,
+                        has_higher_resolution: false,
                     });
                 }
 
-                groups.push(DuplicateGroup {
-                    group_id: format!("exact-{}", exact_counter),
-                    match_type: "exact".into(),
-                    original: DuplicateCandidate {
-                        path: original_item.path.clone(),
-                        title: original_item.title.clone(),
-                        relative_folder: original_item.relative_folder.clone(),
-                        size_bytes: original_item.size_bytes,
-                        width: None,
-                        height: None,
-                        modified_at_millis: original_item.modified_at_millis,
-                        similarity_pct: 100.0,
-                        is_exact_match: true,
-                    },
-                    duplicates: dups,
-                });
+                let grp = assemble_duplicate_group(
+                    format!("exact-{}", exact_counter),
+                    "exact".into(),
+                    cluster,
+                    &options.base_folder,
+                    options.prefer_higher_resolution,
+                );
+
+                // En modo cruzado (base vs depurar), descartar si no hay duplicados para depurar
+                if options.base_folder.is_some() && grp.duplicates.is_empty() {
+                    continue;
+                }
+
+                groups.push(grp);
             }
         }
     }
@@ -266,6 +335,8 @@ pub fn scan_duplicates(
                         modified_at_millis: item_b.modified_at_millis,
                         similarity_pct,
                         is_exact_match: false,
+                        is_from_base_folder: false,
+                        has_higher_resolution: false,
                     });
                 }
             }
@@ -274,22 +345,35 @@ pub fn scan_duplicates(
                 visited_indices.insert(i);
                 perceptual_counter += 1;
 
-                groups.push(DuplicateGroup {
-                    group_id: format!("perceptual-{}", perceptual_counter),
-                    match_type: "perceptual".into(),
-                    original: DuplicateCandidate {
-                        path: item_a.path.clone(),
-                        title: item_a.title.clone(),
-                        relative_folder: item_a.relative_folder.clone(),
-                        size_bytes: item_a.size_bytes,
-                        width: Some(w_a),
-                        height: Some(h_a),
-                        modified_at_millis: item_a.modified_at_millis,
-                        similarity_pct: 100.0,
-                        is_exact_match: false,
-                    },
-                    duplicates: matching_dups,
+                let mut cluster = Vec::new();
+                cluster.push(DuplicateCandidate {
+                    path: item_a.path.clone(),
+                    title: item_a.title.clone(),
+                    relative_folder: item_a.relative_folder.clone(),
+                    size_bytes: item_a.size_bytes,
+                    width: Some(w_a),
+                    height: Some(h_a),
+                    modified_at_millis: item_a.modified_at_millis,
+                    similarity_pct: 100.0,
+                    is_exact_match: false,
+                    is_from_base_folder: false,
+                    has_higher_resolution: false,
                 });
+                cluster.extend(matching_dups);
+
+                let grp = assemble_duplicate_group(
+                    format!("perceptual-{}", perceptual_counter),
+                    "perceptual".into(),
+                    cluster,
+                    &options.base_folder,
+                    options.prefer_higher_resolution,
+                );
+
+                if options.base_folder.is_some() && grp.duplicates.is_empty() {
+                    continue;
+                }
+
+                groups.push(grp);
             }
         }
     }

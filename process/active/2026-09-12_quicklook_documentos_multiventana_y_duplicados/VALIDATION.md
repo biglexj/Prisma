@@ -20,5 +20,8 @@
 - [x] Carga de imágenes PNG en rutas con `@` (ej. `YouTube/@ely_vtuber/01_Brand/Logo/Ely Vtuber 2.png`): resuelta al evitar codificación destructiva en `toSafeAssetUrl`.
 - [x] Dimensionamiento de QuickLook para documentos por porcentaje de pantalla: 70% de ancho y 80% de alto calculado reactivamente contra el monitor actual de Windows.
 - [x] DocumentViewer: contraste de alta legibilidad en modo claro y modo oscuro, eliminación del texto negro sobre fondo negro, contenedor centrado con estilo de hoja elevada M3, números de línea perfectamente alineados y tamaño real del archivo en disco en lugar de `0 B`.
+- [x] Comparativa cruzada de 2 carpetas (Base vs Depurar): selección nativa de carpetas, botón de inversión rápida de roles (`⇄`), designación de la carpeta base como original a conservar intacta y de la carpeta a depurar como duplicados para limpieza.
+- [x] Priorización de mayor resolución (Upgrade HD/4K): detección de píxeles ($W \times H$), insignia visual de mejora de calidad, reemplazo atómico en disco (copia segura temporal, envío de versión antigua de baja resolución a papelera de reciclaje y eliminación del duplicado de la carpeta origen).
+- [x] Acciones flexibles de depuración: eliminación directa a papelera de Windows, reemplazo masivo de versiones base para todas las mejoras HD/4K detectadas, y traslado de duplicados a otra carpeta de respaldo o cuarentena sin borrarlos.
 
 

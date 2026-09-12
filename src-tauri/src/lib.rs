@@ -65,8 +65,8 @@ use app::commands::visual_library::{
     visual_library_add_excluded_folder, visual_library_add_folder,
     visual_library_image_preview, visual_library_list_excluded_folders,
     visual_library_list_folders, visual_library_list_items,
-    visual_library_remove_excluded_folder, visual_library_remove_folder,
-    visual_library_rescan_folder, visual_library_scan_duplicates, visual_library_sync_pip_icon,
+    visual_library_move_duplicates, visual_library_remove_excluded_folder, visual_library_remove_folder,
+    visual_library_replace_duplicate, visual_library_rescan_folder, visual_library_scan_duplicates, visual_library_sync_pip_icon,
 };
 use app::commands::wallpapers::{wallpaper_save_and_apply, wallpaper_set_desktop};
 use app::state::{FavoritesState, InitialFileState, MusicLibraryState, PlaybackProbeState, VisualLibraryState};
@@ -368,6 +368,8 @@ pub fn run() {
             visual_library_image_preview,
             visual_library_sync_pip_icon,
             visual_library_scan_duplicates,
+            visual_library_replace_duplicate,
+            visual_library_move_duplicates,
             media_delete_items,
             media_rename_item,
             media_save_image,

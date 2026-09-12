@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../../../shared/ui/Icon";
-import { toSafeAssetUrl } from "../../../../shared/mediaTree";
+import { toSafeAssetUrl, cleanPath } from "../../../../shared/mediaTree";
 import { deleteMediaItems } from "../../../../shared/mediaOperations";
 import { visualLibraryClient } from "../../tauri/client";
 import type {
@@ -33,6 +34,11 @@ export function DuplicatesScannerModal({
   onOpenComparison,
   onRefreshLibrary,
 }: DuplicatesScannerModalProps) {
+  const [scanMode, setScanMode] = useState<"library" | "two_folders">("two_folders");
+  const [baseFolder, setBaseFolder] = useState<string>("");
+  const [targetFolder, setTargetFolder] = useState<string>("");
+  const [preferHigherResolution, setPreferHigherResolution] = useState(true);
+
   const [isScanning, setIsScanning] = useState(false);
   const [checkVisualSimilarity, setCheckVisualSimilarity] = useState(true);
   const [minSimilarityPct, setMinSimilarityPct] = useState(90);
@@ -40,11 +46,52 @@ export function DuplicatesScannerModal({
   const [hasScanned, setHasScanned] = useState(false);
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
+  const handlePickBaseFolder = async () => {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: "Seleccionar Carpeta Base (a proteger / mantener intacta)",
+    });
+    if (typeof selected === "string") {
+      setBaseFolder(cleanPath(selected));
+    }
+  };
+
+  const handlePickTargetFolder = async () => {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: "Seleccionar Carpeta a Depurar (origen / a limpiar)",
+    });
+    if (typeof selected === "string") {
+      setTargetFolder(cleanPath(selected));
+    }
+  };
+
+  const handleSwapFolders = () => {
+    const temp = baseFolder;
+    setBaseFolder(targetFolder);
+    setTargetFolder(temp);
+  };
+
   const handleStartScan = async () => {
+    if (scanMode === "two_folders") {
+      if (!baseFolder || !targetFolder) {
+        setStatusMessage("Por favor selecciona tanto la Carpeta Base como la Carpeta a Depurar antes de escanear.");
+        return;
+      }
+      if (baseFolder.toLowerCase() === targetFolder.toLowerCase()) {
+        setStatusMessage("La Carpeta Base y la Carpeta a Depurar no pueden ser la misma carpeta.");
+        return;
+      }
+    }
+
     setIsScanning(true);
     setStatusMessage("Escaneando archivos y calculando firmas de similitud...");
     setSelectedPaths(new Set());
@@ -53,6 +100,9 @@ export function DuplicatesScannerModal({
         paths: [],
         minSimilarityPct,
         checkVisualSimilarity,
+        baseFolder: scanMode === "two_folders" ? baseFolder : undefined,
+        targetFolder: scanMode === "two_folders" ? targetFolder : undefined,
+        preferHigherResolution: scanMode === "two_folders" ? preferHigherResolution : false,
       });
       setGroups(results);
       setHasScanned(true);
@@ -65,7 +115,11 @@ export function DuplicatesScannerModal({
         }
       }
       setSelectedPaths(autoSelected);
-      setStatusMessage(null);
+      setStatusMessage(
+        results.length === 0
+          ? "No se encontraron duplicados con los criterios establecidos."
+          : null
+      );
     } catch (err) {
       setStatusMessage(`Error en escaneo: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -115,6 +169,18 @@ export function DuplicatesScannerModal({
     return sum;
   }, [groups, selectedPaths]);
 
+  const selectedHighResCount = useMemo(() => {
+    let count = 0;
+    for (const g of groups) {
+      for (const d of g.duplicates) {
+        if (selectedPaths.has(d.path) && d.hasHigherResolution) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }, [groups, selectedPaths]);
+
   const handleDeleteSelected = async () => {
     if (selectedPaths.size === 0) return;
     const pathsToDelete = Array.from(selectedPaths);
@@ -146,6 +212,127 @@ export function DuplicatesScannerModal({
     }
   };
 
+  const handleMoveSelected = async () => {
+    if (selectedPaths.size === 0) return;
+    const pathsToMove = Array.from(selectedPaths);
+    const dest = await open({
+      directory: true,
+      multiple: false,
+      title: `Seleccionar carpeta destino para ${pathsToMove.length} archivo(s) duplicado(s)`,
+    });
+    if (typeof dest !== "string") return;
+
+    setIsMoving(true);
+    try {
+      const moved = await visualLibraryClient.moveDuplicates(pathsToMove, dest);
+      if (moved > 0) {
+        setGroups((prevGroups) =>
+          prevGroups
+            .map((g) => ({
+              ...g,
+              duplicates: g.duplicates.filter((d) => !selectedPaths.has(d.path)),
+            }))
+            .filter((g) => g.duplicates.length > 0)
+        );
+        setSelectedPaths(new Set());
+        onRefreshLibrary?.();
+        setStatusMessage(`Se movieron exitosamente ${moved} archivo(s) a: ${dest}`);
+      }
+    } catch (err) {
+      alert(`Error al mover archivos: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsMoving(false);
+    }
+  };
+
+  const handleReplaceBase = async (basePath: string, highResPath: string) => {
+    const confirmed = window.confirm(
+      "¿Reemplazar la versión base con esta copia de mayor resolución?\n\n" +
+        "• La versión base anterior de menor resolución se enviará a la Papelera de reciclaje.\n" +
+        "• El archivo de alta resolución se colocará en la carpeta base conservando su calidad."
+    );
+    if (!confirmed) return;
+
+    try {
+      await visualLibraryClient.replaceDuplicate(basePath, highResPath);
+      setGroups((prevGroups) =>
+        prevGroups
+          .map((g) => {
+            if (g.original.path === basePath) {
+              return {
+                ...g,
+                duplicates: g.duplicates.filter((d) => d.path !== highResPath),
+              };
+            }
+            return g;
+          })
+          .filter((g) => g.duplicates.length > 0)
+      );
+      setSelectedPaths((prev) => {
+        const next = new Set(prev);
+        next.delete(highResPath);
+        return next;
+      });
+      onRefreshLibrary?.();
+    } catch (err) {
+      alert(`Error al reemplazar versión base: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  const handleBulkReplaceHighRes = async () => {
+    const upgrades: Array<{ base: string; highRes: string }> = [];
+    for (const g of groups) {
+      for (const d of g.duplicates) {
+        if (selectedPaths.has(d.path) && d.hasHigherResolution) {
+          upgrades.push({ base: g.original.path, highRes: d.path });
+        }
+      }
+    }
+
+    if (upgrades.length === 0) return;
+
+    const confirmed = window.confirm(
+      `¿Reemplazar ${upgrades.length} archivo(s) base con sus versiones de mayor resolución?\n\n` +
+        "Las versiones de menor resolución se enviarán a la Papelera de reciclaje de forma segura."
+    );
+    if (!confirmed) return;
+
+    setIsUpgrading(true);
+    let successCount = 0;
+    try {
+      for (const u of upgrades) {
+        try {
+          await visualLibraryClient.replaceDuplicate(u.base, u.highRes);
+          successCount++;
+          setGroups((prevGroups) =>
+            prevGroups
+              .map((g) => {
+                if (g.original.path === u.base) {
+                  return {
+                    ...g,
+                    duplicates: g.duplicates.filter((d) => d.path !== u.highRes),
+                  };
+                }
+                return g;
+              })
+              .filter((g) => g.duplicates.length > 0)
+          );
+          setSelectedPaths((prev) => {
+            const next = new Set(prev);
+            next.delete(u.highRes);
+            return next;
+          });
+        } catch (e) {
+          console.error("Error al reemplazar:", e);
+        }
+      }
+      onRefreshLibrary?.();
+      setStatusMessage(`Se actualizaron exitosamente ${successCount} archivo(s) a alta resolución.`);
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
   const toVisualLibraryItem = (cand: DuplicateCandidate): VisualLibraryItem => ({
     path: cand.path,
     title: cand.title,
@@ -170,9 +357,9 @@ export function DuplicatesScannerModal({
               <Icon name="layers" />
             </span>
             <div>
-              <h2 className="duplicates-header-title">Buscador de Duplicados (dupeGuru Engine)</h2>
+              <h2 className="duplicates-header-title">Buscador y Comparador de Duplicados</h2>
               <p className="duplicates-header-subtitle">
-                Detección exacta por hash y similitud perceptual visual ({kind === "image" ? "Imágenes" : "Vídeos"})
+                Detección por hash, similitud visual y comparativa cruzada de carpetas ({kind === "image" ? "Imágenes" : "Vídeos"})
               </p>
             </div>
           </div>
@@ -185,6 +372,112 @@ export function DuplicatesScannerModal({
             <Icon name="close" />
           </button>
         </header>
+
+        {/* Selector de Alcance: Comparar 2 Carpetas vs Toda la Biblioteca */}
+        <div className="duplicates-scope-bar">
+          <div className="duplicates-scope-tabs">
+            <button
+              type="button"
+              className={`duplicates-scope-tab ${scanMode === "two_folders" ? "is-active" : ""}`}
+              onClick={() => setScanMode("two_folders")}
+            >
+              <Icon name="split" />
+              <span>Comparar 2 Carpetas (Base vs Depurar)</span>
+            </button>
+            <button
+              type="button"
+              className={`duplicates-scope-tab ${scanMode === "library" ? "is-active" : ""}`}
+              onClick={() => setScanMode("library")}
+            >
+              <Icon name="folder" />
+              <span>Toda la Biblioteca ({kind === "image" ? "Imágenes" : "Vídeos"})</span>
+            </button>
+          </div>
+
+          {scanMode === "two_folders" && (
+            <label
+              className="duplicates-upgrade-toggle"
+              title="Si un duplicado en la carpeta a depurar tiene mayor resolución que el archivo base, marcarlo para actualizar con la mejor calidad"
+            >
+              <input
+                type="checkbox"
+                checked={preferHigherResolution}
+                onChange={(e) => setPreferHigherResolution(e.target.checked)}
+              />
+              <Icon name="sparkles" />
+              <span>Priorizar Mayor Resolución (Upgrade HD/4K)</span>
+            </label>
+          )}
+        </div>
+
+        {/* Panel de selección de Carpetas Cruzadas */}
+        {scanMode === "two_folders" && (
+          <div className="duplicates-two-folders-panel">
+            {/* Carpeta Base */}
+            <div className="duplicates-folder-card is-base" onClick={handlePickBaseFolder}>
+              <div className="folder-card-label">
+                <Icon name="star" />
+                <span>Carpeta Base (A Proteger / Intacta)</span>
+              </div>
+              <div className="folder-card-picker">
+                <Icon name="folder" />
+                <span className="folder-path-text" title={baseFolder || "Haz clic para seleccionar carpeta base..."}>
+                  {baseFolder || "Seleccionar carpeta base (ej. Proyecto o Biblioteca)..."}
+                </span>
+                <button
+                  type="button"
+                  className="folder-pick-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePickBaseFolder();
+                  }}
+                >
+                  Examinar...
+                </button>
+              </div>
+              <p className="folder-card-hint">
+                Los archivos aquí se eligen como referencia original y se mantienen protegidos.
+              </p>
+            </div>
+
+            {/* Botón intercambiar roles */}
+            <button
+              type="button"
+              className="duplicates-swap-btn"
+              onClick={handleSwapFolders}
+              title="Intercambiar Carpeta Base ⇄ Carpeta a Depurar"
+            >
+              <span className="swap-icon">⇄</span>
+            </button>
+
+            {/* Carpeta a Depurar */}
+            <div className="duplicates-folder-card is-target" onClick={handlePickTargetFolder}>
+              <div className="folder-card-label">
+                <Icon name="trash" />
+                <span>Carpeta a Depurar (A Limpiar / Origen)</span>
+              </div>
+              <div className="folder-card-picker">
+                <Icon name="smartphone" />
+                <span className="folder-path-text" title={targetFolder || "Haz clic para seleccionar carpeta a depurar..."}>
+                  {targetFolder || "Seleccionar carpeta a depurar (ej. Copia del Teléfono)..."}
+                </span>
+                <button
+                  type="button"
+                  className="folder-pick-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePickTargetFolder();
+                  }}
+                >
+                  Examinar...
+                </button>
+              </div>
+              <p className="folder-card-hint">
+                Los archivos que coincidan con la base se marcarán para depurar, mover o actualizar.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Toolbar de configuración del escáner */}
         <div className="duplicates-toolbar">
@@ -254,7 +547,9 @@ export function DuplicatesScannerModal({
           <div className="duplicates-action-bar">
             <div className="duplicates-summary-text">
               <strong>{groups.length} grupos</strong> detectados ({totalDuplicatesCount} duplicados) •{" "}
-              <span>Espacio a recuperar: <strong>{formatBytes(recoverableBytes)}</strong></span>
+              <span>
+                Espacio a recuperar: <strong>{formatBytes(recoverableBytes)}</strong>
+              </span>
             </div>
             <div className="duplicates-bulk-buttons">
               <button
@@ -264,6 +559,31 @@ export function DuplicatesScannerModal({
               >
                 {selectedPaths.size === totalDuplicatesCount ? "Deseleccionar todo" : "Seleccionar todo"}
               </button>
+
+              {selectedHighResCount > 0 && (
+                <button
+                  type="button"
+                  className="duplicates-btn-upgrade-bulk"
+                  onClick={handleBulkReplaceHighRes}
+                  disabled={isUpgrading}
+                  title="Reemplazar la versión base con las copias de mayor calidad seleccionadas"
+                >
+                  <Icon name="sparkles" />
+                  <span>Reemplazar versión base ({selectedHighResCount} HD)</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="duplicates-btn-secondary"
+                onClick={handleMoveSelected}
+                disabled={selectedPaths.size === 0 || isMoving}
+                title="Mover los duplicados seleccionados a otra carpeta sin eliminarlos"
+              >
+                <Icon name="folder" />
+                <span>Mover a carpeta...</span>
+              </button>
+
               <button
                 type="button"
                 className="duplicates-btn-danger"
@@ -285,7 +605,9 @@ export function DuplicatesScannerModal({
               <h3>{hasScanned ? "¡No se encontraron archivos duplicados!" : "Listo para escanear"}</h3>
               <p>
                 {hasScanned
-                  ? "Tu biblioteca está completamente limpia con los criterios de similitud seleccionados."
+                  ? "Las carpetas o biblioteca no contienen archivos duplicados con los criterios seleccionados."
+                  : scanMode === "two_folders"
+                  ? "Selecciona la carpeta base a proteger y la carpeta a depurar, luego pulsa 'Escanear duplicados'."
                   : "Pulsa 'Escanear duplicados' para comparar hashes exactos y gradientes perceptuales de imágenes."}
               </p>
             </div>
@@ -298,6 +620,12 @@ export function DuplicatesScannerModal({
                       {group.matchType === "exact" ? "Idéntico (100%)" : "Similitud visual"}
                     </span>
                     <span className="duplicates-group-title">Grupo #{group.groupId}</span>
+                    {group.hasResolutionUpgrade && (
+                      <span className="resolution-upgrade-pill" title="Este grupo incluye una versión con mayor resolución que la base">
+                        <Icon name="sparkles" />
+                        <span>Mejora de Resolución Disponible</span>
+                      </span>
+                    )}
                   </div>
                   <span className="duplicates-group-count">
                     {group.duplicates.length + 1} archivos en este grupo
@@ -309,7 +637,7 @@ export function DuplicatesScannerModal({
                   <div className="duplicate-card is-original">
                     <div className="duplicate-card-tag is-original-tag">
                       <Icon name="star" />
-                      <span>Original / Referencia</span>
+                      <span>{group.original.isFromBaseFolder ? "Original (Carpeta Base)" : "Original / Referencia"}</span>
                     </div>
                     <div className="duplicate-card-thumb">
                       <img
@@ -331,6 +659,9 @@ export function DuplicatesScannerModal({
                         )}
                         <span className="size-badge">{formatBytes(group.original.sizeBytes)}</span>
                       </div>
+                      <span className="duplicate-folder-name" title={group.original.path}>
+                        {group.original.relativeFolder || group.original.path}
+                      </span>
                     </div>
                   </div>
 
@@ -340,7 +671,9 @@ export function DuplicatesScannerModal({
                     return (
                       <div
                         key={dup.path}
-                        className={`duplicate-card is-duplicate ${isSelected ? "is-selected" : ""}`}
+                        className={`duplicate-card is-duplicate ${isSelected ? "is-selected" : ""} ${
+                          dup.hasHigherResolution ? "has-resolution-upgrade" : ""
+                        }`}
                         onClick={() => toggleSelectPath(dup.path)}
                       >
                         <div className="duplicate-card-tag is-dup-tag">
@@ -356,6 +689,14 @@ export function DuplicatesScannerModal({
                               : `${dup.similarityPct.toFixed(1)}% similar`}
                           </span>
                         </div>
+
+                        {dup.hasHigherResolution && (
+                          <div className="duplicate-res-badge" title="Este archivo tiene mayor resolución que la versión base">
+                            <Icon name="sparkles" />
+                            <span>Mayor resolución HD/4K</span>
+                          </div>
+                        )}
+
                         <div className="duplicate-card-thumb">
                           <img
                             src={toSafeAssetUrl(dup.path)}
@@ -370,15 +711,30 @@ export function DuplicatesScannerModal({
                           </span>
                           <div className="duplicate-details">
                             {dup.width && dup.height && (
-                              <span className="dim-badge">
+                              <span className={`dim-badge ${dup.hasHigherResolution ? "is-higher-res" : ""}`}>
                                 {dup.width} × {dup.height} px
                               </span>
                             )}
                             <span className="size-badge">{formatBytes(dup.sizeBytes)}</span>
                           </div>
+                          <span className="duplicate-folder-name" title={dup.path}>
+                            {dup.relativeFolder || dup.path}
+                          </span>
 
                           {/* Acciones individuales */}
                           <div className="duplicate-actions" onClick={(e) => e.stopPropagation()}>
+                            {dup.hasHigherResolution && (
+                              <button
+                                type="button"
+                                className="duplicate-btn-upgrade"
+                                onClick={() => handleReplaceBase(group.original.path, dup.path)}
+                                title="Reemplazar la versión base con esta versión de mayor resolución"
+                              >
+                                <Icon name="sparkles" />
+                                <span>Reemplazar base</span>
+                              </button>
+                            )}
+
                             {onOpenComparison && (
                               <button
                                 type="button"

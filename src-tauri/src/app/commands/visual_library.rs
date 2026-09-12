@@ -646,10 +646,21 @@ pub async fn visual_library_scan_duplicates(
     options: crate::features::visual_library::DuplicateScanOptions,
     library_state: State<'_, VisualLibraryState>,
 ) -> Result<Vec<crate::features::visual_library::DuplicateGroup>, String> {
-    let scan_paths = if !options.paths.is_empty() {
-        options.paths.clone()
-    } else {
-        library_state.paths(kind)?
+    let scan_paths = {
+        let mut p = Vec::new();
+        if let Some(ref b) = options.base_folder {
+            p.push(b.clone());
+        }
+        if let Some(ref t) = options.target_folder {
+            p.push(t.clone());
+        }
+        if !p.is_empty() {
+            p
+        } else if !options.paths.is_empty() {
+            options.paths.clone()
+        } else {
+            library_state.paths(kind)?
+        }
     };
     let excluded_paths = library_state.excluded_paths(kind)?;
 
@@ -669,6 +680,149 @@ pub async fn visual_library_scan_duplicates(
     })
     .await
     .map_err(|e| format!("Error en runtime al escanear duplicados: {e}"))?
+}
+
+fn move_file_cross_volume(src: &Path, dest: &Path) -> std::io::Result<()> {
+    if std::fs::rename(src, dest).is_ok() {
+        return Ok(());
+    }
+    std::fs::copy(src, dest)?;
+    std::fs::remove_file(src)?;
+    Ok(())
+}
+
+/// Reemplaza la copia de menor calidad en la carpeta base con la versión HD/4K de la carpeta a depurar.
+/// La versión base anterior se envía de forma segura a la Papelera de Reciclaje.
+/// La versión duplicada se elimina/recicla de la carpeta origen.
+#[tauri::command]
+pub async fn visual_library_replace_duplicate(
+    base_path: String,
+    high_res_path: String,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean_base = crate::features::folder_session::clean_path_str(&base_path);
+        let clean_high_res = crate::features::folder_session::clean_path_str(&high_res_path);
+
+        let base_p = Path::new(&clean_base);
+        let high_res_p = Path::new(&clean_high_res);
+
+        let base_canonical = base_p
+            .canonicalize()
+            .map_err(|e| format!("No se pudo encontrar el archivo base: {e}"))?;
+        let high_res_canonical = high_res_p
+            .canonicalize()
+            .map_err(|e| format!("No se pudo encontrar el archivo de mayor resolución: {e}"))?;
+
+        if !base_canonical.is_file() || !high_res_canonical.is_file() {
+            return Err("Una de las rutas no es un archivo válido.".to_string());
+        }
+
+        let base_parent = base_canonical
+            .parent()
+            .ok_or_else(|| "Directorio base no encontrado.".to_string())?;
+
+        let base_stem = base_canonical
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("image");
+
+        let high_res_ext = high_res_canonical
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("jpg");
+
+        // Nombre final en la carpeta base (preserva stem base con extensión de alta resolución)
+        let target_dest = base_parent.join(format!("{base_stem}.{high_res_ext}"));
+        let temp_dest = base_parent.join(format!("{base_stem}.upgrade_tmp"));
+
+        // 1. Copiar primero al archivo temporal en la carpeta base
+        std::fs::copy(&high_res_canonical, &temp_dest)
+            .map_err(|e| format!("Error al copiar versión de alta resolución: {e}"))?;
+
+        // 2. Enviar versión base previa a la Papelera de Reciclaje de Windows
+        if let Err(e) = trash::delete(&base_canonical) {
+            let _ = std::fs::remove_file(&temp_dest);
+            return Err(format!("No se pudo enviar el archivo base a la papelera: {e}"));
+        }
+
+        // 3. Renombrar temporal al destino final
+        if let Err(e) = std::fs::rename(&temp_dest, &target_dest) {
+            let _ = std::fs::remove_file(&temp_dest);
+            return Err(format!("Error al finalizar reemplazo en base: {e}"));
+        }
+
+        // 4. Enviar duplicado origen a la papelera (o eliminar directamente si es volumen extraíble sin papelera)
+        let _ = trash::delete(&high_res_canonical).or_else(|_| std::fs::remove_file(&high_res_canonical));
+
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Error interno al reemplazar duplicado: {e}"))?
+}
+
+/// Mueve archivos duplicados a una carpeta de destino especificada (ej. cuarentena o respaldo).
+#[tauri::command]
+pub async fn visual_library_move_duplicates(
+    paths: Vec<String>,
+    destination_dir: String,
+) -> Result<usize, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean_dest = crate::features::folder_session::clean_path_str(&destination_dir);
+        let dest_p = Path::new(&clean_dest);
+
+        if !dest_p.exists() {
+            std::fs::create_dir_all(dest_p)
+                .map_err(|e| format!("No se pudo crear la carpeta destino: {e}"))?;
+        }
+
+        let mut moved_count = 0usize;
+        for raw in paths {
+            let clean = crate::features::folder_session::clean_path_str(&raw);
+            let src = Path::new(&clean);
+            let Ok(canonical) = src.canonicalize() else {
+                continue;
+            };
+
+            if !canonical.is_file() {
+                continue;
+            }
+
+            let file_name = match canonical.file_name().and_then(|s| s.to_str()) {
+                Some(name) => name.to_string(),
+                None => continue,
+            };
+
+            let mut target_file = dest_p.join(&file_name);
+            if target_file.exists() {
+                let stem = Path::new(&file_name)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("file");
+                let ext = Path::new(&file_name)
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("");
+                let mut counter = 1;
+                while target_file.exists() {
+                    let new_name = if ext.is_empty() {
+                        format!("{stem}_{counter}")
+                    } else {
+                        format!("{stem}_{counter}.{ext}")
+                    };
+                    target_file = dest_p.join(new_name);
+                    counter += 1;
+                }
+            }
+
+            if move_file_cross_volume(&canonical, &target_file).is_ok() {
+                moved_count += 1;
+            }
+        }
+
+        Ok(moved_count)
+    })
+    .await
+    .map_err(|e| format!("Error al mover duplicados: {e}"))?
 }
 
 

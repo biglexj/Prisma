@@ -28,6 +28,15 @@
   - [x] Dimensionamiento porcentual dinámico en Rust (`resolve_media_size`): 70% del ancho y 80% del alto de la pantalla actual para documentos (Markdown, texto, EPUB, PDF, HTML y proyectos).
   - [x] Soporte de restauración de pantalla completa/maximizado con base al 70%x80% en `quick_look_toggle_maximize`.
   - [x] Incorporar tokens Material 3 faltantes en `styles.css` (`--surface-dim` y `--surface-container-lowest`) para temas claro y oscuro.
-  - [x] Rediseñar el visor `DocumentViewer`: corregir contraste texto-fondo (blanco puro/hoja elevada en modo claro, oscuro profundo en modo oscuro), cálculo reactivo del tamaño del archivo en disco (`effectiveSizeBytes`) eliminando `0 B`, y estandarización del canal de números de línea alineado 1:1.
-
-
+  - [x] **Fase 6: Comparativa y Depuración Cruzada entre Carpetas con Prioridad de Resolución**
+  - [x] Extender `DuplicateScanOptions` en Rust con `base_folder`, `target_folder` y `prefer_higher_resolution`.
+  - [x] Enriquecer `scan_duplicates` para emparejar carpeta base como original y carpeta a depurar como duplicado.
+  - [x] Detectar resolución en píxeles y marcar `has_higher_resolution` si el duplicado tiene mayor calidad que la base.
+  - [x] Implementar comandos Rust: `visual_library_replace_duplicate` (reemplazo atómico con papelera para la copia antigua) y `visual_library_move_duplicates` (traslado seguro a otra carpeta).
+  - [x] Registrar comandos en `lib.rs`.
+  - [x] Implementar UI de selector de modos en `DuplicatesScannerModal.tsx`: «Biblioteca completa» vs «Comparar 2 Carpetas (Base vs Depuración)».
+  - [x] Añadir selectores de carpeta nativos (`open({ directory: true })`) e intercambio de roles `⇄`.
+  - [x] Añadir toggle de «Priorizar mayor resolución (Upgrade HD/4K)».
+  - [x] Añadir acciones en lote e individuales: «Reemplazar versión base», «Mover a carpeta...» y «Mover a Papelera».
+  - [x] Añadir estilos Material 3 Expressive en `duplicates-scanner.css`.
+  - [x] Verificación de compilación (TypeScript y Rust) y pruebas.

@@ -28,4 +28,8 @@ export const visualLibraryClient = {
     invoke<string | null>("visual_library_image_preview", { path }),
   scanDuplicates: (kind: VisualMediaKind, options: DuplicateScanOptions) =>
     invoke<DuplicateGroup[]>("visual_library_scan_duplicates", { kind, options }),
+  replaceDuplicate: (basePath: string, highResPath: string) =>
+    invoke<void>("visual_library_replace_duplicate", { basePath, highResPath }),
+  moveDuplicates: (paths: string[], destinationDir: string) =>
+    invoke<number>("visual_library_move_duplicates", { paths, destinationDir }),
 };
