@@ -98,6 +98,14 @@
   border-bottom: 1px solid var(--outline-variant, #eadadd);
   background: var(--header-bg, rgba(255, 250, 249, 0.8));
   z-index: 10;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+.quicklook-header:active {
+  cursor: grabbing;
 }
 
 .dark .quicklook-header,
@@ -116,6 +124,9 @@
   min-width: 0;
   margin-right: 6px;
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 
 .quicklook-header-drag:active {
@@ -130,6 +141,9 @@
   justify-content: center;
   color: var(--primary, #c90045);
   flex-shrink: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .quicklook-file-icon svg {
@@ -144,6 +158,9 @@
   overflow: hidden;
   min-width: 0;
   flex: 1;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .quicklook-file-name {
@@ -154,6 +171,8 @@
   text-overflow: ellipsis;
   color: var(--on-surface, #22191b);
   min-width: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .dark .quicklook-file-name,

@@ -210,6 +210,23 @@ pub fn quick_look_start_dragging(window: tauri::WebviewWindow) -> Result<(), Str
 }
 
 #[tauri::command]
+pub fn quick_look_get_position(window: tauri::WebviewWindow) -> Result<(f64, f64), String> {
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let pos = window.outer_position().map_err(|e| e.to_string())?;
+    let logical = pos.to_logical::<f64>(scale);
+    Ok((logical.x, logical.y))
+}
+
+#[tauri::command]
+pub fn quick_look_set_position(window: tauri::WebviewWindow, x: f64, y: f64) -> Result<(), String> {
+    let is_max = quick_look_is_maximized(window.clone());
+    if !is_max {
+        window.set_position(tauri::LogicalPosition::new(x, y)).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub fn quick_look_set_size(window: tauri::WebviewWindow, width: f64, height: f64) -> Result<(), String> {
     let is_max = quick_look_is_maximized(window.clone());
     if !is_max {
