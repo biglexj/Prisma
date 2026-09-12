@@ -38,6 +38,7 @@ import { LunaFetchView } from "../features/luna_fetch/ui/LunaFetchView";
 import { GalleryDlView } from "../features/gallery_dl/ui/GalleryDlView";
 import { WallpapersView } from "../features/wallpapers/ui/WallpapersView";
 import { BatchRenamerView } from "../features/renamer/ui/BatchRenamerView";
+import { DuplicatesScannerModal } from "../features/visual_library/ui/duplicates/DuplicatesScannerModal";
 import { DspEqualizerView } from "../features/dsp/ui/DspEqualizerView";
 import { DspEqualizerModal } from "../features/dsp/ui/DspEqualizerModal";
 import { DspProvider } from "../features/dsp/DspContext";
@@ -65,6 +66,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   luna_fetch: "Luna Fetch",
   gallery_dl: "Gallery-DL",
   wallpapers: "Wallpapers Aurora",
+  duplicates: "Buscador de Duplicados",
 };
 
 function AppContent() {
@@ -634,6 +636,11 @@ function AppContent() {
     };
     window.addEventListener("prisma-open-renamer", handleOpenRenamer);
 
+    const handleOpenDuplicates = () => {
+      setActiveView("duplicates");
+    };
+    window.addEventListener("prisma-open-duplicates", handleOpenDuplicates);
+
     const handleGlobalContextMenu = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       const isEditable =
@@ -661,6 +668,7 @@ function AppContent() {
     return () => {
       window.removeEventListener("prisma-open-converter", handleOpenConverter);
       window.removeEventListener("prisma-open-renamer", handleOpenRenamer);
+      window.removeEventListener("prisma-open-duplicates", handleOpenDuplicates);
       window.removeEventListener("prisma-send-to-supergallery", handleSendToSuperGallery);
       window.removeEventListener("contextmenu", handleGlobalContextMenu);
       unlistenPromise.then((unlisten) => unlisten());
@@ -789,9 +797,11 @@ function AppContent() {
         ? "Buscar en tus vídeos…"
         : activeView === "music"
           ? "Buscar en tu música…"
-          : activeCustomLib
-            ? `Buscar en ${activeCustomLib.label}…`
-            : "Buscar en Prisma…";
+          : activeView === "duplicates"
+            ? "Buscar duplicados…"
+            : activeCustomLib
+              ? `Buscar en ${activeCustomLib.label}…`
+              : "Buscar en Prisma…";
 
   const searchIcon: IconName =
     activeView === "images"
@@ -800,9 +810,11 @@ function AppContent() {
         ? "video"
         : activeView === "music"
           ? "music"
-          : activeCustomLib
-            ? (activeCustomLib.icon as IconName) || "folder"
-            : "search";
+          : activeView === "duplicates"
+            ? "copy"
+            : activeCustomLib
+              ? (activeCustomLib.icon as IconName) || "folder"
+              : "search";
 
   return (
     <div
@@ -1111,6 +1123,18 @@ function AppContent() {
           ) : null}
           {activeView === "renamer" ? <BatchRenamerView /> : null}
           {activeView === "converter" ? <PrismaConvertView /> : null}
+          {activeView === "duplicates" ? (
+            <DuplicatesScannerModal
+              embedded={true}
+              isOpen={true}
+              kind="image"
+              onClose={() => setActiveView("home")}
+              onRefreshLibrary={() => {
+                imageLibrary.refresh();
+                videoLibrary.refresh();
+              }}
+            />
+          ) : null}
           {activeView === "luna_fetch" ? <LunaFetchView onNavigate={setActiveView} /> : null}
           {activeView === "gallery_dl" ? <GalleryDlView onNavigate={setActiveView} /> : null}
           {activeView === "wallpapers" ? <WallpapersView /> : null}

@@ -1,0 +1,203 @@
+/* ══════════════════════════════════════════════════════════════════
+   Prisma — Panel de Herramientas (Material 3 Expressive)
+   ══════════════════════════════════════════════════════════════════ */
+
+.tools-settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.tools-header-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 24px;
+  border-radius: 20px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  flex-wrap: wrap;
+}
+
+.tools-header-text h2 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--on-surface);
+  margin-bottom: 4px;
+}
+
+.tools-header-text p {
+  font-size: 0.84rem;
+  color: var(--on-surface-variant);
+  max-width: 680px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.tools-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+@media (min-width: 1200px) {
+  .tools-cards-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.tool-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 20px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  position: relative;
+}
+
+.tool-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.tool-card.is-active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary-container) 10%, var(--surface-container));
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.tool-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tool-card-icon-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tool-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.tool-card-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.tool-card-icon-title h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.tool-card-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+}
+
+.tool-card-tag.is-active-tag {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* ── Switch Toggle M3 para Herramientas ── */
+.tool-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 26px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.tool-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.tool-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--surface-container-highest, #36343b);
+  border: 1px solid var(--outline, #938f99);
+  border-radius: 26px;
+  transition: 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.tool-slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--outline, #938f99);
+  border-radius: 50%;
+  transition: 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.tool-toggle-switch input:checked + .tool-slider {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.tool-toggle-switch input:checked + .tool-slider::before {
+  transform: translateX(18px);
+  background-color: var(--on-primary);
+}
+
+.tool-card-desc {
+  font-size: 0.82rem;
+  color: var(--on-surface-variant);
+  line-height: 1.45;
+  margin: 0;
+  cursor: pointer;
+}
+
+.tool-card-tags-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.tool-tag-pill {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-variant) 40%, transparent);
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface-variant);
+}
+
+.tool-card.is-active .tool-tag-pill {
+  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+  color: var(--on-surface);
+}

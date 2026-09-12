@@ -892,3 +892,95 @@
   cursor: not-allowed;
 }
 
+/* ── Modo Workspace / Herramienta Embebida ── */
+.duplicates-workspace-view {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 1.25rem 1.5rem;
+  box-sizing: border-box;
+}
+
+.duplicates-workspace-card {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  background: var(--bg-surface, #ffffff);
+  color: var(--text-primary, #1e1e1e);
+  border-radius: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.dark .duplicates-workspace-card,
+[data-theme="dark"] .duplicates-workspace-card {
+  background: #181a20;
+  color: #f1f3f9;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.duplicates-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.duplicates-kind-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--bg-surface-variant, rgba(0, 0, 0, 0.05));
+  padding: 0.25rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+}
+
+.dark .duplicates-kind-switcher,
+[data-theme="dark"] .duplicates-kind-switcher {
+  background: rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.duplicates-kind-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #6b7280);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .duplicates-kind-btn,
+[data-theme="dark"] .duplicates-kind-btn {
+  color: var(--text-secondary, #9ca3af);
+}
+
+.duplicates-kind-btn:hover {
+  color: var(--text-primary, #1e1e1e);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dark .duplicates-kind-btn:hover,
+[data-theme="dark"] .duplicates-kind-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.duplicates-kind-btn.is-active {
+  background: var(--accent-primary, #10b981);
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+}
+

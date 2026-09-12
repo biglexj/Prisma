@@ -40,3 +40,10 @@
   - [x] Añadir acciones en lote e individuales: «Reemplazar versión base», «Mover a carpeta...» y «Mover a Papelera».
   - [x] Añadir estilos Material 3 Expressive en `duplicates-scanner.css`.
   - [x] Verificación de compilación (TypeScript y Rust) y pruebas.
+- [x] **Fase 7: Pestaña de Herramientas en Configuración y Acceso a Duplicados en Barra Lateral**
+  - [x] Añadir icono `tool` a `Icon.tsx`.
+  - [x] Añadir modelo de configuración `enabledTools` y persistencia en `useSystemSettings.ts` (`converter`, `renamer`, `duplicates`, `luna_fetch`, `gallery_dl`, `wallpapers`).
+  - [x] Crear componente `ToolsSettingsPanel.tsx` y estilos M3 `tools-settings-panel.css` como 4ª pestaña en `AppSettings.tsx`.
+  - [x] Integrar `duplicates` como vista de primer nivel en `AppSidebar.tsx` bajo la sección `HERRAMIENTAS`, filtrando dinámicamente según `enabledTools`.
+  - [x] Integrar vista de espacio de trabajo de Duplicados en `App.tsx` (`DuplicatesScannerModal` con `embedded={true}`) permitiendo alternar entre Imágenes y Vídeos.
+  - [x] Verificación de TypeScript (`bun run tsc --noEmit`) y Rust (`cargo check`).

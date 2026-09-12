@@ -16,6 +16,26 @@ export type ProgressBarStyle =
   | "vinyl_tape"
   | "elastic_string";
 
+export type ToolKey = "converter" | "renamer" | "duplicates" | "luna_fetch" | "gallery_dl" | "wallpapers";
+
+export interface EnabledToolsConfig {
+  converter: boolean;
+  renamer: boolean;
+  duplicates: boolean;
+  luna_fetch: boolean;
+  gallery_dl: boolean;
+  wallpapers: boolean;
+}
+
+export const DEFAULT_ENABLED_TOOLS: EnabledToolsConfig = {
+  converter: true,
+  renamer: true,
+  duplicates: true,
+  luna_fetch: true,
+  gallery_dl: true,
+  wallpapers: true,
+};
+
 interface SystemSettings {
   quickLookShortcut: QuickLookShortcutMode;
   autostart: boolean;
@@ -28,6 +48,7 @@ interface SystemSettings {
   auroraServerUrl: string;
   videoSnapshotFolder?: string;
   videoSnapshotFormat?: "png" | "webp" | "jpeg";
+  enabledTools: EnabledToolsConfig;
 }
 
 const STORAGE_KEY = "prisma.system-settings.v1";
@@ -46,13 +67,22 @@ const DEFAULT_SETTINGS: SystemSettings = {
   auroraServerUrl: "https://www.biglexj.com",
   videoSnapshotFolder: "",
   videoSnapshotFormat: "png",
+  enabledTools: DEFAULT_ENABLED_TOOLS,
 };
 
 function loadStoredSettings(): SystemSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      enabledTools: {
+        ...DEFAULT_SETTINGS.enabledTools,
+        ...(parsed.enabledTools || {}),
+      },
+    };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -115,6 +145,7 @@ export function useSystemSettings() {
               auroraServerUrl: stored.auroraServerUrl ?? prev.auroraServerUrl,
               videoSnapshotFolder: stored.videoSnapshotFolder ?? prev.videoSnapshotFolder,
               videoSnapshotFormat: stored.videoSnapshotFormat ?? prev.videoSnapshotFormat,
+              enabledTools: stored.enabledTools ?? prev.enabledTools,
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
             return synced;
@@ -268,6 +299,21 @@ export function useSystemSettings() {
     });
   }, []);
 
+  const setToolEnabled = useCallback((tool: ToolKey, enabled: boolean) => {
+    setSettings((prev) => {
+      const next = {
+        ...prev,
+        enabledTools: {
+          ...prev.enabledTools,
+          [tool]: enabled,
+        },
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, []);
+
   return {
     isLoaded,
     quickLookShortcut: settings.quickLookShortcut,
@@ -281,6 +327,7 @@ export function useSystemSettings() {
     auroraServerUrl: settings.auroraServerUrl,
     videoSnapshotFolder: settings.videoSnapshotFolder || "",
     videoSnapshotFormat: settings.videoSnapshotFormat || "png",
+    enabledTools: settings.enabledTools,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
@@ -292,5 +339,6 @@ export function useSystemSettings() {
     setAuroraServerUrl,
     setVideoSnapshotFolder,
     setVideoSnapshotFormat,
+    setToolEnabled,
   };
 }

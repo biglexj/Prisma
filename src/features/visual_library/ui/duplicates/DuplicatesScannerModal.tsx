@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../../../shared/ui/Icon";
 import { toSafeAssetUrl, cleanPath } from "../../../../shared/mediaTree";
@@ -15,9 +15,10 @@ import "./duplicates-scanner.css";
 interface DuplicatesScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  kind: VisualMediaKind;
+  kind?: VisualMediaKind;
   onOpenComparison?: (original: VisualLibraryItem, duplicate: VisualLibraryItem) => void;
   onRefreshLibrary?: () => void;
+  embedded?: boolean;
 }
 
 function formatBytes(bytes: number): string {
@@ -30,10 +31,19 @@ function formatBytes(bytes: number): string {
 export function DuplicatesScannerModal({
   isOpen,
   onClose,
-  kind,
+  kind = "image",
   onOpenComparison,
   onRefreshLibrary,
+  embedded = false,
 }: DuplicatesScannerModalProps) {
+  const [activeKind, setActiveKind] = useState<VisualMediaKind>(kind);
+
+  useEffect(() => {
+    if (kind) {
+      setActiveKind(kind);
+    }
+  }, [kind]);
+
   const [scanMode, setScanMode] = useState<"single_folder" | "two_folders" | "library">("single_folder");
   const [singleFolder, setSingleFolder] = useState<string>("");
   const [baseFolder, setBaseFolder] = useState<string>("");
@@ -120,7 +130,7 @@ export function DuplicatesScannerModal({
     setStatusMessage("Escaneando archivos y calculando firmas de similitud...");
     setSelectedPaths(new Set());
     try {
-      const results = await visualLibraryClient.scanDuplicates(kind, {
+      const results = await visualLibraryClient.scanDuplicates(activeKind, {
         paths: scanPaths,
         minSimilarityPct,
         checkVisualSimilarity,
@@ -362,15 +372,18 @@ export function DuplicatesScannerModal({
     title: cand.title,
     sourcePath: cand.path,
     relativeFolder: cand.relativeFolder,
-    kind,
+    kind: activeKind,
     modifiedAtMillis: cand.modifiedAtMillis,
     sizeBytes: cand.sizeBytes,
   });
 
   return (
-    <div className="duplicates-modal-backdrop" onClick={onClose}>
+    <div
+      className={embedded ? "duplicates-workspace-view" : "duplicates-modal-backdrop"}
+      onClick={embedded ? undefined : onClose}
+    >
       <div
-        className="duplicates-modal-card"
+        className={embedded ? "duplicates-workspace-card" : "duplicates-modal-card"}
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >
@@ -383,18 +396,52 @@ export function DuplicatesScannerModal({
             <div>
               <h2 className="duplicates-header-title">Buscador y Comparador de Duplicados</h2>
               <p className="duplicates-header-subtitle">
-                Detección por hash, similitud visual y comparativa cruzada de carpetas ({kind === "image" ? "Imágenes" : "Vídeos"})
+                Detección por hash, similitud visual y comparativa cruzada de carpetas ({activeKind === "image" ? "Imágenes" : "Vídeos"})
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            className="duplicates-btn-close"
-            onClick={onClose}
-            title="Cerrar (Esc)"
-          >
-            <Icon name="close" />
-          </button>
+          <div className="duplicates-header-actions">
+            <div className="duplicates-kind-switcher">
+              <button
+                type="button"
+                className={`duplicates-kind-btn ${activeKind === "image" ? "is-active" : ""}`}
+                onClick={() => {
+                  if (activeKind !== "image") {
+                    setActiveKind("image");
+                    setGroups([]);
+                    setHasScanned(false);
+                    setSelectedPaths(new Set());
+                  }
+                }}
+              >
+                <Icon name="image" />
+                <span>Imágenes</span>
+              </button>
+              <button
+                type="button"
+                className={`duplicates-kind-btn ${activeKind === "video" ? "is-active" : ""}`}
+                onClick={() => {
+                  if (activeKind !== "video") {
+                    setActiveKind("video");
+                    setGroups([]);
+                    setHasScanned(false);
+                    setSelectedPaths(new Set());
+                  }
+                }}
+              >
+                <Icon name="video" />
+                <span>Vídeos</span>
+              </button>
+            </div>
+            <button
+              type="button"
+              className="duplicates-btn-close"
+              onClick={onClose}
+              title={embedded ? "Volver al Inicio" : "Cerrar (Esc)"}
+            >
+              <Icon name="close" />
+            </button>
+          </div>
         </header>
 
         {/* Selector de Alcance: 1 Carpeta vs 2 Carpetas vs Toda la Biblioteca */}
@@ -422,7 +469,7 @@ export function DuplicatesScannerModal({
               onClick={() => setScanMode("library")}
             >
               <Icon name="layers" />
-              <span>Toda la Biblioteca ({kind === "image" ? "Imágenes" : "Vídeos"})</span>
+              <span>Toda la Biblioteca ({activeKind === "image" ? "Imágenes" : "Vídeos"})</span>
             </button>
           </div>
 

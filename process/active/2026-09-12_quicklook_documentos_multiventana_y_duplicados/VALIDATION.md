@@ -23,5 +23,8 @@
 - [x] Comparativa cruzada de 2 carpetas (Base vs Depurar): selección nativa de carpetas, botón de inversión rápida de roles (`⇄`), designación de la carpeta base como original a conservar intacta y de la carpeta a depurar como duplicados para limpieza.
 - [x] Priorización de mayor resolución (Upgrade HD/4K): detección de píxeles ($W \times H$), insignia visual de mejora de calidad, reemplazo atómico en disco (copia segura temporal, envío de versión antigua de baja resolución a papelera de reciclaje y eliminación del duplicado de la carpeta origen).
 - [x] Acciones flexibles de depuración: eliminación directa a papelera de Windows, reemplazo masivo de versiones base para todas las mejoras HD/4K detectadas, y traslado de duplicados a otra carpeta de respaldo o cuarentena sin borrarlos.
+- [x] Pestaña «Herramientas» en Configuración: integrada como la 4ª pestaña entre «Carpetas de Biblioteca» y «Barra de Progreso», con tarjetas interactivas M3 para cada herramienta integrada (Conversor, Renombrador, Duplicados, Luna Fetch, Gallery-DL, Wallpapers Aurora).
+- [x] Visibilidad modular en Barra Lateral: conmutación en tiempo real de cada herramienta en el bloque `HERRAMIENTAS` de la barra lateral, sincronizada en `localStorage` y entre ventanas.
+- [x] Acceso de primer nivel a «Duplicados»: navegación como espacio de trabajo embebido (`activeView === "duplicates"`) con selector entre Imágenes y Vídeos, soporte de 1 carpeta, 2 carpetas o biblioteca completa.
 
 

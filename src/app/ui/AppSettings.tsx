@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { LibrarySources } from "./LibrarySources";
 import { ModularLibrariesPanel } from "./ModularLibrariesPanel";
+import { ToolsSettingsPanel } from "./ToolsSettingsPanel";
 import { SynapseSettingsPanel } from "./SynapseSettingsPanel";
 import type { useMusicLibrary } from "../../features/music_library/useMusicLibrary";
 import type { useVisualLibrary } from "../../features/visual_library/useVisualLibrary";
@@ -33,7 +34,7 @@ interface AppSettingsProps {
   isMusicPaletteActive?: boolean;
 }
 
-type SettingsTab = "general" | "folders" | "libraries" | "progress" | "synapse" | "shortcuts" | "aurora";
+type SettingsTab = "general" | "libraries" | "folders" | "tools" | "progress" | "synapse" | "shortcuts" | "aurora";
 
 const THEMES: { mode: ThemeMode; label: string; desc: string; previewClass: string }[] = [
   { mode: "light", label: "Claro", desc: "Interfaz luminosa", previewClass: "light-preview" },
@@ -219,6 +220,13 @@ export function AppSettings({
           >
             <Icon name="folder-open" />
             <span>Carpetas de Biblioteca</span>
+          </button>
+          <button
+            className={activeTab === "tools" ? "is-active" : ""}
+            onClick={() => setActiveTab("tools")}
+          >
+            <Icon name="tool" />
+            <span>Herramientas</span>
           </button>
           <button
             className={activeTab === "progress" ? "is-active" : ""}
@@ -596,7 +604,16 @@ export function AppSettings({
         )}
 
         {/* ══════════════════════════════════════════════════════════════════════════
-            PESTAÑA 4: BARRA DE PROGRESO (Suite de 10 Estilos Interactivos)
+            PESTAÑA 4: HERRAMIENTAS MODULARES
+        ══════════════════════════════════════════════════════════════════════════ */}
+        {activeTab === "tools" && (
+          <div className="settings-panel">
+            <ToolsSettingsPanel />
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════════════
+            PESTAÑA 5: BARRA DE PROGRESO (Suite de 10 Estilos Interactivos)
         ══════════════════════════════════════════════════════════════════════════ */}
         {activeTab === "progress" && (
           <ProgressBarSettingsPanel

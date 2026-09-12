@@ -102,7 +102,8 @@ export type IconName =
   | "chevronDown"
   | "chevronUp"
   | "convert"
-  | "headphones";
+  | "headphones"
+  | "tool";
 
 const paths: Record<IconName, ReactNode> = {
   headphones: <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />,
@@ -213,6 +214,7 @@ const paths: Record<IconName, ReactNode> = {
   chevronDown: <polyline points="6 9 12 15 18 9" />,
   chevronUp: <polyline points="18 15 12 9 6 15" />,
   convert: <><path d="M21 7v6h-6" /><path d="M3 17v-6h6" /><path d="M6 7.5a9 9 0 0 1 14.5-1.5L21 7" /><path d="M18 16.5a9 9 0 0 1-14.5 1.5L3 17" /></>,
+  tool: <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />,
 };
 
 export function Icon({ name, width = "1em", height = "1em", ...props }: SVGProps<SVGSVGElement> & { name: IconName }) {

@@ -20,6 +20,7 @@ export type AppView =
   | "playlists"
   | "history"
   | "renamer"
+  | "duplicates"
   | (string & {});
 
 interface AppSidebarProps {
@@ -63,7 +64,7 @@ export function AppSidebar({
   density = "standard",
 }: AppSidebarProps) {
   const { activeLibraries } = useCustomLibraries();
-  const { auroraOnlineServicesEnabled, auroraWallpapersEnabled } = useSystemSettings();
+  const { auroraOnlineServicesEnabled, auroraWallpapersEnabled, enabledTools } = useSystemSettings();
 
   const dynamicLibraryItems: SidebarItem[] = [
     ...libraryItems,
@@ -74,15 +75,27 @@ export function AppSidebar({
     })),
   ];
 
-  const dynamicToolItems: SidebarItem[] = [
-    { icon: "convert", label: "Conversor", view: "converter" },
-    { icon: "edit", label: "Renombrador", view: "renamer" },
-    { icon: "download", label: "Luna Fetch", view: "luna_fetch" },
-    { icon: "layers", label: "Gallery-DL", view: "gallery_dl" },
-    ...(auroraOnlineServicesEnabled && auroraWallpapersEnabled
-      ? [{ icon: "sparkles" as IconName, label: "Wallpapers Aurora", view: "wallpapers" }]
-      : []),
+  const allToolItems: { key: keyof typeof enabledTools; item: SidebarItem }[] = [
+    { key: "converter", item: { icon: "convert", label: "Conversor", view: "converter" } },
+    { key: "renamer", item: { icon: "edit", label: "Renombrador", view: "renamer" } },
+    { key: "duplicates", item: { icon: "copy", label: "Duplicados", view: "duplicates" } },
+    { key: "luna_fetch", item: { icon: "download", label: "Luna Fetch", view: "luna_fetch" } },
+    { key: "gallery_dl", item: { icon: "layers", label: "Gallery-DL", view: "gallery_dl" } },
+    {
+      key: "wallpapers",
+      item: { icon: "sparkles" as IconName, label: "Wallpapers Aurora", view: "wallpapers" },
+    },
   ];
+
+  const dynamicToolItems: SidebarItem[] = allToolItems
+    .filter(({ key }) => {
+      if (!enabledTools[key]) return false;
+      if (key === "wallpapers") {
+        return auroraOnlineServicesEnabled && auroraWallpapersEnabled;
+      }
+      return true;
+    })
+    .map(({ item }) => item);
 
   return (
     <aside className={`music-sidebar density-${density}`} data-density={density}>
@@ -100,7 +113,9 @@ export function AppSidebar({
         <SidebarSection title="PRINCIPAL" items={principalItems} activeView={activeView} onNavigate={onNavigate} />
         <SidebarSection title="BIBLIOTECA" items={dynamicLibraryItems} activeView={activeView} onNavigate={onNavigate} />
         <SidebarSection title="COLECCIONES" items={collectionItems} activeView={activeView} onNavigate={onNavigate} />
-        <SidebarSection title="HERRAMIENTAS" items={dynamicToolItems} activeView={activeView} onNavigate={onNavigate} />
+        {dynamicToolItems.length > 0 && (
+          <SidebarSection title="HERRAMIENTAS" items={dynamicToolItems} activeView={activeView} onNavigate={onNavigate} />
+        )}
       </nav>
 
       <footer className="sidebar-footer">
