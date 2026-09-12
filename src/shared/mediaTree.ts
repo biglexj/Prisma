@@ -44,17 +44,12 @@ export function toPlatformPath(path: string | null | undefined): string {
 
 /**
  * Convierte una ruta local a una URL segura para Tauri asset protocol en WebView2.
- * Codifica caracteres reservados en URIs como '@', '#', '?' que de otro modo
- * romperían la resolución de host o fragmentos en Chromium.
+ * Limpia prefijos extendidos UNC y asegura separadores de plataforma válidos.
  */
 export function toSafeAssetUrl(path: string | null | undefined): string {
   if (!path) return "";
   const cleaned = cleanPath(path);
-  const safePath = cleaned
-    .replace(/@/g, "%40")
-    .replace(/#/g, "%23")
-    .replace(/\?/g, "%3F");
-  return convertFileSrc(toPlatformPath(safePath));
+  return convertFileSrc(toPlatformPath(cleaned));
 }
 
 export function getCleanRelativeFolder(relativeFolder: string | null | undefined): string {

@@ -113,7 +113,7 @@ impl QuickLookState {
         }
 
         let payload = QuickLookPayload::with_selection(path_str, media_type, selection_index, selection_total);
-        let (target_w, target_h) = resolve_media_size(media_type, path);
+        let (target_w, target_h) = resolve_media_size(&self.app_handle, media_type, path);
 
         if matches!(media_type, QuickLookMediaType::Audio | QuickLookMediaType::Video) {
             if let Some(playback_state) = self.app_handle.try_state::<crate::app::state::PlaybackProbeState>() {
@@ -202,7 +202,7 @@ impl QuickLookState {
         let (index, total) = if info.total > 1 { (Some(info.index), Some(info.total)) } else { (None, None) };
         // Leer metadatos puede tardar (por ejemplo, archivos MTP). Validar de nuevo al publicar.
         let payload = QuickLookPayload::with_selection(path_str.clone(), media_type, index, total);
-        let (width, height) = resolve_media_size(media_type, &path);
+        let (width, height) = resolve_media_size(&self.app_handle, media_type, &path);
         let mut current = self.current_path.lock().unwrap();
         if !selection_update_is_current(is_preview_open(), revision, self.preview_revision.load(Ordering::SeqCst), source, foreground_selection_source())
             || *current != expected_path { return; }
@@ -355,7 +355,7 @@ impl QuickLookState {
 
         let media_type = QuickLookMediaType::from_path(p).unwrap_or(QuickLookMediaType::Generic);
         let payload = QuickLookPayload::new(path.to_string(), media_type);
-        let (target_w, target_h) = resolve_media_size(media_type, p);
+        let (target_w, target_h) = resolve_media_size(&self.app_handle, media_type, p);
 
         let label = loop {
             let next_id = self.detached_counter.fetch_add(1, Ordering::SeqCst) + 1;
@@ -430,13 +430,38 @@ pub struct OpenMediaPayload {
     pub current_time: Option<f64>,
 }
 
-fn resolve_media_size(media_type: QuickLookMediaType, path: &Path) -> (f64, f64) {
+fn get_screen_bounds(app_handle: &tauri::AppHandle) -> (f64, f64) {
+    if let Some(win) = app_handle.get_webview_window("quicklook") {
+        if let Ok(Some(m)) = win.current_monitor() {
+            let scale = m.scale_factor();
+            return (
+                (m.size().width as f64 / scale).round(),
+                (m.size().height as f64 / scale).round(),
+            );
+        }
+    }
+    if let Ok(Some(m)) = app_handle.primary_monitor() {
+        let scale = m.scale_factor();
+        return (
+            (m.size().width as f64 / scale).round(),
+            (m.size().height as f64 / scale).round(),
+        );
+    }
+    (1920.0, 1080.0)
+}
+
+fn resolve_media_size(app_handle: &tauri::AppHandle, media_type: QuickLookMediaType, path: &Path) -> (f64, f64) {
+    let (screen_w, screen_h) = get_screen_bounds(app_handle);
+    // Base ergonómica para documentos por porcentaje de pantalla: 70% ancho, 80% alto
+    let doc_w = (screen_w * 0.70).round().max(760.0);
+    let doc_h = (screen_h * 0.80).round().max(580.0);
+
     match media_type {
         QuickLookMediaType::Audio => (640.0, 390.0),
         QuickLookMediaType::Image => {
             if let Ok((nw, nh)) = image::image_dimensions(path) {
-                let max_w = 1280.0;
-                let max_h = 820.0;
+                let max_w = (screen_w * 0.85).min(1280.0);
+                let max_h = (screen_h * 0.85).min(820.0);
                 let header_h = 48.0;
                 let max_content_h = max_h - header_h;
 
@@ -451,8 +476,8 @@ fn resolve_media_size(media_type: QuickLookMediaType, path: &Path) -> (f64, f64)
         }
         QuickLookMediaType::Video => {
             if let Some((nw, nh)) = super::model::get_video_dimensions(path) {
-                let max_w = 1280.0;
-                let max_h = 820.0;
+                let max_w = (screen_w * 0.85).min(1280.0);
+                let max_h = (screen_h * 0.85).min(820.0);
                 let header_h = 48.0;
                 let max_content_h = max_h - header_h;
 
@@ -465,14 +490,14 @@ fn resolve_media_size(media_type: QuickLookMediaType, path: &Path) -> (f64, f64)
                 (560.0, 360.0)
             }
         }
-        QuickLookMediaType::Pdf => (880.0, 750.0),
-        QuickLookMediaType::Text | QuickLookMediaType::Markdown => (830.0, 630.0),
-        QuickLookMediaType::Html => (960.0, 700.0),
-        QuickLookMediaType::Archive => (740.0, 580.0),
-        QuickLookMediaType::Epub => (830.0, 630.0),
+        QuickLookMediaType::Pdf => (doc_w, doc_h),
+        QuickLookMediaType::Text | QuickLookMediaType::Markdown => (doc_w, doc_h),
+        QuickLookMediaType::Html => (doc_w, doc_h),
+        QuickLookMediaType::Archive => ((screen_w * 0.65).round().max(740.0), (screen_h * 0.72).round().max(560.0)),
+        QuickLookMediaType::Epub => (doc_w, doc_h),
         QuickLookMediaType::Lyrics => (720.0, 600.0),
         QuickLookMediaType::Folder => (640.0, 460.0),
-        QuickLookMediaType::Project => (860.0, 620.0),
+        QuickLookMediaType::Project => (doc_w, doc_h),
         QuickLookMediaType::Playlist => (720.0, 560.0),
         QuickLookMediaType::Generic => (600.0, 420.0),
     }

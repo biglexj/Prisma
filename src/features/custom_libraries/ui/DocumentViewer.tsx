@@ -94,8 +94,16 @@ export function DocumentViewer({
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"preview" | "split" | "code">(isMarkdown ? "preview" : "code");
   const [isFullWidth, setIsFullWidth] = useState<boolean>(false);
-  const [fontFamily, setFontFamily] = useState<"sans" | "serif" | "mono">("sans");
+  const [fontFamily, setFontFamily] = useState<"sans" | "serif" | "mono">(isMarkdown ? "sans" : "mono");
   const [fontSize, setFontSize] = useState<number>(15);
+
+  const effectiveSizeBytes = useMemo(() => {
+    if (item.sizeBytes > 0) return item.sizeBytes;
+    if (textContent !== null) {
+      return new TextEncoder().encode(textContent).length;
+    }
+    return 0;
+  }, [item.sizeBytes, textContent]);
   const [copied, setCopied] = useState<boolean>(false);
   const [copiedPath, setCopiedPath] = useState<boolean>(false);
   const [isDirty, setIsDirty] = useState<boolean>(false);
@@ -360,8 +368,8 @@ export function DocumentViewer({
               {isDirty && <span className="doc-viewer-dirty-badge">● Modificado</span>}
             </div>
             <span className="doc-viewer-meta">
-              {formatBytes(item.sizeBytes)}
-              {item.relativeFolder ? ` • ${item.relativeFolder}` : ""}
+              {effectiveSizeBytes > 0 ? formatBytes(effectiveSizeBytes) : ""}
+              {effectiveSizeBytes > 0 && item.relativeFolder ? ` • ${item.relativeFolder}` : item.relativeFolder || ""}
               {itemsList.length > 0 ? ` (${currentIndex + 1} de ${itemsList.length})` : ""}
             </span>
           </div>
@@ -642,7 +650,7 @@ export function DocumentViewer({
               <div
                 className={`doc-viewer-code-container ${
                   isFullWidth ? "is-full-width" : "is-centered"
-                }`}
+                } doc-viewer-font-${fontFamily}`}
                 style={{ fontSize: `${fontSize}px` }}
               >
                 <div className="doc-viewer-line-numbers" ref={lineNumbersRef} aria-hidden="true">
