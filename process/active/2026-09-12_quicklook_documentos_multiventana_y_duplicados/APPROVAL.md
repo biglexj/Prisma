@@ -8,5 +8,8 @@
 1. **QuickLook Dimensions**: Se incrementan los tamaños de documentos (Markdown, texto, EPUB, archivos comprimidos) para mejorar la lectura y no requerir maximización forzada.
 2. **Multi-ventana sin duplicación en bandeja**: Prisma mantiene un único icono en la bandeja del sistema; las previsualizaciones desacopladas son ventanas hijas de WebView gestionadas por el mismo proceso.
 3. **Escaneo de Duplicados**: Se modela una arquitectura híbrida en Rust (Hash exacto + Perceptual Hash dHash) con UI interactiva inspirada en dupeGuru y conectada con `ImageComparisonModal`.
-4. **Sanitización de URLs (`toSafeAssetUrl`)**: Sustitución sistemática de `convertFileSrc` para codificar caracteres reservados URI como `@`, garantizando compatibilidad con rutas de usuarios y canales de YouTube en Windows WebView2.
+4. **Sanitización de URLs (`toSafeAssetUrl`)**: Preserva la integridad literal del sistema de archivos local y compatibilidad nativa con Tauri v2 y WebView2 sin alterar caracteres `@`.
+5. **Dimensionamiento Dinámico por Porcentaje de Monitor**: Se establece como estándar de producto que los documentos en QuickLook se abran al 70% de ancho y 80% de alto del monitor activo, asegurando proporciones ergonómicas universales en cualquier resolución o escala de pantalla.
+6. **Tokens M3 y Visor de Documentos Profesional**: Se incorporan los tokens `--surface-container-lowest` y `--surface-dim` a la base de diseño, dotando a `DocumentViewer` de una estética de hoja de documento elevada con legibilidad óptima en modos claro y oscuro.
+
 

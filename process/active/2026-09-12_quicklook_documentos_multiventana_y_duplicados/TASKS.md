@@ -23,4 +23,11 @@
   - [x] Comprobar compilación de TypeScript (`bun run tsc --noEmit` o `npm run tsc --noEmit`).
   - [x] Comprobar compilación de Rust (`cargo check`).
   - [x] Registrar validación en `VALIDATION.md` y formalizar `APPROVAL.md`.
+- [x] **Fase 5: Corrección de Imágenes PNG, Dimensionamiento por Porcentaje de Pantalla y Contraste M3**
+  - [x] Corregir `toSafeAssetUrl`: eliminar la mutación artificial de `@` por `%40` que provocaba doble codificación y fallos 404 en carpetas como `@ely_vtuber`.
+  - [x] Dimensionamiento porcentual dinámico en Rust (`resolve_media_size`): 70% del ancho y 80% del alto de la pantalla actual para documentos (Markdown, texto, EPUB, PDF, HTML y proyectos).
+  - [x] Soporte de restauración de pantalla completa/maximizado con base al 70%x80% en `quick_look_toggle_maximize`.
+  - [x] Incorporar tokens Material 3 faltantes en `styles.css` (`--surface-dim` y `--surface-container-lowest`) para temas claro y oscuro.
+  - [x] Rediseñar el visor `DocumentViewer`: corregir contraste texto-fondo (blanco puro/hoja elevada en modo claro, oscuro profundo en modo oscuro), cálculo reactivo del tamaño del archivo en disco (`effectiveSizeBytes`) eliminando `0 B`, y estandarización del canal de números de línea alineado 1:1.
+
 

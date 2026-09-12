@@ -17,4 +17,8 @@
 - [x] Ventana desacoplada: aísla estado de maximizado/límites por `window.label()` y cierra al instante con `window.close()` al pulsar `✕` o `Esc`.
 - [x] Sin menú contextual de WebView2 en ventanas de previsualización (`preventDefault` en `contextmenu`).
 - [x] Escaneo de duplicados: motor en Rust puro con detección por tamaño/hash BLAKE3/SHA-256 (Nivel 1 exacto) y perceptual dHash 64-bit con similitud porcentual (Nivel 2), modal interactivo con selección por lote, envío seguro a papelera (`trash`) y botón directo para «Comparar» en `ImageComparisonModal`.
+- [x] Carga de imágenes PNG en rutas con `@` (ej. `YouTube/@ely_vtuber/01_Brand/Logo/Ely Vtuber 2.png`): resuelta al evitar codificación destructiva en `toSafeAssetUrl`.
+- [x] Dimensionamiento de QuickLook para documentos por porcentaje de pantalla: 70% de ancho y 80% de alto calculado reactivamente contra el monitor actual de Windows.
+- [x] DocumentViewer: contraste de alta legibilidad en modo claro y modo oscuro, eliminación del texto negro sobre fondo negro, contenedor centrado con estilo de hoja elevada M3, números de línea perfectamente alineados y tamaño real del archivo en disco en lugar de `0 B`.
+
 
