@@ -1,8 +1,9 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Icon } from "../../../shared/ui/Icon";
+import { toSafeAssetUrl } from "../../../shared/mediaTree";
 import { formatTime } from "../../playback/ui/formatters";
 import { MediaProgressBar } from "../../../shared/ui/MediaProgressBar";
 import type { QuickLookPayload } from "../model/types";
@@ -43,7 +44,7 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
 
     // Cache-buster con tamaño y fecha de modificación para evitar que Chromium
     // sirva byte-ranges obsoletos cuando el archivo fue sobrescrito (ej. DaVinci Resolve)
-    const fileSrc = convertFileSrc(payload.path);
+    const fileSrc = toSafeAssetUrl(payload.path);
     const cacheKey = payload.fileSizeBytes
       ? `?v=${payload.fileSizeBytes}_${encodeURIComponent(payload.modifiedDate || "")}`
       : `?t=${Date.now()}`;
@@ -223,7 +224,7 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
     setIsReady(false);
     const video = videoRef.current;
     if (!video) return;
-    const fileSrc = convertFileSrc(payload.path);
+    const fileSrc = toSafeAssetUrl(payload.path);
     video.src = `${fileSrc}?retry=${Date.now()}`;
     video.load();
     void video.play().then(() => setIsPlaying(true)).catch(() => {});

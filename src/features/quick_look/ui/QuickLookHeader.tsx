@@ -12,6 +12,7 @@ interface QuickLookHeaderProps {
   onOpenInMain: () => void;
   onOpenDetached?: () => void;
   onCompare?: () => void;
+  onEdit?: () => void;
   onStepSelection?: (forward: boolean) => void;
   onClose: () => void;
 }
@@ -24,6 +25,7 @@ export function QuickLookHeader({
   onOpenInMain,
   onOpenDetached,
   onCompare,
+  onEdit,
   onStepSelection,
   onClose,
 }: QuickLookHeaderProps) {
@@ -227,10 +229,25 @@ export function QuickLookHeader({
             e.stopPropagation();
             onOpenInMain();
           }}
-          title="Abrir en Prisma"
+          title={["markdown", "text", "html", "lyrics", "pdf", "epub"].includes(payload.mediaType) ? "Abrir visor completo en Prisma" : "Abrir en Prisma"}
         >
           <Icon name="external-link" />
         </button>
+
+        {/* Botón Editar para documentos y texto */}
+        {onEdit && (
+          <button
+            type="button"
+            className="quicklook-btn-icon-action"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            title="Editar con el editor predeterminado de Windows"
+          >
+            <Icon name="edit" />
+          </button>
+        )}
 
         {onCompare && payload.mediaType === "image" && (
           <button
@@ -264,7 +281,7 @@ export function QuickLookHeader({
               e.stopPropagation();
               onOpenDetached();
             }}
-            title="Abrir en otra instancia para comparar imágenes o vídeos"
+            title="Desacoplar en ventana independiente (sin duplicar icono en la bandeja)"
           >
             <Icon name="layers" />
           </button>

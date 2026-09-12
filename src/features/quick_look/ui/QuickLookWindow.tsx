@@ -234,12 +234,16 @@ export function QuickLookWindow() {
     void quickLookClient.openDetached(payload.path).catch(() => {});
   };
 
+  const handleEdit = () => {
+    if (!payload) return;
+    void quickLookClient.editFile(payload.path).catch(() => {});
+  };
+
   const handleClose = () => {
     playbackTimeRef.current = 0;
     if (isDetached) {
-      void quickLookClient.closeWindow().catch(() => {
-        void getCurrentWebviewWindow().close().catch(() => {});
-      });
+      void getCurrentWebviewWindow().close().catch(() => {});
+      void quickLookClient.closeWindow().catch(() => {});
       return;
     }
     setPayload(null);
@@ -251,7 +255,10 @@ export function QuickLookWindow() {
   };
 
   return (
-    <div className="quicklook-root">
+    <div
+      className="quicklook-root"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div
         className={`quicklook-card ${paletteStyle ? "has-palette" : ""} ${isMaximized ? "is-maximized" : ""}`}
         style={paletteStyle}
@@ -263,6 +270,7 @@ export function QuickLookWindow() {
               isMaximized={isMaximized}
               onClose={handleClose}
               onCompare={() => setIsComparing(true)}
+              onEdit={["markdown", "text", "html", "lyrics", "generic", "project"].includes(payload.mediaType) ? handleEdit : undefined}
               onOpenDetached={handleOpenDetached}
               onOpenInMain={handleOpenInMain}
               onStepSelection={(forward) => void quickLookClient.stepSelection(forward)}

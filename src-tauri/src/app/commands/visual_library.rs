@@ -640,4 +640,35 @@ pub fn visual_library_sync_pip_icon(app: tauri::AppHandle) -> Result<(), String>
     Ok(())
 }
 
+#[tauri::command]
+pub async fn visual_library_scan_duplicates(
+    kind: VisualMediaKind,
+    options: crate::features::visual_library::DuplicateScanOptions,
+    library_state: State<'_, VisualLibraryState>,
+) -> Result<Vec<crate::features::visual_library::DuplicateGroup>, String> {
+    let scan_paths = if !options.paths.is_empty() {
+        options.paths.clone()
+    } else {
+        library_state.paths(kind)?
+    };
+    let excluded_paths = library_state.excluded_paths(kind)?;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut seen = HashSet::new();
+        let mut items = Vec::new();
+        for path in scan_paths {
+            if let Ok(scan) = scan_visual_folder(Path::new(&path), kind, &excluded_paths) {
+                for item in scan.items {
+                    if seen.insert(item.path.clone()) {
+                        items.push(item);
+                    }
+                }
+            }
+        }
+        Ok(crate::features::visual_library::scan_duplicates(items, options, None))
+    })
+    .await
+    .map_err(|e| format!("Error en runtime al escanear duplicados: {e}"))?
+}
+
 

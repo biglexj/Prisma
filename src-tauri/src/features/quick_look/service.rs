@@ -465,16 +465,16 @@ fn resolve_media_size(media_type: QuickLookMediaType, path: &Path) -> (f64, f64)
                 (560.0, 360.0)
             }
         }
-        QuickLookMediaType::Pdf => (840.0, 720.0),
-        QuickLookMediaType::Text | QuickLookMediaType::Markdown => (760.0, 560.0),
-        QuickLookMediaType::Html => (920.0, 650.0),
-        QuickLookMediaType::Archive => (680.0, 520.0),
-        QuickLookMediaType::Epub => (760.0, 560.0),
-        QuickLookMediaType::Lyrics => (680.0, 540.0),
-        QuickLookMediaType::Folder => (600.0, 420.0),
-        QuickLookMediaType::Project => (820.0, 580.0),
-        QuickLookMediaType::Playlist => (680.0, 520.0),
-        QuickLookMediaType::Generic => (560.0, 380.0),
+        QuickLookMediaType::Pdf => (880.0, 750.0),
+        QuickLookMediaType::Text | QuickLookMediaType::Markdown => (830.0, 630.0),
+        QuickLookMediaType::Html => (960.0, 700.0),
+        QuickLookMediaType::Archive => (740.0, 580.0),
+        QuickLookMediaType::Epub => (830.0, 630.0),
+        QuickLookMediaType::Lyrics => (720.0, 600.0),
+        QuickLookMediaType::Folder => (640.0, 460.0),
+        QuickLookMediaType::Project => (860.0, 620.0),
+        QuickLookMediaType::Playlist => (720.0, 560.0),
+        QuickLookMediaType::Generic => (600.0, 420.0),
     }
 }
 

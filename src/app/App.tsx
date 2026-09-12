@@ -30,6 +30,8 @@ import { SynapseToast, type SynapseReceivedFile } from "./ui/SynapseToast";
 import { SendToSuperGalleryModal } from "./ui/SendToSuperGalleryModal";
 import { addToHistory } from "../shared/useHistory";
 import { CustomLibraryView } from "../features/custom_libraries/ui/CustomLibraryView";
+import { DocumentViewer } from "../features/custom_libraries/ui/DocumentViewer";
+import type { CustomLibraryItem } from "../features/custom_libraries/model/types";
 import { useCustomLibraries } from "../features/custom_libraries/hooks/useCustomLibraries";
 import { PrismaConvertView } from "../features/converter/ui/PrismaConvertView";
 import { LunaFetchView } from "../features/luna_fetch/ui/LunaFetchView";
@@ -73,6 +75,7 @@ function AppContent() {
   const [activeVideoSessionItems, setActiveVideoSessionItems] = useState<VisualLibraryItem[]>([]);
   const [videoReturnView, setVideoReturnView] = useState<AppView>("videos");
   const [activeInitialImagePath, setActiveInitialImagePath] = useState<string | null>(null);
+  const [activeDocumentItem, setActiveDocumentItem] = useState<CustomLibraryItem | null>(null);
   const [isPip, setIsPip] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -251,7 +254,7 @@ function AppContent() {
     const isAudio = /\.(mp3|flac|wav|aac|m4a|ogg|opus|wma)$/.test(lower);
     const isVideo = /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v)$/.test(lower);
     const isImage = /\.(png|jpe?g|webp|gif|bmp|ico|svg|avif|tiff?)$/.test(lower);
-    const isDocumentOrProject = /\.(pdf|md|markdown|epub|mobi|cbz|cbr|kra|krz|ora|af|afphoto|afdesign|afpub|psd|psb|ai|blend|drp)$/.test(lower);
+    const isDocumentOrProject = /\.(pdf|md|markdown|epub|mobi|cbz|cbr|kra|krz|ora|af|afphoto|afdesign|afpub|psd|psb|ai|blend|drp|txt|json|yaml|yml|toml|rs|ts|tsx|js|jsx|py|css|html|log|ini|env|sh|ps1)$/i.test(lower);
 
     if (isPlaylist) {
       if (document.pictureInPictureElement) {
@@ -311,7 +314,25 @@ function AppContent() {
       setActiveInitialImagePath(filePath);
       setActiveView("images");
     } else if (isDocumentOrProject) {
-      void invoke("quick_look_show_file", { path: filePath }).catch(() => { });
+      if (document.pictureInPictureElement) {
+        void document.exitPictureInPicture().catch(() => { });
+      }
+      setActiveVideoPath(null);
+      setActiveVideoSessionItems([]);
+      setIsPip(false);
+      setActiveInitialImagePath(null);
+
+      const ext = filePath.split(".").pop()?.toLowerCase() || "";
+      const name = filePath.replace(/\\/g, "/").split("/").pop() || "Documento";
+      const docItem: CustomLibraryItem = {
+        path: filePath,
+        name,
+        extension: ext,
+        relativeFolder: "",
+        sizeBytes: 0,
+        modifiedTimestamp: Date.now(),
+      };
+      setActiveDocumentItem(docItem);
     } else {
       if (document.pictureInPictureElement) {
         void document.exitPictureInPicture().catch(() => { });
@@ -1095,6 +1116,13 @@ function AppContent() {
           {activeView === "wallpapers" ? <WallpapersView /> : null}
         </main>
       </div>
+
+      {activeDocumentItem ? (
+        <DocumentViewer
+          item={activeDocumentItem}
+          onClose={() => setActiveDocumentItem(null)}
+        />
+      ) : null}
 
       <SynapseToast
         file={synapseToastFile}

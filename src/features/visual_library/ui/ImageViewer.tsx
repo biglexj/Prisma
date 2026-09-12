@@ -3,7 +3,7 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
 import { ContextMenu } from "../../../shared/ui/ContextMenu";
-import { cleanPath } from "../../../shared/mediaTree";
+import { cleanPath, toSafeAssetUrl } from "../../../shared/mediaTree";
 import { useFavorites } from "../../../shared/useFavorites";
 import { useMediaDelete } from "../../../shared/useMediaDelete";
 import { useMediaRename } from "../../../shared/useMediaRename";
@@ -791,7 +791,7 @@ export function ImageViewer({
                 alt={previousLayer.item.title}
                 className="image-viewer-media"
                 draggable={false}
-                src={convertFileSrc(cleanPath(previousLayer.item.path))}
+                src={toSafeAssetUrl(previousLayer.item.path)}
               />
             </div>
           ) : null}
@@ -811,7 +811,7 @@ export function ImageViewer({
               className="image-viewer-media"
               draggable={false}
               ref={imgRef}
-              src={convertFileSrc(cleanPath(currentItem.path))}
+              src={toSafeAssetUrl(currentItem.path)}
               onError={() => setIsEntering(true)}
               onLoad={(e) => {
                 const img = e.currentTarget;

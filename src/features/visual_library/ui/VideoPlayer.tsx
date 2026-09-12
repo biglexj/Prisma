@@ -4,7 +4,7 @@ import { formatTime, mediaTitle } from "../../playback/ui/formatters";
 import { Icon } from "../../../shared/ui/Icon";
 import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
 import { ContextMenu } from "../../../shared/ui/ContextMenu";
-import { cleanPath, toPlatformPath } from "../../../shared/mediaTree";
+import { cleanPath, toPlatformPath, toSafeAssetUrl } from "../../../shared/mediaTree";
 import type { VisualLibraryItem } from "../model/types";
 import { VideoThumbnail } from "./VideoThumbnail";
 import { useFavorites } from "../../../shared/useFavorites";
@@ -155,7 +155,7 @@ export function VideoPlayer({
 
   const hasMedia = Boolean(path);
   const title = path ? mediaTitle(path) : "Sin vídeo seleccionado";
-  const videoSrc = path ? convertFileSrc(toPlatformPath(path)) : "";
+  const videoSrc = path ? toSafeAssetUrl(path) : "";
 
   // Sincronizar cola local si cambian los props
   useEffect(() => {
@@ -317,7 +317,7 @@ export function VideoPlayer({
           trackIndex,
         });
 
-        const audioSrc = convertFileSrc(toPlatformPath(audioFilePath));
+        const audioSrc = toSafeAssetUrl(audioFilePath);
         setExtractedAudioUrl(audioSrc);
 
         if (videoRef.current) {

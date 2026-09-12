@@ -43,7 +43,7 @@ use app::commands::media::{
 };
 use app::commands::quick_look::{
     autostart_get_status, autostart_set, get_minimize_to_tray, is_minimize_to_tray_enabled,
-    quick_look_close_window, quick_look_get_current, quick_look_get_detached_payload,
+    quick_look_close_window, quick_look_edit_file, quick_look_get_current, quick_look_get_detached_payload,
     quick_look_get_shortcut, quick_look_hide, quick_look_is_maximized, quick_look_open_detached,
     quick_look_open_in_main, quick_look_set_shortcut, quick_look_set_size, quick_look_show_file,
     quick_look_start_dragging, quick_look_step_selection, quick_look_toggle, quick_look_toggle_maximize, set_minimize_to_tray,
@@ -66,7 +66,7 @@ use app::commands::visual_library::{
     visual_library_image_preview, visual_library_list_excluded_folders,
     visual_library_list_folders, visual_library_list_items,
     visual_library_remove_excluded_folder, visual_library_remove_folder,
-    visual_library_rescan_folder, visual_library_sync_pip_icon,
+    visual_library_rescan_folder, visual_library_scan_duplicates, visual_library_sync_pip_icon,
 };
 use app::commands::wallpapers::{wallpaper_save_and_apply, wallpaper_set_desktop};
 use app::state::{FavoritesState, InitialFileState, MusicLibraryState, PlaybackProbeState, VisualLibraryState};
@@ -367,6 +367,7 @@ pub fn run() {
             visual_library_list_items,
             visual_library_image_preview,
             visual_library_sync_pip_icon,
+            visual_library_scan_duplicates,
             media_delete_items,
             media_rename_item,
             media_save_image,
@@ -416,6 +417,7 @@ pub fn run() {
             favorites_toggle,
             favorites_is_favorite,
             quick_look_close_window,
+            quick_look_edit_file,
             quick_look_toggle,
             quick_look_hide,
             quick_look_open_in_main,

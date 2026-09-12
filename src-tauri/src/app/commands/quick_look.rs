@@ -1,19 +1,25 @@
+use std::collections::HashMap;
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::State;
 use crate::features::quick_look::keyboard_hook::{get_shortcut_mode, set_shortcut_mode};
 use crate::features::quick_look::{QuickLookPayload, QuickLookState};
 use crate::infrastructure::autostart::{is_autostart_enabled, set_autostart};
 
-use std::sync::Mutex;
-
 static MINIMIZE_TO_TRAY: AtomicBool = AtomicBool::new(true);
-static PREV_BOUNDS: Mutex<Option<(f64, f64, f64, f64)>> = Mutex::new(None);
-static IS_CUSTOM_MAXIMIZED: AtomicBool = AtomicBool::new(false);
+static PREV_BOUNDS: Mutex<Option<HashMap<String, (f64, f64, f64, f64)>>> = Mutex::new(None);
+static WINDOWS_MAXIMIZED: Mutex<Option<HashMap<String, bool>>> = Mutex::new(None);
 
 pub fn reset_maximize_state() {
-    IS_CUSTOM_MAXIMIZED.store(false, Ordering::SeqCst);
+    if let Ok(mut map) = WINDOWS_MAXIMIZED.lock() {
+        if let Some(m) = map.as_mut() {
+            m.insert("quicklook".to_string(), false);
+        }
+    }
     if let Ok(mut lock) = PREV_BOUNDS.lock() {
-        *lock = None;
+        if let Some(m) = lock.as_mut() {
+            m.remove("quicklook");
+        }
     }
 }
 
@@ -103,30 +109,39 @@ pub fn get_minimize_to_tray() -> bool {
 
 #[tauri::command]
 pub fn quick_look_toggle_maximize(window: tauri::WebviewWindow) -> Result<bool, String> {
-    let currently_maximized = IS_CUSTOM_MAXIMIZED.load(Ordering::SeqCst);
+    let label = window.label().to_string();
+    let currently_maximized = {
+        let mut map = WINDOWS_MAXIMIZED.lock().unwrap();
+        let m = map.get_or_insert_with(HashMap::new);
+        m.get(&label).copied().unwrap_or(false)
+    };
 
     if currently_maximized {
         let prev = {
-            let lock = PREV_BOUNDS.lock().unwrap();
-            *lock
+            let mut lock = PREV_BOUNDS.lock().unwrap();
+            let m = lock.get_or_insert_with(HashMap::new);
+            m.remove(&label)
         };
 
         if let Some((x, y, w, h)) = prev {
             let _ = window.set_size(tauri::LogicalSize::new(w, h));
             let _ = window.set_position(tauri::LogicalPosition::new(x, y));
         } else {
-            let _ = window.set_size(tauri::LogicalSize::new(800.0, 560.0));
+            let _ = window.set_size(tauri::LogicalSize::new(830.0, 630.0));
             let _ = window.center();
         }
 
-        IS_CUSTOM_MAXIMIZED.store(false, Ordering::SeqCst);
+        if let Ok(mut map) = WINDOWS_MAXIMIZED.lock() {
+            let m = map.get_or_insert_with(HashMap::new);
+            m.insert(label, false);
+        }
         Ok(false)
     } else {
         let scale = window.scale_factor().unwrap_or(1.0);
         let cur_size = window
             .inner_size()
             .map(|s| s.to_logical::<f64>(scale))
-            .unwrap_or(tauri::LogicalSize::new(800.0, 560.0));
+            .unwrap_or(tauri::LogicalSize::new(830.0, 630.0));
         let cur_pos = window
             .outer_position()
             .map(|p| p.to_logical::<f64>(scale))
@@ -134,7 +149,8 @@ pub fn quick_look_toggle_maximize(window: tauri::WebviewWindow) -> Result<bool, 
 
         {
             let mut lock = PREV_BOUNDS.lock().unwrap();
-            *lock = Some((cur_pos.x, cur_pos.y, cur_size.width, cur_size.height));
+            let m = lock.get_or_insert_with(HashMap::new);
+            m.insert(label.clone(), (cur_pos.x, cur_pos.y, cur_size.width, cur_size.height));
         }
 
         if let Ok(Some(monitor)) = window.current_monitor() {
@@ -149,19 +165,30 @@ pub fn quick_look_toggle_maximize(window: tauri::WebviewWindow) -> Result<bool, 
             let _ = window.center();
         }
 
-        IS_CUSTOM_MAXIMIZED.store(true, Ordering::SeqCst);
+        if let Ok(mut map) = WINDOWS_MAXIMIZED.lock() {
+            let m = map.get_or_insert_with(HashMap::new);
+            m.insert(label, true);
+        }
         Ok(true)
     }
 }
 
 #[tauri::command]
-pub fn quick_look_is_maximized(_window: tauri::WebviewWindow) -> bool {
-    IS_CUSTOM_MAXIMIZED.load(Ordering::SeqCst)
+pub fn quick_look_is_maximized(window: tauri::WebviewWindow) -> bool {
+    let label = window.label().to_string();
+    if let Ok(mut map) = WINDOWS_MAXIMIZED.lock() {
+        let m = map.get_or_insert_with(HashMap::new);
+        if let Some(&max) = m.get(&label) {
+            return max;
+        }
+    }
+    window.is_maximized().unwrap_or(false)
 }
 
 #[tauri::command]
 pub fn quick_look_start_dragging(window: tauri::WebviewWindow) -> Result<(), String> {
-    if !IS_CUSTOM_MAXIMIZED.load(Ordering::SeqCst) {
+    let is_max = quick_look_is_maximized(window.clone());
+    if !is_max {
         window.start_dragging().map_err(|e| e.to_string())
     } else {
         Ok(())
@@ -170,10 +197,9 @@ pub fn quick_look_start_dragging(window: tauri::WebviewWindow) -> Result<(), Str
 
 #[tauri::command]
 pub fn quick_look_set_size(window: tauri::WebviewWindow, width: f64, height: f64) -> Result<(), String> {
-    if !IS_CUSTOM_MAXIMIZED.load(Ordering::SeqCst) {
+    let is_max = quick_look_is_maximized(window.clone());
+    if !is_max {
         let _ = window.set_size(tauri::LogicalSize::new(width, height));
-        // Solo recentrar la vista previa principal; las instancias desacopladas
-        // conservan su posición para permitir compararlas lado a lado.
         if window.label() == "quicklook" {
             let _ = window.center();
         }
@@ -193,8 +219,74 @@ pub fn quick_look_close_window(
         if label.starts_with(crate::features::quick_look::DETACHED_LABEL_PREFIX) {
             state.remove_detached(&label);
         }
-        let _ = window.destroy();
+        if let Ok(mut map) = PREV_BOUNDS.lock() {
+            if let Some(m) = map.as_mut() {
+                m.remove(&label);
+            }
+        }
+        if let Ok(mut map) = WINDOWS_MAXIMIZED.lock() {
+            if let Some(m) = map.as_mut() {
+                m.remove(&label);
+            }
+        }
+        let _ = window.close();
     }
     Ok(())
+}
+
+#[tauri::command]
+pub async fn quick_look_edit_file(path: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean_path = path.trim_start_matches(r"\\?\").trim_start_matches(r"\\?\UNC\").to_string();
+        let p = std::path::Path::new(&clean_path);
+        if !p.exists() {
+            return Err("El archivo no existe".to_string());
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use windows::core::HSTRING;
+            use windows::Win32::UI::Shell::ShellExecuteW;
+            use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+            let wide_path = HSTRING::from(&clean_path);
+            let wide_edit = HSTRING::from("edit");
+            let wide_open = HSTRING::from("open");
+
+            unsafe {
+                let result = ShellExecuteW(
+                    None,
+                    &wide_edit,
+                    &wide_path,
+                    None,
+                    None,
+                    SW_SHOWNORMAL,
+                );
+
+                if result.0 as usize <= 32 {
+                    let fallback = ShellExecuteW(
+                        None,
+                        &wide_open,
+                        &wide_path,
+                        None,
+                        None,
+                        SW_SHOWNORMAL,
+                    );
+                    if fallback.0 as usize <= 32 {
+                        return Err(format!("No se pudo abrir el editor para {:?}", clean_path));
+                    }
+                }
+            }
+            Ok(())
+        }
+
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = clean_path;
+            Ok(())
+        }
+    })
+    .await
+    .map_err(|e| format!("Error en runtime al editar archivo: {e}"))?
 }
 

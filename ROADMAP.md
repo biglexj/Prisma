@@ -9,6 +9,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 ## 🔴 Pendientes activos
 
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
+- [ ] **Refactorización y Modularización de Galería Visual (`VisualLibrary.tsx`)**: Extracción de sub-componentes de la vista principal (1,230 líneas: filtros, barra de acciones y modales de soporte) para reingresar al umbral preferido (< 900 líneas) estipulado en la arquitectura del proyecto.
+
 
 ---
 

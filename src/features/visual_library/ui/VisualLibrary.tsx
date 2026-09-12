@@ -21,6 +21,8 @@ import { VideoThumbnail } from "./VideoThumbnail";
 import { ImageViewer } from "./ImageViewer";
 import { ImageEditor } from "./editor/ImageEditor";
 import { ExifDetailsModal } from "./components/ExifDetailsModal";
+import { DuplicatesScannerModal } from "./duplicates/DuplicatesScannerModal";
+import { ImageComparisonModal } from "./comparison/ImageComparisonModal";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
 import "./visual-library.css";
 
@@ -92,6 +94,11 @@ export function VisualLibrary({
   const [editingImageItem, setEditingImageItem] = useState<VisualLibraryItem | null>(null);
   const [activeImageSessionList, setActiveImageSessionList] = useState<VisualLibraryItem[] | null>(null);
   const [exifViewingPath, setExifViewingPath] = useState<string | null>(null);
+  const [showDuplicatesModal, setShowDuplicatesModal] = useState(false);
+  const [comparisonItems, setComparisonItems] = useState<{
+    itemA: VisualLibraryItem;
+    itemB: VisualLibraryItem;
+  } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [activatingPath, setActivatingPath] = useState<string | null>(null);
@@ -527,6 +534,14 @@ export function VisualLibrary({
           </p>
         </div>
         <div className="visual-heading-actions">
+          <button
+            type="button"
+            className="tonal-button"
+            onClick={() => setShowDuplicatesModal(true)}
+            title="Buscar y comparar archivos duplicados o idénticos (dupeGuru Engine)"
+          >
+            <Icon name="layers" /> Buscar duplicados
+          </button>
           {!isImage && items.length > 0 ? (
             <button className="tonal-button is-primary" onClick={handlePlayAllVideos} title="Reproducir todos los vídeos">
               <Icon name="play" /> Reproducir todo
@@ -945,6 +960,27 @@ export function VisualLibrary({
           path={exifViewingPath}
           isOpen={Boolean(exifViewingPath)}
           onClose={() => setExifViewingPath(null)}
+        />
+      )}
+
+      {showDuplicatesModal && (
+        <DuplicatesScannerModal
+          isOpen={showDuplicatesModal}
+          kind={kind}
+          onClose={() => setShowDuplicatesModal(false)}
+          onOpenComparison={(orig, dup) => {
+            setComparisonItems({ itemA: orig, itemB: dup });
+          }}
+          onRefreshLibrary={() => void onRefresh()}
+        />
+      )}
+
+      {comparisonItems && (
+        <ImageComparisonModal
+          initialItem={comparisonItems.itemA}
+          secondItem={comparisonItems.itemB}
+          itemsList={items}
+          onClose={() => setComparisonItems(null)}
         />
       )}
     </section>

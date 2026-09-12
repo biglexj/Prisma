@@ -1,5 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  DuplicateGroup,
+  DuplicateScanOptions,
   VisualFolderSource,
   VisualLibraryItem,
   VisualMediaKind,
@@ -24,4 +26,6 @@ export const visualLibraryClient = {
     invoke<VisualLibraryItem[]>("visual_library_list_items", { kind }),
   imagePreview: (path: string) =>
     invoke<string | null>("visual_library_image_preview", { path }),
+  scanDuplicates: (kind: VisualMediaKind, options: DuplicateScanOptions) =>
+    invoke<DuplicateGroup[]>("visual_library_scan_duplicates", { kind, options }),
 };

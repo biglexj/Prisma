@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { Icon } from "../../../../shared/ui/Icon";
-import { cleanPath } from "../../../../shared/mediaTree";
+import { cleanPath, toSafeAssetUrl } from "../../../../shared/mediaTree";
 import type { VisualLibraryItem } from "../../model/types";
 import type { ComparisonMode, ComparisonImageSlot } from "./types";
 import { ImageComparisonSelector } from "./ImageComparisonSelector";
@@ -456,7 +455,7 @@ export function ImageComparisonModal({
                 }}
               >
                 <img
-                  src={convertFileSrc(cleanPath(slotA.item.path))}
+                  src={toSafeAssetUrl(slotA.item.path)}
                   alt={slotA.item.title}
                   draggable={false}
                   onLoad={(e) => {
@@ -513,7 +512,7 @@ export function ImageComparisonModal({
                 }}
               >
                 <img
-                  src={convertFileSrc(cleanPath(slotB.item.path))}
+                  src={toSafeAssetUrl(slotB.item.path)}
                   alt={slotB.item.title}
                   draggable={false}
                   onLoad={(e) => {
@@ -552,7 +551,7 @@ export function ImageComparisonModal({
               }}
             >
               <img
-                src={convertFileSrc(cleanPath(slotA.item.path))}
+                src={toSafeAssetUrl(slotA.item.path)}
                 alt={slotA.item.title}
                 draggable={false}
               />
@@ -568,7 +567,7 @@ export function ImageComparisonModal({
               }}
             >
               <img
-                src={convertFileSrc(cleanPath(slotB.item.path))}
+                src={toSafeAssetUrl(slotB.item.path)}
                 alt={slotB.item.title}
                 draggable={false}
               />
@@ -643,7 +642,7 @@ export function ImageComparisonModal({
                   }}
                 >
                   <img
-                    src={convertFileSrc(cleanPath(slot.item.path))}
+                    src={toSafeAssetUrl(slot.item.path)}
                     alt={slot.item.title}
                     draggable={false}
                   />
@@ -689,7 +688,7 @@ export function ImageComparisonModal({
             >
               <img
                 key={slots[activeFlickIndex].id}
-                src={convertFileSrc(cleanPath(slots[activeFlickIndex].item.path))}
+                src={toSafeAssetUrl(slots[activeFlickIndex].item.path)}
                 alt={slots[activeFlickIndex].item.title}
                 draggable={false}
                 onLoad={(e) => {

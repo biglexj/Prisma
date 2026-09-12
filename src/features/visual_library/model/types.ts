@@ -45,3 +45,29 @@ export interface ImageExifData {
   latitude?: number | null;
   longitude?: number | null;
 }
+
+export interface DuplicateCandidate {
+  path: string;
+  title: string;
+  relativeFolder: string;
+  sizeBytes: number;
+  width?: number;
+  height?: number;
+  modifiedAtMillis: number;
+  similarityPct: number;
+  isExactMatch: boolean;
+}
+
+export interface DuplicateGroup {
+  groupId: string;
+  matchType: "exact" | "perceptual";
+  original: DuplicateCandidate;
+  duplicates: DuplicateCandidate[];
+}
+
+export interface DuplicateScanOptions {
+  paths: string[];
+  minSimilarityPct: number;
+  checkVisualSimilarity: boolean;
+  minSizeBytes?: number;
+}

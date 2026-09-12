@@ -1,8 +1,7 @@
 import { useState, useMemo } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../../../shared/ui/Icon";
-import { cleanPath } from "../../../../shared/mediaTree";
+import { cleanPath, toSafeAssetUrl } from "../../../../shared/mediaTree";
 import type { VisualLibraryItem } from "../../model/types";
 
 interface ImageComparisonSelectorProps {
@@ -197,7 +196,7 @@ export function ImageComparisonSelector({
                 >
                   <div className="img-compare-item-thumb">
                     <img
-                      src={convertFileSrc(cleanPath(it.path))}
+                      src={toSafeAssetUrl(it.path)}
                       alt={it.title}
                       loading="lazy"
                       draggable={false}

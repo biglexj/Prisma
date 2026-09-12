@@ -29,4 +29,12 @@ export const quickLookClient = {
   stepSelection(forward: boolean): Promise<boolean> {
     return invoke("quick_look_step_selection", { forward });
   },
+
+  editFile(path: string): Promise<void> {
+    return invoke("quick_look_edit_file", { path });
+  },
+
+  openWithDefaultApp(path: string): Promise<void> {
+    return invoke("open_path_with_default_app", { path });
+  },
 };

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { Icon } from "../../../../shared/ui/Icon";
-import { cleanPath } from "../../../../shared/mediaTree";
+import { cleanPath, toSafeAssetUrl } from "../../../../shared/mediaTree";
 import { saveEditedImage } from "../../../../shared/mediaOperations";
 import type { VisualLibraryItem } from "../../model/types";
 import { ImageCropOverlay } from "./ImageCropOverlay";
@@ -76,7 +75,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
   useEffect(() => {
     const img = new Image();
     img.crossOrigin = "anonymous";
-    img.src = convertFileSrc(cleanPath(item.path));
+    img.src = toSafeAssetUrl(item.path);
     img.onload = () => {
       setImageElement(img);
     };
