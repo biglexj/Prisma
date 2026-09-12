@@ -598,6 +598,17 @@
   cursor: pointer;
 }
 
+/* ── Panel de 1 Carpeta (con subcarpetas) ── */
+.duplicates-single-folder-panel {
+  padding: 1rem 1.75rem;
+  background: var(--bg-surface-variant, rgba(0, 0, 0, 0.02));
+  border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+}
+
+.dark .duplicates-single-folder-panel {
+  background: rgba(0, 0, 0, 0.2);
+}
+
 /* ── Panel de 2 Carpetas (Base vs Depurar) ── */
 .duplicates-two-folders-panel {
   display: flex;
@@ -635,12 +646,20 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
 }
 
+.duplicates-folder-card.is-single {
+  border-left: 4px solid var(--accent, #6366f1);
+}
+
 .duplicates-folder-card.is-base {
   border-left: 4px solid #10b981;
 }
 
 .duplicates-folder-card.is-target {
   border-left: 4px solid #f97316;
+}
+
+.duplicates-folder-card.is-single .folder-card-label {
+  color: var(--accent, #6366f1);
 }
 
 .folder-card-label {

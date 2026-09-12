@@ -119,6 +119,87 @@ fn full_file_hash(path: &Path) -> Option<u64> {
     Some(hasher.finish())
 }
 
+/// Evalúa la naturalidad o intención humana del nombre del archivo.
+/// Otorga mayor puntuación a nombres descriptivos humanos ("Foto Alegre", "Ely_Chibi")
+/// y penaliza fuertemente volcados mecánicos, hashes, UUIDs y nombres temporales
+/// ("file_00000000e944824384b42e0bde42d70d", "ChatGPT image 2.0-2026...", "xxabcdddeff").
+fn score_filename_naturalness(name: &str) -> i32 {
+    let lower = name.to_lowercase();
+    let clean = lower.trim();
+    if clean.is_empty() {
+        return -100;
+    }
+
+    let mut score = 0i32;
+
+    // 1. Penalización drástica por volcados mecánicos/hashes de cámaras o apps (ej. "file_00000000...")
+    if clean.starts_with("file_000") || clean.starts_with("cache_") || clean.starts_with("thumb_") {
+        score -= 60;
+    }
+
+    // Nombres generados por IA o descargas web genéricas
+    if clean.contains("chatgpt") || clean.contains("dall·e") || clean.contains("dalle") || clean.contains("midjourney") {
+        score -= 30;
+    }
+
+    // Prefijos de capturas y volcados brutos de smartphones/cámaras
+    if clean.starts_with("screenshot_") || clean.starts_with("screen_shot_") || clean.starts_with("captura_") {
+        score -= 15;
+    }
+    if clean.starts_with("img_") || clean.starts_with("pxl_") || clean.starts_with("dsc_") {
+        score -= 10;
+    }
+
+    // 2. Detección de hashes hexadecimales largos (ej. md5, sha1, shasum o volcado aleatorio)
+    let hex_chars_count = clean.chars().filter(|c| c.is_ascii_hexdigit()).count();
+    let total_chars = clean.chars().count();
+    let digits_count = clean.chars().filter(|c| c.is_ascii_digit()).count();
+    let letters_count = clean.chars().filter(|c| c.is_alphabetic()).count();
+
+    // Si tiene más de 16 caracteres y prácticamente todos son dígitos hexadecimales sin espacios
+    if total_chars >= 16 && !clean.contains(' ') && (hex_chars_count as f64 / total_chars as f64) > 0.85 {
+        score -= 50;
+    }
+
+    // Secuencia de números muy larga (ej. timestamps largos en milisegundos "1789224585151")
+    let max_consecutive_digits = clean
+        .split(|c: char| !c.is_ascii_digit())
+        .map(|s| s.len())
+        .max()
+        .unwrap_or(0);
+    if max_consecutive_digits >= 10 {
+        score -= 25;
+    }
+
+    // 3. Bonificaciones de naturalidad humana:
+    // Si contiene espacios o palabras separadas naturalmente
+    if clean.contains(' ') {
+        score += 20;
+    }
+
+    // Mayor proporción de letras que números (los nombres humanos tienen palabras)
+    if letters_count > digits_count {
+        score += 15;
+    } else if digits_count > letters_count * 2 {
+        score -= 15;
+    }
+
+    // Longitud óptima para un título descriptivo humano (entre 4 y 35 caracteres)
+    if (4..=35).contains(&total_chars) {
+        score += 10;
+    } else if total_chars > 45 && !clean.contains(' ') {
+        score -= 20; // Probable hash o URL/token
+    }
+
+    // Mayúsculas intencionales en el original (Title Case o CamelCase)
+    let has_camel_or_title = name.chars().any(|c| c.is_uppercase()) && name.chars().any(|c| c.is_lowercase());
+    if has_camel_or_title {
+        score += 10;
+    }
+
+    score
+}
+
 fn assemble_duplicate_group(
     group_id: String,
     match_type: String,
@@ -136,7 +217,9 @@ fn assemble_duplicate_group(
 
     // Ordenar para elegir la referencia (original a conservar):
     // 1. Si hay base_folder, los elementos de base_folder tienen prioridad de conservación.
-    // 2. Desempate: fecha de modificación más antigua.
+    // 2. Si no hay base_folder o hay empate, y se prefiere resolución: mayor resolución gana.
+    // 3. Heurística de Naturalidad: nombres humanos descriptivos ("Foto Alegre") > nombres mecánicos ("file_00000000...").
+    // 4. Desempate final: fecha de modificación más antigua.
     candidates.sort_by(|a, b| {
         if base_folder.is_some() {
             match (b.is_from_base_folder, a.is_from_base_folder) {
@@ -145,6 +228,21 @@ fn assemble_duplicate_group(
                 _ => {}
             }
         }
+
+        if base_folder.is_none() && prefer_higher_resolution {
+            let a_pixels = (a.width.unwrap_or(0) as u64) * (a.height.unwrap_or(0) as u64);
+            let b_pixels = (b.width.unwrap_or(0) as u64) * (b.height.unwrap_or(0) as u64);
+            if b_pixels != a_pixels {
+                return b_pixels.cmp(&a_pixels);
+            }
+        }
+
+        let a_nat = score_filename_naturalness(&a.title);
+        let b_nat = score_filename_naturalness(&b.title);
+        if (a_nat - b_nat).abs() >= 15 {
+            return b_nat.cmp(&a_nat);
+        }
+
         a.modified_at_millis.cmp(&b.modified_at_millis)
     });
 
@@ -259,7 +357,7 @@ pub fn scan_duplicates(
                 );
 
                 // En modo cruzado (base vs depurar), descartar si no hay duplicados para depurar
-                if options.base_folder.is_some() && grp.duplicates.is_empty() {
+                if options.base_folder.is_some() && options.target_folder.is_some() && grp.duplicates.is_empty() {
                     continue;
                 }
 
@@ -369,7 +467,7 @@ pub fn scan_duplicates(
                     options.prefer_higher_resolution,
                 );
 
-                if options.base_folder.is_some() && grp.duplicates.is_empty() {
+                if options.base_folder.is_some() && options.target_folder.is_some() && grp.duplicates.is_empty() {
                     continue;
                 }
 

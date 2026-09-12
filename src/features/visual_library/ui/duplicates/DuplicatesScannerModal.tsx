@@ -34,7 +34,8 @@ export function DuplicatesScannerModal({
   onOpenComparison,
   onRefreshLibrary,
 }: DuplicatesScannerModalProps) {
-  const [scanMode, setScanMode] = useState<"library" | "two_folders">("two_folders");
+  const [scanMode, setScanMode] = useState<"single_folder" | "two_folders" | "library">("single_folder");
+  const [singleFolder, setSingleFolder] = useState<string>("");
   const [baseFolder, setBaseFolder] = useState<string>("");
   const [targetFolder, setTargetFolder] = useState<string>("");
   const [preferHigherResolution, setPreferHigherResolution] = useState(true);
@@ -51,6 +52,17 @@ export function DuplicatesScannerModal({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const handlePickSingleFolder = async () => {
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: "Seleccionar Carpeta para analizar (incluye subcarpetas)",
+    });
+    if (typeof selected === "string") {
+      setSingleFolder(cleanPath(selected));
+    }
+  };
 
   const handlePickBaseFolder = async () => {
     const selected = await open({
@@ -81,7 +93,17 @@ export function DuplicatesScannerModal({
   };
 
   const handleStartScan = async () => {
-    if (scanMode === "two_folders") {
+    let scanPaths: string[] = [];
+    let base: string | undefined = undefined;
+    let target: string | undefined = undefined;
+
+    if (scanMode === "single_folder") {
+      if (!singleFolder) {
+        setStatusMessage("Por favor selecciona una carpeta para analizar sus archivos y subcarpetas.");
+        return;
+      }
+      scanPaths = [singleFolder];
+    } else if (scanMode === "two_folders") {
       if (!baseFolder || !targetFolder) {
         setStatusMessage("Por favor selecciona tanto la Carpeta Base como la Carpeta a Depurar antes de escanear.");
         return;
@@ -90,6 +112,8 @@ export function DuplicatesScannerModal({
         setStatusMessage("La Carpeta Base y la Carpeta a Depurar no pueden ser la misma carpeta.");
         return;
       }
+      base = baseFolder;
+      target = targetFolder;
     }
 
     setIsScanning(true);
@@ -97,12 +121,12 @@ export function DuplicatesScannerModal({
     setSelectedPaths(new Set());
     try {
       const results = await visualLibraryClient.scanDuplicates(kind, {
-        paths: [],
+        paths: scanPaths,
         minSimilarityPct,
         checkVisualSimilarity,
-        baseFolder: scanMode === "two_folders" ? baseFolder : undefined,
-        targetFolder: scanMode === "two_folders" ? targetFolder : undefined,
-        preferHigherResolution: scanMode === "two_folders" ? preferHigherResolution : false,
+        baseFolder: base,
+        targetFolder: target,
+        preferHigherResolution,
       });
       setGroups(results);
       setHasScanned(true);
@@ -373,9 +397,17 @@ export function DuplicatesScannerModal({
           </button>
         </header>
 
-        {/* Selector de Alcance: Comparar 2 Carpetas vs Toda la Biblioteca */}
+        {/* Selector de Alcance: 1 Carpeta vs 2 Carpetas vs Toda la Biblioteca */}
         <div className="duplicates-scope-bar">
           <div className="duplicates-scope-tabs">
+            <button
+              type="button"
+              className={`duplicates-scope-tab ${scanMode === "single_folder" ? "is-active" : ""}`}
+              onClick={() => setScanMode("single_folder")}
+            >
+              <Icon name="folder" />
+              <span>Escanear 1 Carpeta (y subcarpetas)</span>
+            </button>
             <button
               type="button"
               className={`duplicates-scope-tab ${scanMode === "two_folders" ? "is-active" : ""}`}
@@ -389,26 +421,55 @@ export function DuplicatesScannerModal({
               className={`duplicates-scope-tab ${scanMode === "library" ? "is-active" : ""}`}
               onClick={() => setScanMode("library")}
             >
-              <Icon name="folder" />
+              <Icon name="layers" />
               <span>Toda la Biblioteca ({kind === "image" ? "Imágenes" : "Vídeos"})</span>
             </button>
           </div>
 
-          {scanMode === "two_folders" && (
-            <label
-              className="duplicates-upgrade-toggle"
-              title="Si un duplicado en la carpeta a depurar tiene mayor resolución que el archivo base, marcarlo para actualizar con la mejor calidad"
-            >
-              <input
-                type="checkbox"
-                checked={preferHigherResolution}
-                onChange={(e) => setPreferHigherResolution(e.target.checked)}
-              />
-              <Icon name="sparkles" />
-              <span>Priorizar Mayor Resolución (Upgrade HD/4K)</span>
-            </label>
-          )}
+          <label
+            className="duplicates-upgrade-toggle"
+            title="Conserva la mejor resolución HD/4K y nombres humanos descriptivos sobre volcados mecánicos o hashes"
+          >
+            <input
+              type="checkbox"
+              checked={preferHigherResolution}
+              onChange={(e) => setPreferHigherResolution(e.target.checked)}
+            />
+            <Icon name="sparkles" />
+            <span>Priorizar Resolución y Nombres Naturales</span>
+          </label>
         </div>
+
+        {/* Panel para Escanear 1 Carpeta (con todas sus subcarpetas) */}
+        {scanMode === "single_folder" && (
+          <div className="duplicates-single-folder-panel">
+            <div className="duplicates-folder-card is-single" onClick={handlePickSingleFolder}>
+              <div className="folder-card-label">
+                <Icon name="folder" />
+                <span>Carpeta a Analizar (incluye subcarpetas)</span>
+              </div>
+              <div className="folder-card-picker">
+                <Icon name="folder-open" />
+                <span className="folder-path-text" title={singleFolder || "Haz clic para seleccionar una carpeta..."}>
+                  {singleFolder || "Seleccionar cualquier carpeta de la PC o disco externo (ej. Telefono o Descargas)..."}
+                </span>
+                <button
+                  type="button"
+                  className="folder-pick-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePickSingleFolder();
+                  }}
+                >
+                  Examinar...
+                </button>
+              </div>
+              <p className="folder-card-hint">
+                Se analizarán todos los archivos y subcarpetas. La inteligencia de nombres prioriza nombres humanos sobre hashes o volcados mecánicos (como <code>file_00000000...</code>).
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Panel de selección de Carpetas Cruzadas */}
         {scanMode === "two_folders" && (
@@ -606,6 +667,8 @@ export function DuplicatesScannerModal({
               <p>
                 {hasScanned
                   ? "Las carpetas o biblioteca no contienen archivos duplicados con los criterios seleccionados."
+                  : scanMode === "single_folder"
+                  ? "Selecciona cualquier carpeta (ej. Telefono, Descargas o Fotos) para encontrar duplicados en todas sus subcarpetas."
                   : scanMode === "two_folders"
                   ? "Selecciona la carpeta base a proteger y la carpeta a depurar, luego pulsa 'Escanear duplicados'."
                   : "Pulsa 'Escanear duplicados' para comparar hashes exactos y gradientes perceptuales de imágenes."}
