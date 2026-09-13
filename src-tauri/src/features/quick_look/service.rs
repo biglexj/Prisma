@@ -200,6 +200,13 @@ impl QuickLookState {
 
                 let source = foreground_selection_source();
                 if source.is_none() {
+                    // Si se está realizando una captura de pantalla (Snipping Tool, ScreenClippingHost, etc.), NO cerrar
+                    if super::keyboard_hook::is_screen_capture_in_progress() {
+                        empty_count = 0;
+                        outside_count = 0;
+                        continue;
+                    }
+
                     // El usuario hizo clic fuera (en otra aplicación o barra de tareas)
                     empty_count = 0;
                     outside_count += 1;

@@ -307,21 +307,30 @@ pub mod windows_impl {
             });
         }
 
-        // Ordenar candidatos por puntuación descendente
+        // Ordenar candidatos por puntuación descendente (la pestaña activa es la primera)
         candidates.sort_by(|a, b| b.score.cmp(&a.score));
 
-        // Evaluar candidatos empezando por la pestaña activa de mayor puntuación
-        for candidate in candidates {
-            if let Ok(shell_view) = unsafe { candidate.browser.QueryActiveShellView() } {
+        // En ventanas con pestañas (Windows 11), SOLO se debe consultar la pestaña activa (candidato de mayor puntuación).
+        // Si la pestaña activa no tiene selección (ej. clic en espacio vacío), NO debemos hacer fallback a otras pestañas
+        // inactivas del explorador, ya que contendrían selecciones obsoletas de otras carpetas.
+        if let Some(active_candidate) = candidates.first() {
+            if let Ok(shell_view) = unsafe { active_candidate.browser.QueryActiveShellView() } {
                 if let Ok(folder_view) = shell_view.cast::<IFolderView>() {
                     if let Some(info) = unsafe { get_selection_from_folder_view(&folder_view) } {
                         ql_log!(
-                            "Archivo resuelto con éxito desde candidato (hwnd={:?}, score={}): {:?}",
-                            candidate.window_hwnd,
-                            candidate.score,
+                            "Archivo resuelto con éxito desde pestaña activa (hwnd={:?}, score={}): {:?}",
+                            active_candidate.window_hwnd,
+                            active_candidate.score,
                             info.primary_path
                         );
                         return Some(info);
+                    } else {
+                        ql_log!(
+                            "Pestaña activa (hwnd={:?}, score={}) no tiene elementos seleccionados. Sin fallback a pestañas inactivas.",
+                            active_candidate.window_hwnd,
+                            active_candidate.score
+                        );
+                        return None;
                     }
                 }
             }

@@ -73,6 +73,61 @@ pub mod windows_hook {
         IS_PREVIEW_OPEN.load(Ordering::SeqCst)
     }
 
+    static LAST_SCREENSHOT_INSTANT: Mutex<Option<std::time::Instant>> = Mutex::new(None);
+
+    pub fn record_screenshot_intent() {
+        if let Ok(mut lock) = LAST_SCREENSHOT_INSTANT.lock() {
+            *lock = Some(std::time::Instant::now());
+        }
+    }
+
+    pub fn is_recent_screenshot_pressed() -> bool {
+        if let Ok(lock) = LAST_SCREENSHOT_INSTANT.lock() {
+            if let Some(t) = *lock {
+                return t.elapsed().as_secs() < 8;
+            }
+        }
+        false
+    }
+
+    pub fn is_screen_capture_in_progress() -> bool {
+        if is_recent_screenshot_pressed() {
+            return true;
+        }
+        unsafe {
+            let fg = GetForegroundWindow();
+            if !fg.0.is_null() {
+                let mut pid = 0u32;
+                GetWindowThreadProcessId(fg, Some(&mut pid));
+                if pid != 0 {
+                    if let Ok(handle) = windows::Win32::System::Threading::OpenProcess(
+                        windows::Win32::System::Threading::PROCESS_QUERY_LIMITED_INFORMATION,
+                        false,
+                        pid,
+                    ) {
+                        let mut buf = [0u16; 512];
+                        let mut size = buf.len() as u32;
+                        if windows::Win32::System::Threading::QueryFullProcessImageNameW(
+                            handle,
+                            windows::Win32::System::Threading::PROCESS_NAME_FORMAT(0),
+                            windows::core::PWSTR(buf.as_mut_ptr()),
+                            &mut size,
+                        ).is_ok() {
+                            let name = String::from_utf16_lossy(&buf[..size as usize]).to_lowercase();
+                            let _ = windows::Win32::Foundation::CloseHandle(handle);
+                            if name.ends_with("snippingtool.exe") || name.ends_with("screenclippinghost.exe") {
+                                return true;
+                            }
+                        } else {
+                            let _ = windows::Win32::Foundation::CloseHandle(handle);
+                        }
+                    }
+                }
+            }
+        }
+        false
+    }
+
     pub fn start_hook(callback: TriggerCallback) {
         if let Ok(mut lock) = GLOBAL_CALLBACK.lock() {
             *lock = Some(callback);
@@ -196,8 +251,27 @@ pub mod windows_hook {
         let my_pid = unsafe { windows::Win32::System::Threading::GetCurrentProcessId() };
         let is_quicklook_window = pid != 0 && pid == my_pid;
 
+        // Evaluar modificadores activos
+        let win_down = (unsafe { GetAsyncKeyState(0x5B) } as u16 & 0x8000) != 0
+            || (unsafe { GetAsyncKeyState(0x5C) } as u16 & 0x8000) != 0;
+        let ctrl_down = (unsafe { GetAsyncKeyState(VK_CONTROL.0 as i32) } as u16 & 0x8000) != 0
+            || (unsafe { GetAsyncKeyState(0xA2) } as u16 & 0x8000) != 0
+            || (unsafe { GetAsyncKeyState(0xA3) } as u16 & 0x8000) != 0;
+        let alt_down = (unsafe { GetAsyncKeyState(VK_MENU.0 as i32) } as u16 & 0x8000) != 0
+            || (unsafe { GetAsyncKeyState(0xA4) } as u16 & 0x8000) != 0
+            || (unsafe { GetAsyncKeyState(0xA5) } as u16 & 0x8000) != 0;
+
+        // Excepción crítica: Captura de pantalla (Impr Pant / PrintScreen, Win + Shift + S)
+        let is_screenshot_key = vk_code == 0x2C; // VK_SNAPSHOT
+        let is_snipping_shortcut = is_screenshot_key || (win_down && vk_code == 0x53);
+        if is_snipping_shortcut {
+            ql_log!("Captura de pantalla detectada (vk=0x{:02X}, win={}), preservando QuickLook", vk_code, win_down);
+            record_screenshot_intent();
+            return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
+        }
+
         // Si la previsualización está activa y el usuario teclea fuera de QuickLook (alfanumérico, enter, etc.)
-        // que no sea tecla de navegación ni modificador, cerrar la vista previa
+        // sin estar usando modificadores (Win/Ctrl/Alt) y sin ser tecla multimedia/función, cerrar la vista previa
         let is_modifier = vk_code == VK_SHIFT.0
             || vk_code == 0xA0 // VK_LSHIFT
             || vk_code == 0xA1 // VK_RSHIFT
@@ -209,9 +283,23 @@ pub mod windows_hook {
             || vk_code == 0xA5 // VK_RMENU
             || vk_code == 0x5B // VK_LWIN
             || vk_code == 0x5C // VK_RWIN
-            || vk_code == 0x14; // VK_CAPITAL
+            || vk_code == 0x14 // VK_CAPITAL
+            || vk_code == 0x90 // VK_NUMLOCK
+            || vk_code == 0x91; // VK_SCROLL
 
-        if preview_active && !is_quicklook_window && !is_modifier && vk_code != VK_SPACE.0 {
+        let is_f_key = vk_code >= 0x70 && vk_code <= 0x87;
+        let is_media_key = vk_code >= 0xAD && vk_code <= 0xB3;
+
+        if preview_active
+            && !is_quicklook_window
+            && !is_modifier
+            && !is_f_key
+            && !is_media_key
+            && !win_down
+            && !ctrl_down
+            && !alt_down
+            && vk_code != VK_SPACE.0
+        {
             ql_log!("Tecla fuera de QuickLook pulsada (vk=0x{:02X}), cerrando vista previa", vk_code);
             if let Ok(guard) = GLOBAL_CALLBACK.lock() {
                 if let Some(ref cb) = *guard {
@@ -232,19 +320,10 @@ pub mod windows_hook {
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
 
-        // Evaluar modificadores según el modo configurado (Ctrl, Alt, Shift)
-        let ctrl_down = (unsafe { GetAsyncKeyState(VK_CONTROL.0 as i32) } as u16 & 0x8000) != 0
-            || (unsafe { GetAsyncKeyState(0xA2) } as u16 & 0x8000) != 0
-            || (unsafe { GetAsyncKeyState(0xA3) } as u16 & 0x8000) != 0;
-
         // Si la tecla Ctrl está pulsada, dejar pasar de inmediato para reservar Ctrl + Espacio a LyraFlow
         if ctrl_down {
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
-
-        let alt_down = (unsafe { GetAsyncKeyState(VK_MENU.0 as i32) } as u16 & 0x8000) != 0
-            || (unsafe { GetAsyncKeyState(0xA4) } as u16 & 0x8000) != 0
-            || (unsafe { GetAsyncKeyState(0xA5) } as u16 & 0x8000) != 0;
 
         let shift_down = (unsafe { GetAsyncKeyState(VK_SHIFT.0 as i32) } as u16 & 0x8000) != 0
             || (unsafe { GetAsyncKeyState(0xA0) } as u16 & 0x8000) != 0
@@ -458,6 +537,9 @@ pub mod windows_hook {
     pub fn start_hook(_callback: TriggerCallback) {}
     #[allow(dead_code)]
     pub fn stop_hook() {}
+    pub fn record_screenshot_intent() {}
+    pub fn is_recent_screenshot_pressed() -> bool { false }
+    pub fn is_screen_capture_in_progress() -> bool { false }
 }
 
 pub use windows_hook::*;

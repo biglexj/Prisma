@@ -12,6 +12,7 @@
 - [x] T06 — Registrar resultados de verificación en `VALIDATION.md` y preparar `APPROVAL.md`.
 - [x] T07 — Implementar detección de deselección ("punto vacío") y pérdida de foco hacia apps externas en `service.rs`.
 - [x] T08 — Implementar auto-cierre al teclear fuera de QuickLook (alfanuméricos, etc., preservando navegación y modificadores) en `keyboard_hook.rs`.
-- [x] T09 — Validar con `cargo check` y `cargo test` la integración de auto-cierre.
+- [x] T10 — Restringir la consulta COM en Explorer con pestañas exclusivamente a la pestaña activa (`candidates.first()`), eliminando el fallback a pestañas inactivas que recuperaba selecciones obsoletas.
+- [x] T11 — Eximir atajos y procesos de captura de pantalla (`PrintScreen`, `Win+Shift+S`, `SnippingTool`, `ScreenClippingHost`) de auto-cierre para capturar QuickLook sin cerrarlo.
 
 Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.

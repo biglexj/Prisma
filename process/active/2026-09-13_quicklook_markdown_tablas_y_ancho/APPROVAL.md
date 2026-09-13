@@ -23,6 +23,8 @@
 - Enlaces con código y formato enriquecido anidado resueltos sin rotura.
 - Ancho de ventana para documentos ajustado de 70% a 60% de pantalla, eliminando espacios muertos laterales.
 - Auto-cierre inteligente al deseleccionar (clic en punto vacío en Explorer/Escritorio), al hacer clic en otra app o al teclear fuera de QuickLook, preservando navegación continua al pulsar o hacer clic en otros archivos.
+- Aislamiento estricto de la pestaña activa en Explorer de Windows 11: si la pestaña activa no tiene selección, no se realiza fallback a pestañas inactivas que contenían selecciones obsoletas de otras carpetas.
+- Inmunidad total para herramientas de captura de pantalla (tecla `PrintScreen`/`Impr Pant`, atajo `Win+Shift+S`, y procesos `SnippingTool.exe`/`ScreenClippingHost.exe`), permitiendo capturar QuickLook sin que se cierre.
 
 ## Destino
 

@@ -13,6 +13,8 @@
 - [x] V07 — Agente — Comprobar que en Explorer/Desktop, al hacer clic en punto vacío (deselección), el watcher cierra la ventana QuickLook automáticamente.
 - [x] V08 — Agente — Comprobar que al hacer clic en otro archivo (o mover flechas), el watcher actualiza la previsualización al nuevo archivo sin cerrarse.
 - [x] V09 — Agente — Comprobar que al teclear fuera de QuickLook (que no sean teclas de navegación ni modificadores), se dispara el cierre inmediato.
+- [x] V10 — Agente — Comprobar que en Explorer con múltiples pestañas, la deselección (clic en punto vacío) en la pestaña activa retorne `None` sin hacer fallback a selecciones obsoletas de otras pestañas en segundo plano.
+- [x] V11 — Agente — Comprobar que al presionar Impr Pant (`PrintScreen`), `Win+Shift+S` o activar `SnippingTool.exe`/`ScreenClippingHost.exe`, QuickLook permanezca abierto para permitir la captura sin cerrarse.
 
 ## Registro de fallos
 
