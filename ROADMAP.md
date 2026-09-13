@@ -30,6 +30,19 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.1.2**
+  - **Buscador y Comparador de Duplicados Multimodal (Imágenes, Vídeos y Música), Hero Dropzone Central y Quick Look Ampliado**:
+    - Motor multimodal de duplicados con conmutador tri-modal (`[🎵 Música]`, `[🖼️ Imágenes]`, `[🎬 Vídeos]`).
+    - Detección acústica inteligente para música: pipeline híbrido de dos niveles (Hash binario exacto en streaming y metadatos Lofty normalizados con tolerancia temporal de duración $\pm 3.5\text{ s}$).
+    - Scoring Hi-Res de audio: priorización automática de formatos sin pérdida (FLAC, WAV, ALAC con 1,000,000 pts base) y tasas de bits superiores (320 kbps) para conservar la mejor versión de audio y depurar copias comprimidas.
+    - Detección por hash y similitud perceptual (dHash 64 bits con tolerancia porcentual) para imágenes y vídeos, con visor de comparación interactivo frente a frente integrado (`ImageComparisonModal`).
+    - Comparativa cruzada de 2 carpetas (Base vs Depurar) para proteger una carpeta base intacta y depurar o actualizar carpetas externas.
+    - Acciones flexibles en lote e individuales: selección masiva por grupo tri-state (`[-]`, `[✓]`, `[ ]`), traslado a carpeta de respaldo o cuarentena y envío directo a la papelera del sistema (`trash`).
+    - Hero Dropzone Central interactivo y barra compacta de 36 px: eliminación del espacio superior desperdiciado, haciendo que todo el cuadro central vacío sirva como zona de arrastre y clic para examinar carpetas, dejando el 100% de la altura de pantalla libre para explorar duplicados.
+    - Hero Dropzone interactivo aplicado a la cola vacía del Convertidor Prisma.
+    - Pestaña «Herramientas» en Configuración para conmutar la visibilidad modular de utilidades integradas y acceso directo a Duplicados en la barra lateral principal.
+    - Quick Look para Documentos, PDFs, Libros y archivos comprimidos (.zip) con dimensionamiento reactivo al 70% de ancho y 80% de alto del monitor, botón «Editar» en editor predeterminado de Windows y botón «Abrir» en DocumentViewer.
+    - Arrastrar y Soltar (Drag & Drop) universal restaurado en toda la suite sin bloqueos de cursor ni restricciones.
 - [x] **v1.1.1**
   - **Quick Look: Precisión de Dimensiones, Apertura Fluida con Póster Nativo, Cache-Busting y Soporte para Archivos Sobrescritos**:
     - Corrección del GUID de `PKEY_VIDEO_FRAME_WIDTH`/`HEIGHT` en Windows Shell (`0x64440491`), límites de seguridad de resolución y fallback nativo a `ffprobe` para prevenir ventanas desproporcionadas.

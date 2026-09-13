@@ -15,6 +15,32 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.1.2] - 2026-09-12
+
+### Resumen
+Presentamos **Prisma v1.1.2**, una actualización de gran envergadura que introduce el **Buscador y Comparador de Duplicados Multimodal** con soporte inteligente para Imágenes, Vídeos y Música, la nueva arquitectura de **Hero Dropzone Central con optimización vertical**, la gestión modular de **Herramientas en Configuración y Barra Lateral**, la previsualización enriquecida en **Quick Look para documentos y libros con multi-ventana desacoplada**, y la restauración fluida del soporte universal de **Arrastrar y Soltar (Drag & Drop)** en toda la suite.
+
+### Detalles
+- **Buscador y Comparador de Duplicados Multimodal (Imágenes, Vídeos y Música)**:
+  - **Detección Acústica Inteligente para Música**: Incorporación de un pipeline híbrido de dos niveles: Nivel 1 mediante hash binario exacto en streaming y Nivel 2 con análisis de metadatos (Artista, Título, Álbum normalizados) y tolerancia temporal de duración.
+  - **Puntuación Hi-Res de Audio**: Algoritmo inteligente que prioriza automáticamente pistas de máxima fidelidad (formatos sin pérdida como FLAC, WAV o ALAC y tasas de bits elevadas de 320 kbps) frente a versiones comprimidas, permitiendo depurar o reemplazar copias de baja calidad con un solo clic.
+  - **Detección Visual y Hash para Imágenes y Vídeos**: Búsqueda por copia binaria exacta y similitud perceptual (dHash de 64 bits con tolerancia porcentual configurable), complementada con el visor de comparación frente a frente interactivo con zoom de punto focal y división en vivo.
+  - **Comparativa Cruzada de 2 Carpetas (Base vs Depurar)**: Selección de carpetas independientes para proteger una carpeta base intacta y depurar o actualizar una carpeta de origen o dispositivo externo.
+  - **Acciones Flexibles en Lote e Individuales**: Selección masiva por grupo tri-state, reemplazo atómico de versiones base conservando nombres naturales, traslado seguro a carpetas de respaldo o cuarentena y envío directo a la papelera del sistema.
+- **Hero Dropzone Central y Máximo Aprovechamiento Vertical**:
+  - Sustitución de las barras superiores estáticas por un **Hero Dropzone interactivo**: el centro de la pantalla actúa como receptor principal de arrastre y clic, abriendo el diálogo de selección de carpetas con un solo toque o recibiendo carpetas arrastradas desde el Explorador de Windows.
+  - Al seleccionar una carpeta, la cabecera se transforma en una barra compacta ultra-delgada de 36 px, liberando el 100% de la altura vertical disponible para explorar cómodamente las tarjetas de duplicados sin recortes.
+  - Experiencia interactiva unificada también en la cola de conversión por lotes del **Convertidor Prisma**.
+- **Gestión Modular de Herramientas en Configuración y Barra Lateral**:
+  - Nueva pestaña dedicada «Herramientas» en los Ajustes del Sistema para conmutar la visibilidad de cada módulo integrado (Conversor, Renombrador, Duplicados, Luna Fetch, Gallery-DL, Wallpapers Aurora).
+  - Acceso directo de primer nivel a Duplicados desde la sección `HERRAMIENTAS` de la barra lateral, sincronizado entre ventanas y persistido localmente.
+- **Quick Look para Documentos, PDFs, Libros y Multi-ventana Desacoplada**:
+  - Previsualización rápida con dimensionamiento generoso y reactivo por porcentaje de monitor (70% de ancho y 80% de alto) para archivos Markdown, Texto plano, PDF, EPUB y archivos comprimidos (.zip).
+  - Integración del botón «Editar» para invocar el editor predeterminado del sistema operativo y botón «Abrir» para transicionar fluidamente al visor completo dentro de Prisma.
+  - Sanitización de rutas con caracteres especiales (como arrobas `@`) en el visor nativo y gestión desacoplada de ventanas con aislamiento de límites y cierre ágil mediante teclado o cursor.
+- **Arrastrar y Soltar Universal en Todo el Ecosistema**:
+  - Corrección integral de la intercepción de eventos de arrastre a nivel global, eliminando el cursor de restricción del sistema y permitiendo soltar carpetas y archivos con total fluidez tanto en el Renombrador, Convertidor y Duplicados como en las bibliotecas principales de Música, Imágenes y Vídeos.
+
 ## [1.1.1] - 2026-09-11
 
 ### Resumen

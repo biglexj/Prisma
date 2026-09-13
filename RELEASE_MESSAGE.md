@@ -1,16 +1,18 @@
-# ⚡ Prisma v1.1.1 — Quick Look Mejorado para Vídeo, Apertura con Póster Inmediato y Soporte de Re-renderizado
+# 🚀 Prisma v1.1.2 — Buscador de Duplicados Multimodal (Música, Imágenes y Vídeos), Hero Dropzone y Quick Look Ampliado
 
-Llega **Prisma v1.1.1**, una actualización enfocada en la fluidez y precisión de la previsualización rápida (**Quick Look**) para contenidos de vídeo: resolución exacta de dimensiones en Windows, apertura instantánea con póster visual para eliminar el parpadeo negro, soporte optimizado para archivos sobrescritos desde DaVinci Resolve u otros editores, y optimización sustancial de la huella de almacenamiento en compilación.
+Llega **Prisma v1.1.2**, una entrega colosal que expande la suite con el nuevo **Buscador y Comparador de Duplicados Multimodal** (con detección acústica Hi-Res para música y similitud perceptual para imágenes/vídeos), la arquitectura de **Hero Dropzone Central con optimización vertical**, gestión modular de **Herramientas en Configuración y Barra Lateral**, previsualización de **Documentos en Quick Look al 70-80% de pantalla** y soporte fluido de **Arrastrar y Soltar (Drag & Drop)** en toda la suite.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- 📐 **Dimensionamiento Exacto en Quick Look**: Corrección de la lectura de resolución nativa en el Explorador de Windows, eliminando deformaciones en pantalla y asegurando ventanas perfectamente proporcionadas.
-- 🎬 **Apertura Fluida con Póster Nativo Inmediato**: La previsualización de vídeo ahora despliega al instante el primer fotograma como póster mientras arranca el motor multimedia, eliminando el parpadeo negro inicial.
-- 🔄 **Compatibilidad con Vídeos Sobrescritos (DaVinci Resolve / NLEs)**: Solución definitiva a la pantalla negra al previsualizar archivos re-exportados con el mismo nombre, gracias a la invalidación dinámica de fragmentos cacheados y la liberación inmediata de recursos.
-- 🛡️ **Tarjeta de Estado Resiliente**: Indicador visual ante incidencias de reproducción con botón de reintento y acción directa para continuar en el reproductor completo de Prisma.
-- ⚡ **Optimización de Compilación & Almacenamiento**: Adopción de perfiles ligeros para dependencias nativas en Rust, recuperando decenas de gigabytes de disco y acelerando las validaciones del sistema.
+- 🎵 **Duplicados de Música con Detección Hi-Res**: Pipeline híbrido por hash binario exacto y metadatos inteligentes (Lofty normalizado + duración), priorizando automáticamente formatos sin pérdida (FLAC, WAV, ALAC) y bitrates de 320 kbps para conservar la mejor versión de audio.
+- 🖼️ **Duplicados de Imágenes y Vídeos con Comparador Frente a Frente**: Análisis por hash y similitud perceptual (dHash 64 bits con tolerancia ajustable), con comparativa en pantalla dividida integrada (`ImageComparisonModal`).
+- 📂 **Comparativa Cruzada de 2 Carpetas (Base vs Depurar)**: Protege tu carpeta base intacta y limpia o actualiza duplicados desde carpetas externas o de depuración.
+- 🎯 **Hero Dropzone Central & Ahorro de Espacio Vertical**: El centro de la pantalla actúa como receptor interactivo de arrastre y clic para examinar carpetas, transformándose en una barra compacta ultra delgada de 36 px al cargar resultados para aprovechar el 100% de la altura de pantalla.
+- 🛠️ **Pestaña «Herramientas» en Configuración & Barra Lateral**: Controla la visibilidad de cada utilidad (Conversor, Renombrador, Duplicados, Luna Fetch, Gallery-DL, Wallpapers) y accede a Duplicados directamente desde el menú principal.
+- 📑 **Quick Look para Documentos, PDFs y Libros**: Previsualización ampliada y reactiva (70% ancho, 80% alto) para Markdown, Texto, PDF, EPUB y archivos ZIP, con botones directos para «Editar» en tu app predeterminada y «Abrir» en el visor de Prisma.
+- 🖐️ **Arrastrar y Soltar (Drag & Drop) Universal**: Solución integral al cursor de restricción del sistema, permitiendo arrastrar carpetas y archivos con total naturalidad en todas las herramientas y bibliotecas.
 
 ---
 
