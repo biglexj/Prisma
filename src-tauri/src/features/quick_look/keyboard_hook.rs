@@ -187,6 +187,40 @@ pub mod windows_hook {
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
 
+        // Comprobar la ventana en primer plano
+        let fg = unsafe { GetForegroundWindow() };
+        let mut pid = 0u32;
+        if !fg.0.is_null() {
+            unsafe { GetWindowThreadProcessId(fg, Some(&mut pid)) };
+        }
+        let my_pid = unsafe { windows::Win32::System::Threading::GetCurrentProcessId() };
+        let is_quicklook_window = pid != 0 && pid == my_pid;
+
+        // Si la previsualización está activa y el usuario teclea fuera de QuickLook (alfanumérico, enter, etc.)
+        // que no sea tecla de navegación ni modificador, cerrar la vista previa
+        let is_modifier = vk_code == VK_SHIFT.0
+            || vk_code == 0xA0 // VK_LSHIFT
+            || vk_code == 0xA1 // VK_RSHIFT
+            || vk_code == VK_CONTROL.0
+            || vk_code == 0xA2 // VK_LCONTROL
+            || vk_code == 0xA3 // VK_RCONTROL
+            || vk_code == VK_MENU.0
+            || vk_code == 0xA4 // VK_LMENU
+            || vk_code == 0xA5 // VK_RMENU
+            || vk_code == 0x5B // VK_LWIN
+            || vk_code == 0x5C // VK_RWIN
+            || vk_code == 0x14; // VK_CAPITAL
+
+        if preview_active && !is_quicklook_window && !is_modifier && vk_code != VK_SPACE.0 {
+            ql_log!("Tecla fuera de QuickLook pulsada (vk=0x{:02X}), cerrando vista previa", vk_code);
+            if let Ok(guard) = GLOBAL_CALLBACK.lock() {
+                if let Some(ref cb) = *guard {
+                    cb(TriggerEvent::Close);
+                }
+            }
+            return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
+        }
+
         // Si no es la tecla Espacio, dejar pasar
         if vk_code != VK_SPACE.0 {
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
@@ -230,15 +264,6 @@ pub mod windows_hook {
         if !matches_shortcut {
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
-
-        // Comprobar la ventana en primer plano
-        let fg = unsafe { GetForegroundWindow() };
-        let mut pid = 0u32;
-        if !fg.0.is_null() {
-            unsafe { GetWindowThreadProcessId(fg, Some(&mut pid)) };
-        }
-        let my_pid = unsafe { windows::Win32::System::Threading::GetCurrentProcessId() };
-        let is_quicklook_window = pid != 0 && pid == my_pid;
 
         let explorer_focused = unsafe { is_explorer_or_desktop_focused() };
         ql_log!(

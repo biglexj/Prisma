@@ -10,6 +10,9 @@
 - [x] V04 — Agente — Comprobar que `doc_w` en `resolve_media_size` y desmaximización esté configurado en `(screen_w * 0.60).round().max(680.0)`.
 - [x] V05 — Agente — Comprobar que `.markdown-rendered-content` y el contenedor no dejen espacios en blanco excesivos y permitan a las tablas ocupar el ancho necesario con scroll horizontal si es necesario.
 - [x] V06 — Agente — Ejecución limpia de `bun run check` (TypeScript), build de Vite (`bun run build:web`) y `cargo test` (29 tests exitosos).
+- [x] V07 — Agente — Comprobar que en Explorer/Desktop, al hacer clic en punto vacío (deselección), el watcher cierra la ventana QuickLook automáticamente.
+- [x] V08 — Agente — Comprobar que al hacer clic en otro archivo (o mover flechas), el watcher actualiza la previsualización al nuevo archivo sin cerrarse.
+- [x] V09 — Agente — Comprobar que al teclear fuera de QuickLook (que no sean teclas de navegación ni modificadores), se dispara el cierre inmediato.
 
 ## Registro de fallos
 

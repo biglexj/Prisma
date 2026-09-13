@@ -4,7 +4,7 @@
 
 ## Controles
 
-- [ ] Validación técnica del agente.
+- [x] Validación técnica del agente.
 - [ ] Validación funcional del tester.
 - [ ] Aprobación final de Biglex.
 - [ ] `ROADMAP.md` actualizado.
@@ -22,6 +22,7 @@
 - Soporte nativo de tablas Markdown GFM en QuickLook con alineaciones, encabezados y celdas estilizadas.
 - Enlaces con código y formato enriquecido anidado resueltos sin rotura.
 - Ancho de ventana para documentos ajustado de 70% a 60% de pantalla, eliminando espacios muertos laterales.
+- Auto-cierre inteligente al deseleccionar (clic en punto vacío en Explorer/Escritorio), al hacer clic en otra app o al teclear fuera de QuickLook, preservando navegación continua al pulsar o hacer clic en otros archivos.
 
 ## Destino
 

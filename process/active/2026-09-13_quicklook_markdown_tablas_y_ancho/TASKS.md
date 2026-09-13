@@ -10,5 +10,8 @@
 - [x] T04 — Ajustar `doc_w` en `service.rs` y `quick_look.rs` de 70% a 60% (`screen_w * 0.60`) para documentos (Markdown, Text, etc.).
 - [x] T05 — Ejecutar chequeo de tipos (`bun run check`), build de Vite y pruebas nativas (`cargo test`).
 - [x] T06 — Registrar resultados de verificación en `VALIDATION.md` y preparar `APPROVAL.md`.
+- [x] T07 — Implementar detección de deselección ("punto vacío") y pérdida de foco hacia apps externas en `service.rs`.
+- [x] T08 — Implementar auto-cierre al teclear fuera de QuickLook (alfanuméricos, etc., preservando navegación y modificadores) en `keyboard_hook.rs`.
+- [x] T09 — Validar con `cargo check` y `cargo test` la integración de auto-cierre.
 
 Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.

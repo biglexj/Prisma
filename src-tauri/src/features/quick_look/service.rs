@@ -182,18 +182,56 @@ impl QuickLookState {
         let state = self.clone();
         let revision = self.preview_revision.load(Ordering::SeqCst);
         std::thread::spawn(move || {
+            let mut empty_count: u32 = 0;
+            let mut outside_count: u32 = 0;
             while is_preview_open() && state.preview_revision.load(Ordering::SeqCst) == revision {
-                std::thread::sleep(std::time::Duration::from_millis(100));
-                state.refresh_selection_from_foreground(revision);
+                std::thread::sleep(std::time::Duration::from_millis(80));
+
+                if !state.can_hide_on_unfocus() {
+                    continue;
+                }
+
+                // Si QuickLook tiene el foco activo, mantener la vista previa abierta
+                if state.is_foreground_quicklook() {
+                    empty_count = 0;
+                    outside_count = 0;
+                    continue;
+                }
+
+                let source = foreground_selection_source();
+                if source.is_none() {
+                    // El usuario hizo clic fuera (en otra aplicación o barra de tareas)
+                    empty_count = 0;
+                    outside_count += 1;
+                    if outside_count >= 2 {
+                        ql_log!("Cerrando QuickLook: foco fuera de Explorer/Desktop y QuickLook (outside_count={})", outside_count);
+                        state.hide();
+                        break;
+                    }
+                    continue;
+                }
+
+                // El foco está en Explorer o en el Escritorio
+                outside_count = 0;
+                let info_opt = get_foreground_selection_info();
+                if info_opt.is_none() {
+                    // El usuario hizo clic en un punto vacío en Explorer o Escritorio (sin selección)
+                    empty_count += 1;
+                    if empty_count >= 3 {
+                        ql_log!("Cerrando QuickLook: clic en punto vacío en Explorer (empty_count={})", empty_count);
+                        state.hide();
+                        break;
+                    }
+                } else if let Some(info) = info_opt {
+                    // El usuario seleccionó otro archivo (clic en otra imagen/archivo o flechas)
+                    empty_count = 0;
+                    state.handle_selection_update(revision, source, info);
+                }
             }
         });
     }
 
-    fn refresh_selection_from_foreground(&self, revision: u32) {
-        if !is_preview_open() || self.preview_revision.load(Ordering::SeqCst) != revision { return; }
-        let source = foreground_selection_source();
-        if source.is_none() { return; }
-        let Some(info) = get_foreground_selection_info() else { return; };
+    fn handle_selection_update(&self, revision: u32, source: Option<isize>, info: SelectionInfo) {
         let path = info.primary_path.clone();
         let path_str = path.to_string_lossy().to_string();
         let expected_path = self.current_path.lock().unwrap().clone();
@@ -218,6 +256,14 @@ impl QuickLookState {
                 let _ = window.center();
             }
             let _ = window.emit("quicklook://preview", &payload);
+        }
+    }
+
+    pub fn refresh_selection_from_foreground(&self, revision: u32) {
+        if !is_preview_open() || self.preview_revision.load(Ordering::SeqCst) != revision { return; }
+        let source = foreground_selection_source();
+        if let Some(info) = get_foreground_selection_info() {
+            self.handle_selection_update(revision, source, info);
         }
     }
 
@@ -265,7 +311,6 @@ impl QuickLookState {
         self.refresh_selection_from_foreground(self.preview_revision.load(Ordering::SeqCst));
     }
 
-    #[allow(dead_code)]
     pub fn can_hide_on_unfocus(&self) -> bool {
         if !is_preview_open() {
             return false;
@@ -273,11 +318,29 @@ impl QuickLookState {
 
         let shown_guard = self.last_shown.lock().unwrap();
         if let Some(instant) = *shown_guard {
-            // Permitir pequeña ventana de gracia de 100ms tras mostrar la ventana
-            instant.elapsed().as_millis() >= 100
+            // Permitir ventana de gracia de 250ms tras mostrar la ventana
+            instant.elapsed().as_millis() >= 250
         } else {
             true
         }
+    }
+
+    #[cfg(windows)]
+    pub fn is_foreground_quicklook(&self) -> bool {
+        use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+        unsafe {
+            let fg = GetForegroundWindow();
+            if fg.0.is_null() { return false; }
+            let mut pid = 0u32;
+            GetWindowThreadProcessId(fg, Some(&mut pid));
+            let my_pid = windows::Win32::System::Threading::GetCurrentProcessId();
+            pid != 0 && pid == my_pid
+        }
+    }
+
+    #[cfg(not(windows))]
+    pub fn is_foreground_quicklook(&self) -> bool {
+        false
     }
 
     pub fn hide(&self) {
