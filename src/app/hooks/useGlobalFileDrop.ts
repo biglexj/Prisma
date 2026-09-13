@@ -17,16 +17,12 @@ export function useGlobalFileDrop({
   onAddImageFolder,
   onAddVideoFolder,
 }: UseGlobalFileDropProps) {
-  // Prevenir que Windows Explorer muestre el cursor 🚫 ("no disponible / no soportado")
-  // al arrastrar archivos o carpetas sobre la ventana de Prisma.
-  // Usar fase de captura (capture: true) para que ningún elemento hijo interfiera.
+  // Escucha nativa de soltado en las bibliotecas principales (Música, Imágenes, Vídeos)
   useEffect(() => {
-    const handleDragEnter = (e: DragEvent) => {
-      e.preventDefault();
-      if (e.dataTransfer) {
-        e.dataTransfer.dropEffect = "copy";
-      }
-    };
+    // Si la vista activa es una herramienta con receptor dedicado, no intervenir
+    if (activeView === "duplicates" || activeView === "renamer" || activeView === "converter") {
+      return;
+    }
 
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault();
@@ -35,20 +31,11 @@ export function useGlobalFileDrop({
       }
     };
 
-    const handleWindowDrop = (e: DragEvent) => {
-      e.preventDefault();
-    };
-
-    window.addEventListener("dragenter", handleDragEnter, true);
-    window.addEventListener("dragover", handleDragOver, true);
-    window.addEventListener("drop", handleWindowDrop, true);
-
+    window.addEventListener("dragover", handleDragOver);
     return () => {
-      window.removeEventListener("dragenter", handleDragEnter, true);
-      window.removeEventListener("dragover", handleDragOver, true);
-      window.removeEventListener("drop", handleWindowDrop, true);
+      window.removeEventListener("dragover", handleDragOver);
     };
-  }, []);
+  }, [activeView]);
 
   // Escucha nativa de soltado en las bibliotecas principales (Música, Imágenes, Vídeos)
   useEffect(() => {

@@ -1237,4 +1237,265 @@
   color: #f97316;
 }
 
+/* ── Barra compacta de carpeta seleccionada (Ahorro vertical) ── */
+.duplicates-compact-folder-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 1.5rem;
+  background: var(--bg-surface-variant, rgba(255, 255, 255, 0.03));
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+
+.duplicates-compact-folder-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.duplicates-compact-folder-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(var(--accent-rgb, 99, 102, 241), 0.12);
+  color: var(--accent, #6366f1);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.duplicates-compact-folder-path {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-primary, #f1f3f9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.9;
+}
+
+.duplicates-compact-folder-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, #f1f3f9);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.duplicates-compact-folder-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ── Hero Dropzone Interactiva (Centro Vacío) ── */
+.duplicates-hero-dropzone {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3.25rem 2rem;
+  max-width: 580px;
+  width: 90%;
+  border: 2px dashed var(--border-subtle, rgba(255, 255, 255, 0.14));
+  border-radius: 1.5rem;
+  background: var(--bg-surface-variant, rgba(255, 255, 255, 0.02));
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.duplicates-hero-dropzone:hover {
+  border-color: var(--accent, #6366f1);
+  background: rgba(var(--accent-rgb, 99, 102, 241), 0.04);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+.duplicates-hero-dropzone.is-drag-over {
+  border-color: var(--accent, #6366f1) !important;
+  background: rgba(var(--accent-rgb, 99, 102, 241), 0.1) !important;
+  transform: scale(1.02);
+  box-shadow: 0 16px 40px rgba(var(--accent-rgb, 99, 102, 241), 0.3) !important;
+}
+
+.duplicates-hero-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(var(--accent-rgb, 99, 102, 241), 0.12);
+  color: var(--accent, #6366f1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 0 24px rgba(var(--accent-rgb, 99, 102, 241), 0.25);
+  transition: transform 0.25s ease;
+}
+
+.duplicates-hero-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.duplicates-hero-dropzone:hover .duplicates-hero-icon {
+  transform: scale(1.1);
+}
+
+.duplicates-hero-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary, #f1f3f9);
+  margin: 0 0 0.5rem 0;
+}
+
+.duplicates-hero-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary, #9ca3af);
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+  max-width: 440px;
+}
+
+.duplicates-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.4rem;
+  border-radius: 9999px;
+  background: var(--accent, #6366f1);
+  color: #fff;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb, 99, 102, 241), 0.35);
+  transition: all 0.2s ease;
+}
+
+.duplicates-hero-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(var(--accent-rgb, 99, 102, 241), 0.45);
+}
+
+/* ── Tarjeta de Carpeta Lista (Antes de pulsar Escanear) ── */
+.duplicates-ready-card {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2.5rem 2rem;
+  max-width: 540px;
+  width: 90%;
+  background: var(--bg-surface-variant, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 1.5rem;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+}
+
+.duplicates-ready-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.duplicates-ready-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.duplicates-ready-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary, #f1f3f9);
+  margin: 0 0 0.4rem 0;
+}
+
+.duplicates-ready-path {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.9rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-primary, #f1f3f9);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 1.25rem;
+}
+
+.duplicates-ready-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.duplicates-ready-scan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.4rem;
+  border-radius: 9999px;
+  background: var(--accent, #6366f1);
+  color: #fff;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb, 99, 102, 241), 0.35);
+  transition: all 0.2s ease;
+}
+
+.duplicates-ready-scan-btn:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.duplicates-ready-change-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, #f1f3f9);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.duplicates-ready-change-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+
 

@@ -581,17 +581,77 @@ export function PrismaConvertView() {
 
         <div className="convert-queue-table-container">
           {queue.length === 0 ? (
-            <div style={{ padding: "3rem 1.5rem", textAlign: "center", opacity: 0.75 }}>
-              <Icon name="download" />
-              <p style={{ margin: "0.6rem 0 1rem", fontSize: "0.86rem" }}>
-                Arrastra archivos o carpetas aquí o usa los botones para comenzar
+            <div
+              className="convert-empty-dropzone"
+              onClick={pickFiles}
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (e.dataTransfer) {
+                  e.dataTransfer.dropEffect = "copy";
+                }
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const files = Array.from(e.dataTransfer?.files || []);
+                const paths = files.map((f: any) => f.path || f.webkitRelativePath).filter(Boolean);
+                if (paths.length > 0) {
+                  void handleIncomingPaths(paths);
+                }
+              }}
+              style={{
+                padding: "3.5rem 1.5rem",
+                textAlign: "center",
+                cursor: "pointer",
+                border: "2px dashed var(--border-subtle, rgba(255, 255, 255, 0.12))",
+                borderRadius: "1.25rem",
+                margin: "1rem",
+                background: "rgba(255, 255, 255, 0.015)",
+                transition: "all 0.2s ease",
+              }}
+            >
+              <div
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: "50%",
+                  background: "rgba(var(--accent-rgb, 99, 102, 241), 0.12)",
+                  color: "var(--accent, #6366f1)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: "0.85rem",
+                }}
+              >
+                <Icon name="download" />
+              </div>
+              <h4 style={{ margin: "0 0 0.35rem 0", fontSize: "1.05rem", fontWeight: 600 }}>
+                Arrastra archivos o carpetas aquí o haz clic para examinar
+              </h4>
+              <p style={{ margin: "0 0 1.25rem 0", fontSize: "0.84rem", opacity: 0.7 }}>
+                Soporta imágenes individuales, colecciones de vídeo y carpetas completas para conversión por lotes.
               </p>
               <div style={{ display: "flex", gap: "0.6rem", justifyContent: "center", flexWrap: "wrap" }}>
-                <button className="convert-btn is-secondary" onClick={pickFiles} type="button" disabled={isRunning}>
+                <button
+                  className="convert-btn is-primary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    pickFiles();
+                  }}
+                  type="button"
+                  disabled={isRunning}
+                >
                   <Icon name="plus" />
                   <span>Añadir archivos</span>
                 </button>
-                <button className="convert-btn is-secondary" onClick={pickFolder} type="button" disabled={isRunning}>
+                <button
+                  className="convert-btn is-secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    pickFolder();
+                  }}
+                  type="button"
+                  disabled={isRunning}
+                >
                   <Icon name="folder-open" />
                   <span>Añadir carpeta</span>
                 </button>

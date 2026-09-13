@@ -13,6 +13,7 @@ import type {
   VisualLibraryItem,
 } from "../../model/types";
 import { DuplicateGroupCard, type DuplicateScanKind } from "./DuplicateGroupCard";
+import { DuplicatesEmptyState } from "./DuplicatesEmptyState";
 import { ImageComparisonModal } from "../comparison/ImageComparisonModal";
 import "./duplicates-scanner.css";
 
@@ -781,67 +782,27 @@ export function DuplicatesScannerModal({
           </label>
         </div>
 
-        {/* Panel para Escanear 1 Carpeta (con todas sus subcarpetas) */}
-        {scanMode === "single_folder" && (
-          <div className="duplicates-single-folder-panel">
-            <div
-              className={`duplicates-folder-card is-single ${hoveredDropZone === "single" ? "is-drag-over" : ""}`}
-              data-drop-zone="single"
-              onClick={handlePickSingleFolder}
-              onDragEnter={() => {
-                setHoveredDropZone("single");
-                hoveredDropZoneRef.current = "single";
-              }}
-              onDragLeave={() => {
-                if (hoveredDropZoneRef.current === "single") {
-                  setHoveredDropZone(null);
-                  hoveredDropZoneRef.current = null;
-                }
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                if (e.dataTransfer) {
-                  e.dataTransfer.dropEffect = "copy";
-                }
-                if (hoveredDropZoneRef.current !== "single") {
-                  setHoveredDropZone("single");
-                  hoveredDropZoneRef.current = "single";
-                }
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                setIsDraggingOver(false);
-                const files = Array.from(e.dataTransfer?.files || []);
-                const paths = files.map((f: any) => f.path || f.webkitRelativePath).filter(Boolean);
-                if (paths.length > 0) {
-                  applyDroppedPaths(paths, "single");
-                }
-              }}
-            >
-              <div className="folder-card-label">
+        {/* Barra Compacta para 1 Carpeta (Solo cuando ya se seleccionó una carpeta) */}
+        {scanMode === "single_folder" && singleFolder && (
+          <div className="duplicates-compact-folder-bar">
+            <div className="duplicates-compact-folder-meta">
+              <span className="duplicates-compact-folder-badge">
                 <Icon name="folder" />
-                <span>Carpeta a Analizar (incluye subcarpetas)</span>
-              </div>
-              <div className="folder-card-picker">
-                <Icon name="folder-open" />
-                <span className="folder-path-text" title={singleFolder || "Arrastra una carpeta aquí o haz clic para examinar..."}>
-                  {singleFolder || "Arrastra una carpeta aquí o haz clic para examinar..."}
-                </span>
-                <button
-                  type="button"
-                  className="folder-pick-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePickSingleFolder();
-                  }}
-                >
-                  Examinar...
-                </button>
-              </div>
-              <p className="folder-card-hint">
-                Arrastra una carpeta desde el explorador de archivos o examina. Se analizarán todos los archivos y subcarpetas con inteligencia de nombres naturales.
-              </p>
+                <span>Carpeta</span>
+              </span>
+              <span className="duplicates-compact-folder-path" title={singleFolder}>
+                {singleFolder}
+              </span>
             </div>
+            <button
+              type="button"
+              className="duplicates-compact-folder-btn"
+              onClick={handlePickSingleFolder}
+              title="Cambiar carpeta a analizar"
+            >
+              <Icon name="edit" />
+              <span>Cambiar...</span>
+            </button>
           </div>
         )}
 
@@ -1101,19 +1062,21 @@ export function DuplicatesScannerModal({
         {/* Contenido / Lista de grupos */}
         <div className="duplicates-body-scroll">
           {groups.length === 0 ? (
-            <div className="duplicates-empty-view">
-              <Icon name="copy" />
-              <h3>{hasScanned ? "¡No se encontraron archivos duplicados!" : "Listo para escanear"}</h3>
-              <p>
-                {hasScanned
-                  ? "Las carpetas o biblioteca no contienen archivos duplicados con los criterios seleccionados."
-                  : scanMode === "single_folder"
-                  ? "Selecciona cualquier carpeta (ej. Telefono, Descargas o Fotos) para encontrar duplicados en todas sus subcarpetas."
-                  : scanMode === "two_folders"
-                  ? "Selecciona la carpeta base a proteger y la carpeta a depurar, luego pulsa 'Escanear duplicados'."
-                  : "Pulsa 'Escanear duplicados' para comparar hashes exactos y gradientes perceptuales de imágenes."}
-              </p>
-            </div>
+            <DuplicatesEmptyState
+              hasScanned={hasScanned}
+              scanMode={scanMode}
+              singleFolder={singleFolder}
+              activeKind={activeKind}
+              hoveredDropZone={hoveredDropZone}
+              isScanning={isScanning}
+              handlePickSingleFolder={handlePickSingleFolder}
+              handleStartScan={handleStartScan}
+              applyDroppedPaths={applyDroppedPaths}
+              setHasScanned={setHasScanned}
+              setHoveredDropZone={setHoveredDropZone}
+              hoveredDropZoneRef={hoveredDropZoneRef}
+              setIsDraggingOver={setIsDraggingOver}
+            />
           ) : (
             groups.map((group) => (
               <DuplicateGroupCard
