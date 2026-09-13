@@ -14,6 +14,6 @@
 - [x] T08 — Implementar auto-cierre al teclear fuera de QuickLook (alfanuméricos, etc., preservando navegación y modificadores) en `keyboard_hook.rs`.
 - [x] T10 — Restringir la consulta COM en Explorer con pestañas exclusivamente a la pestaña activa (`candidates.first()`), eliminando el fallback a pestañas inactivas que recuperaba selecciones obsoletas.
 - [x] T11 — Eximir atajos y procesos de captura de pantalla (`PrintScreen`, `Win+Shift+S`, `SnippingTool`, `ScreenClippingHost`) de auto-cierre para capturar QuickLook sin cerrarlo.
-- [x] T12 — Calibrar proporciones finales de ventana de lectura al 50% de pantalla (`clamp(660.0, 960.0)`), reducir padding superior a 14px y eliminar márgenes laterales automáticos para ceñir el texto sin espacios muertos.
+- [x] T12 — Mantener el ancho de ventana al 60% de pantalla (`screen_w * 0.60`), conservar padding superior en 14px y calibrar padding lateral a 16px alineado con la barra de herramientas.
 
 Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.
