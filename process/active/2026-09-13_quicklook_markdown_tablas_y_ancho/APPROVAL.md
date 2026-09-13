@@ -21,7 +21,7 @@
 
 - Soporte nativo de tablas Markdown GFM en QuickLook con alineaciones, encabezados y celdas estilizadas.
 - Enlaces con código y formato enriquecido anidado resueltos sin rotura.
-- Ancho de ventana para documentos ajustado de 70% a 60% de pantalla, eliminando espacios muertos laterales.
+- Ancho de ventana para documentos ajustado al 50% de pantalla (`clamp(660.0, 960.0)`), con padding superior compacto de 14px y eliminación de márgenes automáticos laterales para un encaje proporcionado y natural.
 - Auto-cierre inteligente al deseleccionar (clic en punto vacío en Explorer/Escritorio), al hacer clic en otra app o al teclear fuera de QuickLook, preservando navegación continua al pulsar o hacer clic en otros archivos.
 - Aislamiento estricto de la pestaña activa en Explorer de Windows 11: si la pestaña activa no tiene selección, no se realiza fallback a pestañas inactivas que contenían selecciones obsoletas de otras carpetas.
 - Inmunidad total para herramientas de captura de pantalla (tecla `PrintScreen`/`Impr Pant`, atajo `Win+Shift+S`, y procesos `SnippingTool.exe`/`ScreenClippingHost.exe`), permitiendo capturar QuickLook sin que se cierre.

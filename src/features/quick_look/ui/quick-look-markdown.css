@@ -3,7 +3,7 @@
 .quicklook-markdown-body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 28px;
+  padding: 14px 24px 24px;
   background: var(--surface-container-lowest);
 }
 
@@ -12,9 +12,7 @@
 }
 
 .markdown-rendered-content {
-  max-width: 920px;
   width: 100%;
-  margin: 0 auto;
   color: var(--on-surface);
   line-height: 1.65;
   font-size: 0.94rem;

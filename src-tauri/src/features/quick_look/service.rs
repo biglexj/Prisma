@@ -522,8 +522,8 @@ fn get_screen_bounds(app_handle: &tauri::AppHandle) -> (f64, f64) {
 
 fn resolve_media_size(app_handle: &tauri::AppHandle, media_type: QuickLookMediaType, path: &Path) -> (f64, f64) {
     let (screen_w, screen_h) = get_screen_bounds(app_handle);
-    // Base ergonómica para documentos por porcentaje de pantalla: 60% ancho, 80% alto
-    let doc_w = (screen_w * 0.60).round().max(680.0);
+    // Base ergonómica para documentos por porcentaje de pantalla: 50% ancho, 80% alto
+    let doc_w = (screen_w * 0.50).round().clamp(660.0, 960.0);
     let doc_h = (screen_h * 0.80).round().max(580.0);
 
     match media_type {

@@ -15,6 +15,7 @@
 - [x] V09 — Agente — Comprobar que al teclear fuera de QuickLook (que no sean teclas de navegación ni modificadores), se dispara el cierre inmediato.
 - [x] V10 — Agente — Comprobar que en Explorer con múltiples pestañas, la deselección (clic en punto vacío) en la pestaña activa retorne `None` sin hacer fallback a selecciones obsoletas de otras pestañas en segundo plano.
 - [x] V11 — Agente — Comprobar que al presionar Impr Pant (`PrintScreen`), `Win+Shift+S` o activar `SnippingTool.exe`/`ScreenClippingHost.exe`, QuickLook permanezca abierto para permitir la captura sin cerrarse.
+- [x] V12 — Agente — Comprobar que la ventana de documentos dimensione al 50% de pantalla (`clamp 660-960px`), con padding superior de 14px y alineación fluida sin márgenes auto excesivos.
 
 ## Registro de fallos
 

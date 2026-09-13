@@ -139,7 +139,7 @@ pub fn quick_look_toggle_maximize(window: tauri::WebviewWindow) -> Result<bool, 
                     )
                 })
                 .unwrap_or((1920.0, 1080.0));
-            let def_w = (screen_w * 0.60).round().max(680.0);
+            let def_w = (screen_w * 0.50).round().clamp(660.0, 960.0);
             let def_h = (screen_h * 0.80).round().max(580.0);
             let _ = window.set_size(tauri::LogicalSize::new(def_w, def_h));
             let _ = window.center();
