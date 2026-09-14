@@ -124,6 +124,8 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
     let inList = false;
     let listType: "ul" | "ol" = "ul";
     let listItems: React.ReactNode[] = [];
+    let currentParagraphLines: string[] = [];
+    let consecutiveBlankLines = 0;
 
     const flushList = () => {
       if (inList && listItems.length > 0) {
@@ -143,6 +145,28 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
         listItems = [];
         inList = false;
       }
+    };
+
+    const flushParagraph = () => {
+      if (currentParagraphLines.length === 0) return;
+      const pLines = [...currentParagraphLines];
+      currentParagraphLines = [];
+
+      elements.push(
+        <p key={`p-${elements.length}`} className="md-paragraph">
+          {pLines.map((lineText, idx) => (
+            <span key={idx} className="md-line">
+              {formatInline(lineText)}
+              {idx < pLines.length - 1 && <br />}
+            </span>
+          ))}
+        </p>
+      );
+    };
+
+    const flushAll = () => {
+      flushList();
+      flushParagraph();
     };
 
     const formatInline = (text: string): React.ReactNode => {
@@ -236,7 +260,7 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
 
       // Bloques de código con triple backtick
       if (trimmed.startsWith("```")) {
-        flushList();
+        flushAll();
         if (inCodeBlock) {
           elements.push(
             <CodeBlock
@@ -260,15 +284,25 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
         continue;
       }
 
-      // Línea vacía
+      // Línea vacía / Salto de párrafo canónico (doble salto de línea)
       if (!trimmed) {
-        flushList();
+        flushAll();
+        consecutiveBlankLines++;
+        // Si hay múltiples líneas vacías consecutivas, renderizar espaciador visual
+        if (consecutiveBlankLines > 1) {
+          elements.push(
+            <div key={`spacer-${i}`} className="md-empty-line" />
+          );
+        }
         continue;
       }
 
+      // Reiniciar contador de líneas vacías consecutivas al encontrar contenido
+      consecutiveBlankLines = 0;
+
       // Regla horizontal
       if (/^(\*\*\*|---|___)$/.test(trimmed)) {
-        flushList();
+        flushAll();
         elements.push(<hr key={`hr-${i}`} className="md-hr" />);
         continue;
       }
@@ -279,7 +313,7 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
         i + 1 < lines.length &&
         isTableDelimiter(lines[i + 1])
       ) {
-        flushList();
+        flushAll();
         const headerCells = splitTableRow(trimmed);
         const delimiterCells = splitTableRow(lines[i + 1]);
         const alignments: ("left" | "center" | "right")[] = delimiterCells.map((cell) => {
@@ -350,7 +384,7 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
       // Alertas estilo GitHub / Callouts (> [!NOTE], > [!TIP], etc.)
       const alertMatch = /^>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/i.exec(trimmed);
       if (alertMatch) {
-        flushList();
+        flushAll();
         const alertType = alertMatch[1].toUpperCase();
         const alertLines: string[] = [];
         const firstLineRest = trimmed.replace(
@@ -374,9 +408,10 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
             </div>
             <div className="md-alert-content">
               {alertLines.map((al, idx) => (
-                <p key={idx} className="md-paragraph">
+                <span key={idx} className="md-line">
                   {formatInline(al)}
-                </p>
+                  {idx < alertLines.length - 1 && <br />}
+                </span>
               ))}
             </div>
           </div>
@@ -386,7 +421,7 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
 
       // Citas en bloque (Blockquotes estándar)
       if (trimmed.startsWith("> ")) {
-        flushList();
+        flushAll();
         const quoteLines: string[] = [trimmed.slice(2)];
         let j = i + 1;
         while (
@@ -398,11 +433,32 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
           j++;
         }
         i = j - 1;
+
+        // Agrupar líneas de cita en párrafos si hay líneas vacías ">"
+        const quoteParagraphs: string[][] = [];
+        let curQuoteP: string[] = [];
+        for (const ql of quoteLines) {
+          if (!ql.trim()) {
+            if (curQuoteP.length > 0) {
+              quoteParagraphs.push(curQuoteP);
+              curQuoteP = [];
+            }
+          } else {
+            curQuoteP.push(ql);
+          }
+        }
+        if (curQuoteP.length > 0) quoteParagraphs.push(curQuoteP);
+
         elements.push(
           <blockquote key={`quote-${i}`} className="md-blockquote">
-            {quoteLines.map((ql, idx) => (
-              <p key={idx} className="md-paragraph">
-                {formatInline(ql)}
+            {quoteParagraphs.map((qp, pIdx) => (
+              <p key={pIdx} className="md-paragraph">
+                {qp.map((lineText, lIdx) => (
+                  <span key={lIdx} className="md-line">
+                    {formatInline(lineText)}
+                    {lIdx < qp.length - 1 && <br />}
+                  </span>
+                ))}
               </p>
             ))}
           </blockquote>
@@ -412,32 +468,32 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
 
       // Encabezados
       if (trimmed.startsWith("# ")) {
-        flushList();
+        flushAll();
         elements.push(<h1 key={`h1-${i}`} className="md-h1">{formatInline(trimmed.slice(2))}</h1>);
         continue;
       }
       if (trimmed.startsWith("## ")) {
-        flushList();
+        flushAll();
         elements.push(<h2 key={`h2-${i}`} className="md-h2">{formatInline(trimmed.slice(3))}</h2>);
         continue;
       }
       if (trimmed.startsWith("### ")) {
-        flushList();
+        flushAll();
         elements.push(<h3 key={`h3-${i}`} className="md-h3">{formatInline(trimmed.slice(4))}</h3>);
         continue;
       }
       if (trimmed.startsWith("#### ")) {
-        flushList();
+        flushAll();
         elements.push(<h4 key={`h4-${i}`} className="md-h4">{formatInline(trimmed.slice(5))}</h4>);
         continue;
       }
       if (trimmed.startsWith("##### ")) {
-        flushList();
+        flushAll();
         elements.push(<h5 key={`h5-${i}`} className="md-h5">{formatInline(trimmed.slice(6))}</h5>);
         continue;
       }
       if (trimmed.startsWith("###### ")) {
-        flushList();
+        flushAll();
         elements.push(<h6 key={`h6-${i}`} className="md-h6">{formatInline(trimmed.slice(7))}</h6>);
         continue;
       }
@@ -445,7 +501,7 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
       // Tareas (- [ ] o - [x])
       const taskMatch = /^- \[( |x|X)\] (.*)$/.exec(trimmed);
       if (taskMatch) {
-        flushList();
+        flushAll();
         const checked = taskMatch[1].toLowerCase() === "x";
         elements.push(
           <div key={`task-${i}`} className="md-task-item">
@@ -458,6 +514,7 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
 
       // Listas no ordenadas (*, -, +)
       if (/^[-*+]\s+/.test(trimmed)) {
+        flushParagraph();
         inList = true;
         listType = "ul";
         listItems.push(
@@ -470,6 +527,7 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
 
       // Listas ordenadas (1., 2., etc.)
       if (/^\d+\.\s+/.test(trimmed)) {
+        flushParagraph();
         inList = true;
         listType = "ol";
         listItems.push(
@@ -480,16 +538,12 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
         continue;
       }
 
-      // Párrafo normal
+      // Párrafo normal: acumular líneas consecutivas dentro del mismo párrafo / estrofa
       flushList();
-      elements.push(
-        <p key={`p-${i}`} className="md-paragraph">
-          {formatInline(line)}
-        </p>
-      );
+      currentParagraphLines.push(line);
     }
 
-    flushList();
+    flushAll();
     return elements;
   }, [content]);
 

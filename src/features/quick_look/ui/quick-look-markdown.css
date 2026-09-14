@@ -51,7 +51,21 @@
 }
 
 .markdown-rendered-content .md-paragraph {
-  margin: 0 0 14px 0;
+  margin: 0 0 18px 0;
+  line-height: 1.65;
+}
+
+.markdown-rendered-content .md-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-rendered-content .md-line {
+  display: inline;
+}
+
+.markdown-rendered-content .md-empty-line {
+  height: 16px;
+  width: 100%;
 }
 
 .markdown-rendered-content .md-bold {
