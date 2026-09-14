@@ -47,6 +47,13 @@ const TOOL_DEFINITIONS: ToolItemDef[] = [
     tags: ["Galerías Web", "Manga / Arte", "Extracción por Lotes"],
   },
   {
+    key: "prisma_upscaler",
+    label: "Prisma Upscaler",
+    icon: "sparkles",
+    description: "Super-resolución neuronal de imágenes (2x, 4x) y aumento a ultra alta definición con IA acelerada por GPU.",
+    tags: ["Super-Resolución", "IA NCNN Vulkan", "Aumento 4K", "RealESRGAN"],
+  },
+  {
     key: "wallpapers",
     label: "Wallpapers Aurora",
     icon: "sparkles",

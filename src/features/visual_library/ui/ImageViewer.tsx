@@ -436,6 +436,14 @@ export function ImageViewer({
         onSelect: () => setIsComparing(true),
       },
       {
+        id: "upscale",
+        label: "Mejorar con Prisma Upscaler (IA)",
+        icon: "sparkles" as const,
+        onSelect: () => {
+          void invoke("launch_prisma_upscaler", { filePath: target.item.path }).catch(() => {});
+        },
+      },
+      {
         id: "detach",
         label: "Abrir en otra instancia a la par",
         icon: "copy" as const,
@@ -730,6 +738,9 @@ export function ImageViewer({
           <ViewerToolsMenu
             onEdit={() => setIsEditing(true)}
             onCompare={() => setIsComparing(true)}
+            onUpscale={() => {
+              void invoke("launch_prisma_upscaler", { filePath: currentItem.path }).catch(() => {});
+            }}
             onConvert={() => {
               window.dispatchEvent(
                 new CustomEvent("prisma-open-converter", {

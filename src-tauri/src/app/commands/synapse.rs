@@ -253,4 +253,66 @@ pub async fn launch_gallery_dl(
     .map_err(|e| format!("Error al iniciar Gallery-DL GUI: {e}"))?
 }
 
+#[tauri::command]
+pub async fn launch_prisma_upscaler(
+    file_path: Option<String>,
+) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(target_os = "windows")]
+        {
+            use std::process::Command;
+
+            let mut candidates = Vec::new();
+            if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+                candidates.push(std::path::PathBuf::from(&local_app_data).join("Programs").join("PrismaUpscaler").join("PrismaUpscaler.exe"));
+                candidates.push(std::path::PathBuf::from(&local_app_data).join("Programs").join("prisma-upscaler").join("prisma-upscaler.exe"));
+                candidates.push(std::path::PathBuf::from(&local_app_data).join("Programs").join("prisma-upscaler").join("prisma-upscaler-desktop.exe"));
+                candidates.push(std::path::PathBuf::from(&local_app_data).join("PrismaUpscaler").join("PrismaUpscaler.exe"));
+                candidates.push(std::path::PathBuf::from(&local_app_data).join("prisma-upscaler").join("prisma-upscaler.exe"));
+            }
+            if let Ok(prog_files) = std::env::var("ProgramFiles") {
+                candidates.push(std::path::PathBuf::from(&prog_files).join("PrismaUpscaler").join("PrismaUpscaler.exe"));
+                candidates.push(std::path::PathBuf::from(&prog_files).join("Prisma Upscaler").join("PrismaUpscaler.exe"));
+                candidates.push(std::path::PathBuf::from(&prog_files).join("prisma-upscaler").join("prisma-upscaler.exe"));
+            }
+            // Ubicaciones del repositorio en desarrollo
+            candidates.push(std::path::PathBuf::from(r"D:\Proyectos\biglexj\prisma-upscaler\release\prisma-upscaler.exe"));
+            candidates.push(std::path::PathBuf::from(r"D:\Proyectos\biglexj\prisma-upscaler\release\prisma-upscaler-desktop.exe"));
+            candidates.push(std::path::PathBuf::from(r"D:\Proyectos\biglexj\prisma-upscaler\desktop\src-tauri\target\release\prisma-upscaler-desktop.exe"));
+            candidates.push(std::path::PathBuf::from(r"D:\Proyectos\biglexj\prisma-upscaler\target\release\prisma-upscaler.exe"));
+
+            for cand in candidates {
+                if cand.exists() {
+                    let mut cmd = Command::new(&cand);
+                    if let Some(ref path) = file_path {
+                        let trimmed = path.trim();
+                        if !trimmed.is_empty() {
+                            cmd.arg(trimmed);
+                        }
+                    }
+                    if let Ok(_) = cmd.spawn() {
+                        return Ok(true);
+                    }
+                }
+            }
+
+            // Fallback genérico vía comando directo o protocolo
+            if let Ok(mut child) = Command::new("cmd").args(["/C", "start", "", "prismaupscaler:"]).spawn() {
+                let _ = child.wait();
+                return Ok(true);
+            }
+
+            Ok(false)
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = file_path;
+            Ok(false)
+        }
+    })
+    .await
+    .map_err(|e| format!("Error al iniciar Prisma Upscaler: {e}"))?
+}
+
+
 

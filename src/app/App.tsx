@@ -36,6 +36,7 @@ import { useCustomLibraries } from "../features/custom_libraries/hooks/useCustom
 import { PrismaConvertView } from "../features/converter/ui/PrismaConvertView";
 import { LunaFetchView } from "../features/luna_fetch/ui/LunaFetchView";
 import { GalleryDlView } from "../features/gallery_dl/ui/GalleryDlView";
+import { PrismaUpscalerView } from "../features/prisma_upscaler/ui/PrismaUpscalerView";
 import { WallpapersView } from "../features/wallpapers/ui/WallpapersView";
 import { BatchRenamerView } from "../features/renamer/ui/BatchRenamerView";
 import { DuplicatesScannerModal } from "../features/visual_library/ui/duplicates/DuplicatesScannerModal";
@@ -66,6 +67,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   converter: "Convertidor Prisma",
   luna_fetch: "Luna Fetch",
   gallery_dl: "Gallery-DL",
+  prisma_upscaler: "Prisma Upscaler",
   wallpapers: "Wallpapers Aurora",
   duplicates: "Buscador de Duplicados",
 };
@@ -1145,6 +1147,7 @@ function AppContent() {
           ) : null}
           {activeView === "luna_fetch" ? <LunaFetchView onNavigate={setActiveView} /> : null}
           {activeView === "gallery_dl" ? <GalleryDlView onNavigate={setActiveView} /> : null}
+          {activeView === "prisma_upscaler" ? <PrismaUpscalerView onNavigate={setActiveView} /> : null}
           {activeView === "wallpapers" ? <WallpapersView /> : null}
         </main>
       </div>

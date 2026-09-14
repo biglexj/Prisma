@@ -4,6 +4,7 @@ import { Icon } from "../../../../shared/ui/Icon";
 export interface ViewerToolsMenuProps {
   onEdit: () => void;
   onCompare: () => void;
+  onUpscale?: () => void;
   onConvert: () => void;
   onRename: () => void;
   onShowInfo: () => void;
@@ -18,6 +19,7 @@ export interface ViewerToolsMenuProps {
 export function ViewerToolsMenu({
   onEdit,
   onCompare,
+  onUpscale,
   onConvert,
   onRename,
   onShowInfo,
@@ -124,6 +126,20 @@ export function ViewerToolsMenu({
               </div>
               <kbd className="viewer-tools-shortcut">C</kbd>
             </button>
+
+            {onUpscale && (
+              <button
+                className="viewer-tools-item"
+                onClick={() => handleAction(onUpscale)}
+                role="menuitem"
+              >
+                <Icon name="sparkles" />
+                <div className="viewer-tools-item-content">
+                  <span className="viewer-tools-item-title">Prisma Upscaler (IA)</span>
+                  <span className="viewer-tools-item-desc">Super-resolución neuronal (2x, 4x)</span>
+                </div>
+              </button>
+            )}
           </div>
 
           <div className="viewer-tools-divider" />

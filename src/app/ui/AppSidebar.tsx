@@ -81,6 +81,7 @@ export function AppSidebar({
     { key: "duplicates", item: { icon: "copy", label: "Duplicados", view: "duplicates" } },
     { key: "luna_fetch", item: { icon: "download", label: "Luna Fetch", view: "luna_fetch" } },
     { key: "gallery_dl", item: { icon: "layers", label: "Gallery-DL", view: "gallery_dl" } },
+    { key: "prisma_upscaler", item: { icon: "sparkles", label: "Upscaler IA", view: "prisma_upscaler" } },
     {
       key: "wallpapers",
       item: { icon: "sparkles" as IconName, label: "Wallpapers Aurora", view: "wallpapers" },

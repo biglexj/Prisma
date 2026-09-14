@@ -52,7 +52,7 @@ use app::commands::renamer::{
     renamer_execute_batch, renamer_scan_folder, renamer_undo_batch, RenamerState,
 };
 use app::commands::synapse::{
-    launch_gallery_dl, launch_luna_fetch, synapse_get_discovered_devices, synapse_get_downloads_dir,
+    launch_gallery_dl, launch_luna_fetch, launch_prisma_upscaler, synapse_get_discovered_devices, synapse_get_downloads_dir,
     synapse_get_status, synapse_send_file_to_device, synapse_set_downloads_dir,
     synapse_update_playback,
 };
@@ -464,6 +464,7 @@ pub fn run() {
             synapse_send_file_to_device,
             launch_luna_fetch,
             launch_gallery_dl,
+            launch_prisma_upscaler,
             custom_libraries_get_all,
             custom_libraries_save,
             custom_libraries_toggle_active,
