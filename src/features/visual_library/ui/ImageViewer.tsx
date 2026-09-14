@@ -535,22 +535,31 @@ export function ImageViewer({
         });
       } else if (event.key.toLowerCase() === "f") {
         event.preventDefault();
+        event.stopPropagation();
         toggleFullscreen();
       } else if ((event.ctrlKey || event.metaKey) && (event.key === "+" || event.key === "=")) {
         event.preventDefault();
+        event.stopPropagation();
         handleZoomIn();
       } else if ((event.ctrlKey || event.metaKey) && (event.key === "-" || event.key === "_")) {
         event.preventDefault();
+        event.stopPropagation();
         handleZoomOut();
       } else if ((event.ctrlKey || event.metaKey) && event.key === "0") {
         event.preventDefault();
+        event.stopPropagation();
         handleResetZoom();
       } else if (event.key.toLowerCase() === "r" && !event.ctrlKey && !event.metaKey && !event.altKey) {
         event.preventDefault();
+        event.stopPropagation();
         handleResetZoom();
       } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        event.stopPropagation();
         handlePreviousImage();
       } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        event.stopPropagation();
         handleNextImage();
       } else if (
         event.key === "Delete" ||
@@ -559,6 +568,7 @@ export function ImageViewer({
         event.code === "Delete"
       ) {
         event.preventDefault();
+        event.stopPropagation();
         mediaDelete.requestDelete({
           path: currentItem.path,
           title: currentItem.title,
@@ -566,6 +576,7 @@ export function ImageViewer({
         });
       } else if (event.key === " " && !isDragging) {
         event.preventDefault();
+        event.stopPropagation();
         setIsSlideshowActive((prev) => !prev);
       }
     },
@@ -578,6 +589,7 @@ export function ImageViewer({
       isDragging,
       activeList,
       currentIndex,
+      showInfoDrawer,
     ]
   );
 
@@ -648,7 +660,6 @@ export function ImageViewer({
       aria-modal="true"
       className={`image-viewer ${isFullscreen ? "is-fullscreen-mode" : ""} ${!showControls ? "controls-hidden" : ""}`}
       onContextMenu={handleContextMenu}
-      onKeyDown={handleKeyDown}
       onMouseMove={handleUserActivity}
     >
       <div

@@ -191,8 +191,11 @@ export function VisualLibrary({
     });
   };
 
+  // Ordenar los elementos no excluidos para que coincidan con la ordenación visual configurada
+  const sortedNonExcludedItems = sortItemList(nonExcludedItems);
+
   // En la línea de tiempo: solo se muestran elementos que NO han sido ocultados del tiempo
-  const visibleItems = nonExcludedItems.slice(0, VISIBLE_ITEM_LIMIT);
+  const visibleItems = sortedNonExcludedItems.slice(0, VISIBLE_ITEM_LIMIT);
   const timelineSections = groupByTimeline(visibleItems, sortItemList);
 
   // Árbol jerárquico y colecciones: muestran toda la estructura de carpetas y subcarpetas
@@ -210,7 +213,7 @@ export function VisualLibrary({
   const currentActiveList = activeImageSessionList ?? (
     isInsideFolder
       ? (sortedDirectItems.length > 0 ? sortedDirectItems : sortItemList(treeLevel.allRecursiveItems))
-      : (viewMode === "timeline" ? nonExcludedItems : allMatchingItems)
+      : (viewMode === "timeline" ? sortedNonExcludedItems : sortItemList(allMatchingItems))
   );
 
   const handleSelectImage = (item: VisualLibraryItem, queueList?: VisualLibraryItem[]) => {
@@ -224,8 +227,8 @@ export function VisualLibrary({
   };
 
   const handlePlayAllVideos = () => {
-    if (nonExcludedItems.length === 0) return;
-    onOpenVideo(nonExcludedItems[0].path, nonExcludedItems);
+    if (sortedNonExcludedItems.length === 0) return;
+    onOpenVideo(sortedNonExcludedItems[0].path, sortedNonExcludedItems);
   };
 
   const handlePlayFolderVideos = (folderItems: VisualLibraryItem[]) => {
@@ -756,9 +759,9 @@ export function VisualLibrary({
                         triggerActivation(item.path);
                       }
                       if (isImage) {
-                        handleSelectImage(item, nonExcludedItems);
+                        handleSelectImage(item, sortedNonExcludedItems);
                       } else {
-                        onOpenVideo(item.path, nonExcludedItems);
+                        onOpenVideo(item.path, sortedNonExcludedItems);
                       }
                     }}
                     onContextMenu={(event) => handleCardContextMenu(event, item)}
