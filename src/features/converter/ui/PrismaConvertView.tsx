@@ -133,7 +133,17 @@ export function PrismaConvertView() {
     : "Bitrate";
 
   return (
-    <div className={`convert-root ${isDraggingOver ? "is-drag-over" : ""}`}>
+    <div
+      className={`convert-root ${isDraggingOver ? "is-drag-over" : ""}`}
+      onDragEnter={(e) => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+      }}
+    >
       {isDraggingOver ? (
         <div className="convert-drop-overlay">
           <div className="convert-drop-card">

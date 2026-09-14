@@ -61,7 +61,17 @@ export function BatchRenamerView() {
   };
 
   return (
-    <div className={`batch-renamer-root ${isDraggingOver ? "is-drag-over" : ""}`}>
+    <div
+      className={`batch-renamer-root ${isDraggingOver ? "is-drag-over" : ""}`}
+      onDragEnter={(e) => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+      }}
+    >
       {/* Overlay Drag & Drop */}
       {isDraggingOver && (
         <div className="renamer-drop-overlay">

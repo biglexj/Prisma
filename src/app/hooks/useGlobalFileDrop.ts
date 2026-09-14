@@ -18,7 +18,15 @@ export function useGlobalFileDrop({
   onAddVideoFolder,
 }: UseGlobalFileDropProps) {
   // Prevenir rechazo de cursor (icono 🚫 de Windows) de forma global en cualquier vista
+  // mediante listeners en fase de captura (capture: true) a nivel de raíz (window y document).
   useEffect(() => {
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "copy";
+      }
+    };
+
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault();
       if (e.dataTransfer) {
@@ -26,15 +34,24 @@ export function useGlobalFileDrop({
       }
     };
 
-    const handleDragEnter = (e: DragEvent) => {
+    const handleWindowDrop = (e: DragEvent) => {
       e.preventDefault();
     };
 
-    window.addEventListener("dragover", handleDragOver);
-    window.addEventListener("dragenter", handleDragEnter);
+    window.addEventListener("dragenter", handleDragEnter, true);
+    window.addEventListener("dragover", handleDragOver, true);
+    window.addEventListener("drop", handleWindowDrop, true);
+    document.addEventListener("dragenter", handleDragEnter, true);
+    document.addEventListener("dragover", handleDragOver, true);
+    document.addEventListener("drop", handleWindowDrop, true);
+
     return () => {
-      window.removeEventListener("dragover", handleDragOver);
-      window.removeEventListener("dragenter", handleDragEnter);
+      window.removeEventListener("dragenter", handleDragEnter, true);
+      window.removeEventListener("dragover", handleDragOver, true);
+      window.removeEventListener("drop", handleWindowDrop, true);
+      document.removeEventListener("dragenter", handleDragEnter, true);
+      document.removeEventListener("dragover", handleDragOver, true);
+      document.removeEventListener("drop", handleWindowDrop, true);
     };
   }, []);
 

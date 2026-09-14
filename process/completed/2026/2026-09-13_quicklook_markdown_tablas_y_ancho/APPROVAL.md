@@ -5,14 +5,14 @@
 ## Controles
 
 - [x] Validación técnica del agente.
-- [ ] Validación funcional del tester.
-- [ ] Aprobación final de Biglex.
-- [ ] `ROADMAP.md` actualizado.
-- [ ] Sesión cerrada con resumen breve.
+- [x] Validación funcional del tester.
+- [x] Aprobación final de Biglex.
+- [x] `ROADMAP.md` actualizado.
+- [x] Sesión cerrada con resumen breve.
 
 ## Decisión
 
-- [ ] `APPROVED`
+- [x] `APPROVED`
 - [ ] `REWORK`
 - [ ] `CANCELLED`
 - [ ] `SUPERSEDED`
