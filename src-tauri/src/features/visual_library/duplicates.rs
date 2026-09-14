@@ -268,6 +268,38 @@ fn assemble_duplicate_group(
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum FolderOrigin {
+    Base,
+    Target,
+    Neither,
+}
+
+pub fn classify_path(path: &str, base_folder: &str, target_folder: &str) -> FolderOrigin {
+    let norm_base = base_folder.replace('\\', "/").to_lowercase();
+    let norm_base = norm_base.trim_end_matches('/').to_string();
+    let norm_target = target_folder.replace('\\', "/").to_lowercase();
+    let norm_target = norm_target.trim_end_matches('/').to_string();
+    let norm_path = path.replace('\\', "/").to_lowercase();
+
+    let in_base = norm_path == norm_base || norm_path.starts_with(&format!("{}/", norm_base));
+    let in_target = norm_path == norm_target || norm_path.starts_with(&format!("{}/", norm_target));
+
+    if in_base && in_target {
+        if norm_base.len() >= norm_target.len() {
+            FolderOrigin::Base
+        } else {
+            FolderOrigin::Target
+        }
+    } else if in_base {
+        FolderOrigin::Base
+    } else if in_target {
+        FolderOrigin::Target
+    } else {
+        FolderOrigin::Neither
+    }
+}
+
 pub fn scan_duplicates(
     items: Vec<crate::features::visual_library::VisualLibraryItem>,
     options: DuplicateScanOptions,
@@ -278,6 +310,10 @@ pub fn scan_duplicates(
         .into_iter()
         .filter(|it| it.size_bytes >= min_size && Path::new(&it.path).is_file())
         .collect();
+
+    let is_cross_comparison = options.base_folder.is_some() && options.target_folder.is_some();
+    let base_f = options.base_folder.as_deref().unwrap_or("");
+    let target_f = options.target_folder.as_deref().unwrap_or("");
 
     let mut groups: Vec<DuplicateGroup> = Vec::new();
     let mut grouped_paths: std::collections::HashSet<String> = std::collections::HashSet::new();
@@ -328,40 +364,97 @@ pub fn scan_duplicates(
                     continue;
                 }
 
-                exact_counter += 1;
-                let mut cluster = Vec::new();
-                for &it in &exact_matches {
-                    grouped_paths.insert(it.path.clone());
-                    let (w, h) = get_image_dims(Path::new(&it.path));
-                    cluster.push(DuplicateCandidate {
-                        path: it.path.clone(),
-                        title: it.title.clone(),
-                        relative_folder: it.relative_folder.clone(),
-                        size_bytes: it.size_bytes,
-                        width: w,
-                        height: h,
-                        modified_at_millis: it.modified_at_millis,
-                        similarity_pct: 100.0,
-                        is_exact_match: true,
-                        is_from_base_folder: false,
-                        has_higher_resolution: false,
+                if is_cross_comparison {
+                    // MODO CRUZADO: Solo agrupar si hay archivos en Base Y en Depurar
+                    let mut base_candidates = Vec::new();
+                    let mut target_candidates = Vec::new();
+
+                    for &it in &exact_matches {
+                        let origin = classify_path(&it.path, base_f, target_f);
+                        let (w, h) = get_image_dims(Path::new(&it.path));
+                        let cand = DuplicateCandidate {
+                            path: it.path.clone(),
+                            title: it.title.clone(),
+                            relative_folder: it.relative_folder.clone(),
+                            size_bytes: it.size_bytes,
+                            width: w,
+                            height: h,
+                            modified_at_millis: it.modified_at_millis,
+                            similarity_pct: 100.0,
+                            is_exact_match: true,
+                            is_from_base_folder: origin == FolderOrigin::Base,
+                            has_higher_resolution: false,
+                        };
+                        if origin == FolderOrigin::Base {
+                            base_candidates.push(cand);
+                        } else if origin == FolderOrigin::Target {
+                            target_candidates.push(cand);
+                        }
+                    }
+
+                    // Si no hay al menos uno en Base Y uno en Target, no es un duplicado cruzado
+                    if base_candidates.is_empty() || target_candidates.is_empty() {
+                        continue;
+                    }
+
+                    for c in &base_candidates {
+                        grouped_paths.insert(c.path.clone());
+                    }
+                    for c in &target_candidates {
+                        grouped_paths.insert(c.path.clone());
+                    }
+
+                    // Elegir el mejor candidato de Base como referencia original
+                    base_candidates.sort_by(|a, b| {
+                        let a_nat = score_filename_naturalness(&a.title);
+                        let b_nat = score_filename_naturalness(&b.title);
+                        if (a_nat - b_nat).abs() >= 15 {
+                            return b_nat.cmp(&a_nat);
+                        }
+                        a.modified_at_millis.cmp(&b.modified_at_millis)
                     });
+
+                    let original = base_candidates.remove(0);
+                    exact_counter += 1;
+                    groups.push(DuplicateGroup {
+                        group_id: format!("exact-{}", exact_counter),
+                        match_type: "exact".into(),
+                        original,
+                        duplicates: target_candidates,
+                        has_resolution_upgrade: false,
+                    });
+                } else {
+                    // MODO 1 CARPETA / BIBLIOTECA: Análisis estándar
+                    exact_counter += 1;
+                    let mut cluster = Vec::new();
+                    for &it in &exact_matches {
+                        grouped_paths.insert(it.path.clone());
+                        let (w, h) = get_image_dims(Path::new(&it.path));
+                        cluster.push(DuplicateCandidate {
+                            path: it.path.clone(),
+                            title: it.title.clone(),
+                            relative_folder: it.relative_folder.clone(),
+                            size_bytes: it.size_bytes,
+                            width: w,
+                            height: h,
+                            modified_at_millis: it.modified_at_millis,
+                            similarity_pct: 100.0,
+                            is_exact_match: true,
+                            is_from_base_folder: false,
+                            has_higher_resolution: false,
+                        });
+                    }
+
+                    let grp = assemble_duplicate_group(
+                        format!("exact-{}", exact_counter),
+                        "exact".into(),
+                        cluster,
+                        &options.base_folder,
+                        options.prefer_higher_resolution,
+                    );
+
+                    groups.push(grp);
                 }
-
-                let grp = assemble_duplicate_group(
-                    format!("exact-{}", exact_counter),
-                    "exact".into(),
-                    cluster,
-                    &options.base_folder,
-                    options.prefer_higher_resolution,
-                );
-
-                // En modo cruzado (base vs depurar), descartar si no hay duplicados para depurar
-                if options.base_folder.is_some() && options.target_folder.is_some() && grp.duplicates.is_empty() {
-                    continue;
-                }
-
-                groups.push(grp);
             }
         }
     }
@@ -395,83 +488,168 @@ pub fn scan_duplicates(
             }
         }
 
-        let mut perceptual_counter = 0;
-        let mut visited_indices = std::collections::HashSet::new();
+        if is_cross_comparison {
+            // MODO CRUZADO: Comparar únicamente elementos de Base contra elementos de Target
+            let mut base_hashes = Vec::new();
+            let mut target_hashes = Vec::new();
 
-        for i in 0..image_hashes.len() {
-            if visited_indices.contains(&i) {
-                continue;
-            }
-
-            if let Some(flag) = &cancel_flag {
-                if flag.load(Ordering::SeqCst) {
-                    return groups;
+            for entry in image_hashes {
+                let origin = classify_path(&entry.3.path, base_f, target_f);
+                if origin == FolderOrigin::Base {
+                    base_hashes.push(entry);
+                } else if origin == FolderOrigin::Target {
+                    target_hashes.push(entry);
                 }
             }
 
-            let (hash_a, w_a, h_a, item_a) = image_hashes[i];
-            let mut matching_dups = Vec::new();
+            let mut perceptual_counter = 0;
+            let mut visited_target_indices = std::collections::HashSet::new();
 
-            for j in (i + 1)..image_hashes.len() {
-                if visited_indices.contains(&j) {
+            for (hash_a, w_a, h_a, item_a) in base_hashes {
+                if let Some(flag) = &cancel_flag {
+                    if flag.load(Ordering::SeqCst) {
+                        return groups;
+                    }
+                }
+
+                let orig_pixels = (w_a as u64) * (h_a as u64);
+                let mut matching_dups: Vec<DuplicateCandidate> = Vec::new();
+                let mut has_res_upgrade = false;
+
+                for (target_idx, &(hash_b, w_b, h_b, item_b)) in target_hashes.iter().enumerate() {
+                    if visited_target_indices.contains(&target_idx) {
+                        continue;
+                    }
+
+                    let diff_bits = (hash_a ^ hash_b).count_ones();
+                    let similarity_pct = ((64 - diff_bits) as f64 / 64.0) * 100.0;
+
+                    if similarity_pct >= options.min_similarity_pct {
+                        visited_target_indices.insert(target_idx);
+
+                        let dup_pixels = (w_b as u64) * (h_b as u64);
+                        let is_upgrade = options.prefer_higher_resolution && dup_pixels > orig_pixels && dup_pixels > 0;
+                        if is_upgrade {
+                            has_res_upgrade = true;
+                        }
+
+                        matching_dups.push(DuplicateCandidate {
+                            path: item_b.path.clone(),
+                            title: item_b.title.clone(),
+                            relative_folder: item_b.relative_folder.clone(),
+                            size_bytes: item_b.size_bytes,
+                            width: Some(w_b),
+                            height: Some(h_b),
+                            modified_at_millis: item_b.modified_at_millis,
+                            similarity_pct: (similarity_pct * 10.0).round() / 10.0,
+                            is_exact_match: false,
+                            is_from_base_folder: false,
+                            has_higher_resolution: is_upgrade,
+                        });
+                    }
+                }
+
+                if !matching_dups.is_empty() {
+                    perceptual_counter += 1;
+                    let original = DuplicateCandidate {
+                        path: item_a.path.clone(),
+                        title: item_a.title.clone(),
+                        relative_folder: item_a.relative_folder.clone(),
+                        size_bytes: item_a.size_bytes,
+                        width: Some(w_a),
+                        height: Some(h_a),
+                        modified_at_millis: item_a.modified_at_millis,
+                        similarity_pct: 100.0,
+                        is_exact_match: false,
+                        is_from_base_folder: true,
+                        has_higher_resolution: false,
+                    };
+
+                    groups.push(DuplicateGroup {
+                        group_id: format!("perceptual-{}", perceptual_counter),
+                        match_type: "perceptual".into(),
+                        original,
+                        duplicates: matching_dups,
+                        has_resolution_upgrade: has_res_upgrade,
+                    });
+                }
+            }
+        } else {
+            // MODO 1 CARPETA / BIBLIOTECA: Comparar todos los pares
+            let mut perceptual_counter = 0;
+            let mut visited_indices = std::collections::HashSet::new();
+
+            for i in 0..image_hashes.len() {
+                if visited_indices.contains(&i) {
                     continue;
                 }
 
-                let (hash_b, w_b, h_b, item_b) = image_hashes[j];
-                let diff_bits = (hash_a ^ hash_b).count_ones();
-                let similarity_pct = ((64 - diff_bits) as f64 / 64.0) * 100.0;
+                if let Some(flag) = &cancel_flag {
+                    if flag.load(Ordering::SeqCst) {
+                        return groups;
+                    }
+                }
 
-                if similarity_pct >= options.min_similarity_pct {
-                    visited_indices.insert(j);
-                    matching_dups.push(DuplicateCandidate {
-                        path: item_b.path.clone(),
-                        title: item_b.title.clone(),
-                        relative_folder: item_b.relative_folder.clone(),
-                        size_bytes: item_b.size_bytes,
-                        width: Some(w_b),
-                        height: Some(h_b),
-                        modified_at_millis: item_b.modified_at_millis,
-                        similarity_pct,
+                let (hash_a, w_a, h_a, item_a) = image_hashes[i];
+                let mut matching_dups = Vec::new();
+
+                for j in (i + 1)..image_hashes.len() {
+                    if visited_indices.contains(&j) {
+                        continue;
+                    }
+
+                    let (hash_b, w_b, h_b, item_b) = image_hashes[j];
+                    let diff_bits = (hash_a ^ hash_b).count_ones();
+                    let similarity_pct = ((64 - diff_bits) as f64 / 64.0) * 100.0;
+
+                    if similarity_pct >= options.min_similarity_pct {
+                        visited_indices.insert(j);
+                        matching_dups.push(DuplicateCandidate {
+                            path: item_b.path.clone(),
+                            title: item_b.title.clone(),
+                            relative_folder: item_b.relative_folder.clone(),
+                            size_bytes: item_b.size_bytes,
+                            width: Some(w_b),
+                            height: Some(h_b),
+                            modified_at_millis: item_b.modified_at_millis,
+                            similarity_pct,
+                            is_exact_match: false,
+                            is_from_base_folder: false,
+                            has_higher_resolution: false,
+                        });
+                    }
+                }
+
+                if !matching_dups.is_empty() {
+                    visited_indices.insert(i);
+                    perceptual_counter += 1;
+
+                    let mut cluster = Vec::new();
+                    cluster.push(DuplicateCandidate {
+                        path: item_a.path.clone(),
+                        title: item_a.title.clone(),
+                        relative_folder: item_a.relative_folder.clone(),
+                        size_bytes: item_a.size_bytes,
+                        width: Some(w_a),
+                        height: Some(h_a),
+                        modified_at_millis: item_a.modified_at_millis,
+                        similarity_pct: 100.0,
                         is_exact_match: false,
                         is_from_base_folder: false,
                         has_higher_resolution: false,
                     });
+                    cluster.extend(matching_dups);
+
+                    let grp = assemble_duplicate_group(
+                        format!("perceptual-{}", perceptual_counter),
+                        "perceptual".into(),
+                        cluster,
+                        &options.base_folder,
+                        options.prefer_higher_resolution,
+                    );
+
+                    groups.push(grp);
                 }
-            }
-
-            if !matching_dups.is_empty() {
-                visited_indices.insert(i);
-                perceptual_counter += 1;
-
-                let mut cluster = Vec::new();
-                cluster.push(DuplicateCandidate {
-                    path: item_a.path.clone(),
-                    title: item_a.title.clone(),
-                    relative_folder: item_a.relative_folder.clone(),
-                    size_bytes: item_a.size_bytes,
-                    width: Some(w_a),
-                    height: Some(h_a),
-                    modified_at_millis: item_a.modified_at_millis,
-                    similarity_pct: 100.0,
-                    is_exact_match: false,
-                    is_from_base_folder: false,
-                    has_higher_resolution: false,
-                });
-                cluster.extend(matching_dups);
-
-                let grp = assemble_duplicate_group(
-                    format!("perceptual-{}", perceptual_counter),
-                    "perceptual".into(),
-                    cluster,
-                    &options.base_folder,
-                    options.prefer_higher_resolution,
-                );
-
-                if options.base_folder.is_some() && options.target_folder.is_some() && grp.duplicates.is_empty() {
-                    continue;
-                }
-
-                groups.push(grp);
             }
         }
     }

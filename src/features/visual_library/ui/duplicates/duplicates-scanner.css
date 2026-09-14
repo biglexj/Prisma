@@ -1299,6 +1299,203 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
+/* ── Barra Compacta Dual para 2 Carpetas (Ahorro vertical inteligente) ── */
+.duplicates-two-folders-compact-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 1.75rem;
+  background: var(--bg-surface-variant, rgba(0, 0, 0, 0.02));
+  border-bottom: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+  animation: dupFadeIn 0.18s ease;
+}
+
+.dark .duplicates-two-folders-compact-bar {
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.duplicates-compact-folder-capsule {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.65rem 0.35rem 0.5rem;
+  background: var(--bg-surface, #ffffff);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.1));
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .duplicates-compact-folder-capsule {
+  background: #20232b;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.duplicates-compact-folder-capsule:hover {
+  border-color: var(--accent, #6366f1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.duplicates-compact-folder-capsule.is-base {
+  border-left: 3px solid #10b981;
+}
+
+.duplicates-compact-folder-capsule.is-target {
+  border-left: 3px solid #f97316;
+}
+
+.duplicates-compact-folder-capsule.is-drag-over {
+  box-shadow: 0 0 0 2px var(--accent, #6366f1);
+  background: rgba(var(--accent-rgb, 99, 102, 241), 0.06);
+}
+
+.compact-capsule-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.compact-capsule-badge.base {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.compact-capsule-badge.target {
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+}
+
+.compact-capsule-path {
+  flex: 1;
+  font-size: 0.8rem;
+  font-family: monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary, #111827);
+}
+
+.dark .compact-capsule-path {
+  color: #e2e8f0;
+}
+
+.compact-capsule-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  color: var(--text-secondary, #4b5563);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.dark .compact-capsule-action-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+}
+
+.compact-capsule-action-btn:hover {
+  background: var(--accent, #6366f1);
+  color: #fff;
+  border-color: var(--accent, #6366f1);
+}
+
+.duplicates-compact-swap-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.12));
+  background: var(--bg-surface, #ffffff);
+  color: var(--text-primary, #111827);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  font-size: 0.95rem;
+}
+
+.dark .duplicates-compact-swap-btn {
+  background: #252831;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.duplicates-compact-swap-btn:hover {
+  transform: rotate(180deg) scale(1.1);
+  border-color: var(--accent, #6366f1);
+  color: var(--accent, #6366f1);
+}
+
+.duplicates-compact-expand-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  background: transparent;
+  color: var(--text-secondary, #6b7280);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.duplicates-compact-expand-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-primary, #111827);
+}
+
+.dark .duplicates-compact-expand-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.duplicates-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: flex-start;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.1));
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-top: 0.25rem;
+}
+
+.duplicates-collapse-btn:hover {
+  background: rgba(var(--accent-rgb, 99, 102, 241), 0.1);
+  color: var(--accent, #6366f1);
+  border-color: var(--accent, #6366f1);
+}
+
 /* ── Hero Dropzone Interactiva (Centro Vacío) ── */
 .duplicates-hero-dropzone {
   margin: auto;

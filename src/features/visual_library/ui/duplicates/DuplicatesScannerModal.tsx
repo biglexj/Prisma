@@ -53,6 +53,7 @@ export function DuplicatesScannerModal({
   const [singleFolder, setSingleFolder] = useState<string>("");
   const [baseFolder, setBaseFolder] = useState<string>("");
   const [targetFolder, setTargetFolder] = useState<string>("");
+  const [isTwoFoldersExpanded, setIsTwoFoldersExpanded] = useState(false);
   const [preferHigherResolution, setPreferHigherResolution] = useState(true);
 
   const [isScanning, setIsScanning] = useState(false);
@@ -798,7 +799,81 @@ export function DuplicatesScannerModal({
         )}
 
         {/* Panel de selección de Carpetas Cruzadas */}
-        {scanMode === "two_folders" && (
+        {scanMode === "two_folders" && (baseFolder && targetFolder && !isTwoFoldersExpanded ? (
+          <div className="duplicates-two-folders-compact-bar">
+            {/* Cápsula Carpeta Base */}
+            <div
+              className={`duplicates-compact-folder-capsule is-base ${hoveredDropZone === "base" ? "is-drag-over" : ""}`}
+              data-drop-zone="base"
+              onClick={handlePickBaseFolder}
+              title={`Carpeta Base (A proteger / intacta):\n${baseFolder}`}
+            >
+              <span className="compact-capsule-badge base">
+                <Icon name="star" />
+                <span>Base</span>
+              </span>
+              <span className="compact-capsule-path">{baseFolder}</span>
+              <button
+                type="button"
+                className="compact-capsule-action-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePickBaseFolder();
+                }}
+                title="Cambiar Carpeta Base"
+              >
+                <Icon name="edit" />
+                <span>Cambiar</span>
+              </button>
+            </div>
+
+            {/* Botón intercambiar roles */}
+            <button
+              type="button"
+              className="duplicates-compact-swap-btn"
+              onClick={handleSwapFolders}
+              title="Intercambiar Carpeta Base ⇄ Carpeta a Depurar"
+            >
+              <span className="swap-icon">⇄</span>
+            </button>
+
+            {/* Cápsula Carpeta a Depurar */}
+            <div
+              className={`duplicates-compact-folder-capsule is-target ${hoveredDropZone === "target" ? "is-drag-over" : ""}`}
+              data-drop-zone="target"
+              onClick={handlePickTargetFolder}
+              title={`Carpeta a Depurar (A limpiar / origen):\n${targetFolder}`}
+            >
+              <span className="compact-capsule-badge target">
+                <Icon name="trash" />
+                <span>A Depurar</span>
+              </span>
+              <span className="compact-capsule-path">{targetFolder}</span>
+              <button
+                type="button"
+                className="compact-capsule-action-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePickTargetFolder();
+                }}
+                title="Cambiar Carpeta a Depurar"
+              >
+                <Icon name="edit" />
+                <span>Cambiar</span>
+              </button>
+            </div>
+
+            {/* Botón expandir a tarjetas detalladas */}
+            <button
+              type="button"
+              className="duplicates-compact-expand-btn"
+              onClick={() => setIsTwoFoldersExpanded(true)}
+              title="Expandir panel detallado de carpetas"
+            >
+              <Icon name="fullscreen" />
+            </button>
+          </div>
+        ) : (
           <div className="duplicates-two-folders-panel">
             {/* Carpeta Base */}
             <div
@@ -911,8 +986,20 @@ export function DuplicatesScannerModal({
                 Arrastra la carpeta a depurar aquí. Los archivos que coincidan con la base se marcarán para depurar, mover o actualizar.
               </p>
             </div>
+
+            {baseFolder && targetFolder && (
+              <button
+                type="button"
+                className="duplicates-collapse-btn"
+                onClick={() => setIsTwoFoldersExpanded(false)}
+                title="Contraer a modo compacto (ahorrar espacio)"
+              >
+                <Icon name="fullscreen-exit" />
+                <span>Modo compacto</span>
+              </button>
+            )}
           </div>
-        )}
+        ))}
 
         {/* Toolbar de configuración del escáner */}
         <div className="duplicates-toolbar">

@@ -10,6 +10,7 @@ use lofty::probe::Probe;
 use lofty::tag::Accessor;
 
 use crate::features::music_library::MusicLibraryItem;
+use crate::features::visual_library::duplicates::{classify_path, FolderOrigin};
 use crate::features::visual_library::{DuplicateCandidate, DuplicateGroup, DuplicateScanOptions};
 
 /// Estructura de audio enriquecida con metadatos leídos por Lofty
@@ -284,6 +285,10 @@ pub fn scan_music_duplicates(
         .filter(|it| it.size_bytes >= min_size && Path::new(&it.path).is_file())
         .collect();
 
+    let is_cross_comparison = options.base_folder.is_some() && options.target_folder.is_some();
+    let base_f = options.base_folder.as_deref().unwrap_or("");
+    let target_f = options.target_folder.as_deref().unwrap_or("");
+
     let mut groups: Vec<DuplicateGroup> = Vec::new();
     let mut grouped_paths: HashSet<String> = HashSet::new();
     let mut metadata_map: HashMap<String, AudioMetadata> = HashMap::new();
@@ -327,53 +332,122 @@ pub fn scan_music_duplicates(
 
             for (_, exact_items) in by_full {
                 if exact_items.len() >= 2 {
-                    exact_counter += 1;
-                    let mut cluster: Vec<DuplicateCandidate> = Vec::new();
+                    if is_cross_comparison {
+                        let mut base_candidates = Vec::new();
+                        let mut target_candidates = Vec::new();
 
-                    for it in exact_items {
-                        grouped_paths.insert(it.path.clone());
-                        let meta = extract_audio_info(
-                            Path::new(&it.path),
-                            &it.title,
-                            it.size_bytes,
-                            it.modified_at_millis,
-                        );
-                        metadata_map.insert(it.path.clone(), meta);
+                        for it in exact_items {
+                            let origin = classify_path(&it.path, base_f, target_f);
+                            let meta = extract_audio_info(
+                                Path::new(&it.path),
+                                &it.title,
+                                it.size_bytes,
+                                it.modified_at_millis,
+                            );
+                            metadata_map.insert(it.path.clone(), meta);
 
-                        let rel_folder = Path::new(&it.path)
-                            .parent()
-                            .and_then(|p| p.file_name())
-                            .map(|s| s.to_string_lossy().to_string())
-                            .unwrap_or_default();
+                            let rel_folder = Path::new(&it.path)
+                                .parent()
+                                .and_then(|p| p.file_name())
+                                .map(|s| s.to_string_lossy().to_string())
+                                .unwrap_or_default();
 
-                        cluster.push(DuplicateCandidate {
-                            path: it.path.clone(),
-                            title: it.title.clone(),
-                            relative_folder: rel_folder,
-                            size_bytes: it.size_bytes,
-                            width: None,
-                            height: None,
-                            modified_at_millis: it.modified_at_millis,
-                            similarity_pct: 100.0,
-                            is_exact_match: true,
-                            is_from_base_folder: false,
-                            has_higher_resolution: false,
+                            let cand = DuplicateCandidate {
+                                path: it.path.clone(),
+                                title: it.title.clone(),
+                                relative_folder: rel_folder,
+                                size_bytes: it.size_bytes,
+                                width: None,
+                                height: None,
+                                modified_at_millis: it.modified_at_millis,
+                                similarity_pct: 100.0,
+                                is_exact_match: true,
+                                is_from_base_folder: origin == FolderOrigin::Base,
+                                has_higher_resolution: false,
+                            };
+
+                            if origin == FolderOrigin::Base {
+                                base_candidates.push(cand);
+                            } else if origin == FolderOrigin::Target {
+                                target_candidates.push(cand);
+                            }
+                        }
+
+                        if base_candidates.is_empty() || target_candidates.is_empty() {
+                            continue;
+                        }
+
+                        for c in &base_candidates {
+                            grouped_paths.insert(c.path.clone());
+                        }
+                        for c in &target_candidates {
+                            grouped_paths.insert(c.path.clone());
+                        }
+
+                        base_candidates.sort_by(|a, b| {
+                            let score_a = metadata_map.get(&a.path).map(|m| m.quality_score()).unwrap_or(0);
+                            let score_b = metadata_map.get(&b.path).map(|m| m.quality_score()).unwrap_or(0);
+                            if score_a != score_b {
+                                return score_b.cmp(&score_a);
+                            }
+                            a.modified_at_millis.cmp(&b.modified_at_millis)
                         });
-                    }
 
-                    let grp = assemble_music_duplicate_group(
-                        format!("E{exact_counter}"),
-                        "exact".to_string(),
-                        cluster,
-                        &metadata_map,
-                        &options.base_folder,
-                        options.prefer_higher_resolution,
-                    );
+                        let original = base_candidates.remove(0);
+                        exact_counter += 1;
+                        groups.push(DuplicateGroup {
+                            group_id: format!("E{exact_counter}"),
+                            match_type: "exact".into(),
+                            original,
+                            duplicates: target_candidates,
+                            has_resolution_upgrade: false,
+                        });
+                    } else {
+                        exact_counter += 1;
+                        let mut cluster: Vec<DuplicateCandidate> = Vec::new();
 
-                    if options.base_folder.is_some() && options.target_folder.is_some() && grp.duplicates.is_empty() {
-                        continue;
+                        for it in exact_items {
+                            grouped_paths.insert(it.path.clone());
+                            let meta = extract_audio_info(
+                                Path::new(&it.path),
+                                &it.title,
+                                it.size_bytes,
+                                it.modified_at_millis,
+                            );
+                            metadata_map.insert(it.path.clone(), meta);
+
+                            let rel_folder = Path::new(&it.path)
+                                .parent()
+                                .and_then(|p| p.file_name())
+                                .map(|s| s.to_string_lossy().to_string())
+                                .unwrap_or_default();
+
+                            cluster.push(DuplicateCandidate {
+                                path: it.path.clone(),
+                                title: it.title.clone(),
+                                relative_folder: rel_folder,
+                                size_bytes: it.size_bytes,
+                                width: None,
+                                height: None,
+                                modified_at_millis: it.modified_at_millis,
+                                similarity_pct: 100.0,
+                                is_exact_match: true,
+                                is_from_base_folder: false,
+                                has_higher_resolution: false,
+                            });
+                        }
+
+                        let grp = assemble_music_duplicate_group(
+                            format!("E{exact_counter}"),
+                            "exact".to_string(),
+                            cluster,
+                            &metadata_map,
+                            &options.base_folder,
+                            options.prefer_higher_resolution,
+                        );
+
+                        groups.push(grp);
                     }
-                    groups.push(grp);
                 }
             }
         }
@@ -405,102 +479,212 @@ pub fn scan_music_duplicates(
             audio_list.push(meta);
         }
 
-        let mut sim_counter = 0;
-        let mut sim_grouped: HashSet<String> = HashSet::new();
+        if is_cross_comparison {
+            let mut base_audio = Vec::new();
+            let mut target_audio = Vec::new();
 
-        for i in 0..audio_list.len() {
-            let a = &audio_list[i];
-            if sim_grouped.contains(&a.path) {
-                continue;
+            for a in audio_list {
+                let origin = classify_path(&a.path, base_f, target_f);
+                if origin == FolderOrigin::Base {
+                    base_audio.push(a);
+                } else if origin == FolderOrigin::Target {
+                    target_audio.push(a);
+                }
             }
 
-            let norm_title_a = normalize_audio_title(&a.title);
-            let mut matching_dups: Vec<DuplicateCandidate> = Vec::new();
+            let mut sim_counter = 0;
+            let mut visited_target_indices: HashSet<usize> = HashSet::new();
 
-            for j in (i + 1)..audio_list.len() {
-                let b = &audio_list[j];
-                if sim_grouped.contains(&b.path) {
-                    continue;
-                }
-
-                // 1. Margen de tolerancia de duración temporal (|durA - durB| <= 3.5 segundos)
-                if a.duration_secs > 0.0 && b.duration_secs > 0.0 {
-                    if (a.duration_secs - b.duration_secs).abs() > 3.5 {
-                        continue;
+            for a in base_audio {
+                if let Some(flag) = &cancel_flag {
+                    if flag.load(Ordering::SeqCst) {
+                        return groups;
                     }
                 }
 
-                // 2. Similitud de título y artista normalizados
-                let norm_title_b = normalize_audio_title(&b.title);
-                let mut sim = string_similarity(&norm_title_a, &norm_title_b);
-                if !a.artist.is_empty() && !b.artist.is_empty() {
-                    let artist_sim = string_similarity(&a.artist.to_lowercase(), &b.artist.to_lowercase());
-                    sim = (sim * 0.7) + (artist_sim * 0.3);
+                let norm_title_a = normalize_audio_title(&a.title);
+                let score_a = a.quality_score();
+                let mut matching_dups: Vec<DuplicateCandidate> = Vec::new();
+                let mut has_res_upgrade = false;
+
+                for (target_idx, b) in target_audio.iter().enumerate() {
+                    if visited_target_indices.contains(&target_idx) {
+                        continue;
+                    }
+
+                    // 1. Margen de tolerancia de duración temporal (|durA - durB| <= 3.5 segundos)
+                    if a.duration_secs > 0.0 && b.duration_secs > 0.0 {
+                        if (a.duration_secs - b.duration_secs).abs() > 3.5 {
+                            continue;
+                        }
+                    }
+
+                    // 2. Similitud de título y artista normalizados
+                    let norm_title_b = normalize_audio_title(&b.title);
+                    let mut sim = string_similarity(&norm_title_a, &norm_title_b);
+                    if !a.artist.is_empty() && !b.artist.is_empty() {
+                        let artist_sim = string_similarity(&a.artist.to_lowercase(), &b.artist.to_lowercase());
+                        sim = (sim * 0.7) + (artist_sim * 0.3);
+                    }
+
+                    if sim >= options.min_similarity_pct {
+                        visited_target_indices.insert(target_idx);
+
+                        let score_b = b.quality_score();
+                        let is_upgrade = options.prefer_higher_resolution && score_b > score_a;
+                        if is_upgrade {
+                            has_res_upgrade = true;
+                        }
+
+                        let rel_folder = Path::new(&b.path)
+                            .parent()
+                            .and_then(|p| p.file_name())
+                            .map(|s| s.to_string_lossy().to_string())
+                            .unwrap_or_default();
+
+                        matching_dups.push(DuplicateCandidate {
+                            path: b.path.clone(),
+                            title: b.title.clone(),
+                            relative_folder: rel_folder,
+                            size_bytes: b.size_bytes,
+                            width: None,
+                            height: None,
+                            modified_at_millis: b.modified_at_millis,
+                            similarity_pct: (sim * 10.0).round() / 10.0,
+                            is_exact_match: false,
+                            is_from_base_folder: false,
+                            has_higher_resolution: is_upgrade,
+                        });
+                    }
                 }
 
-                if sim >= options.min_similarity_pct {
-                    sim_grouped.insert(b.path.clone());
-
-                    let rel_folder = Path::new(&b.path)
+                if !matching_dups.is_empty() {
+                    sim_counter += 1;
+                    let rel_folder = Path::new(&a.path)
                         .parent()
                         .and_then(|p| p.file_name())
                         .map(|s| s.to_string_lossy().to_string())
                         .unwrap_or_default();
 
-                    matching_dups.push(DuplicateCandidate {
-                        path: b.path.clone(),
-                        title: b.title.clone(),
+                    let original = DuplicateCandidate {
+                        path: a.path.clone(),
+                        title: a.title.clone(),
                         relative_folder: rel_folder,
-                        size_bytes: b.size_bytes,
+                        size_bytes: a.size_bytes,
                         width: None,
                         height: None,
-                        modified_at_millis: b.modified_at_millis,
-                        similarity_pct: (sim * 10.0).round() / 10.0,
+                        modified_at_millis: a.modified_at_millis,
+                        similarity_pct: 100.0,
                         is_exact_match: false,
-                        is_from_base_folder: false,
+                        is_from_base_folder: true,
                         has_higher_resolution: false,
+                    };
+
+                    groups.push(DuplicateGroup {
+                        group_id: format!("M{sim_counter}"),
+                        match_type: "perceptual".to_string(),
+                        original,
+                        duplicates: matching_dups,
+                        has_resolution_upgrade: has_res_upgrade,
                     });
                 }
             }
+        } else {
+            // MODO 1 CARPETA / BIBLIOTECA: Comparar todos los pares
+            let mut sim_counter = 0;
+            let mut sim_grouped: HashSet<String> = HashSet::new();
 
-            if !matching_dups.is_empty() {
-                sim_grouped.insert(a.path.clone());
-                sim_counter += 1;
-
-                let rel_folder = Path::new(&a.path)
-                    .parent()
-                    .and_then(|p| p.file_name())
-                    .map(|s| s.to_string_lossy().to_string())
-                    .unwrap_or_default();
-
-                let mut cluster = vec![DuplicateCandidate {
-                    path: a.path.clone(),
-                    title: a.title.clone(),
-                    relative_folder: rel_folder,
-                    size_bytes: a.size_bytes,
-                    width: None,
-                    height: None,
-                    modified_at_millis: a.modified_at_millis,
-                    similarity_pct: 100.0,
-                    is_exact_match: false,
-                    is_from_base_folder: false,
-                    has_higher_resolution: false,
-                }];
-                cluster.extend(matching_dups);
-
-                let grp = assemble_music_duplicate_group(
-                    format!("M{sim_counter}"),
-                    "perceptual".to_string(),
-                    cluster,
-                    &metadata_map,
-                    &options.base_folder,
-                    options.prefer_higher_resolution,
-                );
-
-                if options.base_folder.is_some() && options.target_folder.is_some() && grp.duplicates.is_empty() {
+            for i in 0..audio_list.len() {
+                let a = &audio_list[i];
+                if sim_grouped.contains(&a.path) {
                     continue;
                 }
-                groups.push(grp);
+
+                let norm_title_a = normalize_audio_title(&a.title);
+                let mut matching_dups: Vec<DuplicateCandidate> = Vec::new();
+
+                for j in (i + 1)..audio_list.len() {
+                    let b = &audio_list[j];
+                    if sim_grouped.contains(&b.path) {
+                        continue;
+                    }
+
+                    // 1. Margen de tolerancia de duración temporal (|durA - durB| <= 3.5 segundos)
+                    if a.duration_secs > 0.0 && b.duration_secs > 0.0 {
+                        if (a.duration_secs - b.duration_secs).abs() > 3.5 {
+                            continue;
+                        }
+                    }
+
+                    // 2. Similitud de título y artista normalizados
+                    let norm_title_b = normalize_audio_title(&b.title);
+                    let mut sim = string_similarity(&norm_title_a, &norm_title_b);
+                    if !a.artist.is_empty() && !b.artist.is_empty() {
+                        let artist_sim = string_similarity(&a.artist.to_lowercase(), &b.artist.to_lowercase());
+                        sim = (sim * 0.7) + (artist_sim * 0.3);
+                    }
+
+                    if sim >= options.min_similarity_pct {
+                        sim_grouped.insert(b.path.clone());
+
+                        let rel_folder = Path::new(&b.path)
+                            .parent()
+                            .and_then(|p| p.file_name())
+                            .map(|s| s.to_string_lossy().to_string())
+                            .unwrap_or_default();
+
+                        matching_dups.push(DuplicateCandidate {
+                            path: b.path.clone(),
+                            title: b.title.clone(),
+                            relative_folder: rel_folder,
+                            size_bytes: b.size_bytes,
+                            width: None,
+                            height: None,
+                            modified_at_millis: b.modified_at_millis,
+                            similarity_pct: (sim * 10.0).round() / 10.0,
+                            is_exact_match: false,
+                            is_from_base_folder: false,
+                            has_higher_resolution: false,
+                        });
+                    }
+                }
+
+                if !matching_dups.is_empty() {
+                    sim_grouped.insert(a.path.clone());
+                    sim_counter += 1;
+
+                    let rel_folder = Path::new(&a.path)
+                        .parent()
+                        .and_then(|p| p.file_name())
+                        .map(|s| s.to_string_lossy().to_string())
+                        .unwrap_or_default();
+
+                    let mut cluster = vec![DuplicateCandidate {
+                        path: a.path.clone(),
+                        title: a.title.clone(),
+                        relative_folder: rel_folder,
+                        size_bytes: a.size_bytes,
+                        width: None,
+                        height: None,
+                        modified_at_millis: a.modified_at_millis,
+                        similarity_pct: 100.0,
+                        is_exact_match: false,
+                        is_from_base_folder: false,
+                        has_higher_resolution: false,
+                    }];
+                    cluster.extend(matching_dups);
+
+                    let grp = assemble_music_duplicate_group(
+                        format!("M{sim_counter}"),
+                        "perceptual".to_string(),
+                        cluster,
+                        &metadata_map,
+                        &options.base_folder,
+                        options.prefer_higher_resolution,
+                    );
+
+                    groups.push(grp);
+                }
             }
         }
     }
