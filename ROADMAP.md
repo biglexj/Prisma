@@ -30,6 +30,10 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.1.3**
+  - **Buscador de Duplicados: Comparativa Cruzada Estricta y Modo Compacto Dual**:
+    - Comparativa cruzada estricta (Base vs Depurar) en Rust: discriminación de origen (`classify_path`), eliminación de falsos positivos intra-carpeta (evita comparar archivos de Base contra Base o Depurar contra Depurar) tanto en hash exacto como en similitud perceptual visual (dHash) y acústica (Lofty).
+    - Barra compacta dual inteligente al seleccionar carpetas: reducción de más del 60% de la altura vertical de la cabecera (de ~130px a ~44px), con cápsulas tonales (Base intacta en verde esmeralda y A Depurar en naranja vibrante), rutas legibles, intercambio instantáneo (`⇄`), soporte de arrastrar y soltar nativo y conmutador de expansión/colapso.
 - [x] **v1.1.2**
   - **Buscador y Comparador de Duplicados Multimodal (Imágenes, Vídeos y Música), Hero Dropzone Central y Quick Look Ampliado**:
     - Motor multimodal de duplicados con conmutador tri-modal (`[🎵 Música]`, `[🖼️ Imágenes]`, `[🎬 Vídeos]`).

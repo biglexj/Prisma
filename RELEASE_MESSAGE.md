@@ -1,18 +1,16 @@
-# 🚀 Prisma v1.1.2 — Buscador de Duplicados Multimodal (Música, Imágenes y Vídeos), Hero Dropzone y Quick Look Ampliado
+# 🚀 Prisma v1.1.3 — Comparativa Cruzada Estricta en Duplicados y Modo Compacto Dual
 
-Llega **Prisma v1.1.2**, una entrega colosal que expande la suite con el nuevo **Buscador y Comparador de Duplicados Multimodal** (con detección acústica Hi-Res para música y similitud perceptual para imágenes/vídeos), la arquitectura de **Hero Dropzone Central con optimización vertical**, gestión modular de **Herramientas en Configuración y Barra Lateral**, previsualización de **Documentos en Quick Look al 70-80% de pantalla** y soporte fluido de **Arrastrar y Soltar (Drag & Drop)** en toda la suite.
+Llega **Prisma v1.1.3**, una versión de afinamiento y máxima precisión para el **Buscador y Comparador de Duplicados**, implementando la **comparativa cruzada estricta** entre carpetas (Base vs Depurar) para garantizar la protección total de la carpeta base sin falsos positivos internos, junto con la nueva **barra compacta dual** que ahorra más del 60% de espacio vertical para una exploración limpia de duplicados.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- 🎵 **Duplicados de Música con Detección Hi-Res**: Pipeline híbrido por hash binario exacto y metadatos inteligentes (Lofty normalizado + duración), priorizando automáticamente formatos sin pérdida (FLAC, WAV, ALAC) y bitrates de 320 kbps para conservar la mejor versión de audio.
-- 🖼️ **Duplicados de Imágenes y Vídeos con Comparador Frente a Frente**: Análisis por hash y similitud perceptual (dHash 64 bits con tolerancia ajustable), con comparativa en pantalla dividida integrada (`ImageComparisonModal`).
-- 📂 **Comparativa Cruzada de 2 Carpetas (Base vs Depurar)**: Protege tu carpeta base intacta y limpia o actualiza duplicados desde carpetas externas o de depuración.
-- 🎯 **Hero Dropzone Central & Ahorro de Espacio Vertical**: El centro de la pantalla actúa como receptor interactivo de arrastre y clic para examinar carpetas, transformándose en una barra compacta ultra delgada de 36 px al cargar resultados para aprovechar el 100% de la altura de pantalla.
-- 🛠️ **Pestaña «Herramientas» en Configuración & Barra Lateral**: Controla la visibilidad de cada utilidad (Conversor, Renombrador, Duplicados, Luna Fetch, Gallery-DL, Wallpapers) y accede a Duplicados directamente desde el menú principal.
-- 📑 **Quick Look para Documentos, PDFs y Libros**: Previsualización ampliada y reactiva (70% ancho, 80% alto) para Markdown, Texto, PDF, EPUB y archivos ZIP, con botones directos para «Editar» en tu app predeterminada y «Abrir» en el visor de Prisma.
-- 🖐️ **Arrastrar y Soltar Nativo OLE Win32**: Receptor nativo en Rust para soltar carpetas y archivos directamente desde el Explorador en el Renombrador, Conversor y Duplicados, con cursor de copia (+) continuo y re-registro dinámico al enfocar la ventana.
+- 🛡️ **Comparativa Cruzada Estricta (Base vs Depurar)**: Al comparar dos carpetas, el motor de búsqueda en Rust compara exclusivamente los archivos de la Carpeta a Depurar contra los de la Carpeta Base protegida. Se eliminan por completo los falsos positivos intra-carpeta (no compara archivos de Base entre sí ni de Depurar entre sí).
+- 🔬 **Detección Híbrida Optimizada**: La comparativa cruzada estricta aplica tanto para coincidencia exacta por hash binario (100%) como para similitud perceptual visual (dHash de 64 bits en imágenes/vídeos) y acústica (metadatos Lofty y duración en música).
+- 📐 **Barra Compacta Dual (Ahorro de ~85 px Verticales)**: Al seleccionar ambas carpetas, las tarjetas grandes se transforman automáticamente en una barra horizontal elegante de solo 44 px, liberando espacio para visualizar cómodamente las tarjetas de imágenes y duplicados.
+- 🎨 **Cápsulas Tonal Material 3 Expressive**: Identificación inmediata con distintivos verde esmeralda para la Base intacta y naranja vibrante para la carpeta a depurar, con rutas en tipografía monoespaciada, cambio rápido y soporte nativo de Arrastrar y Soltar (*Drag & Drop*).
+- ⇄ **Intercambio y Expansión Rápida**: Botón de swap instantáneo (`⇄`) para invertir roles y conmutador sutil para expandir o contraer las tarjetas detalladas cuando lo desees.
 
 ---
 
