@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../../../shared/ui/Icon";
-import { cleanPath, toSafeAssetUrl } from "../../../../shared/mediaTree";
+import { cleanPath } from "../../../../shared/mediaTree";
+import { VisualThumbnail } from "../VisualThumbnail";
 import type { VisualLibraryItem } from "../../model/types";
 
 interface ImageComparisonSelectorProps {
@@ -11,8 +12,34 @@ interface ImageComparisonSelectorProps {
   onSelectMultiple?: (items: VisualLibraryItem[]) => void;
   onClose: () => void;
   title?: string;
+  subtitle?: string;
   maxSelectable?: number;
 }
+
+interface FolderEntry {
+  key: string;
+  name: string;
+  count: number;
+}
+
+function getItemFolderInfo(item: VisualLibraryItem): { key: string; name: string } {
+  if (item.relativeFolder && item.relativeFolder.trim() !== "") {
+    const cleanRel = cleanPath(item.relativeFolder);
+    const parts = cleanRel.replace(/\\/g, "/").split("/").filter(Boolean);
+    const lastPart = parts[parts.length - 1] || cleanRel;
+    return { key: cleanRel, name: lastPart };
+  }
+  const normalized = item.path.replace(/\\/g, "/");
+  const segments = normalized.split("/").filter(Boolean);
+  if (segments.length >= 2) {
+    const parent = segments[segments.length - 2];
+    const parentDir = segments.slice(0, -1).join("/");
+    return { key: parentDir, name: parent };
+  }
+  return { key: "root", name: "Carpeta principal" };
+}
+
+const BATCH_SIZE = 60;
 
 export function ImageComparisonSelector({
   currentItems,
@@ -21,25 +48,105 @@ export function ImageComparisonSelector({
   onSelectMultiple,
   onClose,
   title = "Seleccionar imagen para comparar",
+  subtitle,
   maxSelectable = 1,
 }: ImageComparisonSelectorProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
 
   const currentPathSet = useMemo(
     () => new Set(currentItems.map((it) => it.path)),
     [currentItems],
   );
 
+  // Group items by folders
+  const { folderEntries, folderItemMap } = useMemo(() => {
+    const map = new Map<string, VisualLibraryItem[]>();
+    const nameMap = new Map<string, string>();
+
+    for (const it of availableItems) {
+      const { key, name } = getItemFolderInfo(it);
+      nameMap.set(key, name);
+      const list = map.get(key);
+      if (list) {
+        list.push(it);
+      } else {
+        map.set(key, [it]);
+      }
+    }
+
+    const entries: FolderEntry[] = Array.from(map.entries()).map(([key, items]) => ({
+      key,
+      name: nameMap.get(key) || key,
+      count: items.length,
+    }));
+
+    entries.sort((a, b) => b.count - a.count);
+    return { folderEntries: entries, folderItemMap: map };
+  }, [availableItems]);
+
+  // Determine initial folder based on the primary image being viewed
+  const initialFolderKey = useMemo(() => {
+    if (currentItems.length > 0) {
+      const currentFolder = getItemFolderInfo(currentItems[0]);
+      if (folderItemMap.has(currentFolder.key)) {
+        return currentFolder.key;
+      }
+    }
+    return folderEntries[0]?.key || "ALL";
+  }, [currentItems, folderItemMap, folderEntries]);
+
+  const [selectedFolderKey, setSelectedFolderKey] = useState<string>(initialFolderKey);
+
+  // Reset pagination when folder or search query changes
+  useEffect(() => {
+    setVisibleCount(BATCH_SIZE);
+  }, [selectedFolderKey, searchTerm]);
+
+  // Filter items by folder
+  const itemsInSelectedFolder = useMemo(() => {
+    if (selectedFolderKey === "ALL") {
+      return availableItems;
+    }
+    return folderItemMap.get(selectedFolderKey) || availableItems;
+  }, [selectedFolderKey, folderItemMap, availableItems]);
+
+  // Filter items by search query
   const filteredItems = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return availableItems;
-    return availableItems.filter(
+    if (!term) return itemsInSelectedFolder;
+    return itemsInSelectedFolder.filter(
       (it) =>
         it.title.toLowerCase().includes(term) ||
         it.path.toLowerCase().includes(term),
     );
-  }, [availableItems, searchTerm]);
+  }, [itemsInSelectedFolder, searchTerm]);
+
+  // Check if matches exist across ALL folders when 0 matches in current folder
+  const globalMatchesCount = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term || selectedFolderKey === "ALL") return 0;
+    return availableItems.filter(
+      (it) =>
+        it.title.toLowerCase().includes(term) ||
+        it.path.toLowerCase().includes(term),
+    ).length;
+  }, [availableItems, searchTerm, selectedFolderKey]);
+
+  // Windowed display list for ultra-smooth 60fps rendering
+  const displayedItems = useMemo(() => {
+    return filteredItems.slice(0, visibleCount);
+  }, [filteredItems, visibleCount]);
+
+  const handleGridScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollTop + clientHeight >= scrollHeight - 240) {
+      if (visibleCount < filteredItems.length) {
+        setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredItems.length));
+      }
+    }
+  };
 
   const handleBrowseCustomFile = async () => {
     try {
@@ -125,7 +232,10 @@ export function ImageComparisonSelector({
             <span className="img-compare-selector-icon">
               <Icon name="compare" />
             </span>
-            <h3>{title}</h3>
+            <div>
+              <h3>{title}</h3>
+              {subtitle && <p className="img-compare-selector-subtitle">{subtitle}</p>}
+            </div>
           </div>
           <button
             className="img-compare-selector-close-btn"
@@ -136,12 +246,13 @@ export function ImageComparisonSelector({
           </button>
         </header>
 
+        {/* Toolbar con buscador y botón de examinar */}
         <div className="img-compare-selector-toolbar">
           <div className="img-compare-search-wrap">
             <Icon name="search" />
             <input
               type="text"
-              placeholder="Buscar en esta carpeta / biblioteca..."
+              placeholder="Buscar en esta carpeta..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               autoFocus
@@ -150,6 +261,7 @@ export function ImageComparisonSelector({
               <button
                 className="img-compare-search-clear"
                 onClick={() => setSearchTerm("")}
+                title="Limpiar búsqueda"
               >
                 <Icon name="close" />
               </button>
@@ -167,14 +279,61 @@ export function ImageComparisonSelector({
           </button>
         </div>
 
-        <div className="img-compare-selector-grid">
+        {/* Filtro por carpetas (Tabs / Pills) */}
+        {folderEntries.length > 0 && (
+          <div className="img-compare-folder-bar">
+            <span className="img-compare-folder-label">
+              <Icon name="folder" />
+              <span>Carpeta:</span>
+            </span>
+            <div className="img-compare-folder-pills">
+              {folderEntries.map((folder) => {
+                const isActive = selectedFolderKey === folder.key;
+                return (
+                  <button
+                    key={folder.key}
+                    type="button"
+                    className={`img-compare-folder-pill ${isActive ? "is-active" : ""}`}
+                    onClick={() => setSelectedFolderKey(folder.key)}
+                    title={`${folder.name} (${folder.count} fotos)`}
+                  >
+                    <span>{folder.name}</span>
+                    <span className="img-compare-pill-count">{folder.count}</span>
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                className={`img-compare-folder-pill ${selectedFolderKey === "ALL" ? "is-active" : ""}`}
+                onClick={() => setSelectedFolderKey("ALL")}
+                title={`Mostrar todas las fotos de la biblioteca (${availableItems.length})`}
+              >
+                <span>Todas las carpetas</span>
+                <span className="img-compare-pill-count">{availableItems.length}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Rejilla de miniaturas ultrarrápidas con VisualThumbnail */}
+        <div className="img-compare-selector-grid" onScroll={handleGridScroll}>
           {filteredItems.length === 0 ? (
             <div className="img-compare-selector-empty">
               <Icon name="image" />
-              <p>No se encontraron imágenes coincidentes.</p>
+              <p>No se encontraron imágenes en esta carpeta.</p>
+              {globalMatchesCount > 0 && (
+                <button
+                  type="button"
+                  className="img-compare-browse-btn is-primary"
+                  onClick={() => setSelectedFolderKey("ALL")}
+                >
+                  <Icon name="search" />
+                  <span>Ver {globalMatchesCount} resultado(s) en todas las carpetas</span>
+                </button>
+              )}
               <button
                 type="button"
-                className="img-compare-browse-btn is-primary"
+                className="img-compare-browse-btn"
                 onClick={handleBrowseCustomFile}
               >
                 <Icon name="folder-open" />
@@ -182,7 +341,7 @@ export function ImageComparisonSelector({
               </button>
             </div>
           ) : (
-            filteredItems.map((it) => {
+            displayedItems.map((it) => {
               const isAlreadyCurrent = currentPathSet.has(it.path);
               const isSelected = selectedPaths.has(it.path);
 
@@ -195,14 +354,14 @@ export function ImageComparisonSelector({
                   title={it.title}
                 >
                   <div className="img-compare-item-thumb">
-                    <img
-                      src={toSafeAssetUrl(it.path)}
+                    <VisualThumbnail
+                      path={it.path}
                       alt={it.title}
-                      loading="lazy"
-                      draggable={false}
+                      className="img-compare-thumbnail-media"
+                      fit="cover"
                     />
                     {isAlreadyCurrent && (
-                      <span className="img-compare-item-badge">En uso</span>
+                      <span className="img-compare-item-badge">En comparativa</span>
                     )}
                     {isSelected && (
                       <span className="img-compare-item-check">
@@ -214,6 +373,24 @@ export function ImageComparisonSelector({
                 </button>
               );
             })
+          )}
+
+          {/* Indicador y botón de carga progresiva si hay más elementos */}
+          {visibleCount < filteredItems.length && (
+            <div className="img-compare-load-more">
+              <span>
+                Mostrando {displayedItems.length} de {filteredItems.length} fotos
+              </span>
+              <button
+                type="button"
+                className="img-compare-btn-load-more"
+                onClick={() =>
+                  setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, filteredItems.length))
+                }
+              >
+                Cargar más fotos ({filteredItems.length - displayedItems.length} restantes)
+              </button>
+            </div>
           )}
         </div>
 

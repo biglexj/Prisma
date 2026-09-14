@@ -752,3 +752,345 @@
   color: var(--color-on-primary, #381e72);
   font-weight: 600;
 }
+
+/* ── FOLDER BAR EN SELECTOR ── */
+.img-compare-selector-subtitle {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--color-primary, #d0bcff);
+  opacity: 0.85;
+}
+
+.img-compare-folder-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  background: rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid var(--color-outline-variant, rgba(255, 255, 255, 0.06));
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.img-compare-folder-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-on-surface-variant, #cac4d0);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.img-compare-folder-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.img-compare-folder-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.img-compare-folder-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--color-outline-variant, rgba(255, 255, 255, 0.08));
+  background: var(--color-surface-container, rgba(255, 255, 255, 0.05));
+  color: var(--color-text, #f3edf7);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.img-compare-folder-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.img-compare-folder-pill.is-active {
+  background: var(--color-primary-container, #4f378b);
+  border-color: var(--color-primary, #d0bcff);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(208, 188, 255, 0.2);
+}
+
+.img-compare-pill-count {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--color-primary, #d0bcff);
+  font-weight: 600;
+}
+
+.img-compare-folder-pill.is-active .img-compare-pill-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+/* ── PROGRESSIVE LOADING & LOAD MORE ── */
+.img-compare-load-more {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px 0 10px;
+  font-size: 12px;
+  color: var(--color-on-surface-variant, #cac4d0);
+}
+
+.img-compare-btn-load-more {
+  padding: 7px 18px;
+  border-radius: 20px;
+  background: var(--color-surface-container-high, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--color-outline-variant, rgba(255, 255, 255, 0.12));
+  color: var(--color-primary, #d0bcff);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.img-compare-btn-load-more:hover {
+  background: var(--color-primary-container, #4f378b);
+  color: #fff;
+  border-color: var(--color-primary, #d0bcff);
+}
+
+/* ── VISUAL THUMBNAIL INTEGRATION ── */
+.img-compare-thumbnail-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.img-compare-thumbnail-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── COMPARISON FILMSTRIP (BARRA FLOTANTE DE SLOTS) ── */
+.img-compare-filmstrip-bar {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  max-width: calc(100% - 32px);
+  pointer-events: none;
+  animation: compareFadeIn 0.2s ease-out;
+}
+
+.img-compare-filmstrip {
+  pointer-events: auto;
+  background: rgba(22, 17, 30, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-outline-variant, rgba(255, 255, 255, 0.12));
+  border-radius: 18px;
+  padding: 8px 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.img-compare-filmstrip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+}
+
+.img-compare-filmstrip-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--color-on-surface-variant, #cac4d0);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.img-compare-filmstrip-toggle {
+  background: transparent;
+  border: none;
+  color: var(--color-on-surface-variant, #cac4d0);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+}
+
+.img-compare-filmstrip-toggle:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.img-compare-filmstrip-items {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding: 2px;
+}
+
+.img-compare-filmstrip-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface-container, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--color-outline-variant, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  padding: 4px 8px 4px 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  max-width: 220px;
+}
+
+.img-compare-filmstrip-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.img-compare-filmstrip-card.is-slot-a {
+  border-color: var(--color-primary, #d0bcff);
+  background: rgba(208, 188, 255, 0.12);
+}
+
+.img-compare-filmstrip-card.is-slot-b {
+  border-color: #70d6ff;
+  background: rgba(112, 214, 255, 0.12);
+}
+
+.img-compare-filmstrip-card.is-flick {
+  border-color: #ffd166;
+  background: rgba(255, 209, 102, 0.12);
+}
+
+.img-compare-filmstrip-thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  background: #000;
+}
+
+.img-compare-slot-pill {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.img-compare-slot-pill.is-a {
+  background: var(--color-primary, #d0bcff);
+  color: #000;
+}
+
+.img-compare-slot-pill.is-b {
+  background: #70d6ff;
+  color: #000;
+}
+
+.img-compare-slot-pill.is-alt,
+.img-compare-slot-pill.is-grid {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+}
+
+.img-compare-filmstrip-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.img-compare-filmstrip-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text, #f3edf7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100px;
+}
+
+.img-compare-filmstrip-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.img-compare-mini-btn {
+  padding: 2px 5px;
+  border-radius: 6px;
+  border: 1px solid var(--color-outline-variant, rgba(255, 255, 255, 0.12));
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-on-surface-variant, #cac4d0);
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+.img-compare-mini-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.img-compare-mini-btn.is-danger:hover {
+  background: #b3261e;
+  border-color: #f2b8b5;
+  color: #fff;
+}
+
+.img-compare-filmstrip-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--color-outline-variant, rgba(255, 255, 255, 0.2));
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-primary, #d0bcff);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  height: 46px;
+}
+
+.img-compare-filmstrip-add-btn:hover {
+  background: rgba(208, 188, 255, 0.1);
+  border-color: var(--color-primary, #d0bcff);
+}
