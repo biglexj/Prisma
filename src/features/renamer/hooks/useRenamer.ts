@@ -1,6 +1,9 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { cleanPath } from "../../../shared/mediaTree";
 import { computeRenamingPreview } from "../model/renamerEngine";
 import { renamerClient } from "../tauri/client";
 import type {
@@ -493,32 +496,84 @@ export function useRenamer() {
     }
   }, [currentFolder, loadFolder]);
 
-  // Drag & drop nativo de Tauri v2
+  // Drag & drop nativo de Tauri v2 (soporte universal de carpetas y archivos)
   useEffect(() => {
-    let unlistenPromise: Promise<() => void> | undefined;
+    const unlistens: UnlistenFn[] = [];
+    let isCancelled = false;
 
+    const handleDrop = (paths: string[]) => {
+      setIsDraggingOver(false);
+      if (!paths || paths.length === 0) return;
+      const target = cleanPath(paths[0]).trim();
+      if (target) {
+        loadFolder(target);
+      }
+    };
+
+    // 1. Canal global tauri://drag-drop de Tauri v2
+    listen<{ paths?: string[] }>("tauri://drag-drop", (event) => {
+      if (isCancelled) return;
+      if (event.payload?.paths && event.payload.paths.length > 0) {
+        handleDrop(event.payload.paths);
+      } else {
+        setIsDraggingOver(false);
+      }
+    })
+      .then((unlisten) => {
+        if (isCancelled) unlisten();
+        else unlistens.push(unlisten);
+      })
+      .catch(() => {});
+
+    listen("tauri://drag-enter", () => {
+      if (!isCancelled) setIsDraggingOver(true);
+    })
+      .then((unlisten) => {
+        if (isCancelled) unlisten();
+        else unlistens.push(unlisten);
+      })
+      .catch(() => {});
+
+    listen("tauri://drag-leave", () => {
+      if (!isCancelled) setIsDraggingOver(false);
+    })
+      .then((unlisten) => {
+        if (isCancelled) unlisten();
+        else unlistens.push(unlisten);
+      })
+      .catch(() => {});
+
+    // 2. Webview onDragDropEvent
     try {
-      const appWindow = getCurrentWebviewWindow();
-      unlistenPromise = appWindow.onDragDropEvent((event) => {
-        if (event.payload.type === "over" || event.payload.type === "enter") {
-          setIsDraggingOver(true);
-        } else if (event.payload.type === "drop") {
-          setIsDraggingOver(false);
-          const droppedPaths = event.payload.paths;
-          if (droppedPaths && droppedPaths.length > 0) {
-            loadFolder(droppedPaths[0]);
+      const webview = getCurrentWebview();
+      webview
+        .onDragDropEvent((event) => {
+          if (isCancelled) return;
+          if (event.payload.type === "over" || event.payload.type === "enter") {
+            setIsDraggingOver(true);
+          } else if (event.payload.type === "drop") {
+            if (event.payload.paths && event.payload.paths.length > 0) {
+              handleDrop(event.payload.paths);
+            } else {
+              setIsDraggingOver(false);
+            }
+          } else {
+            setIsDraggingOver(false);
           }
-        } else {
-          setIsDraggingOver(false);
-        }
-      });
-    } catch (err) {
-      console.warn("No se pudo iniciar listener de DragDrop en Renombrador:", err);
-    }
+        })
+        .then((unlisten) => {
+          if (isCancelled) unlisten();
+          else unlistens.push(unlisten);
+        })
+        .catch(() => {});
+    } catch {}
 
     return () => {
-      if (unlistenPromise) {
-        unlistenPromise.then((unlisten) => unlisten()).catch(() => {});
+      isCancelled = true;
+      for (const u of unlistens) {
+        try {
+          u();
+        } catch {}
       }
     };
   }, [loadFolder]);

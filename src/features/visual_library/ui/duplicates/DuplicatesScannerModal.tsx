@@ -599,15 +599,6 @@ export function DuplicatesScannerModal({
           hoveredDropZoneRef.current = null;
         }
       }}
-      onDrop={(e) => {
-        e.preventDefault();
-        setIsDraggingOver(false);
-        const files = Array.from(e.dataTransfer?.files || []);
-        const paths = files.map((f: any) => f.path || f.webkitRelativePath).filter(Boolean);
-        if (paths.length > 0) {
-          applyDroppedPaths(paths, hoveredDropZoneRef.current);
-        }
-      }}
     >
       <div
         className={embedded ? "duplicates-workspace-card" : "duplicates-modal-card"}
@@ -834,15 +825,6 @@ export function DuplicatesScannerModal({
                   hoveredDropZoneRef.current = "base";
                 }
               }}
-              onDrop={(e) => {
-                e.preventDefault();
-                setIsDraggingOver(false);
-                const files = Array.from(e.dataTransfer?.files || []);
-                const paths = files.map((f: any) => f.path || f.webkitRelativePath).filter(Boolean);
-                if (paths.length > 0) {
-                  applyDroppedPaths(paths, "base");
-                }
-              }}
             >
               <div className="folder-card-label">
                 <Icon name="star" />
@@ -902,15 +884,6 @@ export function DuplicatesScannerModal({
                 if (hoveredDropZoneRef.current !== "target") {
                   setHoveredDropZone("target");
                   hoveredDropZoneRef.current = "target";
-                }
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                setIsDraggingOver(false);
-                const files = Array.from(e.dataTransfer?.files || []);
-                const paths = files.map((f: any) => f.path || f.webkitRelativePath).filter(Boolean);
-                if (paths.length > 0) {
-                  applyDroppedPaths(paths, "target");
                 }
               }}
             >

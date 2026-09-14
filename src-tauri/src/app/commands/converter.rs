@@ -218,11 +218,19 @@ pub async fn converter_scan_folder(
             "mp3", "flac", "wav", "ogg", "aac", "m4a", "opus", "wma", "aiff", "alac", "mid",
         ];
 
+        let all_exts: Vec<&str> = image_exts
+            .iter()
+            .chain(video_exts.iter())
+            .chain(audio_exts.iter())
+            .copied()
+            .collect();
+
         let target_exts: &[&str] = match mode.as_str() {
             "image" => image_exts,
             "video_to_audio" | "video_transcode" => video_exts,
             "audio_transcode" => audio_exts,
-            _ => &[],
+            "auto" | "all" => &all_exts,
+            _ => &all_exts,
         };
 
         if path.is_file() {

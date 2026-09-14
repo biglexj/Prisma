@@ -590,14 +590,6 @@ export function PrismaConvertView() {
                   e.dataTransfer.dropEffect = "copy";
                 }
               }}
-              onDrop={(e) => {
-                e.preventDefault();
-                const files = Array.from(e.dataTransfer?.files || []);
-                const paths = files.map((f: any) => f.path || f.webkitRelativePath).filter(Boolean);
-                if (paths.length > 0) {
-                  void handleIncomingPaths(paths);
-                }
-              }}
               style={{
                 padding: "3.5rem 1.5rem",
                 textAlign: "center",

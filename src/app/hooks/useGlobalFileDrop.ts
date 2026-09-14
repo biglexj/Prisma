@@ -17,13 +17,8 @@ export function useGlobalFileDrop({
   onAddImageFolder,
   onAddVideoFolder,
 }: UseGlobalFileDropProps) {
-  // Escucha nativa de soltado en las bibliotecas principales (Música, Imágenes, Vídeos)
+  // Prevenir rechazo de cursor (icono 🚫 de Windows) de forma global en cualquier vista
   useEffect(() => {
-    // Si la vista activa es una herramienta con receptor dedicado, no intervenir
-    if (activeView === "duplicates" || activeView === "renamer" || activeView === "converter") {
-      return;
-    }
-
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault();
       if (e.dataTransfer) {
@@ -31,11 +26,17 @@ export function useGlobalFileDrop({
       }
     };
 
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+    };
+
     window.addEventListener("dragover", handleDragOver);
+    window.addEventListener("dragenter", handleDragEnter);
     return () => {
       window.removeEventListener("dragover", handleDragOver);
+      window.removeEventListener("dragenter", handleDragEnter);
     };
-  }, [activeView]);
+  }, []);
 
   // Escucha nativa de soltado en las bibliotecas principales (Música, Imágenes, Vídeos)
   useEffect(() => {

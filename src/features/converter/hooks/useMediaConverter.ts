@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { cleanPath } from "../../../shared/mediaTree";
 import type {
   AudioTranscodeOptions,
   BatchRenameRules,
@@ -181,26 +183,66 @@ export function useMediaConverter() {
   );
 
   const handleIncomingPaths = useCallback(
-    async (paths: string[], requestedMode: ConversionMode = mode) => {
+    async (rawPaths: string[], requestedMode: ConversionMode = mode) => {
       if (runningRef.current) return;
       setInputError(null);
+      const paths = rawPaths.map(cleanPath).filter(Boolean);
+      if (paths.length === 0) return;
+
+      // Si la cola está vacía, auto-detectar el tipo de archivo o carpeta
       if (queue.length === 0 && paths.length > 0) {
-        const extension = paths[0].split(".").pop()?.toLowerCase() || "";
-        if (["jpg", "jpeg", "png", "webp", "avif", "bmp", "tiff", "gif", "heic"].includes(extension)) requestedMode = "image";
-        else if (["mp4", "mkv", "webm", "avi", "mov", "wmv", "m4v"].includes(extension) && requestedMode !== "video_transcode" && requestedMode !== "video_to_audio") requestedMode = "video_to_audio";
-        else if (["mp3", "flac", "wav", "ogg", "aac", "m4a", "opus"].includes(extension)) requestedMode = "audio_transcode";
+        const directExt = paths[0].split(".").pop()?.toLowerCase() || "";
+        if (["jpg", "jpeg", "png", "webp", "avif", "bmp", "tiff", "gif", "heic", "svg"].includes(directExt)) {
+          requestedMode = "image";
+        } else if (["mp4", "mkv", "webm", "avi", "mov", "wmv", "m4v", "flv", "ts"].includes(directExt) && requestedMode !== "video_transcode" && requestedMode !== "video_to_audio") {
+          requestedMode = "video_to_audio";
+        } else if (["mp3", "flac", "wav", "ogg", "aac", "m4a", "opus", "wma"].includes(directExt)) {
+          requestedMode = "audio_transcode";
+        } else {
+          // Si no tiene extensión directa (carpeta), inspeccionar su contenido en modo auto
+          try {
+            const sampled = await converterClient.scanFolder(paths[0], "auto");
+            if (sampled.length > 0) {
+              const audioMatches = sampled.filter((f) => /\.(mp3|flac|wav|ogg|aac|m4a|opus|wma|aiff|alac)$/i.test(f)).length;
+              const videoMatches = sampled.filter((f) => /\.(mp4|mkv|webm|avi|mov|wmv|m4v|flv|ts)$/i.test(f)).length;
+              const imageMatches = sampled.filter((f) => /\.(jpg|jpeg|png|webp|avif|bmp|tiff|tif|gif|svg|heic)$/i.test(f)).length;
+
+              if (audioMatches > videoMatches && audioMatches > imageMatches) {
+                requestedMode = "audio_transcode";
+              } else if (videoMatches >= audioMatches && videoMatches >= imageMatches) {
+                requestedMode = "video_to_audio";
+              } else if (imageMatches > 0) {
+                requestedMode = "image";
+              }
+            }
+          } catch {}
+        }
         if (requestedMode !== mode) setMode(requestedMode);
       }
+
       const files: string[] = [];
       const errors: string[] = [];
       for (const path of paths) {
         try {
-          const scanned = await converterClient.scanFolder(path, requestedMode);
-          if (!scanned.length) errors.push(`Sin archivos compatibles con este modo: ${path}`);
+          let scanned = await converterClient.scanFolder(path, requestedMode);
+          if (!scanned.length) {
+            // Reintento con auto para no rechazar si el usuario soltó un tipo de medio distinto
+            const fallbackScanned = await converterClient.scanFolder(path, "auto");
+            if (fallbackScanned.length > 0) {
+              scanned = fallbackScanned;
+            } else {
+              errors.push(`Sin archivos compatibles con el conversor: ${path}`);
+            }
+          }
           files.push(...scanned);
-        } catch (error) { errors.push(String(error)); }
+        } catch (error) {
+          errors.push(String(error));
+        }
       }
-      if (!runningRef.current) addFilesToQueue(files, requestedMode);
+
+      if (!runningRef.current && files.length > 0) {
+        addFilesToQueue(files, requestedMode);
+      }
       if (errors.length) setInputError(errors.join("\n"));
     },
     [addFilesToQueue, mode, queue.length]
@@ -209,33 +251,84 @@ export function useMediaConverter() {
   const incomingRef = useRef(handleIncomingPaths);
   incomingRef.current = handleIncomingPaths;
 
-  // Escucha nativa estable sobre el webview que recibe las rutas.
+  // Escucha nativa dual (tauri://drag-drop y onDragDropEvent) para carpetas y archivos
   useEffect(() => {
-    let unlistenPromise: Promise<() => void> | undefined;
+    const unlistens: UnlistenFn[] = [];
+    let isCancelled = false;
 
+    const handleDrop = (paths: string[]) => {
+      setIsDraggingOver(false);
+      if (paths && paths.length > 0) {
+        void incomingRef.current(paths);
+      }
+    };
+
+    // 1. Canal global tauri://drag-drop de Tauri v2
+    listen<{ paths?: string[] }>("tauri://drag-drop", (event) => {
+      if (isCancelled) return;
+      if (event.payload?.paths && event.payload.paths.length > 0) {
+        handleDrop(event.payload.paths);
+      } else {
+        setIsDraggingOver(false);
+      }
+    })
+      .then((unlisten) => {
+        if (isCancelled) unlisten();
+        else unlistens.push(unlisten);
+      })
+      .catch(() => {});
+
+    listen("tauri://drag-enter", () => {
+      if (!isCancelled) setIsDraggingOver(true);
+    })
+      .then((unlisten) => {
+        if (isCancelled) unlisten();
+        else unlistens.push(unlisten);
+      })
+      .catch(() => {});
+
+    listen("tauri://drag-leave", () => {
+      if (!isCancelled) setIsDraggingOver(false);
+    })
+      .then((unlisten) => {
+        if (isCancelled) unlisten();
+        else unlistens.push(unlisten);
+      })
+      .catch(() => {});
+
+    // 2. Webview onDragDropEvent
     try {
       const appWindow = getCurrentWebview();
-      unlistenPromise = appWindow.onDragDropEvent((event) => {
-        if (event.payload.type === "over" || event.payload.type === "enter") {
-          setIsDraggingOver(true);
-        } else if (event.payload.type === "drop") {
-          setIsDraggingOver(false);
-          const droppedPaths = event.payload.paths;
-          if (droppedPaths && droppedPaths.length > 0) {
-            void incomingRef.current(droppedPaths);
+      appWindow
+        .onDragDropEvent((event) => {
+          if (isCancelled) return;
+          if (event.payload.type === "over" || event.payload.type === "enter") {
+            setIsDraggingOver(true);
+          } else if (event.payload.type === "drop") {
+            if (event.payload.paths && event.payload.paths.length > 0) {
+              handleDrop(event.payload.paths);
+            } else {
+              setIsDraggingOver(false);
+            }
+          } else {
+            setIsDraggingOver(false);
           }
-        } else {
-          setIsDraggingOver(false);
-        }
-      });
-      void unlistenPromise.catch((error) => setInputError(`No se pudo activar el arrastre: ${String(error)}`));
+        })
+        .then((unlisten) => {
+          if (isCancelled) unlisten();
+          else unlistens.push(unlisten);
+        })
+        .catch(() => {});
     } catch (err) {
-      console.warn("No se pudo iniciar listener de DragDrop en Tauri:", err);
+      console.warn("No se pudo iniciar listener de DragDrop en Conversor:", err);
     }
 
     return () => {
-      if (unlistenPromise) {
-        unlistenPromise.then((unlisten) => unlisten()).catch(() => {});
+      isCancelled = true;
+      for (const u of unlistens) {
+        try {
+          u();
+        } catch {}
       }
     };
   }, []);

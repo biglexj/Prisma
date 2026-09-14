@@ -87,15 +87,6 @@ export const DuplicatesEmptyState: React.FC<DuplicatesEmptyStateProps> = ({
               hoveredDropZoneRef.current = "single";
             }
           }}
-          onDrop={(e) => {
-            e.preventDefault();
-            setIsDraggingOver(false);
-            const files = Array.from(e.dataTransfer?.files || []);
-            const paths = files.map((f: any) => f.path || f.webkitRelativePath).filter(Boolean);
-            if (paths.length > 0) {
-              applyDroppedPaths(paths, "single");
-            }
-          }}
         >
           <div className="duplicates-hero-icon">
             <Icon name="folder-open" />
