@@ -12,7 +12,7 @@ Llega **Prisma v1.1.2**, una entrega colosal que expande la suite con el nuevo *
 - 🎯 **Hero Dropzone Central & Ahorro de Espacio Vertical**: El centro de la pantalla actúa como receptor interactivo de arrastre y clic para examinar carpetas, transformándose en una barra compacta ultra delgada de 36 px al cargar resultados para aprovechar el 100% de la altura de pantalla.
 - 🛠️ **Pestaña «Herramientas» en Configuración & Barra Lateral**: Controla la visibilidad de cada utilidad (Conversor, Renombrador, Duplicados, Luna Fetch, Gallery-DL, Wallpapers) y accede a Duplicados directamente desde el menú principal.
 - 📑 **Quick Look para Documentos, PDFs y Libros**: Previsualización ampliada y reactiva (70% ancho, 80% alto) para Markdown, Texto, PDF, EPUB y archivos ZIP, con botones directos para «Editar» en tu app predeterminada y «Abrir» en el visor de Prisma.
-- 🖐️ **Arrastrar y Soltar (Drag & Drop) Universal**: Solución integral al cursor de restricción del sistema, permitiendo arrastrar carpetas y archivos con total naturalidad en todas las herramientas y bibliotecas.
+- 🖐️ **Arrastrar y Soltar Nativo OLE Win32**: Receptor nativo en Rust para soltar carpetas y archivos directamente desde el Explorador en el Renombrador, Conversor y Duplicados, con cursor de copia (+) continuo y re-registro dinámico al enfocar la ventana.
 
 ---
 

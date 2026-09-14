@@ -9,4 +9,4 @@ pub mod media;
 pub mod media_preview;
 pub mod playlists;
 pub mod tags;
-
+pub mod windows_file_drop;

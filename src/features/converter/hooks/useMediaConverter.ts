@@ -251,7 +251,7 @@ export function useMediaConverter() {
   const incomingRef = useRef(handleIncomingPaths);
   incomingRef.current = handleIncomingPaths;
 
-  // Escucha nativa dual (tauri://drag-drop y onDragDropEvent) para carpetas y archivos
+  // Escucha nativa dual (evento propio de Prisma y onDragDropEvent) para carpetas y archivos
   useEffect(() => {
     const unlistens: UnlistenFn[] = [];
     let isCancelled = false;
@@ -263,8 +263,8 @@ export function useMediaConverter() {
       }
     };
 
-    // 1. Canal global tauri://drag-drop de Tauri v2
-    listen<{ paths?: string[] }>("tauri://drag-drop", (event) => {
+    // 1. Canal OLE propio de Prisma para Windows/WebView2
+    listen<{ paths?: string[] }>("prisma://native-drag-drop", (event) => {
       if (isCancelled) return;
       if (event.payload?.paths && event.payload.paths.length > 0) {
         handleDrop(event.payload.paths);
@@ -278,7 +278,7 @@ export function useMediaConverter() {
       })
       .catch(() => {});
 
-    listen("tauri://drag-enter", () => {
+    listen("prisma://native-drag-enter", () => {
       if (!isCancelled) setIsDraggingOver(true);
     })
       .then((unlisten) => {
@@ -287,7 +287,7 @@ export function useMediaConverter() {
       })
       .catch(() => {});
 
-    listen("tauri://drag-leave", () => {
+    listen("prisma://native-drag-leave", () => {
       if (!isCancelled) setIsDraggingOver(false);
     })
       .then((unlisten) => {

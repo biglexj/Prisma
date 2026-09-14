@@ -230,6 +230,10 @@ pub fn run() {
                     let _ = main_window.maximize();
                     let _ = main_window.set_focus();
                 }
+
+                if let Err(error) = infrastructure::windows_file_drop::register_or_refresh(&main_window) {
+                    eprintln!("Prisma no pudo registrar el receptor nativo de carpetas: {error}");
+                }
             }
 
             // ── Menú de la bandeja del sistema (System Tray) ──
@@ -310,6 +314,17 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if window.label() == "main" {
+                if matches!(event, WindowEvent::Focused(true)) {
+                    if let Some(main_window) = window.app_handle().get_webview_window("main") {
+                        if let Err(error) =
+                            infrastructure::windows_file_drop::register_or_refresh(&main_window)
+                        {
+                            eprintln!(
+                                "Prisma no pudo refrescar el receptor nativo de carpetas: {error}"
+                            );
+                        }
+                    }
+                }
                 if let WindowEvent::CloseRequested { api, .. } = event {
                     if is_minimize_to_tray_enabled() {
                         api.prevent_close();

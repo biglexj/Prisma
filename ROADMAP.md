@@ -43,6 +43,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
     - Pestaña «Herramientas» en Configuración para conmutar la visibilidad modular de utilidades integradas y acceso directo a Duplicados en la barra lateral principal.
     - Quick Look para Documentos, PDFs, Libros y archivos comprimidos (.zip) con dimensionamiento reactivo al 70% de ancho y 80% de alto del monitor, botón «Editar» en editor predeterminado de Windows y botón «Abrir» en DocumentViewer.
     - Arrastrar y Soltar (Drag & Drop) universal restaurado en toda la suite sin bloqueos de cursor ni restricciones.
+    - Soporte nativo OLE de arrastre de carpetas en herramientas (Renombrador, Conversor y Duplicados) mediante receptor Win32 `IDropTarget` (`CF_HDROP`) con re-registro dinámico al enfocar la ventana.
 - [x] **v1.1.1**
   - **Quick Look: Precisión de Dimensiones, Apertura Fluida con Póster Nativo, Cache-Busting y Soporte para Archivos Sobrescritos**:
     - Corrección del GUID de `PKEY_VIDEO_FRAME_WIDTH`/`HEIGHT` en Windows Shell (`0x64440491`), límites de seguridad de resolución y fallback nativo a `ffprobe` para prevenir ventanas desproporcionadas.

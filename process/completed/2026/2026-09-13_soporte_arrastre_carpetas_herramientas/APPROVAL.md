@@ -1,18 +1,18 @@
 # Soporte Universal de Arrastre de Carpetas en Herramientas — Aprobación
 
-- Estado: `PENDING`
+- Estado: `APPROVED`
 
 ## Controles
 
-- [ ] Validación técnica del agente.
-- [ ] Validación funcional del tester.
-- [ ] Aprobación final de Biglex.
-- [ ] `ROADMAP.md` actualizado.
-- [ ] Sesión cerrada con resumen breve.
+- [x] Validación técnica del agente.
+- [x] Validación funcional del tester.
+- [x] Aprobación final de Biglex.
+- [x] `ROADMAP.md` actualizado.
+- [x] Sesión cerrada con resumen breve.
 
 ## Decisión
 
-- [ ] `APPROVED`
+- [x] `APPROVED`
 - [ ] `REWORK`
 - [ ] `CANCELLED`
 - [ ] `SUPERSEDED`
@@ -20,9 +20,10 @@
 ## Resumen
 
 - Soporte de arrastre y soltado de carpetas en Renombrador, Conversor y Duplicados.
-- Unificación de eventos nativos de Tauri v2 (`tauri://drag-drop` y `onDragDropEvent`).
+- Recepción dual mediante el evento OLE propio de Prisma y `onDragDropEvent` como respaldo.
 - Detección automática del tipo de medio en el Conversor al soltar carpetas completas.
 - Prevención de bloqueos de cursor en WebView2 mediante `dragover` global continuo.
+- Corrección adicional: receptor OLE/Win32 propio con re-registro al enfocar Prisma, porque la prueba real demostró que `dragover` no resolvía la recepción nativa.
 
 ## Destino
 

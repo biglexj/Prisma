@@ -15,10 +15,10 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
-## [1.1.2] - 2026-09-12
+## [1.1.2] - 2026-09-13
 
 ### Resumen
-Presentamos **Prisma v1.1.2**, una actualización de gran envergadura que introduce el **Buscador y Comparador de Duplicados Multimodal** con soporte inteligente para Imágenes, Vídeos y Música, la nueva arquitectura de **Hero Dropzone Central con optimización vertical**, la gestión modular de **Herramientas en Configuración y Barra Lateral**, la previsualización enriquecida en **Quick Look para documentos y libros con multi-ventana desacoplada**, y la restauración fluida del soporte universal de **Arrastrar y Soltar (Drag & Drop)** en toda la suite.
+Presentamos **Prisma v1.1.2**, una actualización de gran envergadura que introduce el **Buscador y Comparador de Duplicados Multimodal** con soporte inteligente para Imágenes, Vídeos y Música, la nueva arquitectura de **Hero Dropzone Central con optimización vertical**, la gestión modular de **Herramientas en Configuración y Barra Lateral**, la previsualización enriquecida en **Quick Look para documentos y libros con multi-ventana desacoplada**, y la implementación del soporte nativo de **Arrastrar y Soltar OLE Win32** para carpetas y archivos en toda la suite.
 
 ### Detalles
 - **Buscador y Comparador de Duplicados Multimodal (Imágenes, Vídeos y Música)**:
@@ -38,8 +38,9 @@ Presentamos **Prisma v1.1.2**, una actualización de gran envergadura que introd
   - Previsualización rápida con dimensionamiento generoso y reactivo por porcentaje de monitor (70% de ancho y 80% de alto) para archivos Markdown, Texto plano, PDF, EPUB y archivos comprimidos (.zip).
   - Integración del botón «Editar» para invocar el editor predeterminado del sistema operativo y botón «Abrir» para transicionar fluidamente al visor completo dentro de Prisma.
   - Sanitización de rutas con caracteres especiales (como arrobas `@`) en el visor nativo y gestión desacoplada de ventanas con aislamiento de límites y cierre ágil mediante teclado o cursor.
-- **Arrastrar y Soltar Universal en Todo el Ecosistema**:
-  - Corrección integral de la intercepción de eventos de arrastre a nivel global, eliminando el cursor de restricción del sistema y permitiendo soltar carpetas y archivos con total fluidez tanto en el Renombrador, Convertidor y Duplicados como en las bibliotecas principales de Música, Imágenes y Vídeos.
+- **Arrastrar y Soltar Nativo OLE Win32 en Todo el Ecosistema**:
+  - Implementación de un receptor nativo OLE `IDropTarget` en Rust para captura de `CF_HDROP`, con re-registro dinámico al enfocar la ventana principal, garantizando el cursor de copia (+) sin bloqueos de cursor del sistema operativo.
+  - Soltado directo de carpetas y archivos en el Renombrador (cargando y listando su contenido al instante), en el Convertidor (auto-detectando el tipo de medio y poblando la cola por lotes) y en el Buscador de Duplicados (asignando carpetas de búsqueda y depuración).
 
 ## [1.1.1] - 2026-09-11
 

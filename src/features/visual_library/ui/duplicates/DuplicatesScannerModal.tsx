@@ -148,7 +148,7 @@ export function DuplicatesScannerModal({
     let isCancelled = false;
 
     // 1. Escucha de evento drop nativo de Tauri v2
-    listen<{ paths?: string[]; position?: { x: number; y: number } }>("tauri://drag-drop", (event) => {
+    listen<{ paths?: string[]; position?: { x: number; y: number } }>("prisma://native-drag-drop", (event) => {
       if (isCancelled) return;
       setIsDraggingOver(false);
       const dropZone = hoveredDropZoneRef.current;
@@ -163,7 +163,7 @@ export function DuplicatesScannerModal({
     }).catch(() => {});
 
     // 2. Escucha de drag-enter
-    listen("tauri://drag-enter", () => {
+    listen("prisma://native-drag-enter", () => {
       if (isCancelled) return;
       setIsDraggingOver(true);
     }).then((unlisten) => {
@@ -172,7 +172,7 @@ export function DuplicatesScannerModal({
     }).catch(() => {});
 
     // 3. Escucha de drag-leave
-    listen("tauri://drag-leave", () => {
+    listen("prisma://native-drag-leave", () => {
       if (isCancelled) return;
       setIsDraggingOver(false);
       setHoveredDropZone(null);
@@ -183,7 +183,7 @@ export function DuplicatesScannerModal({
     }).catch(() => {});
 
     // 4. Escucha de drag-over
-    listen<{ position?: { x: number; y: number } }>("tauri://drag-over", (event) => {
+    listen<{ position?: { x: number; y: number } }>("prisma://native-drag-over", (event) => {
       if (isCancelled) return;
       setIsDraggingOver(true);
       if (event.payload?.position) {

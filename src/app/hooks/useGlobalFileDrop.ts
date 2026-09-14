@@ -79,7 +79,7 @@ export function useGlobalFileDrop({
     };
 
     // 1. Escucha directa mediante canal de eventos global de Tauri v2
-    listen<{ paths?: string[] }>("tauri://drag-drop", (event) => {
+    listen<{ paths?: string[] }>("prisma://native-drag-drop", (event) => {
       if (isCancelled) return;
       if (event.payload?.paths && event.payload.paths.length > 0) {
         handleDroppedPaths(event.payload.paths);
@@ -115,4 +115,3 @@ export function useGlobalFileDrop({
     };
   }, [activeView, onAddMusicFolder, onAddImageFolder, onAddVideoFolder]);
 }
-
