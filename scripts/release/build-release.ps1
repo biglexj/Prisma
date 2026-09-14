@@ -135,7 +135,11 @@ if ($SkipAuroraUpload) {
 
             try {
                 # ── Calcular SHA-256 del binario que YA está en GitHub ──
-                $sha256Hash = (Get-FileHash -Path $installerTarget -Algorithm SHA256).Hash.ToLower()
+                $sha256Hash = if (Get-Command Get-FileHash -ErrorAction SilentlyContinue) {
+                    (Get-FileHash -Path $installerTarget -Algorithm SHA256).Hash.ToLower()
+                } else {
+                    [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.IO.File]::ReadAllBytes($installerTarget))).Replace('-', '').ToLower()
+                }
                 Write-Host "  SHA-256: $sha256Hash" -ForegroundColor DarkGray
 
                 $vParts = $Version.Split('.')
