@@ -7,7 +7,11 @@ export interface AIModel {
   description: string;
   scales: number[];
   category?: "photo" | "anime" | "restore" | "sharp" | "compact";
+  arch?: string;
 }
+
+const FALLBACK_PHOTO_IMAGE = "/models/realesrgan-x4plus.webp";
+const FALLBACK_GLOBAL_IMAGE = "/models/ultramix_balanced.webp";
 
 const MODEL_COMPARISON_IMAGES: Record<string, string> = {
   "realesrgan-x4plus-anime": "/models/realesrgan-x4plus-anime.webp",
@@ -15,6 +19,40 @@ const MODEL_COMPARISON_IMAGES: Record<string, string> = {
   "ultrasharp": "/models/ultrasharp.webp",
   "remacri": "/models/remacri.webp",
   "ultramix_balanced": "/models/ultramix_balanced.webp",
+  "siax_anime": "/models/realesrgan-x4plus-anime.webp",
+  "realesr-animevideov3-x4": "/models/realesrgan-x4plus-anime.webp",
+  "2x-animesharpv4": "/models/realesrgan-x4plus-anime.webp",
+};
+
+/**
+ * Resuelve la imagen comparativa con sistema dual de fallbacks:
+ * 1. Fotografía/Realismo: /models/realesrgan-x4plus.webp
+ * 2. Global / Predeterminado: /models/ultramix_balanced.webp (UltraMix Balanced)
+ */
+export const getModelComparisonImage = (model: AIModel): string => {
+  if (MODEL_COMPARISON_IMAGES[model.id]) {
+    return MODEL_COMPARISON_IMAGES[model.id];
+  }
+
+  const idLower = model.id.toLowerCase();
+  const descLower = (model.description || "").toLowerCase();
+  const nameLower = (model.name || "").toLowerCase();
+
+  const isPhoto =
+    model.category === "photo" ||
+    idLower.includes("photo") ||
+    idLower.includes("foto") ||
+    idLower.includes("real") ||
+    descLower.includes("fotografía") ||
+    descLower.includes("foto") ||
+    descLower.includes("paisaje") ||
+    nameLower.includes("foto");
+
+  if (isPhoto) {
+    return FALLBACK_PHOTO_IMAGE;
+  }
+
+  return FALLBACK_GLOBAL_IMAGE;
 };
 
 interface ModelSelectModalProps {
@@ -45,11 +83,11 @@ export function ModelSelectModal({
   if (!isOpen) return null;
 
   const getModelIcon = (id: string): import("../../../shared/ui/Icon").IconName => {
-    if (id.includes("anime") || id.includes("art")) return "brush";
+    if (id.includes("anime") || id.includes("art") || id.includes("siax")) return "brush";
     if (id.includes("sharp")) return "sparkles";
     if (id.includes("remacri") || id.includes("restore") || id.includes("ultramix")) return "sliders";
-    if (id.includes("compact")) return "clock";
-    return "image";
+    if (id.includes("compact") || id.includes("video")) return "film";
+    return "camera";
   };
 
   const getCategoryBadge = (category?: string) => {
@@ -162,32 +200,35 @@ export function ModelSelectModal({
 
                   <p className="upscaler-model-card-desc">{model.description}</p>
 
-                  {/* Comparativa visual real Antes / Después */}
-                  {MODEL_COMPARISON_IMAGES[model.id] ? (
-                    <div className="upscaler-model-comparativa-wrapper">
-                      <img
-                        src={MODEL_COMPARISON_IMAGES[model.id]}
-                        alt={`Comparativa ${model.name}`}
-                        className="upscaler-model-comparativa-img"
-                        loading="lazy"
-                      />
-                      <div className="upscaler-comparativa-tag before">Antes (Original)</div>
-                      <div className="upscaler-comparativa-divider-badge">⚡</div>
-                      <div className="upscaler-comparativa-tag after">
-                        Después (Super-Resolución {maxScale}x)
+                  {/* Comparativa visual real Antes / Después con doble fallback */}
+                  {(() => {
+                    const comparisonSrc = getModelComparisonImage(model);
+                    return (
+                      <div className="upscaler-model-comparativa-wrapper">
+                        <img
+                          src={comparisonSrc}
+                          alt={`Comparativa ${model.name}`}
+                          className="upscaler-model-comparativa-img"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = FALLBACK_GLOBAL_IMAGE;
+                          }}
+                        />
+                        <div className="upscaler-comparativa-tag before">Antes (Original)</div>
+                        <div className="upscaler-comparativa-divider-badge">⚡</div>
+                        <div className="upscaler-comparativa-tag after">
+                          Después (Super-Resolución {maxScale}x)
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="upscaler-model-preview-bar">
-                      <div className="preview-split-half before">
-                        <span>Antes (Original)</span>
-                      </div>
-                      <div className="preview-split-divider">
-                        <span>⚡</span>
-                      </div>
-                      <div className="preview-split-half after">
-                        <span>Después (Super-Resolución {maxScale}x)</span>
-                      </div>
+                    );
+                  })()}
+
+                  {/* Etiqueta de Arquitectura */}
+                  {model.arch && (
+                    <div className="upscaler-model-card-arch-row">
+                      <span className="upscaler-model-arch-tag">
+                        ⚡ Arquitectura: {model.arch}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -200,7 +241,7 @@ export function ModelSelectModal({
         <div className="modal-footer upscaler-modal-footer">
           <div className="upscaler-modal-footer-tip">
             <span className="tip-bulb">💡</span>
-            <span>Modelos acelerados con NCNN Vulkan en GPU dedicada.</span>
+            <span>Modelos acelerados con NCNN Vulkan y ONNX en GPU.</span>
           </div>
           <button
             type="button"
@@ -214,3 +255,4 @@ export function ModelSelectModal({
     </div>
   );
 }
+

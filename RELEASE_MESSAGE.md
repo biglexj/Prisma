@@ -1,16 +1,25 @@
-# 🚀 Prisma v1.1.3 — Comparativa Cruzada Estricta en Duplicados y Modo Compacto Dual
+# 🚀 Prisma v1.1.3 — Comparativa Cruzada en Duplicados, Flujo Ergonómico de Comparador y Prisma Upscaler IA
 
-Llega **Prisma v1.1.3**, una versión de afinamiento y máxima precisión para el **Buscador y Comparador de Duplicados**, implementando la **comparativa cruzada estricta** entre carpetas (Base vs Depurar) para garantizar la protección total de la carpeta base sin falsos positivos internos, junto con la nueva **barra compacta dual** que ahorra más del 60% de espacio vertical para una exploración limpia de duplicados.
+Llega **Prisma v1.1.3**, una versión cargada de refinamiento ergonómico y potencia multimedia: la **comparativa cruzada estricta** en el Buscador de Duplicados con barra compacta dual, el nuevo **flujo de ranura de espera interactiva y Drag & Drop nativo** en el Comparador de Imágenes, y la integración de **Prisma Upscaler** para reescalar imágenes mediante IA local y aceleración por GPU.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- 🛡️ **Comparativa Cruzada Estricta (Base vs Depurar)**: Al comparar dos carpetas, el motor de búsqueda en Rust compara exclusivamente los archivos de la Carpeta a Depurar contra los de la Carpeta Base protegida. Se eliminan por completo los falsos positivos intra-carpeta (no compara archivos de Base entre sí ni de Depurar entre sí).
-- 🔬 **Detección Híbrida Optimizada**: La comparativa cruzada estricta aplica tanto para coincidencia exacta por hash binario (100%) como para similitud perceptual visual (dHash de 64 bits en imágenes/vídeos) y acústica (metadatos Lofty y duración en música).
-- 📐 **Barra Compacta Dual (Ahorro de ~85 px Verticales)**: Al seleccionar ambas carpetas, las tarjetas grandes se transforman automáticamente en una barra horizontal elegante de solo 44 px, liberando espacio para visualizar cómodamente las tarjetas de imágenes y duplicados.
-- 🎨 **Cápsulas Tonal Material 3 Expressive**: Identificación inmediata con distintivos verde esmeralda para la Base intacta y naranja vibrante para la carpeta a depurar, con rutas en tipografía monoespaciada, cambio rápido y soporte nativo de Arrastrar y Soltar (*Drag & Drop*).
-- ⇄ **Intercambio y Expansión Rápida**: Botón de swap instantáneo (`⇄`) para invertir roles y conmutador sutil para expandir o contraer las tarjetas detalladas cuando lo desees.
+- 🛡️ **Comparativa Cruzada Estricta en Duplicados**: Al comparar 2 carpetas (Base vs Depurar), se compara exclusivamente la carpeta de origen contra la base protegida, eliminando falsos positivos internos.
+- 📐 **Barra Compacta Dual (Ahorro de ~85 px Verticales)**: Al seleccionar ambas carpetas, la cabecera se contrae a una barra elegante de 44 px para maximizar el espacio de exploración de duplicados.
+- 🖼️ **Ranura de Espera Interactiva en el Comparador**: La Imagen 1 queda fija como base protegida y el Slot B espera deliberadamente con una tarjeta interactiva con accesos a Biblioteca, Explorador y arrastre de fotos.
+- 🪟 **Modal Compacto de Selección de Fuentes**: Al pulsar «+ Añadir foto» o «Cambiar», emerge una ventana centrada con zona de soltado directo y accesos rápidos sin saturar la pantalla.
+- 🎯 **Arrastrar y Soltar (*Drag & Drop*) Nativo Universal**: Arrastra imágenes desde el Explorador de Windows directamente sobre las ranuras, los modales o las mitades del visor para sustituir fotos al vuelo.
+- ⚡ **Integración de Prisma Upscaler (IA Local)**: Reescalado inteligente de ilustraciones y fotos directamente desde la barra de herramientas y el visor de imágenes.
+- 🎨 **Nuevas Variantes de Color de Fondo**: Personaliza el fondo en Ajustes con opciones *Prisma*, *Neutral* y *Miku*.
+
+---
+
+### 📦 Descargas oficiales
+
+- 💾 [Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.3/Prisma_1.1.3_x64-setup.exe)
+- 📦 [Descargar Instalador MSI (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.3/Prisma_1.1.3_x64_en-US.msi)
 
 ---
 

@@ -18,10 +18,6 @@
 .prisma-upscaler-view svg {
   width: 18px;
   height: 18px;
-  min-width: 18px;
-  min-height: 18px;
-  max-width: 18px;
-  max-height: 18px;
   flex-shrink: 0;
   display: inline-block;
 }
@@ -592,6 +588,36 @@
   background: var(--surface-container-lowest, #ffffff);
 }
 
+.upscaler-drop-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface, #1e1416) 92%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 20;
+  pointer-events: none;
+  animation: fadeIn 0.18s ease;
+}
+
+.upscaler-drop-overlay h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 750;
+  color: var(--on-surface, #fcf0f1);
+}
+
+.upscaler-drop-overlay p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--on-surface-variant, #d6c2c3);
+}
+
 .dropzone-empty-state {
   display: flex;
   flex-direction: column;
@@ -899,12 +925,17 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
+  width: 100%;
 }
 
 .upscaler-model-card-icon-title {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex: 1 1 0%;
+  overflow: hidden;
 }
 
 .upscaler-model-card-icon {
@@ -924,6 +955,10 @@
   font-size: 0.92rem;
   font-weight: 750;
   color: var(--on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .upscaler-model-cat-badge {
@@ -933,6 +968,7 @@
   border-radius: 6px;
   border: 1px solid;
   display: inline-block;
+  white-space: nowrap;
 }
 
 .upscaler-model-card-status {
@@ -966,6 +1002,21 @@
   font-size: 0.8rem;
   color: var(--on-surface-variant);
   line-height: 1.4;
+}
+
+.upscaler-model-card-arch-row {
+  display: flex;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px solid var(--outline-variant);
+  margin-top: 4px;
+}
+
+.upscaler-model-arch-tag {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+  letter-spacing: 0.2px;
 }
 
 /* Comparativa Real Antes / Después */

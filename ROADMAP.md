@@ -34,6 +34,16 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
   - **Buscador de Duplicados: Comparativa Cruzada Estricta y Modo Compacto Dual**:
     - Comparativa cruzada estricta (Base vs Depurar) en Rust: discriminación de origen (`classify_path`), eliminación de falsos positivos intra-carpeta (evita comparar archivos de Base contra Base o Depurar contra Depurar) tanto en hash exacto como en similitud perceptual visual (dHash) y acústica (Lofty).
     - Barra compacta dual inteligente al seleccionar carpetas: reducción de más del 60% de la altura vertical de la cabecera (de ~130px a ~44px), con cápsulas tonales (Base intacta en verde esmeralda y A Depurar en naranja vibrante), rutas legibles, intercambio instantáneo (`⇄`), soporte de arrastrar y soltar nativo y conmutador de expansión/colapso.
+  - **Suite de Comparación de Imágenes: Ranura de Espera, Selector Compacto y Drag & Drop Universal**:
+    - Ranura interactiva vacía para Slot B con zona de soltado y botones para Biblioteca y Explorador, eliminando el emparejamiento aleatorio al abrir comparaciones.
+    - Modal intermedio compacto (`ImageComparisonSourceModal`) para añadir o cambiar fotos con soltado directo y selector ligero de fuentes.
+    - Soporte nativo de Arrastrar y Soltar (*Drag & Drop*) Win32/Tauri v2 en todas las ranuras, selectores y mitades de pantalla activas.
+    - Filtrado por carpetas en selector, miniaturas nativas con caché LRU y renderizado progresivo por lotes.
+  - **Integración de Prisma Upscaler y Variantes de Color de Fondo**:
+    - Herramienta de super-resolución con IA local integrada en la barra lateral y menú contextual del visor de fotos.
+    - Modal de selección de modelos ONNX (Real-ESRGAN, Compact, Anime, UltraSharp, etc.) y factores de escala ($2\times$, $4\times$, $8\times$).
+    - Variantes de fondo reactivas en Configuración (`prisma`, `neutral`, `miku`).
+
 - [x] **v1.1.2**
   - **Buscador y Comparador de Duplicados Multimodal (Imágenes, Vídeos y Música), Hero Dropzone Central y Quick Look Ampliado**:
     - Motor multimodal de duplicados con conmutador tri-modal (`[🎵 Música]`, `[🖼️ Imágenes]`, `[🎬 Vídeos]`).

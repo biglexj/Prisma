@@ -58,7 +58,12 @@ export function useGlobalFileDrop({
   // Escucha nativa de soltado en las bibliotecas principales (Música, Imágenes, Vídeos)
   useEffect(() => {
     // Si la vista activa es una herramienta con receptor dedicado, no duplicar la acción
-    if (activeView === "duplicates" || activeView === "renamer" || activeView === "converter") {
+    if (
+      activeView === "duplicates" ||
+      activeView === "renamer" ||
+      activeView === "converter" ||
+      activeView === "prisma_upscaler"
+    ) {
       return;
     }
 

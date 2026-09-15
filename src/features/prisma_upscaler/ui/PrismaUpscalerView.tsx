@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Icon } from "../../../shared/ui/Icon";
+import { cleanPath, toSafeAssetUrl } from "../../../shared/mediaTree";
 import type { AppView } from "../../../app/ui/AppSidebar";
 import { ModelSelectModal, type AIModel } from "./ModelSelectModal";
 import "./prisma-upscaler.css";
@@ -14,30 +17,34 @@ const MODELS: AIModel[] = [
   {
     id: "realesrgan-x4plus-anime",
     name: "Arte Digital / Anime",
-    description: "Ideal para ilustraciones digitales, anime, manga y líneas nítidas sin artefactos.",
+    description: "Ideal para ilustraciones digitales, anime, manga y líneas nítidas sin artefactos de compresión.",
     scales: [2, 3, 4],
     category: "anime",
+    arch: "RRDBNet",
   },
   {
     id: "realesrgan-x4plus",
     name: "Fotografía General",
-    description: "Restaura fotografías reales, retratos y texturas complejas con alta fidelidad.",
+    description: "Restaura fotografías reales, retratos y texturas complejas con reducción de ruido digital.",
     scales: [2, 3, 4],
     category: "photo",
+    arch: "RRDBNet",
   },
   {
     id: "ultrasharp",
     name: "UltraSharp",
-    description: "Acentuación agresiva de nitidez y micro-detalles en bordes y texturas finas.",
+    description: "Acentuación agresiva de nitidez y micro-detalles en bordes de alta frecuencia y texturas.",
     scales: [4],
     category: "sharp",
+    arch: "RRDBNet",
   },
   {
     id: "remacri",
     name: "Remacri",
-    description: "Restaura texturas y grano con ultra-alta fidelidad en imágenes comprimidas.",
+    description: "Restaura texturas y grano con ultra-alta fidelidad en imágenes comprimidas o degradadas.",
     scales: [4],
     category: "restore",
+    arch: "RRDBNet",
   },
   {
     id: "ultramix_balanced",
@@ -45,13 +52,31 @@ const MODELS: AIModel[] = [
     description: "Equilibrio suave entre eliminación de ruido y retención de detalles finos sin sobre-enfocar.",
     scales: [4],
     category: "photo",
+    arch: "RRDBNet",
   },
   {
-    id: "compact",
-    name: "RealESRGANv2 Compact",
-    description: "Modelo ultraligero de baja latencia y consumo mínimo de VRAM para GPU modesta.",
+    id: "siax_anime",
+    name: "NMKD Siax Anime",
+    description: "Red profunda de 64 bloques residuales para ilustraciones anime de alta complejidad y entintado limpio.",
+    scales: [4],
+    category: "anime",
+    arch: "RRDBNet",
+  },
+  {
+    id: "realesr-animevideov3-x4",
+    name: "RealESR-AnimeVideoV3 (Compact)",
+    description: "Modelo ultraligero SRVGGNet de baja latencia y consumo mínimo de VRAM para video y streaming.",
     scales: [2, 3, 4],
     category: "compact",
+    arch: "SRVGGNet",
+  },
+  {
+    id: "2x-animesharpv4",
+    name: "AnimeSharp V4 (ONNX)",
+    description: "Modelo RCAN de vanguardia en formato universal ONNX para trazos anime cristalinos.",
+    scales: [2],
+    category: "anime",
+    arch: "RCAN / ONNX",
   },
 ];
 
@@ -76,6 +101,36 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
     }
   }, [selectedModel, currentModel, selectedScale]);
 
+  // Aplicar ruta de imagen validada
+  const handleApplyImagePath = useCallback(async (rawPath: string) => {
+    const cleaned = cleanPath(rawPath.trim().replace(/^"|"$/g, ""));
+    if (!cleaned) return;
+    const lower = cleaned.toLowerCase();
+    const validExts = [".png", ".jpg", ".jpeg", ".webp", ".avif", ".bmp"];
+    const isImage = validExts.some((ext) => lower.endsWith(ext));
+
+    if (!isImage) {
+      setStatusMessage({
+        text: "Formato no compatible. Usa imágenes PNG, JPG, JPEG, WEBP o BMP.",
+        type: "error",
+      });
+      return;
+    }
+
+    setSelectedPath(cleaned);
+    try {
+      const assetUrl = await invoke<string>("get_media_preview_url", { path: cleaned });
+      setPreviewUrl(assetUrl || toSafeAssetUrl(cleaned));
+    } catch {
+      setPreviewUrl(toSafeAssetUrl(cleaned));
+    }
+    const filename = cleaned.split(/[\\/]/).pop() || cleaned;
+    setStatusMessage({
+      text: `Imagen «${filename}» cargada correctamente.`,
+      type: "success",
+    });
+  }, []);
+
   // Selección de archivo con explorador nativo
   const handleSelectFile = async () => {
     try {
@@ -85,21 +140,13 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
         filters: [
           {
             name: "Imágenes compatibles",
-            extensions: ["png", "jpg", "jpeg", "webp"],
+            extensions: ["png", "jpg", "jpeg", "webp", "avif", "bmp"],
           },
         ],
       });
 
       if (selected && typeof selected === "string") {
-        setSelectedPath(selected);
-        setStatusMessage(null);
-        // Generar URL para visualización en WebView
-        try {
-          const assetUrl = await invoke<string>("get_media_preview_url", { path: selected });
-          setPreviewUrl(assetUrl || null);
-        } catch {
-          setPreviewUrl(null);
-        }
+        await handleApplyImagePath(selected);
       }
     } catch (err) {
       console.error(err);
@@ -118,28 +165,19 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
     try {
       const text = await navigator.clipboard.readText();
       const trimmed = text ? text.trim().replace(/^"|"$/g, "") : "";
-      if (
-        trimmed &&
-        (trimmed.endsWith(".png") ||
-          trimmed.endsWith(".jpg") ||
-          trimmed.endsWith(".jpeg") ||
-          trimmed.endsWith(".webp"))
-      ) {
-        setSelectedPath(trimmed);
-        setStatusMessage({ text: "Ruta de imagen pegada desde el portapapeles.", type: "success" });
-        try {
-          const assetUrl = await invoke<string>("get_media_preview_url", { path: trimmed });
-          setPreviewUrl(assetUrl || null);
-        } catch {
-          setPreviewUrl(null);
+      if (trimmed) {
+        const lower = trimmed.toLowerCase();
+        const validExts = [".png", ".jpg", ".jpeg", ".webp", ".avif", ".bmp"];
+        if (validExts.some((ext) => lower.endsWith(ext))) {
+          await handleApplyImagePath(trimmed);
+          return;
         }
-        return;
       }
       setStatusMessage({ text: "El portapapeles no contiene una ruta de imagen válida (.png, .jpg, .webp).", type: "info" });
     } catch {
       setStatusMessage({ text: "No se pudo leer el portapapeles.", type: "error" });
     }
-  }, []);
+  }, [handleApplyImagePath]);
 
   // Soporte de atajo Ctrl+V global en la vista
   useEffect(() => {
@@ -156,7 +194,94 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handlePasteClipboard]);
 
-  // Manejo de Drag & Drop
+  // Escucha nativa de Drag & Drop de Windows (OLE Win32 + Webview fallback)
+  useEffect(() => {
+    const unlistens: UnlistenFn[] = [];
+    let isCancelled = false;
+
+    // 1. Escucha evento nativo Win32 OLE emitido por Rust
+    listen<{ paths?: string[]; position?: { x: number; y: number } }>(
+      "prisma://native-drag-drop",
+      (event) => {
+        if (isCancelled) return;
+        setIsDragging(false);
+        const paths = event.payload?.paths;
+        if (!paths || paths.length === 0) return;
+        const validExts = [".png", ".jpg", ".jpeg", ".webp", ".avif", ".bmp"];
+        const validPath = paths.find((p) => {
+          const lower = p.toLowerCase();
+          return validExts.some((ext) => lower.endsWith(ext));
+        });
+        if (validPath) {
+          void handleApplyImagePath(validPath);
+        } else {
+          setStatusMessage({
+            text: "Formato no compatible. Arrastra una imagen PNG, JPG, JPEG o WEBP.",
+            type: "error",
+          });
+        }
+      }
+    ).then((u) => {
+      if (isCancelled) u();
+      else unlistens.push(u);
+    }).catch(() => {});
+
+    // 2. Drag enter nativo
+    listen("prisma://native-drag-enter", () => {
+      if (!isCancelled) setIsDragging(true);
+    }).then((u) => {
+      if (isCancelled) u();
+      else unlistens.push(u);
+    }).catch(() => {});
+
+    // 3. Drag leave nativo
+    listen("prisma://native-drag-leave", () => {
+      if (!isCancelled) setIsDragging(false);
+    }).then((u) => {
+      if (isCancelled) u();
+      else unlistens.push(u);
+    }).catch(() => {});
+
+    // 4. Fallback secundario de Tauri Webview
+    try {
+      const webview = getCurrentWebview();
+      webview.onDragDropEvent((event) => {
+        if (isCancelled) return;
+        if (event.payload.type === "enter" || event.payload.type === "over") {
+          setIsDragging(true);
+        } else if (event.payload.type === "drop" && event.payload.paths) {
+          setIsDragging(false);
+          const paths = event.payload.paths;
+          const validExts = [".png", ".jpg", ".jpeg", ".webp", ".avif", ".bmp"];
+          const validPath = paths.find((p) => {
+            const lower = p.toLowerCase();
+            return validExts.some((ext) => lower.endsWith(ext));
+          });
+          if (validPath) {
+            void handleApplyImagePath(validPath);
+          }
+        } else if (event.payload.type === "leave") {
+          setIsDragging(false);
+        }
+      }).then((u) => {
+        if (isCancelled) u();
+        else unlistens.push(u);
+      }).catch(() => {});
+    } catch {
+      // Ignorar si no está en entorno webview nativo
+    }
+
+    return () => {
+      isCancelled = true;
+      for (const u of unlistens) {
+        try {
+          u();
+        } catch {}
+      }
+    };
+  }, [handleApplyImagePath]);
+
+  // Manejo de Drag & Drop HTML5 estándar
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -177,17 +302,19 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
       const file = files[0];
-      const validExts = [".png", ".jpg", ".jpeg", ".webp"];
-      const isImage = validExts.some((ext) => file.name.toLowerCase().endsWith(ext));
-
-      if (isImage) {
-        // En WebView Tauri, File a menudo expone la ruta real o name
-        const filePath = (file as unknown as { path?: string }).path || file.name;
-        setSelectedPath(filePath);
-        setPreviewUrl(URL.createObjectURL(file));
-        setStatusMessage({ text: `Imagen «${file.name}» cargada correctamente.`, type: "success" });
+      const filePath = (file as unknown as { path?: string }).path;
+      if (filePath) {
+        await handleApplyImagePath(filePath);
       } else {
-        setStatusMessage({ text: "Formato no compatible. Usa imágenes PNG, JPG o WEBP.", type: "error" });
+        const validExts = [".png", ".jpg", ".jpeg", ".webp", ".avif", ".bmp"];
+        const isImage = validExts.some((ext) => file.name.toLowerCase().endsWith(ext));
+        if (isImage) {
+          setSelectedPath(file.name);
+          setPreviewUrl(URL.createObjectURL(file));
+          setStatusMessage({ text: `Imagen «${file.name}» cargada correctamente.`, type: "success" });
+        } else {
+          setStatusMessage({ text: "Formato no compatible. Usa imágenes PNG, JPG o WEBP.", type: "error" });
+        }
       }
     }
   };
@@ -228,11 +355,11 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
   };
 
   const getModelIcon = (id: string): import("../../../shared/ui/Icon").IconName => {
-    if (id.includes("anime") || id.includes("art")) return "brush";
+    if (id.includes("anime") || id.includes("art") || id.includes("siax")) return "brush";
     if (id.includes("sharp")) return "sparkles";
     if (id.includes("remacri") || id.includes("restore") || id.includes("ultramix")) return "sliders";
-    if (id.includes("compact")) return "clock";
-    return "image";
+    if (id.includes("compact") || id.includes("video")) return "film";
+    return "camera";
   };
 
   return (
@@ -449,6 +576,15 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
+            {isDragging && (
+              <div className="upscaler-drop-overlay">
+                <div className="dropzone-cloud-icon">
+                  <Icon name="image" />
+                </div>
+                <h3>Suelta la imagen aquí</h3>
+                <p>Cargarás la nueva imagen para procesar con Prisma Upscaler</p>
+              </div>
+            )}
             {previewUrl || selectedPath ? (
               <div className="dropzone-preview-container">
                 <div className="dropzone-preview-image-wrap">

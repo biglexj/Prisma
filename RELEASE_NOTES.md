@@ -15,20 +15,24 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
-## [1.1.3] - 2026-09-14
+## [1.1.3] - 2026-09-15
 
 ### Resumen
-Presentamos **Prisma v1.1.3**, una actualización de refinamiento y ergonomía centrada en el **Buscador y Comparador de Duplicados**. Esta entrega implementa la **comparativa cruzada estricta** en el modo de 2 carpetas (Base vs Depurar) para garantizar que los archivos de la carpeta base permanezcan completamente protegidos sin reportar falsos positivos internos, e introduce una nueva **barra compacta dual** que reduce en más de un 60% la altura de la cabecera al tener ambas carpetas seleccionadas, maximizando el espacio de visualización para inspeccionar y depurar los grupos detectados.
+Presentamos **Prisma v1.1.3**, una actualización de gran refinamiento ergonómico y potencia multimedia. Esta entrega optimiza a fondo el **Buscador y Comparador de Duplicados** implementando la comparativa cruzada estricta entre carpetas (Base vs Depurar) para garantizar la protección total de tus archivos originales, e introduce una nueva barra compacta dual que ahorra más del 60% de espacio vertical. Asimismo, revoluciona el **Comparador de Imágenes** con un flujo intuitivo de ranura de espera interactiva, modal compacto de selección de fuentes y soporte nativo de Arrastrar y Soltar (*Drag & Drop*) en toda la experiencia. Finalmente, culmina la integración de la suite **Prisma Upscaler**, permitiendo reescalar ilustraciones y fotografías mediante inteligencia artificial local y aceleración por GPU directamente dentro de la aplicación.
 
 ### Detalles
-- **Comparativa Cruzada Estricta en el Comparador de 2 Carpetas (Base vs Depurar)**:
-  - Clasificación de origen de archivos para asegurar que la comparación se efectúe exclusivamente entre la carpeta de origen/depuración y la carpeta base protegida.
-  - Eliminación absoluta de falsos positivos intra-carpeta: los archivos pertenecientes a la misma carpeta no se comparan entre sí en este modo, evitando que duplicados internos de la carpeta base o de la carpeta a depurar generen grupos no deseados.
-  - Aplicación consistente tanto en la detección por hash binario exacto (100%) como en la similitud perceptual visual (dHash de 64 bits para imágenes y vídeos) y acústica (metadatos Lofty y duración para música), reservando el escaneo integral para los modos de carpeta individual y biblioteca completa.
-- **Barra Compacta Dual para Selección de Carpetas**:
-  - Transformación automática del panel de selección a una barra horizontal delgada de 44 px al seleccionar ambas carpetas, ahorrando más de 85 px de espacio vertical para la exploración de resultados.
-  - Cápsulas interactivas con distintivos visuales en Material 3 Expressive (verde esmeralda para la Base a proteger y naranja vibrante para la Carpeta a depurar), rutas formateadas con tooltip descriptivo, botón de cambio rápido y soporte nativo de arrastrar y soltar (*Drag & Drop*).
-  - Integración del botón de intercambio de roles (`⇄`) y control sutil de expansión para conmutar fluidamente entre la vista compacta y las tarjetas detalladas.
+- **Buscador de Duplicados: Comparativa Cruzada Estricta y Barra Compacta Dual**:
+  - Clasificación de origen de archivos para asegurar que la comparación se efectúe exclusivamente entre la carpeta a depurar y la carpeta base protegida, eliminando por completo los falsos positivos intra-carpeta tanto en detección por hash binario exacto (100%) como en similitud perceptual visual (dHash de 64 bits) y acústica (metadatos Lofty y duración para música).
+  - Barra compacta dual inteligente que reduce automáticamente la cabecera a 44 px al seleccionar ambas carpetas, liberando más de 85 px de espacio vertical para la exploración cómoda de resultados, con distintivos tonales en Material 3 Expressive (Base en esmeralda y A Depurar en naranja), intercambio instantáneo (`⇄`), rutas formateadas y soporte de arrastre de carpetas.
+- **Suite de Comparación de Imágenes: Ranura de Espera, Selector Compacto y Drag & Drop Universal**:
+  - Flujo de comparación deliberado: la imagen de partida se fija como referencia en la Imagen A (Base) y el Slot B inicia en espera con una tarjeta interactiva espaciosa con zona de soltado y accesos directos a «Biblioteca» y «Explorador», eliminando el auto-emparejamiento arbitrario.
+  - Modal intermedio compacto al pulsar «+ Añadir foto» o «Cambiar»: despliega una ventana centrada y ligera con área receptora de soltado y botones de selección rápida sin saltar abruptamente a la lista completa de fotos.
+  - Soporte nativo de Arrastrar y Soltar (*Drag & Drop*): arrastra imágenes directamente desde el Explorador de Windows sobre la ranura vacía, sobre el modal de fuentes, sobre el selector de biblioteca o sobre las mitades activas de la pantalla para reemplazar la Imagen A o B al instante.
+  - Filtro por carpetas en el selector de biblioteca, generación de miniaturas ultrarrápidas con caché nativo LRU y renderizado progresivo por lotes.
+- **Integración de Prisma Upscaler y Variantes de Fondo**:
+  - Módulo completo de super-resolución por IA integrado como herramienta nativa en la barra lateral y accesible desde el menú contextual del visor de imágenes.
+  - Selector modal de modelos de IA locales (Real-ESRGAN, Compact, Anime, UltraSharp, etc.) con selección de factor de escala (2x, 4x, 8x) y Dropzone central para arrastrar y procesar imágenes.
+  - Nuevas variantes de color de fondo en Configuración (Prisma, Neutral y Miku) para personalizar la atmósfera visual de la aplicación.
 
 ## [1.1.2] - 2026-09-13
 
