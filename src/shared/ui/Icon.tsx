@@ -47,6 +47,7 @@ export type IconName =
   | "volume-mute"
   | "keyboard"
   | "fit-screen"
+  | "expand"
   | "sort-asc"
   | "sort-desc"
   | "filter"
@@ -144,6 +145,18 @@ const paths: Record<IconName, ReactNode> = {
   eye: <><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></>,
   "eye-slash": <><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61M2 2l20 20" /></>,
   "fit-screen": <><path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" /><rect x="7" y="7" width="10" height="10" rx="1.5" /></>,
+  expand: (
+    <>
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="21" y1="3" x2="14" y2="10" />
+      <polyline points="9 21 3 21 3 15" />
+      <line x1="3" y1="21" x2="10" y2="14" />
+      <polyline points="21 15 21 21 15 21" />
+      <line x1="21" y1="21" x2="14" y2="14" />
+      <polyline points="3 9 3 3 9 3" />
+      <line x1="3" y1="3" x2="10" y2="10" />
+    </>
+  ),
   folder: <path d="M3 7.5h7l2 2h9v8.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5Z M3 7.5V6a2 2 0 0 1 2-2h5l2 3.5" />,
   "folder-open": <><path d="M5 19a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2 2h4a2 2 0 0 1 2 2v1" /><path d="M3 15h18l-2.4 5H5.4L3 15Z" /></>,
   fullscreen: <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />,

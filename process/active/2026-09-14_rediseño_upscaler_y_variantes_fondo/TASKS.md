@@ -34,3 +34,10 @@
   - [x] Actualizar badge a "Nocturno" y descripción a "Azul profundo nocturno", preservando el color exacto `#16161e`.
   - [x] Soportar `dark_blue` en `BackgroundVariantId`, `localStorage` y selectores CSS en `src/app/styles.css`, manteniendo retrocompatibilidad transparente.
   - [x] Verificar compilación con `bun run build`.
+
+- [x] **Fase 6: Icono de Expansión para Upscaler y Reorganización Ergonómica de Apariencia**
+  - [x] Añadir icono SVG `expand` (4 flechas diagonales en expansión ↖ ↗ ↘ ↙) en `src/shared/ui/Icon.tsx`.
+  - [x] Actualizar icono de `prisma_upscaler` en `AppSidebar.tsx` y `ToolsSettingsPanel.tsx` a `expand`, eliminando la duplicación visual de `sparkles` con Wallpapers Aurora.
+  - [x] Reubicar "Tema reactivo a la música en reproducción" directamente debajo de "Color de Énfasis Principal" en `AppSettings.tsx`.
+  - [x] Hacer reactivas las previsualizaciones de modo "Oscuro" y "Automático" según la variante de fondo activa (`backgroundVariant`) tanto mediante inline styles dinámicos como selectores CSS de `app-settings.css`.
+  - [x] Verificar compilación con `bun run build`.

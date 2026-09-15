@@ -157,12 +157,30 @@
   background: linear-gradient(135deg, #1b1216, #2d1822);
 }
 
+[data-bg="neutral"] .dark-preview {
+  background: linear-gradient(135deg, #121214, #27272a);
+}
+
+[data-bg="dark_blue"] .dark-preview,
+[data-bg="miku"] .dark-preview {
+  background: linear-gradient(135deg, #16161e, #24283b);
+}
+
 .light-preview {
   background: linear-gradient(135deg, #fff5f7, #f4e2e7);
 }
 
 .system-preview {
   background: linear-gradient(135deg, #1b1216 50%, #fff5f7 50%);
+}
+
+[data-bg="neutral"] .system-preview {
+  background: linear-gradient(135deg, #121214 50%, #fafafa 50%);
+}
+
+[data-bg="dark_blue"] .system-preview,
+[data-bg="miku"] .system-preview {
+  background: linear-gradient(135deg, #16161e 50%, #f4f6fc 50%);
 }
 
 .theme-card strong {

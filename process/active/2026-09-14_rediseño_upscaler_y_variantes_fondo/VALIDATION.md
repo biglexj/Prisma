@@ -29,8 +29,14 @@
    - Sistema de temas actualizado con tipo `dark_blue` y migración transparente de claves previas (`miku` -> `dark_blue`) sin romper estados guardados.
    - Selectores CSS de `styles.css` ampliados con `.dark[data-bg="dark_blue"]` y `:root[data-bg="dark_blue"]`.
 
-5. **Compilación Global**:
+5. **Icono de Expansión y Reorganización de Apariencia**:
+   - Icono SVG `expand` integrado en `Icon.tsx` con 4 flechas de escala hacia las esquinas (`↖ ↗ ↘ ↙`).
+   - `prisma_upscaler` actualizado con `icon: "expand"` en barra lateral y panel de herramientas, diferenciándose limpiamente de `wallpapers` (`sparkles`).
+   - "Tema reactivo a la música en reproducción" reubicado inmediatamente bajo "Color de Énfasis Principal", reflejando su rol semántico sobre la paleta de acentos y no sobre el fondo base.
+   - Previsualizaciones de "Oscuro" y "Automático" reactivas en tiempo real al cambio de `backgroundVariant` (tanto por reglas `[data-bg]` en CSS como por inline style dinámico en React).
+
+6. **Compilación Global**:
    - **Comando**: `bun run build` (`tsc --noEmit && vite build`)
    - **Resultado**: Código de salida `0` (exitoso)
-   - **Tiempo**: `3.33s`
+   - **Tiempo**: `3.57s`
    - **Módulos**: 227 módulos transformados sin errores.

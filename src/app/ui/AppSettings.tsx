@@ -519,18 +519,39 @@ export function AppSettings({
                   {/* Modo Claro / Oscuro */}
                   <h4 className="settings-subheading">Modo de Interfaz</h4>
                   <div className="theme-options-grid">
-                    {THEMES.map(({ mode, label, desc, previewClass }) => (
-                      <button
-                        key={mode}
-                        className={`theme-card${theme === mode ? " is-selected" : ""}`}
-                        onClick={() => onThemeChange(mode)}
-                        aria-pressed={theme === mode}
-                      >
-                        <div className={`theme-preview ${previewClass}`} />
-                        <strong>{label}</strong>
-                        <small>{desc}</small>
-                      </button>
-                    ))}
+                    {THEMES.map(({ mode, label, desc, previewClass }) => {
+                      let previewStyle: React.CSSProperties | undefined;
+                      if (mode === "dark") {
+                        if (backgroundVariant === "neutral") {
+                          previewStyle = { background: "linear-gradient(135deg, #121214, #27272a)" };
+                        } else if (backgroundVariant === "dark_blue") {
+                          previewStyle = { background: "linear-gradient(135deg, #16161e, #24283b)" };
+                        } else {
+                          previewStyle = { background: "linear-gradient(135deg, #1b1216, #2d1822)" };
+                        }
+                      } else if (mode === "system") {
+                        if (backgroundVariant === "neutral") {
+                          previewStyle = { background: "linear-gradient(135deg, #121214 50%, #fafafa 50%)" };
+                        } else if (backgroundVariant === "dark_blue") {
+                          previewStyle = { background: "linear-gradient(135deg, #16161e 50%, #f4f6fc 50%)" };
+                        } else {
+                          previewStyle = { background: "linear-gradient(135deg, #1b1216 50%, #fff5f7 50%)" };
+                        }
+                      }
+
+                      return (
+                        <button
+                          key={mode}
+                          className={`theme-card${theme === mode ? " is-selected" : ""}`}
+                          onClick={() => onThemeChange(mode)}
+                          aria-pressed={theme === mode}
+                        >
+                          <div className={`theme-preview ${previewClass}`} style={previewStyle} />
+                          <strong>{label}</strong>
+                          <small>{desc}</small>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   <div className="settings-section-divider" />
@@ -553,6 +574,33 @@ export function AppSettings({
                         <strong>{label}</strong>
                       </button>
                     ))}
+                  </div>
+
+                  {/* Tema reactivo a la música en reproducción (Color de énfasis dinámico) */}
+                  <div className="settings-option-row" style={{ marginTop: "14px" }}>
+                    <div className="settings-option-info">
+                      <div className="settings-option-title-row">
+                        <strong>Tema reactivo a la música en reproducción</strong>
+                        {isMusicPaletteActive ? (
+                          <span className="settings-option-live-badge">
+                            <span className="pulse-dot" />
+                            En vivo · Paleta activa
+                          </span>
+                        ) : null}
+                      </div>
+                      <p>
+                        Extrae dinámicamente los tonos dominantes de la carátula activa y los aplica globalmente a toda la interfaz mientras escuchas música.
+                      </p>
+                    </div>
+                    <label className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={dynamicMusicTheme}
+                        onChange={(e) => onDynamicMusicThemeChange?.(e.target.checked)}
+                        aria-label="Tema reactivo a la música en reproducción"
+                      />
+                      <span className="toggle-slider" />
+                    </label>
                   </div>
 
                   <div className="settings-section-divider" />
@@ -578,35 +626,6 @@ export function AppSettings({
                         </div>
                       </button>
                     ))}
-                  </div>
-
-                  <div className="settings-section-divider" />
-
-                  {/* Tema reactivo a la música en reproducción */}
-                  <div className="settings-option-row">
-                    <div className="settings-option-info">
-                      <div className="settings-option-title-row">
-                        <strong>Tema reactivo a la música en reproducción</strong>
-                        {isMusicPaletteActive ? (
-                          <span className="settings-option-live-badge">
-                            <span className="pulse-dot" />
-                            En vivo · Paleta activa
-                          </span>
-                        ) : null}
-                      </div>
-                      <p>
-                        Extrae dinámicamente los tonos dominantes de la carátula activa y los aplica globalmente a toda la interfaz mientras escuchas música.
-                      </p>
-                    </div>
-                    <label className="toggle-switch">
-                      <input
-                        type="checkbox"
-                        checked={dynamicMusicTheme}
-                        onChange={(e) => onDynamicMusicThemeChange?.(e.target.checked)}
-                        aria-label="Tema reactivo a la música en reproducción"
-                      />
-                      <span className="toggle-slider" />
-                    </label>
                   </div>
                 </div>
               </div>
