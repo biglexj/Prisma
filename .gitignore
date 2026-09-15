@@ -14,3 +14,4 @@ src-tauri/vendor/libmpv/
 /release/
 
 src-tauri/vendor/ffmpeg/
+src-tauri/engine/

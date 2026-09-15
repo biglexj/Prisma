@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Icon } from "../../../shared/ui/Icon";
+import "./model-select-modal.css";
 
 export interface AIModel {
   id: string;

@@ -52,9 +52,10 @@ use app::commands::renamer::{
     renamer_execute_batch, renamer_scan_folder, renamer_undo_batch, RenamerState,
 };
 use app::commands::synapse::{
-    launch_gallery_dl, launch_luna_fetch, launch_prisma_upscaler, synapse_get_discovered_devices, synapse_get_downloads_dir,
-    synapse_get_status, synapse_send_file_to_device, synapse_set_downloads_dir,
-    synapse_update_playback,
+    check_prisma_upscaler_engine, launch_gallery_dl, launch_luna_fetch, launch_prisma_upscaler,
+    synapse_get_discovered_devices, synapse_get_downloads_dir, synapse_get_status,
+    synapse_send_file_to_device, synapse_set_downloads_dir, synapse_update_playback,
+    upscale_image_native,
 };
 use app::commands::tags::{
     audio_batch_write_tags, audio_read_tags, audio_save_lyrics, audio_write_tags,
@@ -465,6 +466,8 @@ pub fn run() {
             launch_luna_fetch,
             launch_gallery_dl,
             launch_prisma_upscaler,
+            check_prisma_upscaler_engine,
+            upscale_image_native,
             custom_libraries_get_all,
             custom_libraries_save,
             custom_libraries_toggle_active,

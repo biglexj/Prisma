@@ -7,7 +7,9 @@ import { Icon } from "../../../shared/ui/Icon";
 import { cleanPath, toSafeAssetUrl } from "../../../shared/mediaTree";
 import type { AppView } from "../../../app/ui/AppSidebar";
 import { ModelSelectModal, type AIModel } from "./ModelSelectModal";
+import { UpscaleComparisonSlider } from "./UpscaleComparisonSlider";
 import "./prisma-upscaler.css";
+import "./upscale-comparison.css";
 
 interface PrismaUpscalerViewProps {
   onNavigate?: (view: AppView) => void;
@@ -72,11 +74,11 @@ const MODELS: AIModel[] = [
   },
   {
     id: "2x-animesharpv4",
-    name: "AnimeSharp V4 (ONNX)",
-    description: "Modelo RCAN de vanguardia en formato universal ONNX para trazos anime cristalinos.",
-    scales: [2],
+    name: "AnimeSharp V4",
+    description: "Modelo universal de vanguardia para trazos anime cristalinos y texturas limpias sin artefactos.",
+    scales: [2, 4],
     category: "anime",
-    arch: "RCAN / ONNX",
+    arch: "ESRGAN / NCNN Vulkan",
   },
 ];
 
@@ -90,9 +92,42 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
   const [isDragging, setIsDragging] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: "success" | "info" | "error" } | null>(null);
 
+  // Estados de ejecución nativa en segundo plano
+  const [hasNativeEngine, setHasNativeEngine] = useState<boolean | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingTime, setProcessingTime] = useState(0);
+  const [lastResult, setLastResult] = useState<{
+    success: boolean;
+    outputPath: string;
+    durationSecs: number;
+    error?: string;
+  } | null>(null);
+  const [upscaledPreviewUrl, setUpscaledPreviewUrl] = useState<string | null>(null);
+
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
   const currentModel = MODELS.find((m) => m.id === selectedModel) || MODELS[0];
+
+  // Comprobar si el motor Vulkan local de Prisma Upscaler está disponible
+  useEffect(() => {
+    invoke<boolean>("check_prisma_upscaler_engine")
+      .then((installed) => setHasNativeEngine(installed))
+      .catch(() => setHasNativeEngine(false));
+  }, []);
+
+  // Temporizador en vivo durante el procesamiento en segundo plano
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isProcessing) {
+      setProcessingTime(0);
+      interval = setInterval(() => {
+        setProcessingTime((t) => t + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isProcessing]);
 
   // Si el modelo actual no soporta la escala seleccionada, auto-ajustar a la primera disponible
   useEffect(() => {
@@ -118,6 +153,8 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
     }
 
     setSelectedPath(cleaned);
+    setLastResult(null);
+    setUpscaledPreviewUrl(null);
     try {
       const assetUrl = await invoke<string>("get_media_preview_url", { path: cleaned });
       setPreviewUrl(assetUrl || toSafeAssetUrl(cleaned));
@@ -153,6 +190,8 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
   const handleClearImage = () => {
     setSelectedPath("");
     setPreviewUrl(null);
+    setLastResult(null);
+    setUpscaledPreviewUrl(null);
     setStatusMessage(null);
   };
 
@@ -347,6 +386,53 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
       void invoke("open_external_url", { url: "https://github.com/biglexj/prisma-upscaler/releases" });
     } finally {
       setIsLaunching(false);
+    }
+  };
+
+  // Ejecutar escalado nativo en segundo plano sin abrir ventanas externas
+  const handleNativeUpscale = async () => {
+    if (!selectedPath || isProcessing) return;
+    setIsProcessing(true);
+    setStatusMessage(null);
+
+    try {
+      const res = await invoke<{
+        success: boolean;
+        outputPath: string;
+        durationSecs: number;
+        error?: string;
+      }>("upscale_image_native", {
+        inputPath: selectedPath,
+        scale: selectedScale,
+        model: selectedModel,
+        customOutputDir: null,
+      });
+
+      if (res.success && res.outputPath) {
+        setLastResult(res);
+        try {
+          const assetUrl = await invoke<string>("get_media_preview_url", { path: res.outputPath });
+          setUpscaledPreviewUrl(assetUrl || toSafeAssetUrl(res.outputPath));
+        } catch {
+          setUpscaledPreviewUrl(toSafeAssetUrl(res.outputPath));
+        }
+        setStatusMessage({
+          text: `¡Imagen escalada con éxito (${selectedScale}x) en ${res.durationSecs.toFixed(1)}s!`,
+          type: "success",
+        });
+      } else {
+        setStatusMessage({
+          text: res.error || "No se pudo completar el escalado neuronal.",
+          type: "error",
+        });
+      }
+    } catch (err) {
+      setStatusMessage({
+        text: `Error de ejecución: ${String(err)}`,
+        type: "error",
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -567,28 +653,115 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
               <span className="upscaler-step-title">Ejecutar escalado</span>
             </div>
 
-            <button
-              type="button"
-              className="upscaler-btn primary-glow upscaler-launch-btn"
-              onClick={() => void handleLaunchUpscaler()}
-              disabled={isLaunching}
-            >
-              <Icon name="sparkles" />
-              <span>
-                {selectedPath
-                  ? `Abrir y Escalar (${selectedScale}x)`
-                  : "Abrir en Prisma Upscaler"}
-              </span>
-            </button>
+            <div className="upscaler-step4-btn-group">
+              {isProcessing ? (
+                <button
+                  type="button"
+                  className="upscaler-btn primary-glow upscaler-launch-btn"
+                  disabled
+                >
+                  <Icon name="sparkles" />
+                  <span>Escalando con IA ({processingTime}s)...</span>
+                </button>
+              ) : lastResult?.success ? (
+                <>
+                  <button
+                    type="button"
+                    className="upscaler-btn primary-glow upscaler-launch-btn"
+                    onClick={() => void handleNativeUpscale()}
+                    disabled={!selectedPath}
+                  >
+                    <Icon name="sparkles" />
+                    <span>Volver a Escalar ({selectedScale}x)</span>
+                  </button>
+                  <div className="upscaler-step4-extra-actions">
+                    <button
+                      type="button"
+                      className="upscaler-btn secondary compact"
+                      onClick={() => void invoke("show_in_file_manager", { path: lastResult.outputPath })}
+                      title="Abrir carpeta de destino"
+                    >
+                      <Icon name="folder-open" />
+                      <span>Ver archivo</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="upscaler-btn outline compact"
+                      onClick={() => void handleLaunchUpscaler()}
+                      title="Abrir en ventana completa de Prisma Upscaler"
+                    >
+                      <Icon name="external-link" />
+                      <span>App Desktop</span>
+                    </button>
+                  </div>
+                </>
+              ) : hasNativeEngine !== false ? (
+                <>
+                  <button
+                    type="button"
+                    className="upscaler-btn primary-glow upscaler-launch-btn"
+                    onClick={() => void handleNativeUpscale()}
+                    disabled={!selectedPath}
+                  >
+                    <Icon name="sparkles" />
+                    <span>
+                      {selectedPath
+                        ? `Escalar Imagen (${selectedScale}x)`
+                        : "Selecciona una imagen"}
+                    </span>
+                  </button>
+                  {selectedPath && (
+                    <div className="upscaler-step4-extra-actions">
+                      <button
+                        type="button"
+                        className="upscaler-btn outline compact"
+                        onClick={() => void handleLaunchUpscaler()}
+                        disabled={isLaunching}
+                        title="Abrir en ventana completa de Prisma Upscaler"
+                      >
+                        <Icon name="external-link" />
+                        <span>Abrir en Desktop</span>
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="upscaler-btn primary-glow upscaler-launch-btn"
+                  onClick={() => void handleLaunchUpscaler()}
+                  disabled={isLaunching}
+                >
+                  <Icon name="external-link" />
+                  <span>Abrir en Prisma Upscaler</span>
+                </button>
+              )}
+
+              {/* Indicador de estado del motor Vulkan */}
+              <div
+                className={`upscaler-engine-badge ${
+                  hasNativeEngine ? "ready" : hasNativeEngine === false ? "missing" : ""
+                }`}
+              >
+                <Icon name={hasNativeEngine ? "check" : "info"} />
+                <span>
+                  {hasNativeEngine
+                    ? "Motor Vulkan local listo (GPU activa)"
+                    : hasNativeEngine === false
+                    ? "Motor local no detectado (usando app externa)"
+                    : "Detectando motor de inferencia..."}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Columna Derecha: DropZone Central e Interactiva (Estilo Prisma Upscaler) */}
+        {/* Columna Derecha: DropZone Central e Interactiva / Slider Comparador */}
         <div className="upscaler-content-center">
           <div
             ref={dropZoneRef}
             className={`upscaler-dropzone ${isDragging ? "is-dragging" : ""} ${
-              previewUrl || selectedPath ? "has-preview" : ""
+              previewUrl || selectedPath || isProcessing || lastResult?.success ? "has-preview" : ""
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -603,7 +776,41 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
                 <p>Cargarás la nueva imagen para procesar con Prisma Upscaler</p>
               </div>
             )}
-            {previewUrl || selectedPath ? (
+
+            {/* 1. Estado de procesamiento neuronal en curso */}
+            {isProcessing ? (
+              <div className="upscaler-processing-state">
+                <div className="neural-spinner-wrap">
+                  <div className="neural-ring-spinner" />
+                  <div className="neural-ring-spinner inner" />
+                  <div className="neural-spinner-icon">
+                    <Icon name="sparkles" />
+                  </div>
+                </div>
+                <h3 className="processing-title">Escalando con IA ({selectedScale}x)</h3>
+                <p className="processing-subtitle">
+                  Procesando con <strong>{currentModel.name}</strong> mediante aceleración GPU Vulkan en segundo plano. Tu PC sigue completamente libre.
+                </p>
+                <div className="processing-metrics-pill">
+                  <span className="pill-dot" />
+                  <span>Tiempo transcurrido: {processingTime}s</span>
+                </div>
+              </div>
+            ) : lastResult?.success && upscaledPreviewUrl && previewUrl ? (
+              /* 2. Visualizador interactivo de comparación Antes / Después */
+              <UpscaleComparisonSlider
+                originalUrl={previewUrl}
+                upscaledUrl={upscaledPreviewUrl}
+                originalPath={selectedPath}
+                upscaledPath={lastResult.outputPath}
+                scale={selectedScale}
+                modelName={currentModel.name}
+                durationSecs={lastResult.durationSecs}
+                onOpenFolder={() => void invoke("show_in_file_manager", { path: lastResult.outputPath })}
+                onClear={handleClearImage}
+              />
+            ) : previewUrl || selectedPath ? (
+              /* 3. Vista previa de la imagen original seleccionada */
               <div className="dropzone-preview-container">
                 <div className="dropzone-preview-image-wrap">
                   {previewUrl ? (
@@ -620,6 +827,7 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
                 </div>
               </div>
             ) : (
+              /* 4. Estado vacío / DropZone para explorar o soltar archivo */
               <div className="dropzone-empty-state">
                 <div className="dropzone-cloud-icon">
                   <Icon name="image" />
