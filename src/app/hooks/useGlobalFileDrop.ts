@@ -67,6 +67,14 @@ export function useGlobalFileDrop({
 
     const handleDroppedPaths = (paths: string[]) => {
       if (!paths || paths.length === 0) return;
+      // Si el comparador de imágenes o sus selectores están en pantalla, tienen prioridad exclusiva
+      if (
+        document.querySelector(".img-compare-modal-root") ||
+        document.querySelector(".img-compare-source-backdrop") ||
+        document.querySelector(".img-compare-selector-backdrop")
+      ) {
+        return;
+      }
       const firstPath = cleanPath(paths[0]);
 
       if (activeView === "music") {

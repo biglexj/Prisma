@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Icon } from "../../../../shared/ui/Icon";
 import { cleanPath } from "../../../../shared/mediaTree";
 import { VisualThumbnail } from "../VisualThumbnail";
 import type { VisualLibraryItem } from "../../model/types";
+import { isImagePath, createVisualItemFromPath } from "./types";
 
 interface ImageComparisonSelectorProps {
   currentItems: VisualLibraryItem[];
@@ -54,6 +56,52 @@ export function ImageComparisonSelector({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  // Escucha de drag & drop nativo de Tauri v2
+  useEffect(() => {
+    const unlistens: UnlistenFn[] = [];
+    let isCancelled = false;
+
+    listen<{ paths?: string[] }>("prisma://native-drag-drop", (event) => {
+      if (isCancelled) return;
+      setIsDragOver(false);
+      const paths = event.payload?.paths;
+      if (paths && paths.length > 0) {
+        const imagePaths = paths.filter(isImagePath);
+        if (imagePaths.length > 0) {
+          const newItems = imagePaths.map(createVisualItemFromPath);
+          if (maxSelectable > 1 && onSelectMultiple && newItems.length > 1) {
+            onSelectMultiple(newItems);
+          } else if (newItems[0]) {
+            onSelect(newItems[0]);
+          }
+        }
+      }
+    }).then((u) => {
+      if (isCancelled) u();
+      else unlistens.push(u);
+    }).catch(() => {});
+
+    listen("prisma://native-drag-enter", () => {
+      if (!isCancelled) setIsDragOver(true);
+    }).then((u) => {
+      if (isCancelled) u();
+      else unlistens.push(u);
+    }).catch(() => {});
+
+    listen("prisma://native-drag-leave", () => {
+      if (!isCancelled) setIsDragOver(false);
+    }).then((u) => {
+      if (isCancelled) u();
+      else unlistens.push(u);
+    }).catch(() => {});
+
+    return () => {
+      isCancelled = true;
+      unlistens.forEach((u) => u());
+    };
+  }, [maxSelectable, onSelect, onSelectMultiple]);
 
   const currentPathSet = useMemo(
     () => new Set(currentItems.map((it) => it.path)),
@@ -219,14 +267,61 @@ export function ImageComparisonSelector({
     }
   };
 
+  const handleHtmlDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    if (!isDragOver) setIsDragOver(true);
+  };
+
+  const handleHtmlDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleHtmlDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      const paths = files
+        .map((f) => (f as unknown as { path?: string }).path)
+        .filter((p): p is string => Boolean(p && isImagePath(p)));
+      if (paths.length > 0) {
+        const newItems = paths.map(createVisualItemFromPath);
+        if (maxSelectable > 1 && onSelectMultiple && newItems.length > 1) {
+          onSelectMultiple(newItems);
+        } else if (newItems[0]) {
+          onSelect(newItems[0]);
+        }
+      }
+    }
+  };
+
   return (
     <div className="img-compare-selector-backdrop" onClick={onClose}>
       <div
-        className="img-compare-selector-modal"
+        className={`img-compare-selector-modal ${isDragOver ? "is-drag-over" : ""}`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        onDragOver={handleHtmlDragOver}
+        onDragEnter={handleHtmlDragOver}
+        onDragLeave={handleHtmlDragLeave}
+        onDrop={handleHtmlDrop}
       >
+        {isDragOver && (
+          <div className="img-compare-selector-drag-overlay">
+            <div className="img-compare-drag-glow-box">
+              <Icon name="download" />
+              <h3>¡Suelta la imagen aquí!</h3>
+              <p>Se añadirá inmediatamente a la comparativa</p>
+            </div>
+          </div>
+        )}
+
         <header className="img-compare-selector-header">
           <div className="img-compare-selector-title-wrap">
             <span className="img-compare-selector-icon">
