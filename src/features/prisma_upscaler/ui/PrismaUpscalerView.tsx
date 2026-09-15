@@ -124,11 +124,7 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
     } catch {
       setPreviewUrl(toSafeAssetUrl(cleaned));
     }
-    const filename = cleaned.split(/[\\/]/).pop() || cleaned;
-    setStatusMessage({
-      text: `Imagen «${filename}» cargada correctamente.`,
-      type: "success",
-    });
+    setStatusMessage(null);
   }, []);
 
   // Selección de archivo con explorador nativo
@@ -311,7 +307,7 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
         if (isImage) {
           setSelectedPath(file.name);
           setPreviewUrl(URL.createObjectURL(file));
-          setStatusMessage({ text: `Imagen «${file.name}» cargada correctamente.`, type: "success" });
+          setStatusMessage(null);
         } else {
           setStatusMessage({ text: "Formato no compatible. Usa imágenes PNG, JPG o WEBP.", type: "error" });
         }
@@ -383,6 +379,28 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
           </div>
 
           <div className="upscaler-actions">
+            {selectedPath && (
+              <div className="upscaler-header-image-actions">
+                <button
+                  className="upscaler-btn secondary compact"
+                  onClick={() => void handleSelectFile()}
+                  type="button"
+                  title="Cambiar imagen a procesar"
+                >
+                  <Icon name="folder-open" />
+                  <span>Cambiar</span>
+                </button>
+                <button
+                  className="upscaler-btn text-icon danger compact"
+                  onClick={handleClearImage}
+                  type="button"
+                  title="Quitar imagen seleccionada"
+                >
+                  <Icon name="trash" />
+                  <span>Quitar</span>
+                </button>
+              </div>
+            )}
             <button
               className="upscaler-btn secondary"
               onClick={() => void handleLaunchUpscaler()}
@@ -579,7 +597,7 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
             {isDragging && (
               <div className="upscaler-drop-overlay">
                 <div className="dropzone-cloud-icon">
-                  <Icon name="image" />
+                  <Icon name="upload" />
                 </div>
                 <h3>Suelta la imagen aquí</h3>
                 <p>Cargarás la nueva imagen para procesar con Prisma Upscaler</p>
@@ -599,36 +617,6 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
                       <Icon name="image" />
                     </div>
                   )}
-                </div>
-
-                <div className="dropzone-preview-bar">
-                  <div className="preview-meta">
-                    <Icon name="image" />
-                    <span className="preview-filename">
-                      {selectedPath.split(/[\\/]/).pop()}
-                    </span>
-                  </div>
-
-                  <div className="preview-actions">
-                    <button
-                      type="button"
-                      className="dropzone-mini-btn"
-                      onClick={() => void handleSelectFile()}
-                      title="Cambiar imagen"
-                    >
-                      <Icon name="folder-open" />
-                      <span>Cambiar</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="dropzone-mini-btn danger"
-                      onClick={handleClearImage}
-                      title="Quitar imagen"
-                    >
-                      <Icon name="trash" />
-                      <span>Quitar</span>
-                    </button>
-                  </div>
                 </div>
               </div>
             ) : (
