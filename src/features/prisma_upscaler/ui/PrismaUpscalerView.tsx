@@ -56,8 +56,6 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [serverUrl, setServerUrl] = useState("http://localhost:8085");
-  const [serverHealth, setServerHealth] = useState<"idle" | "checking" | "online" | "offline">("idle");
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: "success" | "info" | "error" } | null>(null);
 
   const dropZoneRef = useRef<HTMLDivElement>(null);
@@ -222,26 +220,6 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
     }
   };
 
-  // Health-check del daemon Axum/NCNN
-  const handleCheckServer = async () => {
-    setServerHealth("checking");
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
-      const res = await fetch(`${serverUrl.replace(/\/+$/, "")}/api/v1/health`, {
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      if (res.ok) {
-        setServerHealth("online");
-      } else {
-        setServerHealth("offline");
-      }
-    } catch {
-      setServerHealth("offline");
-    }
-  };
-
   const getModelIcon = (id: string): import("../../../shared/ui/Icon").IconName => {
     if (id.includes("anime") || id.includes("art")) return "brush";
     if (id.includes("sharp")) return "sparkles";
@@ -265,7 +243,7 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
                 <span className="upscaler-pill">Ecosistema biglexj · IA Neuronal</span>
               </div>
               <p className="upscaler-subtitle">
-                Suite de super-resolución e inferencia neuronal de imágenes con aceleración por GPU (NVIDIA Vulkan / NCNN).
+                Super-resolución neuronal de imágenes con aceleración por GPU (Vulkan / NCNN).
               </p>
             </div>
           </div>
@@ -524,7 +502,7 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
                   </span>
                   <span className="dropzone-badge">Hasta 100 MB</span>
                   <span className="dropzone-badge highlight">
-                    <Icon name="sparkles" /> GPU Remota NVIDIA / Vulkan
+                    <Icon name="sparkles" /> Aceleración GPU Vulkan
                   </span>
                 </div>
 
@@ -538,76 +516,6 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
                 </button>
               </div>
             )}
-          </div>
-
-          {/* ── Tarjetas Informativas y Estado del Daemon Neuronal ── */}
-          <div className="upscaler-footer-features">
-            <div className="upscaler-feature-item">
-              <div className="feature-icon-wrap">
-                <Icon name="layout" />
-              </div>
-              <div className="feature-text">
-                <h4>Inferencia en GPU Desacoplada</h4>
-                <p>Delega el trabajo pesado a una GPU NVIDIA Vulkan dedicada sin congelar la app.</p>
-              </div>
-            </div>
-
-            <div className="upscaler-feature-item">
-              <div className="feature-icon-wrap">
-                <Icon name="disc" />
-              </div>
-              <div className="feature-text">
-                <h4>Semáforo Concurrente Unitario</h4>
-                <p>Protección anti-OOM procesando tareas en cola estricta para cero colapsos de VRAM.</p>
-              </div>
-            </div>
-
-            <div className="upscaler-feature-item">
-              <div className="feature-icon-wrap">
-                <Icon name="link" />
-              </div>
-              <div className="feature-text">
-                <h4>Sinergia Ecosistema Aurora</h4>
-                <p>Conéctate en local o en LAN hacia nodos registrados en Aurora Synapse.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Daemon Status Bar */}
-          <div className="upscaler-daemon-bar">
-            <div className="daemon-bar-info">
-              <span className="daemon-title">Daemon Neuronal (Axum / NCNN)</span>
-              <div className="daemon-url-input-wrap">
-                <input
-                  type="text"
-                  value={serverUrl}
-                  onChange={(e) => setServerUrl(e.target.value)}
-                  placeholder="http://localhost:8085"
-                />
-              </div>
-            </div>
-
-            <div className="daemon-bar-actions">
-              <span className={`daemon-status-pill ${serverHealth}`}>
-                <span className="daemon-dot" />
-                {serverHealth === "idle"
-                  ? "Sin comprobar"
-                  : serverHealth === "checking"
-                  ? "Comprobando..."
-                  : serverHealth === "online"
-                  ? "En línea"
-                  : "Servidor offline"}
-              </span>
-              <button
-                type="button"
-                className="upscaler-btn text-icon"
-                onClick={() => void handleCheckServer()}
-                disabled={serverHealth === "checking"}
-              >
-                <Icon name="refresh" />
-                <span>Comprobar Salud</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>

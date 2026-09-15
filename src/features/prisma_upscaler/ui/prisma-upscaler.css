@@ -232,9 +232,11 @@
 /* ── Layout Principal: Pasos a la Izquierda + DropZone al Centro ── */
 .upscaler-main-layout {
   display: grid;
-  grid-template-columns: 310px 1fr;
+  grid-template-columns: 320px 1fr;
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
 }
 
 @media (max-width: 960px) {
@@ -248,6 +250,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  height: 100%;
 }
 
 .upscaler-step-card {
@@ -537,6 +540,10 @@
 }
 
 /* Paso 4: Botón Principal */
+.upscaler-action-card {
+  margin-top: auto;
+}
+
 .upscaler-launch-btn {
   width: 100%;
   padding: 13px 18px;
@@ -550,7 +557,8 @@
 .upscaler-content-center {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  height: 100%;
+  min-height: 0;
 }
 
 .upscaler-dropzone {
@@ -558,7 +566,9 @@
   background: var(--surface-container, #f7eeee);
   border: 2px dashed var(--outline-variant, #eadadd);
   padding: 36px 24px;
-  min-height: 330px;
+  min-height: 440px;
+  height: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -674,7 +684,8 @@
 
 .dropzone-preview-image-wrap {
   width: 100%;
-  height: 270px;
+  flex: 1;
+  min-height: 280px;
   border-radius: 16px;
   overflow: hidden;
   background: var(--surface-dim, #140d10);
@@ -759,141 +770,7 @@
   border-color: var(--error, #ef4444);
 }
 
-/* ── Tarjetas de Sinergia Inferiores ── */
-.upscaler-footer-features {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-}
 
-@media (max-width: 960px) {
-  .upscaler-footer-features {
-    grid-template-columns: 1fr;
-  }
-}
-
-.upscaler-feature-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: var(--surface-container, #f7eeee);
-  border: 1px solid var(--outline-variant, #eadadd);
-}
-
-.feature-icon-wrap {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.feature-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.feature-text h4 {
-  margin: 0;
-  font-size: 0.84rem;
-  font-weight: 750;
-  color: var(--on-surface);
-}
-
-.feature-text p {
-  margin: 0;
-  font-size: 0.74rem;
-  color: var(--on-surface-variant);
-  line-height: 1.35;
-}
-
-/* ── Barra de Estado del Daemon ── */
-.upscaler-daemon-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 12px 18px;
-  border-radius: 16px;
-  background: var(--surface-container, #f7eeee);
-  border: 1px solid var(--outline-variant, #eadadd);
-  flex-wrap: wrap;
-}
-
-.daemon-bar-info {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.daemon-title {
-  font-size: 0.82rem;
-  font-weight: 750;
-  color: var(--on-surface);
-}
-
-.daemon-url-input-wrap input {
-  padding: 6px 12px;
-  border-radius: 10px;
-  background: var(--surface-container-lowest, #ffffff);
-  border: 1px solid var(--outline-variant, #eadadd);
-  font-size: 0.8rem;
-  color: var(--on-surface);
-  font-family: inherit;
-  outline: none;
-  min-width: 200px;
-}
-
-.daemon-url-input-wrap input:focus {
-  border-color: var(--primary);
-}
-
-.daemon-bar-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.daemon-status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  background: var(--surface-container-high);
-  border: 1px solid var(--outline-variant);
-}
-
-.daemon-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #9ca3af;
-}
-
-.daemon-status-pill.online .daemon-dot {
-  background: var(--success, #10b981);
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
-}
-
-.daemon-status-pill.offline .daemon-dot {
-  background: var(--error, #ef4444);
-}
-
-.daemon-status-pill.checking .daemon-dot {
-  background: #f59e0b;
-  animation: pulse 1s infinite alternate;
-}
 
 /* ══════════════════════════════════════════════════════════════════
    MODAL DE SELECCIÓN DE MODELOS (ModelSelectModal)

@@ -18,8 +18,14 @@
    - Fila compacta de escalas de ampliación (2x, 3x, 4x) con deshabilitación dinámica si el modelo no soporta el factor de escala.
    - DropZone interactiva con soporte de arrastrar y soltar (Drag & Drop), atajo de pegado global (<kbd>Ctrl+V</kbd>), explorador nativo y vista previa activa de la imagen a procesar.
 
-3. **Compilación Global**:
+3. **Depuración de Arquitectura y Ajuste de Layout (Prisma Upscaler)**:
+   - Eliminadas tarjetas redundantes de arquitectura de servidor ("Inferencia en GPU Desacoplada", "Semáforo Concurrente Unitario", "Sinergia Ecosistema Aurora") y la barra daemon Axum (`http://localhost:8085`), adecuando la interfaz a la naturaleza de aplicación de escritorio local.
+   - Textos de banner y badges sintetizados y concisos ("Super-resolución neuronal de imágenes con aceleración por GPU (Vulkan / NCNN)" y "Aceleración GPU Vulkan").
+   - Espacio en blanco inferior eliminado: `.upscaler-main-layout` ahora cuenta con `align-items: stretch; flex: 1; min-height: 0;`, el Paso 4 está anclado elegantemente al fondo de la barra lateral (`margin-top: auto;`) y la Dropzone / contenedor de vista previa ocupan el 100% de la altura de la vista.
+   - Hoja de estilos `prisma-upscaler.css` reducida de 1210 a 1074 líneas, eliminando deuda técnica activa.
+
+4. **Compilación Global**:
    - **Comando**: `bun run build` (`tsc --noEmit && vite build`)
    - **Resultado**: Código de salida `0` (exitoso)
-   - **Tiempo**: `3.13s`
+   - **Tiempo**: `3.12s`
    - **Módulos**: 227 módulos transformados sin errores.
