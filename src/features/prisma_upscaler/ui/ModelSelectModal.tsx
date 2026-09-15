@@ -9,6 +9,14 @@ export interface AIModel {
   category?: "photo" | "anime" | "restore" | "sharp" | "compact";
 }
 
+const MODEL_COMPARISON_IMAGES: Record<string, string> = {
+  "realesrgan-x4plus-anime": "/models/realesrgan-x4plus-anime.webp",
+  "realesrgan-x4plus": "/models/realesrgan-x4plus.webp",
+  "ultrasharp": "/models/ultrasharp.webp",
+  "remacri": "/models/remacri.webp",
+  "ultramix_balanced": "/models/ultramix_balanced.webp",
+};
+
 interface ModelSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -39,7 +47,7 @@ export function ModelSelectModal({
   const getModelIcon = (id: string): import("../../../shared/ui/Icon").IconName => {
     if (id.includes("anime") || id.includes("art")) return "brush";
     if (id.includes("sharp")) return "sparkles";
-    if (id.includes("remacri") || id.includes("restore")) return "sliders";
+    if (id.includes("remacri") || id.includes("restore") || id.includes("ultramix")) return "sliders";
     if (id.includes("compact")) return "clock";
     return "image";
   };
@@ -154,17 +162,34 @@ export function ModelSelectModal({
 
                   <p className="upscaler-model-card-desc">{model.description}</p>
 
-                  <div className="upscaler-model-preview-bar">
-                    <div className="preview-split-half before">
-                      <span>Antes (Original)</span>
+                  {/* Comparativa visual real Antes / Después */}
+                  {MODEL_COMPARISON_IMAGES[model.id] ? (
+                    <div className="upscaler-model-comparativa-wrapper">
+                      <img
+                        src={MODEL_COMPARISON_IMAGES[model.id]}
+                        alt={`Comparativa ${model.name}`}
+                        className="upscaler-model-comparativa-img"
+                        loading="lazy"
+                      />
+                      <div className="upscaler-comparativa-tag before">Antes (Original)</div>
+                      <div className="upscaler-comparativa-divider-badge">⚡</div>
+                      <div className="upscaler-comparativa-tag after">
+                        Después (Super-Resolución {maxScale}x)
+                      </div>
                     </div>
-                    <div className="preview-split-divider">
-                      <span>⚡</span>
+                  ) : (
+                    <div className="upscaler-model-preview-bar">
+                      <div className="preview-split-half before">
+                        <span>Antes (Original)</span>
+                      </div>
+                      <div className="preview-split-divider">
+                        <span>⚡</span>
+                      </div>
+                      <div className="preview-split-half after">
+                        <span>Después (Super-Resolución {maxScale}x)</span>
+                      </div>
                     </div>
-                    <div className="preview-split-half after">
-                      <span>Después (Super-Resolución {maxScale}x)</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               );
             })}

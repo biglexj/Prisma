@@ -41,3 +41,12 @@
   - [x] Reubicar "Tema reactivo a la música en reproducción" directamente debajo de "Color de Énfasis Principal" en `AppSettings.tsx`.
   - [x] Hacer reactivas las previsualizaciones de modo "Oscuro" y "Automático" según la variante de fondo activa (`backgroundVariant`) tanto mediante inline styles dinámicos como selectores CSS de `app-settings.css`.
   - [x] Verificar compilación con `bun run build`.
+
+- [x] **Fase 7: Separación Visual en Duplicados y Previews Neuronales en Upscaler**
+  - [x] Reestructurar `DuplicatesScannerModal.tsx` separando `.duplicates-controls-card` (alcance, carpetas, barra de herramientas) y `.duplicates-results-panel` (encabezado de resultados y scroll de pares/grupos), siguiendo el patrón ergonómico de Renombrador por Lotes.
+  - [x] Tokenizar `duplicates-scanner.css` reemplazando fondos monolíticos fijos por contenedores modulares con bordes redondeados (`border-radius: 14px`), `var(--surface-container-low)` y bordes `var(--outline-variant)`.
+  - [x] Mapear los 5 assets de previsualización WebP en `ModelSelectModal.tsx` (`realesrgan-x4plus-anime`, `realesrgan-x4plus`, `ultrasharp`, `remacri`, `ultramix_balanced`).
+  - [x] Implementar contenedor comparativo 32:9 `.upscaler-model-comparativa-wrapper` con insignias flotantes "Antes (Original)" y "Después (Super-Resolución 4x)" centradas por divisor ⚡ en `prisma-upscaler.css`.
+  - [x] Añadir modelo `UltraMix Balanced` a la lista `MODELS` en `PrismaUpscalerView.tsx`.
+  - [x] Verificar compilación completa con `bun run build`.
+

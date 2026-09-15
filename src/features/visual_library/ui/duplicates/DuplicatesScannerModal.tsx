@@ -723,436 +723,452 @@ export function DuplicatesScannerModal({
           </div>
         </header>
 
-        {/* Selector de Alcance: 1 Carpeta vs 2 Carpetas vs Toda la Biblioteca */}
-        <div className="duplicates-scope-bar">
-          <div className="duplicates-scope-tabs">
-            <button
-              type="button"
-              className={`duplicates-scope-tab ${scanMode === "single_folder" ? "is-active" : ""}`}
-              onClick={() => setScanMode("single_folder")}
-            >
-              <Icon name="folder" />
-              <span>Escanear 1 Carpeta (y subcarpetas)</span>
-            </button>
-            <button
-              type="button"
-              className={`duplicates-scope-tab ${scanMode === "two_folders" ? "is-active" : ""}`}
-              onClick={() => setScanMode("two_folders")}
-            >
-              <Icon name="split" />
-              <span>Comparar 2 Carpetas (Base vs Depurar)</span>
-            </button>
-            <button
-              type="button"
-              className={`duplicates-scope-tab ${scanMode === "library" ? "is-active" : ""}`}
-              onClick={() => setScanMode("library")}
-            >
-              <Icon name="layers" />
-              <span>Toda la Biblioteca ({activeKind === "music" ? "Música" : activeKind === "image" ? "Imágenes" : "Vídeos"})</span>
-            </button>
-          </div>
-
-          <label
-            className="duplicates-upgrade-toggle"
-            title={
-              activeKind === "music"
-                ? "Conserva pistas Hi-Res (FLAC, ALAC, WAV o mayor bitrate) y nombres limpios sobre pistas comprimidas"
-                : "Conserva la mejor resolución HD/4K y nombres humanos descriptivos sobre volcados mecánicos o hashes"
-            }
-          >
-            <input
-              type="checkbox"
-              checked={preferHigherResolution}
-              onChange={(e) => setPreferHigherResolution(e.target.checked)}
-            />
-            <Icon name="sparkles" />
-            <span>
-              {activeKind === "music"
-                ? "Priorizar Hi-Res (FLAC / 320kbps) y Nombres Limpios"
-                : "Priorizar Resolución y Nombres Naturales"}
-            </span>
-          </label>
-        </div>
-
-        {/* Barra Compacta para 1 Carpeta (Solo cuando ya se seleccionó una carpeta) */}
-        {scanMode === "single_folder" && singleFolder && (
-          <div className="duplicates-compact-folder-bar">
-            <div className="duplicates-compact-folder-meta">
-              <span className="duplicates-compact-folder-badge">
-                <Icon name="folder" />
-                <span>Carpeta</span>
-              </span>
-              <span className="duplicates-compact-folder-path" title={singleFolder}>
-                {singleFolder}
-              </span>
-            </div>
-            <button
-              type="button"
-              className="duplicates-compact-folder-btn"
-              onClick={handlePickSingleFolder}
-              title="Cambiar carpeta a analizar"
-            >
-              <Icon name="edit" />
-              <span>Cambiar...</span>
-            </button>
-          </div>
-        )}
-
-        {/* Panel de selección de Carpetas Cruzadas */}
-        {scanMode === "two_folders" && (baseFolder && targetFolder && !isTwoFoldersExpanded ? (
-          <div className="duplicates-two-folders-compact-bar">
-            {/* Cápsula Carpeta Base */}
-            <div
-              className={`duplicates-compact-folder-capsule is-base ${hoveredDropZone === "base" ? "is-drag-over" : ""}`}
-              data-drop-zone="base"
-              onClick={handlePickBaseFolder}
-              title={`Carpeta Base (A proteger / intacta):\n${baseFolder}`}
-            >
-              <span className="compact-capsule-badge base">
-                <Icon name="star" />
-                <span>Base</span>
-              </span>
-              <span className="compact-capsule-path">{baseFolder}</span>
+        {/* Tarjeta de Controles y Alcance */}
+        <div className="duplicates-controls-card">
+          {/* Selector de Alcance: 1 Carpeta vs 2 Carpetas vs Toda la Biblioteca */}
+          <div className="duplicates-scope-bar">
+            <div className="duplicates-scope-tabs">
               <button
                 type="button"
-                className="compact-capsule-action-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePickBaseFolder();
-                }}
-                title="Cambiar Carpeta Base"
+                className={`duplicates-scope-tab ${scanMode === "single_folder" ? "is-active" : ""}`}
+                onClick={() => setScanMode("single_folder")}
               >
-                <Icon name="edit" />
-                <span>Cambiar</span>
+                <Icon name="folder" />
+                <span>Escanear 1 Carpeta (y subcarpetas)</span>
+              </button>
+              <button
+                type="button"
+                className={`duplicates-scope-tab ${scanMode === "two_folders" ? "is-active" : ""}`}
+                onClick={() => setScanMode("two_folders")}
+              >
+                <Icon name="split" />
+                <span>Comparar 2 Carpetas (Base vs Depurar)</span>
+              </button>
+              <button
+                type="button"
+                className={`duplicates-scope-tab ${scanMode === "library" ? "is-active" : ""}`}
+                onClick={() => setScanMode("library")}
+              >
+                <Icon name="layers" />
+                <span>Toda la Biblioteca ({activeKind === "music" ? "Música" : activeKind === "image" ? "Imágenes" : "Vídeos"})</span>
               </button>
             </div>
 
-            {/* Botón intercambiar roles */}
-            <button
-              type="button"
-              className="duplicates-compact-swap-btn"
-              onClick={handleSwapFolders}
-              title="Intercambiar Carpeta Base ⇄ Carpeta a Depurar"
+            <label
+              className="duplicates-upgrade-toggle"
+              title={
+                activeKind === "music"
+                  ? "Conserva pistas Hi-Res (FLAC, ALAC, WAV o mayor bitrate) y nombres limpios sobre pistas comprimidas"
+                  : "Conserva la mejor resolución HD/4K y nombres humanos descriptivos sobre volcados mecánicos o hashes"
+              }
             >
-              <span className="swap-icon">⇄</span>
-            </button>
-
-            {/* Cápsula Carpeta a Depurar */}
-            <div
-              className={`duplicates-compact-folder-capsule is-target ${hoveredDropZone === "target" ? "is-drag-over" : ""}`}
-              data-drop-zone="target"
-              onClick={handlePickTargetFolder}
-              title={`Carpeta a Depurar (A limpiar / origen):\n${targetFolder}`}
-            >
-              <span className="compact-capsule-badge target">
-                <Icon name="trash" />
-                <span>A Depurar</span>
+              <input
+                type="checkbox"
+                checked={preferHigherResolution}
+                onChange={(e) => setPreferHigherResolution(e.target.checked)}
+              />
+              <Icon name="sparkles" />
+              <span>
+                {activeKind === "music"
+                  ? "Priorizar Hi-Res (FLAC / 320kbps) y Nombres Limpios"
+                  : "Priorizar Resolución y Nombres Naturales"}
               </span>
-              <span className="compact-capsule-path">{targetFolder}</span>
-              <button
-                type="button"
-                className="compact-capsule-action-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePickTargetFolder();
-                }}
-                title="Cambiar Carpeta a Depurar"
-              >
-                <Icon name="edit" />
-                <span>Cambiar</span>
-              </button>
-            </div>
-
-            {/* Botón expandir a tarjetas detalladas */}
-            <button
-              type="button"
-              className="duplicates-compact-expand-btn"
-              onClick={() => setIsTwoFoldersExpanded(true)}
-              title="Expandir panel detallado de carpetas"
-            >
-              <Icon name="fullscreen" />
-            </button>
+            </label>
           </div>
-        ) : (
-          <div className="duplicates-two-folders-panel">
-            {/* Carpeta Base */}
-            <div
-              className={`duplicates-folder-card is-base ${hoveredDropZone === "base" ? "is-drag-over" : ""}`}
-              data-drop-zone="base"
-              onClick={handlePickBaseFolder}
-              onDragEnter={() => {
-                setHoveredDropZone("base");
-                hoveredDropZoneRef.current = "base";
-              }}
-              onDragLeave={() => {
-                if (hoveredDropZoneRef.current === "base") {
-                  setHoveredDropZone(null);
-                  hoveredDropZoneRef.current = null;
-                }
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                if (e.dataTransfer) {
-                  e.dataTransfer.dropEffect = "copy";
-                }
-                if (hoveredDropZoneRef.current !== "base") {
-                  setHoveredDropZone("base");
-                  hoveredDropZoneRef.current = "base";
-                }
-              }}
-            >
-              <div className="folder-card-label">
-                <Icon name="star" />
-                <span>Carpeta Base (A Proteger / Intacta)</span>
-              </div>
-              <div className="folder-card-picker">
-                <Icon name="folder" />
-                <span className="folder-path-text" title={baseFolder || "Arrastra carpeta base aquí o haz clic para examinar..."}>
-                  {baseFolder || "Arrastra carpeta base aquí o haz clic para examinar..."}
+
+          {/* Barra Compacta para 1 Carpeta (Solo cuando ya se seleccionó una carpeta) */}
+          {scanMode === "single_folder" && singleFolder && (
+            <div className="duplicates-compact-folder-bar">
+              <div className="duplicates-compact-folder-meta">
+                <span className="duplicates-compact-folder-badge">
+                  <Icon name="folder" />
+                  <span>Carpeta</span>
                 </span>
+                <span className="duplicates-compact-folder-path" title={singleFolder}>
+                  {singleFolder}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="duplicates-compact-folder-btn"
+                onClick={handlePickSingleFolder}
+                title="Cambiar carpeta a analizar"
+              >
+                <Icon name="edit" />
+                <span>Cambiar...</span>
+              </button>
+            </div>
+          )}
+
+          {/* Panel de selección de Carpetas Cruzadas */}
+          {scanMode === "two_folders" && (baseFolder && targetFolder && !isTwoFoldersExpanded ? (
+            <div className="duplicates-two-folders-compact-bar">
+              {/* Cápsula Carpeta Base */}
+              <div
+                className={`duplicates-compact-folder-capsule is-base ${hoveredDropZone === "base" ? "is-drag-over" : ""}`}
+                data-drop-zone="base"
+                onClick={handlePickBaseFolder}
+                title={`Carpeta Base (A proteger / intacta):\n${baseFolder}`}
+              >
+                <span className="compact-capsule-badge base">
+                  <Icon name="star" />
+                  <span>Base</span>
+                </span>
+                <span className="compact-capsule-path">{baseFolder}</span>
                 <button
                   type="button"
-                  className="folder-pick-btn"
+                  className="compact-capsule-action-btn"
                   onClick={(e) => {
                     e.stopPropagation();
                     handlePickBaseFolder();
                   }}
+                  title="Cambiar Carpeta Base"
                 >
-                  Examinar...
+                  <Icon name="edit" />
+                  <span>Cambiar</span>
                 </button>
               </div>
-              <p className="folder-card-hint">
-                Arrastra la carpeta base aquí. Los archivos aquí se eligen como referencia original y se mantienen protegidos.
-              </p>
-            </div>
 
-            {/* Botón intercambiar roles */}
-            <button
-              type="button"
-              className="duplicates-swap-btn"
-              onClick={handleSwapFolders}
-              title="Intercambiar Carpeta Base ⇄ Carpeta a Depurar"
-            >
-              <span className="swap-icon">⇄</span>
-            </button>
+              {/* Botón intercambiar roles */}
+              <button
+                type="button"
+                className="duplicates-compact-swap-btn"
+                onClick={handleSwapFolders}
+                title="Intercambiar Carpeta Base ⇄ Carpeta a Depurar"
+              >
+                <span className="swap-icon">⇄</span>
+              </button>
 
-            {/* Carpeta a Depurar */}
-            <div
-              className={`duplicates-folder-card is-target ${hoveredDropZone === "target" ? "is-drag-over" : ""}`}
-              data-drop-zone="target"
-              onClick={handlePickTargetFolder}
-              onDragEnter={() => {
-                setHoveredDropZone("target");
-                hoveredDropZoneRef.current = "target";
-              }}
-              onDragLeave={() => {
-                if (hoveredDropZoneRef.current === "target") {
-                  setHoveredDropZone(null);
-                  hoveredDropZoneRef.current = null;
-                }
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                if (e.dataTransfer) {
-                  e.dataTransfer.dropEffect = "copy";
-                }
-                if (hoveredDropZoneRef.current !== "target") {
-                  setHoveredDropZone("target");
-                  hoveredDropZoneRef.current = "target";
-                }
-              }}
-            >
-              <div className="folder-card-label">
-                <Icon name="trash" />
-                <span>Carpeta a Depurar (A Limpiar / Origen)</span>
-              </div>
-              <div className="folder-card-picker">
-                <Icon name="smartphone" />
-                <span className="folder-path-text" title={targetFolder || "Arrastra carpeta a depurar aquí o haz clic para examinar..."}>
-                  {targetFolder || "Arrastra carpeta a depurar aquí o haz clic para examinar..."}
+              {/* Cápsula Carpeta a Depurar */}
+              <div
+                className={`duplicates-compact-folder-capsule is-target ${hoveredDropZone === "target" ? "is-drag-over" : ""}`}
+                data-drop-zone="target"
+                onClick={handlePickTargetFolder}
+                title={`Carpeta a Depurar (A limpiar / origen):\n${targetFolder}`}
+              >
+                <span className="compact-capsule-badge target">
+                  <Icon name="trash" />
+                  <span>A Depurar</span>
                 </span>
+                <span className="compact-capsule-path">{targetFolder}</span>
                 <button
                   type="button"
-                  className="folder-pick-btn"
+                  className="compact-capsule-action-btn"
                   onClick={(e) => {
                     e.stopPropagation();
                     handlePickTargetFolder();
                   }}
+                  title="Cambiar Carpeta a Depurar"
                 >
-                  Examinar...
+                  <Icon name="edit" />
+                  <span>Cambiar</span>
                 </button>
               </div>
-              <p className="folder-card-hint">
-                Arrastra la carpeta a depurar aquí. Los archivos que coincidan con la base se marcarán para depurar, mover o actualizar.
-              </p>
-            </div>
 
-            {baseFolder && targetFolder && (
+              {/* Botón expandir a tarjetas detalladas */}
               <button
                 type="button"
-                className="duplicates-collapse-btn"
-                onClick={() => setIsTwoFoldersExpanded(false)}
-                title="Contraer a modo compacto (ahorrar espacio)"
+                className="duplicates-compact-expand-btn"
+                onClick={() => setIsTwoFoldersExpanded(true)}
+                title="Expandir panel detallado de carpetas"
               >
-                <Icon name="fullscreen-exit" />
-                <span>Modo compacto</span>
+                <Icon name="fullscreen" />
               </button>
-            )}
-          </div>
-        ))}
-
-        {/* Toolbar de configuración del escáner */}
-        <div className="duplicates-toolbar">
-          <div className="duplicates-toolbar-modes">
-            <button
-              type="button"
-              className={`duplicates-mode-chip ${!checkVisualSimilarity ? "is-active" : ""}`}
-              onClick={() => setCheckVisualSimilarity(false)}
-            >
-              <Icon name="check" />
-              <span>Exacto (100% Hash)</span>
-            </button>
-            <button
-              type="button"
-              className={`duplicates-mode-chip ${checkVisualSimilarity ? "is-active" : ""}`}
-              onClick={() => setCheckVisualSimilarity(true)}
-            >
-              <Icon name="image" />
-              <span>Similitud Perceptual (dHash)</span>
-            </button>
-          </div>
-
-          {checkVisualSimilarity && (
-            <div className="duplicates-slider-box" title="Umbral mínimo de similitud visual">
-              <span className="duplicates-slider-label">Tolerancia:</span>
-              <input
-                type="range"
-                min="75"
-                max="100"
-                step="1"
-                value={minSimilarityPct}
-                onChange={(e) => setMinSimilarityPct(Number(e.target.value))}
-                className="duplicates-slider"
-              />
-              <span className="duplicates-slider-val">{minSimilarityPct}%</span>
             </div>
-          )}
+          ) : (
+            <div className="duplicates-two-folders-panel">
+              {/* Carpeta Base */}
+              <div
+                className={`duplicates-folder-card is-base ${hoveredDropZone === "base" ? "is-drag-over" : ""}`}
+                data-drop-zone="base"
+                onClick={handlePickBaseFolder}
+                onDragEnter={() => {
+                  setHoveredDropZone("base");
+                  hoveredDropZoneRef.current = "base";
+                }}
+                onDragLeave={() => {
+                  if (hoveredDropZoneRef.current === "base") {
+                    setHoveredDropZone(null);
+                    hoveredDropZoneRef.current = null;
+                  }
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (e.dataTransfer) {
+                    e.dataTransfer.dropEffect = "copy";
+                  }
+                  if (hoveredDropZoneRef.current !== "base") {
+                    setHoveredDropZone("base");
+                    hoveredDropZoneRef.current = "base";
+                  }
+                }}
+              >
+                <div className="folder-card-label">
+                  <Icon name="star" />
+                  <span>Carpeta Base (A Proteger / Intacta)</span>
+                </div>
+                <div className="folder-card-picker">
+                  <Icon name="folder" />
+                  <span className="folder-path-text" title={baseFolder || "Arrastra carpeta base aquí o haz clic para examinar..."}>
+                    {baseFolder || "Arrastra carpeta base aquí o haz clic para examinar..."}
+                  </span>
+                  <button
+                    type="button"
+                    className="folder-pick-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePickBaseFolder();
+                    }}
+                  >
+                    Examinar...
+                  </button>
+                </div>
+                <p className="folder-card-hint">
+                  Arrastra la carpeta base aquí. Los archivos aquí se eligen como referencia original y se mantienen protegidos.
+                </p>
+              </div>
 
-          <button
-            type="button"
-            className="duplicates-btn-scan"
-            onClick={handleStartScan}
-            disabled={isScanning}
-          >
-            {isScanning ? (
-              <>
-                <Icon name="refresh" className="spin" />
-                <span>Analizando...</span>
-              </>
-            ) : (
-              <>
-                <Icon name="search" />
-                <span>Escanear duplicados</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        {statusMessage && (
-          <div className="duplicates-status-banner">
-            <span>{statusMessage}</span>
-          </div>
-        )}
-
-        {/* Acciones por lote si hay resultados */}
-        {groups.length > 0 && (
-          <div className="duplicates-action-bar">
-            <div className="duplicates-summary-text">
-              <strong>{groups.length} grupos</strong> detectados ({totalDuplicatesCount} duplicados) •{" "}
-              <span>
-                Espacio a recuperar: <strong>{formatBytes(recoverableBytes)}</strong>
-              </span>
-            </div>
-            <div className="duplicates-bulk-buttons">
+              {/* Botón intercambiar roles */}
               <button
                 type="button"
-                className="duplicates-btn-secondary"
-                onClick={selectedPaths.size === totalDuplicatesCount ? handleDeselectAll : handleSelectAll}
+                className="duplicates-swap-btn"
+                onClick={handleSwapFolders}
+                title="Intercambiar Carpeta Base ⇄ Carpeta a Depurar"
               >
-                {selectedPaths.size === totalDuplicatesCount ? "Deseleccionar todo" : "Seleccionar todo"}
+                <span className="swap-icon">⇄</span>
               </button>
 
-              {selectedHighResCount > 0 && (
+              {/* Carpeta a Depurar */}
+              <div
+                className={`duplicates-folder-card is-target ${hoveredDropZone === "target" ? "is-drag-over" : ""}`}
+                data-drop-zone="target"
+                onClick={handlePickTargetFolder}
+                onDragEnter={() => {
+                  setHoveredDropZone("target");
+                  hoveredDropZoneRef.current = "target";
+                }}
+                onDragLeave={() => {
+                  if (hoveredDropZoneRef.current === "target") {
+                    setHoveredDropZone(null);
+                    hoveredDropZoneRef.current = null;
+                  }
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (e.dataTransfer) {
+                    e.dataTransfer.dropEffect = "copy";
+                  }
+                  if (hoveredDropZoneRef.current !== "target") {
+                    setHoveredDropZone("target");
+                    hoveredDropZoneRef.current = "target";
+                  }
+                }}
+              >
+                <div className="folder-card-label">
+                  <Icon name="trash" />
+                  <span>Carpeta a Depurar (A Limpiar / Origen)</span>
+                </div>
+                <div className="folder-card-picker">
+                  <Icon name="smartphone" />
+                  <span className="folder-path-text" title={targetFolder || "Arrastra carpeta a depurar aquí o haz clic para examinar..."}>
+                    {targetFolder || "Arrastra carpeta a depurar aquí o haz clic para examinar..."}
+                  </span>
+                  <button
+                    type="button"
+                    className="folder-pick-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePickTargetFolder();
+                    }}
+                  >
+                    Examinar...
+                  </button>
+                </div>
+                <p className="folder-card-hint">
+                  Arrastra la carpeta a depurar aquí. Los archivos que coincidan con la base se marcarán para depurar, mover o actualizar.
+                </p>
+              </div>
+
+              {baseFolder && targetFolder && (
                 <button
                   type="button"
-                  className="duplicates-btn-upgrade-bulk"
-                  onClick={handleBulkReplaceHighRes}
-                  disabled={isUpgrading}
-                  title="Reemplazar la versión base con las copias de mayor calidad seleccionadas"
+                  className="duplicates-collapse-btn"
+                  onClick={() => setIsTwoFoldersExpanded(false)}
+                  title="Contraer a modo compacto (ahorrar espacio)"
                 >
-                  <Icon name="sparkles" />
-                  <span>Reemplazar versión base ({selectedHighResCount} HD)</span>
+                  <Icon name="fullscreen-exit" />
+                  <span>Modo compacto</span>
                 </button>
               )}
+            </div>
+          ))}
 
+          {/* Toolbar de configuración del escáner */}
+          <div className="duplicates-toolbar">
+            <div className="duplicates-toolbar-modes">
               <button
                 type="button"
-                className="duplicates-btn-secondary"
-                onClick={handleMoveSelected}
-                disabled={selectedPaths.size === 0 || isMoving}
-                title="Mover los duplicados seleccionados a otra carpeta sin eliminarlos"
+                className={`duplicates-mode-chip ${!checkVisualSimilarity ? "is-active" : ""}`}
+                onClick={() => setCheckVisualSimilarity(false)}
               >
-                <Icon name="folder" />
-                <span>Mover a carpeta...</span>
+                <Icon name="check" />
+                <span>Exacto (100% Hash)</span>
               </button>
-
               <button
                 type="button"
-                className="duplicates-btn-danger"
-                onClick={handleDeleteSelected}
-                disabled={selectedPaths.size === 0 || isDeleting}
+                className={`duplicates-mode-chip ${checkVisualSimilarity ? "is-active" : ""}`}
+                onClick={() => setCheckVisualSimilarity(true)}
               >
-                <Icon name="trash" />
-                <span>Mover {selectedPaths.size} a la Papelera</span>
+                <Icon name="image" />
+                <span>Similitud Perceptual (dHash)</span>
               </button>
             </div>
-          </div>
-        )}
 
-        {/* Contenido / Lista de grupos */}
-        <div className="duplicates-body-scroll">
-          {groups.length === 0 ? (
-            <DuplicatesEmptyState
-              hasScanned={hasScanned}
-              scanMode={scanMode}
-              singleFolder={singleFolder}
-              activeKind={activeKind}
-              hoveredDropZone={hoveredDropZone}
-              isScanning={isScanning}
-              handlePickSingleFolder={handlePickSingleFolder}
-              handleStartScan={handleStartScan}
-              applyDroppedPaths={applyDroppedPaths}
-              setHasScanned={setHasScanned}
-              setHoveredDropZone={setHoveredDropZone}
-              hoveredDropZoneRef={hoveredDropZoneRef}
-              setIsDraggingOver={setIsDraggingOver}
-            />
-          ) : (
-            groups.map((group) => (
-              <DuplicateGroupCard
-                key={group.groupId}
-                group={group}
-                activeKind={activeKind}
-                selectedPaths={selectedPaths}
-                toggleGroupSelection={toggleGroupSelection}
-                toggleSelectPath={toggleSelectPath}
-                handleReplaceBase={handleReplaceBase}
-                handleOpenComparison={handleOpenComparison}
-                toVisualLibraryItem={toVisualLibraryItem}
-                formatBytes={formatBytes}
-              />
-            ))
+            {checkVisualSimilarity && (
+              <div className="duplicates-slider-box" title="Umbral mínimo de similitud visual">
+                <span className="duplicates-slider-label">Tolerancia:</span>
+                <input
+                  type="range"
+                  min="75"
+                  max="100"
+                  step="1"
+                  value={minSimilarityPct}
+                  onChange={(e) => setMinSimilarityPct(Number(e.target.value))}
+                  className="duplicates-slider"
+                />
+                <span className="duplicates-slider-val">{minSimilarityPct}%</span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="duplicates-btn-scan"
+              onClick={handleStartScan}
+              disabled={isScanning}
+            >
+              {isScanning ? (
+                <>
+                  <Icon name="refresh" className="spin" />
+                  <span>Analizando...</span>
+                </>
+              ) : (
+                <>
+                  <Icon name="search" />
+                  <span>Escanear duplicados</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Panel de Resultados / Lista Bordeada Elevada */}
+        <div className="duplicates-results-panel">
+          {statusMessage && (
+            <div className="duplicates-status-banner">
+              <span>{statusMessage}</span>
+            </div>
           )}
+
+          {/* Acciones por lote si hay resultados o cabecera de panel en espera */}
+          {groups.length > 0 ? (
+            <div className="duplicates-action-bar">
+              <div className="duplicates-summary-text">
+                <strong>{groups.length} grupos</strong> detectados ({totalDuplicatesCount} duplicados) •{" "}
+                <span>
+                  Espacio a recuperar: <strong>{formatBytes(recoverableBytes)}</strong>
+                </span>
+              </div>
+              <div className="duplicates-bulk-buttons">
+                <button
+                  type="button"
+                  className="duplicates-btn-secondary"
+                  onClick={selectedPaths.size === totalDuplicatesCount ? handleDeselectAll : handleSelectAll}
+                >
+                  {selectedPaths.size === totalDuplicatesCount ? "Deseleccionar todo" : "Seleccionar todo"}
+                </button>
+
+                {selectedHighResCount > 0 && (
+                  <button
+                    type="button"
+                    className="duplicates-btn-upgrade-bulk"
+                    onClick={handleBulkReplaceHighRes}
+                    disabled={isUpgrading}
+                    title="Reemplazar la versión base con las copias de mayor calidad seleccionadas"
+                  >
+                    <Icon name="sparkles" />
+                    <span>Reemplazar versión base ({selectedHighResCount} HD)</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  className="duplicates-btn-secondary"
+                  onClick={handleMoveSelected}
+                  disabled={selectedPaths.size === 0 || isMoving}
+                  title="Mover los duplicados seleccionados a otra carpeta sin eliminarlos"
+                >
+                  <Icon name="folder" />
+                  <span>Mover a carpeta...</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="duplicates-btn-danger"
+                  onClick={handleDeleteSelected}
+                  disabled={selectedPaths.size === 0 || isDeleting}
+                >
+                  <Icon name="trash" />
+                  <span>Mover {selectedPaths.size} a la Papelera</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="duplicates-results-header-bar">
+              <div className="duplicates-results-header-title">
+                <Icon name="copy" />
+                <span>Panel de Resultados</span>
+              </div>
+              <span className="duplicates-results-badge">
+                {isScanning ? "Analizando carpetas..." : hasScanned ? "0 duplicados encontrados" : "En espera de escaneo"}
+              </span>
+            </div>
+          )}
+
+          {/* Contenido / Lista de grupos */}
+          <div className="duplicates-body-scroll">
+            {groups.length === 0 ? (
+              <DuplicatesEmptyState
+                hasScanned={hasScanned}
+                scanMode={scanMode}
+                singleFolder={singleFolder}
+                activeKind={activeKind}
+                hoveredDropZone={hoveredDropZone}
+                isScanning={isScanning}
+                handlePickSingleFolder={handlePickSingleFolder}
+                handleStartScan={handleStartScan}
+                applyDroppedPaths={applyDroppedPaths}
+                setHasScanned={setHasScanned}
+                setHoveredDropZone={setHoveredDropZone}
+                hoveredDropZoneRef={hoveredDropZoneRef}
+                setIsDraggingOver={setIsDraggingOver}
+              />
+            ) : (
+              groups.map((group) => (
+                <DuplicateGroupCard
+                  key={group.groupId}
+                  group={group}
+                  activeKind={activeKind}
+                  selectedPaths={selectedPaths}
+                  toggleGroupSelection={toggleGroupSelection}
+                  toggleSelectPath={toggleSelectPath}
+                  handleReplaceBase={handleReplaceBase}
+                  handleOpenComparison={handleOpenComparison}
+                  toVisualLibraryItem={toVisualLibraryItem}
+                  formatBytes={formatBytes}
+                />
+              ))
+            )}
+          </div>
         </div>
       </div>
 

@@ -40,6 +40,13 @@ const MODELS: AIModel[] = [
     category: "restore",
   },
   {
+    id: "ultramix_balanced",
+    name: "UltraMix Balanced",
+    description: "Equilibrio suave entre eliminación de ruido y retención de detalles finos sin sobre-enfocar.",
+    scales: [4],
+    category: "photo",
+  },
+  {
     id: "compact",
     name: "RealESRGANv2 Compact",
     description: "Modelo ultraligero de baja latencia y consumo mínimo de VRAM para GPU modesta.",
@@ -223,7 +230,7 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
   const getModelIcon = (id: string): import("../../../shared/ui/Icon").IconName => {
     if (id.includes("anime") || id.includes("art")) return "brush";
     if (id.includes("sharp")) return "sparkles";
-    if (id.includes("remacri") || id.includes("restore")) return "sliders";
+    if (id.includes("remacri") || id.includes("restore") || id.includes("ultramix")) return "sliders";
     if (id.includes("compact")) return "clock";
     return "image";
   };

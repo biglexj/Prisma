@@ -35,8 +35,15 @@
    - "Tema reactivo a la música en reproducción" reubicado inmediatamente bajo "Color de Énfasis Principal", reflejando su rol semántico sobre la paleta de acentos y no sobre el fondo base.
    - Previsualizaciones de "Oscuro" y "Automático" reactivas en tiempo real al cambio de `backgroundVariant` (tanto por reglas `[data-bg]` en CSS como por inline style dinámico en React).
 
-6. **Compilación Global**:
+7. **Separación Visual en Duplicados y Previews Neuronales en Upscaler**:
+   - `DuplicatesScannerModal.tsx` reestructurado con separación física en tarjetas independientes: `.duplicates-controls-card` arriba (alcance, carpetas, barra de herramientas) y `.duplicates-results-panel` abajo (encabezado de resultados y scroll de elementos), replicando el diseño ergonómico de Renombrador por Lotes.
+   - `duplicates-scanner.css` modernizado con variables CSS del sistema de diseño (`var(--surface-container-low)`, `var(--outline-variant)`), bordes redondeados consistentes (`border-radius: 14px`) y eliminación de fondos `#181a20` estáticos.
+   - `ModelSelectModal.tsx` conectado a las 5 imágenes WebP de super-resolución de `public/models/` (`realesrgan-x4plus-anime`, `realesrgan-x4plus`, `ultrasharp`, `remacri`, `ultramix_balanced`).
+   - Previsualizador comparativo real 32:9 (`.upscaler-model-comparativa-wrapper`) con tags flotantes translúcidos "Antes (Original)" y "Después (Super-Resolución 4x)" y división central con insignia ⚡.
+   - `UltraMix Balanced` integrado a `MODELS` en `PrismaUpscalerView.tsx`.
+
+8. **Compilación Global**:
    - **Comando**: `bun run build` (`tsc --noEmit && vite build`)
    - **Resultado**: Código de salida `0` (exitoso)
-   - **Tiempo**: `3.57s`
+   - **Tiempo**: `2.92s`
    - **Módulos**: 227 módulos transformados sin errores.
