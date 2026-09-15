@@ -24,8 +24,13 @@
    - Espacio en blanco inferior eliminado: `.upscaler-main-layout` ahora cuenta con `align-items: stretch; flex: 1; min-height: 0;`, el Paso 4 está anclado elegantemente al fondo de la barra lateral (`margin-top: auto;`) y la Dropzone / contenedor de vista previa ocupan el 100% de la altura de la vista.
    - Hoja de estilos `prisma-upscaler.css` reducida de 1210 a 1074 líneas, eliminando deuda técnica activa.
 
-4. **Compilación Global**:
+4. **Generalización de Variante de Fondo (Azul Oscuro)**:
+   - Tarjeta y opción generalizadas a "Azul Oscuro" con badge "Nocturno" y descripción "Azul profundo nocturno", conservando intacta la paleta de color `#16161e`.
+   - Sistema de temas actualizado con tipo `dark_blue` y migración transparente de claves previas (`miku` -> `dark_blue`) sin romper estados guardados.
+   - Selectores CSS de `styles.css` ampliados con `.dark[data-bg="dark_blue"]` y `:root[data-bg="dark_blue"]`.
+
+5. **Compilación Global**:
    - **Comando**: `bun run build` (`tsc --noEmit && vite build`)
    - **Resultado**: Código de salida `0` (exitoso)
-   - **Tiempo**: `3.12s`
+   - **Tiempo**: `3.33s`
    - **Módulos**: 227 módulos transformados sin errores.

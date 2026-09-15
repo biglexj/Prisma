@@ -28,3 +28,9 @@
   - [x] Permitir que la Dropzone y la vista previa de imagen se expandan verticalmente al 100% de la altura disponible.
   - [x] Eliminar estilos CSS obsoletos en `prisma-upscaler.css` reduciendo el archivo de 1210 a 1074 líneas (bajo la regla estricta de deuda técnica).
   - [x] Verificar compilación con `bun run build`.
+
+- [x] **Fase 5: Generalización de Nomenclatura en Variante Azul Oscuro**
+  - [x] Renombrar variante "Miku Code" a "Azul Oscuro" de forma general en `src/app/useTheme.ts`.
+  - [x] Actualizar badge a "Nocturno" y descripción a "Azul profundo nocturno", preservando el color exacto `#16161e`.
+  - [x] Soportar `dark_blue` en `BackgroundVariantId`, `localStorage` y selectores CSS en `src/app/styles.css`, manteniendo retrocompatibilidad transparente.
+  - [x] Verificar compilación con `bun run build`.

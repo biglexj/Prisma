@@ -3,7 +3,7 @@ import type { AlbumPalette } from "../features/playback/ui/useAlbumPalette";
 
 export type ThemeMode = "light" | "dark" | "system";
 export type AccentColorId = "purple" | "rose" | "blue" | "emerald" | "amber" | "cyan";
-export type BackgroundVariantId = "prisma" | "neutral" | "miku";
+export type BackgroundVariantId = "prisma" | "neutral" | "dark_blue";
 
 export interface AccentColorOption {
   id: AccentColorId;
@@ -45,10 +45,10 @@ export const BACKGROUND_VARIANTS: BackgroundVariantOption[] = [
     colorHex: "#121214",
   },
   {
-    id: "miku",
-    label: "Miku Code",
-    desc: "Azul profundo nocturno (VS Code)",
-    badge: "Miku Theme",
+    id: "dark_blue",
+    label: "Azul Oscuro",
+    desc: "Azul profundo nocturno",
+    badge: "Nocturno",
     colorHex: "#16161e",
   },
 ];
@@ -144,8 +144,10 @@ export function useTheme() {
   });
 
   const [backgroundVariant, setBackgroundVariantState] = useState<BackgroundVariantId>(() => {
-    const saved = localStorage.getItem(STORAGE_BG_VARIANT_KEY) as BackgroundVariantId | null;
-    return saved ?? "prisma";
+    const saved = localStorage.getItem(STORAGE_BG_VARIANT_KEY);
+    if (saved === "miku" || saved === "dark_blue") return "dark_blue";
+    if (saved === "neutral" || saved === "prisma") return saved;
+    return "prisma";
   });
 
   const [dynamicMusicTheme, setDynamicMusicThemeState] = useState<boolean>(() => {
