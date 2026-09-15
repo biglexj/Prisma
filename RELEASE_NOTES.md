@@ -18,21 +18,23 @@ Registro histórico de cambios y versiones de Prisma.
 ## [1.1.3] - 2026-09-15
 
 ### Resumen
-Presentamos **Prisma v1.1.3**, una actualización de gran refinamiento ergonómico y potencia multimedia. Esta entrega optimiza a fondo el **Buscador y Comparador de Duplicados** implementando la comparativa cruzada estricta entre carpetas (Base vs Depurar) para garantizar la protección total de tus archivos originales, e introduce una nueva barra compacta dual que ahorra más del 60% de espacio vertical. Asimismo, revoluciona el **Comparador de Imágenes** con un flujo intuitivo de ranura de espera interactiva, modal compacto de selección de fuentes y soporte nativo de Arrastrar y Soltar (*Drag & Drop*) en toda la experiencia. Finalmente, culmina la integración de la suite **Prisma Upscaler**, permitiendo reescalar ilustraciones y fotografías mediante inteligencia artificial local y aceleración por GPU directamente dentro de la aplicación.
+Presentamos **Prisma v1.1.3**, una actualización de gran refinamiento ergonómico y potencia multimedia. Esta entrega integra el **Escalado Neuronal por IA en Segundo Plano**, permitiendo procesar y super-resolver ilustraciones y fotografías mediante aceleración por GPU (Vulkan NCNN) directamente dentro de Prisma y de forma 100% silenciosa, con tiling adaptativo anti-OOM y un visualizador interactivo de comparación antes/después con pantalla dividida. Asimismo, optimiza a fondo el **Buscador y Comparador de Duplicados** implementando la comparativa cruzada estricta entre carpetas (Base vs Depurar) para garantizar la protección total de tus archivos originales con una nueva barra compacta dual, y revoluciona el **Comparador de Imágenes** con un flujo intuitivo de ranura de espera interactiva y soporte nativo de Arrastrar y Soltar (*Drag & Drop*) OLE en toda la experiencia.
 
 ### Detalles
+- **Super-Resolución e Inferencia Neuronal en Segundo Plano (Prisma Upscaler Vulkan)**:
+  - Motor de IA integrado directamente en el backend de Prisma (`realesrgan-ncnn-vulkan.exe`) ejecutado de forma silenciosa en segundo plano (`CREATE_NO_WINDOW`), sin abrir consolas ni ventanas externas.
+  - Tiling adaptativo (64 y 32) para estabilidad garantizada contra falta de memoria VRAM tanto en GPUs dedicadas (NVIDIA RTX / AMD Radeon) como en GPUs integradas (AMD Radeon 780M / Intel Iris).
+  - Redimensionamiento Lanczos3 de alta precisión para factores 2x y 3x preservando la máxima fidelidad en bordes y texturas.
+  - Visualizador interactivo de super-resolución: deslizador de pantalla dividida (*Split Slider*) antes y después, cronómetro en vivo y acciones directas («Abrir Carpeta», «Volver a Escalar» y «App Desktop»).
 - **Buscador de Duplicados: Comparativa Cruzada Estricta y Barra Compacta Dual**:
-  - Clasificación de origen de archivos para asegurar que la comparación se efectúe exclusivamente entre la carpeta a depurar y la carpeta base protegida, eliminando por completo los falsos positivos intra-carpeta tanto en detección por hash binario exacto (100%) como en similitud perceptual visual (dHash de 64 bits) y acústica (metadatos Lofty y duración para música).
+  - Clasificación de origen de archivos para asegurar que la comparación se efectúe exclusivamente entre la carpeta a depurar y la carpeta base protegida, eliminando por completo los falsos positivos intra-carpeta tanto en detección por hash binario exacto como en similitud perceptual visual (dHash de 64 bits) y acústica (metadatos Lofty y duración para música).
   - Barra compacta dual inteligente que reduce automáticamente la cabecera a 44 px al seleccionar ambas carpetas, liberando más de 85 px de espacio vertical para la exploración cómoda de resultados, con distintivos tonales en Material 3 Expressive (Base en esmeralda y A Depurar en naranja), intercambio instantáneo (`⇄`), rutas formateadas y soporte de arrastre de carpetas.
 - **Suite de Comparación de Imágenes: Ranura de Espera, Selector Compacto y Drag & Drop Universal**:
   - Flujo de comparación deliberado: la imagen de partida se fija como referencia en la Imagen A (Base) y el Slot B inicia en espera con una tarjeta interactiva espaciosa con zona de soltado y accesos directos a «Biblioteca» y «Explorador», eliminando el auto-emparejamiento arbitrario.
   - Modal intermedio compacto al pulsar «+ Añadir foto» o «Cambiar»: despliega una ventana centrada y ligera con área receptora de soltado y botones de selección rápida sin saltar abruptamente a la lista completa de fotos.
   - Soporte nativo de Arrastrar y Soltar (*Drag & Drop*): arrastra imágenes directamente desde el Explorador de Windows sobre la ranura vacía, sobre el modal de fuentes, sobre el selector de biblioteca o sobre las mitades activas de la pantalla para reemplazar la Imagen A o B al instante.
-  - Filtro por carpetas en el selector de biblioteca, generación de miniaturas ultrarrápidas con caché nativo LRU y renderizado progresivo por lotes.
-- **Integración de Prisma Upscaler y Variantes de Fondo**:
-  - Módulo completo de super-resolución por IA integrado como herramienta nativa en la barra lateral y accesible desde el menú contextual del visor de imágenes.
-  - Selector modal de modelos de IA locales (Real-ESRGAN, Compact, Anime, UltraSharp, etc.) con selección de factor de escala (2x, 4x, 8x) y Dropzone central para arrastrar y procesar imágenes.
-  - Nuevas variantes de color de fondo en Configuración (Prisma, Neutral y Miku) para personalizar la atmósfera visual de la aplicación.
+- **Personalización y Variantes de Fondo**:
+  - Nuevas variantes de color de fondo en Configuración (*Prisma*, *Neutral* y *Miku*) para personalizar la atmósfera visual de la aplicación.
 
 ## [1.1.2] - 2026-09-13
 

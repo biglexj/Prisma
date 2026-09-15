@@ -18,7 +18,7 @@ interface PrismaUpscalerViewProps {
 const MODELS: AIModel[] = [
   {
     id: "realesrgan-x4plus-anime",
-    name: "Arte Digital / Anime",
+    name: "RealESRGAN Anime (Arte Digital)",
     description: "Ideal para ilustraciones digitales, anime, manga y líneas nítidas sin artefactos de compresión.",
     scales: [2, 3, 4],
     category: "anime",
@@ -26,7 +26,7 @@ const MODELS: AIModel[] = [
   },
   {
     id: "realesrgan-x4plus",
-    name: "Fotografía General",
+    name: "RealESRGAN Photo (Fotografía Real)",
     description: "Restaura fotografías reales, retratos y texturas complejas con reducción de ruido digital.",
     scales: [2, 3, 4],
     category: "photo",

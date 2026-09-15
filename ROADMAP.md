@@ -31,6 +31,11 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 ## 🟢 Completado
 
 - [x] **v1.1.3**
+  - **Super-Resolución Neuronal por IA en Segundo Plano (Prisma Upscaler Vulkan)**:
+    - Inferencia nativa y silenciosa (`realesrgan-ncnn-vulkan.exe`) con flag `CREATE_NO_WINDOW`, ejecutando super-resolución por GPU sin abrir consolas ni ventanas externas.
+    - Tiling adaptativo anti-OOM (64 ➔ 32) para estabilidad en cualquier GPU (integradas AMD Radeon 780M / Intel Iris y dedicadas NVIDIA RTX / AMD Radeon).
+    - Redimensionamiento Lanczos3 de alta fidelidad para factores 2x y 3x preservando la máxima fidelidad en bordes y texturas.
+    - Visualizador interactivo de super-resolución (`UpscaleComparisonSlider`): deslizador de pantalla dividida (*Split Slider*), cronómetro en vivo y acciones directas («Abrir Carpeta», «Volver a Escalar» y «App Desktop»).
   - **Buscador de Duplicados: Comparativa Cruzada Estricta y Modo Compacto Dual**:
     - Comparativa cruzada estricta (Base vs Depurar) en Rust: discriminación de origen (`classify_path`), eliminación de falsos positivos intra-carpeta (evita comparar archivos de Base contra Base o Depurar contra Depurar) tanto en hash exacto como en similitud perceptual visual (dHash) y acústica (Lofty).
     - Barra compacta dual inteligente al seleccionar carpetas: reducción de más del 60% de la altura vertical de la cabecera (de ~130px a ~44px), con cápsulas tonales (Base intacta en verde esmeralda y A Depurar en naranja vibrante), rutas legibles, intercambio instantáneo (`⇄`), soporte de arrastrar y soltar nativo y conmutador de expansión/colapso.
@@ -39,9 +44,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
     - Modal intermedio compacto (`ImageComparisonSourceModal`) para añadir o cambiar fotos con soltado directo y selector ligero de fuentes.
     - Soporte nativo de Arrastrar y Soltar (*Drag & Drop*) Win32/Tauri v2 en todas las ranuras, selectores y mitades de pantalla activas.
     - Filtrado por carpetas en selector, miniaturas nativas con caché LRU y renderizado progresivo por lotes.
-  - **Integración de Prisma Upscaler y Variantes de Color de Fondo**:
-    - Herramienta de super-resolución con IA local integrada en la barra lateral y menú contextual del visor de fotos.
-    - Modal de selección de modelos ONNX (Real-ESRGAN, Compact, Anime, UltraSharp, etc.) y factores de escala ($2\times$, $4\times$, $8\times$).
+  - **Personalización y Variantes de Color de Fondo**:
     - Variantes de fondo reactivas en Configuración (`prisma`, `neutral`, `miku`).
 
 - [x] **v1.1.2**
