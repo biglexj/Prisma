@@ -111,6 +111,92 @@
   }
 }
 
+/* ── Variante de Fondo: Gris Neutro (Oscuro Clásico) ─────────── */
+.dark[data-bg="neutral"],
+:root[data-bg="neutral"].dark {
+  color: #f4f4f5;
+  background: #121214;
+  --surface: #121214;
+  --surface-dim: #09090b;
+  --surface-container-lowest: #09090b;
+  --surface-container-low: #18181b;
+  --surface-container: #1f1f23;
+  --surface-container-high: #27272a;
+  --surface-container-highest: #323238;
+  --surface-bright: #1c1c20;
+  --on-surface: #f4f4f5;
+  --on-surface-variant: #a1a1aa;
+  --outline: #71717a;
+  --outline-variant: #27272a;
+  --sidebar-bg: rgb(18 18 20 / 90%);
+  --header-bg: rgb(18 18 20 / 84%);
+  --active-pressed: #27272a;
+  --transport-hover: #27272a;
+  --preview-actions-pressed: #27272a;
+}
+
+:root[data-bg="neutral"]:not(.dark) {
+  color: #18181b;
+  background: #fafafa;
+  --surface: #fafafa;
+  --surface-dim: #e4e4e7;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f4f4f5;
+  --surface-container: #ebebef;
+  --surface-container-high: #e2e2e7;
+  --surface-container-highest: #d4d4d8;
+  --surface-bright: #ffffff;
+  --on-surface: #18181b;
+  --on-surface-variant: #52525b;
+  --outline: #a1a1aa;
+  --outline-variant: #e4e4e7;
+  --sidebar-bg: rgb(250 250 250 / 88%);
+  --header-bg: rgb(250 250 250 / 84%);
+}
+
+/* ── Variante de Fondo: Miku Code (VS Code Theme Oficial) ─────── */
+.dark[data-bg="miku"],
+:root[data-bg="miku"].dark {
+  color: #c0caf5;
+  background: #16161e;
+  --surface: #16161e;
+  --surface-dim: #101017;
+  --surface-container-lowest: #0d0d13;
+  --surface-container-low: #1a1b26;
+  --surface-container: #1f2335;
+  --surface-container-high: #24283b;
+  --surface-container-highest: #2f354f;
+  --surface-bright: #222638;
+  --on-surface: #c0caf5;
+  --on-surface-variant: #9aa5ce;
+  --outline: #565f89;
+  --outline-variant: #292e42;
+  --sidebar-bg: rgb(22 22 30 / 90%);
+  --header-bg: rgb(22 22 30 / 84%);
+  --active-pressed: #24283b;
+  --transport-hover: #24283b;
+  --preview-actions-pressed: #24283b;
+}
+
+:root[data-bg="miku"]:not(.dark) {
+  color: #1e293b;
+  background: #f4f6fc;
+  --surface: #f4f6fc;
+  --surface-dim: #e2e8f5;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #eef2fb;
+  --surface-container: #e6edf8;
+  --surface-container-high: #dbe4f4;
+  --surface-container-highest: #cbd7ec;
+  --surface-bright: #ffffff;
+  --on-surface: #1e293b;
+  --on-surface-variant: #475569;
+  --outline: #94a3b8;
+  --outline-variant: #e2e8f0;
+  --sidebar-bg: rgb(244 246 252 / 88%);
+  --header-bg: rgb(244 246 252 / 84%);
+}
+
 /* ── Tokens de Colores de Énfasis (Paletas de Acento) ─────────── */
 
 /* 1. Morado Prisma (Predeterminado / Violet) */

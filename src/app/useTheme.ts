@@ -3,12 +3,21 @@ import type { AlbumPalette } from "../features/playback/ui/useAlbumPalette";
 
 export type ThemeMode = "light" | "dark" | "system";
 export type AccentColorId = "purple" | "rose" | "blue" | "emerald" | "amber" | "cyan";
+export type BackgroundVariantId = "prisma" | "neutral" | "miku";
 
 export interface AccentColorOption {
   id: AccentColorId;
   label: string;
   colorHex: string;
   badge?: string;
+}
+
+export interface BackgroundVariantOption {
+  id: BackgroundVariantId;
+  label: string;
+  desc: string;
+  badge?: string;
+  colorHex: string;
 }
 
 export const ACCENT_COLORS: AccentColorOption[] = [
@@ -20,8 +29,33 @@ export const ACCENT_COLORS: AccentColorOption[] = [
   { id: "cyan", label: "Cyan Neón", colorHex: "#06b6d4" },
 ];
 
+export const BACKGROUND_VARIANTS: BackgroundVariantOption[] = [
+  {
+    id: "prisma",
+    label: "Tonal Prisma",
+    desc: "Ciruela oscuro cálido característico",
+    badge: "Predeterminado",
+    colorHex: "#1b1216",
+  },
+  {
+    id: "neutral",
+    label: "Gris Neutro",
+    desc: "Gris carbón neutro / oscuro clásico",
+    badge: "Clásico",
+    colorHex: "#121214",
+  },
+  {
+    id: "miku",
+    label: "Miku Code",
+    desc: "Azul profundo nocturno (VS Code)",
+    badge: "Miku Theme",
+    colorHex: "#16161e",
+  },
+];
+
 const STORAGE_THEME_KEY = "prisma_theme";
 const STORAGE_ACCENT_KEY = "prisma_accent";
+const STORAGE_BG_VARIANT_KEY = "prisma_bg_variant";
 const STORAGE_DYNAMIC_MUSIC_KEY = "prisma_dynamic_music_theme";
 
 function computeIsDark(mode: ThemeMode): boolean {
@@ -30,13 +64,14 @@ function computeIsDark(mode: ThemeMode): boolean {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-function applyThemeAttributes(mode: ThemeMode, accent: AccentColorId): void {
+function applyThemeAttributes(mode: ThemeMode, accent: AccentColorId, bgVariant: BackgroundVariantId): void {
   const root = document.documentElement;
   const isDark = computeIsDark(mode);
 
   root.classList.toggle("dark", isDark);
   root.setAttribute("data-theme", mode);
   root.setAttribute("data-accent", accent);
+  root.setAttribute("data-bg", bgVariant);
 }
 
 const DYNAMIC_CSS_PROPERTIES = [
@@ -108,6 +143,11 @@ export function useTheme() {
     return saved ?? "purple";
   });
 
+  const [backgroundVariant, setBackgroundVariantState] = useState<BackgroundVariantId>(() => {
+    const saved = localStorage.getItem(STORAGE_BG_VARIANT_KEY) as BackgroundVariantId | null;
+    return saved ?? "prisma";
+  });
+
   const [dynamicMusicTheme, setDynamicMusicThemeState] = useState<boolean>(() => {
     const saved = localStorage.getItem(STORAGE_DYNAMIC_MUSIC_KEY);
     return saved !== null ? saved === "true" : true;
@@ -115,10 +155,10 @@ export function useTheme() {
 
   const [activeMusicPalette, setActiveMusicPalette] = useState<AlbumPalette | null>(null);
 
-  // Aplicar atributos base data-theme y data-accent
+  // Aplicar atributos base data-theme, data-accent y data-bg
   useEffect(() => {
-    applyThemeAttributes(theme, accentColor);
-  }, [theme, accentColor]);
+    applyThemeAttributes(theme, accentColor, backgroundVariant);
+  }, [theme, accentColor, backgroundVariant]);
 
   // Aplicar tokens adaptativos en tiempo real si hay música sonando y está activado
   useEffect(() => {
@@ -134,7 +174,7 @@ export function useTheme() {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const handler = () => {
       if (theme === "system") {
-        applyThemeAttributes("system", accentColor);
+        applyThemeAttributes("system", accentColor, backgroundVariant);
         if (dynamicMusicTheme && activeMusicPalette) {
           applyMusicPaletteTokens(activeMusicPalette, "system");
         }
@@ -142,7 +182,7 @@ export function useTheme() {
     };
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [theme, accentColor, dynamicMusicTheme, activeMusicPalette]);
+  }, [theme, accentColor, backgroundVariant, dynamicMusicTheme, activeMusicPalette]);
 
   const setTheme = useCallback((mode: ThemeMode) => {
     localStorage.setItem(STORAGE_THEME_KEY, mode);
@@ -152,6 +192,11 @@ export function useTheme() {
   const setAccentColor = useCallback((accent: AccentColorId) => {
     localStorage.setItem(STORAGE_ACCENT_KEY, accent);
     setAccentColorState(accent);
+  }, []);
+
+  const setBackgroundVariant = useCallback((variant: BackgroundVariantId) => {
+    localStorage.setItem(STORAGE_BG_VARIANT_KEY, variant);
+    setBackgroundVariantState(variant);
   }, []);
 
   const setDynamicMusicTheme = useCallback((enabled: boolean) => {
@@ -168,6 +213,8 @@ export function useTheme() {
     setTheme,
     accentColor,
     setAccentColor,
+    backgroundVariant,
+    setBackgroundVariant,
     dynamicMusicTheme,
     setDynamicMusicTheme,
     applyMusicPalette,

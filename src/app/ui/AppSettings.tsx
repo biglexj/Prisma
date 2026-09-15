@@ -5,8 +5,8 @@ import { ToolsSettingsPanel } from "./ToolsSettingsPanel";
 import { SynapseSettingsPanel } from "./SynapseSettingsPanel";
 import type { useMusicLibrary } from "../../features/music_library/useMusicLibrary";
 import type { useVisualLibrary } from "../../features/visual_library/useVisualLibrary";
-import type { ThemeMode, AccentColorId } from "../useTheme";
-import { ACCENT_COLORS } from "../useTheme";
+import type { ThemeMode, AccentColorId, BackgroundVariantId } from "../useTheme";
+import { ACCENT_COLORS, BACKGROUND_VARIANTS } from "../useTheme";
 import {
   useSystemSettings,
   type QuickLookShortcutMode,
@@ -29,6 +29,8 @@ interface AppSettingsProps {
   onThemeChange: (mode: ThemeMode) => void;
   accentColor?: AccentColorId;
   onAccentColorChange?: (accent: AccentColorId) => void;
+  backgroundVariant?: BackgroundVariantId;
+  onBackgroundVariantChange?: (variant: BackgroundVariantId) => void;
   dynamicMusicTheme?: boolean;
   onDynamicMusicThemeChange?: (enabled: boolean) => void;
   isMusicPaletteActive?: boolean;
@@ -89,6 +91,8 @@ export function AppSettings({
   onThemeChange,
   accentColor = "purple",
   onAccentColorChange,
+  backgroundVariant = "prisma",
+  onBackgroundVariantChange,
   dynamicMusicTheme = true,
   onDynamicMusicThemeChange,
   isMusicPaletteActive = false,
@@ -547,6 +551,31 @@ export function AppSettings({
                           {accentColor === id ? <Icon name="check" /> : null}
                         </span>
                         <strong>{label}</strong>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="settings-section-divider" />
+
+                  {/* Variantes de Fondo */}
+                  <h4 className="settings-subheading">Variante de Fondo</h4>
+                  <div className="bg-variant-options-grid">
+                    {BACKGROUND_VARIANTS.map(({ id, label, desc, badge, colorHex }) => (
+                      <button
+                        key={id}
+                        className={`bg-variant-card${backgroundVariant === id ? " is-selected" : ""}`}
+                        onClick={() => onBackgroundVariantChange?.(id)}
+                        aria-pressed={backgroundVariant === id}
+                        type="button"
+                      >
+                        {badge ? <span className="bg-variant-badge">{badge}</span> : null}
+                        <div className="bg-variant-swatch-box" style={{ backgroundColor: colorHex }}>
+                          {backgroundVariant === id ? <Icon name="check" /> : null}
+                        </div>
+                        <div className="bg-variant-info">
+                          <strong>{label}</strong>
+                          <small>{desc}</small>
+                        </div>
                       </button>
                     ))}
                   </div>

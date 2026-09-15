@@ -91,6 +91,8 @@ function AppContent() {
     setTheme,
     accentColor,
     setAccentColor,
+    backgroundVariant,
+    setBackgroundVariant,
     dynamicMusicTheme,
     setDynamicMusicTheme,
     applyMusicPalette,
@@ -1079,6 +1081,8 @@ function AppContent() {
               theme={theme}
               accentColor={accentColor}
               onAccentColorChange={setAccentColor}
+              backgroundVariant={backgroundVariant}
+              onBackgroundVariantChange={setBackgroundVariant}
               dynamicMusicTheme={dynamicMusicTheme}
               onDynamicMusicThemeChange={setDynamicMusicTheme}
               isMusicPaletteActive={isMusicPaletteActive}

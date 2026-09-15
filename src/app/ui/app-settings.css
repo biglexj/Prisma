@@ -276,6 +276,104 @@
   box-shadow: 0 2px 6px color-mix(in srgb, var(--primary) 40%, transparent);
 }
 
+/* ── Variante de Fondo (Background Variants) ─────────────── */
+.bg-variant-options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.bg-variant-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1.5px solid var(--outline-variant);
+  border-radius: 14px;
+  padding: 12px 10px;
+  color: var(--on-surface);
+  background: var(--surface-container);
+  cursor: pointer;
+  text-align: center;
+  transition: all 160ms ease;
+  position: relative;
+  min-height: 94px;
+}
+
+.bg-variant-card:hover {
+  border-color: var(--outline);
+  background: var(--surface-container-high);
+  transform: translateY(-2px);
+}
+
+.bg-variant-card.is-selected {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-container));
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.bg-variant-swatch-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: transform 160ms ease;
+}
+
+.bg-variant-card:hover .bg-variant-swatch-box {
+  transform: scale(1.08);
+}
+
+.bg-variant-card.is-selected .bg-variant-swatch-box {
+  border-color: var(--primary);
+}
+
+.bg-variant-swatch-box svg {
+  width: 16px;
+  height: 16px;
+  color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+}
+
+.bg-variant-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bg-variant-info strong {
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: var(--on-surface);
+}
+
+.bg-variant-info small {
+  font-size: 0.68rem;
+  color: var(--on-surface-variant);
+  line-height: 1.25;
+}
+
+.bg-variant-badge {
+  position: absolute;
+  top: -6px;
+  right: 6px;
+  font-size: 0.55rem;
+  font-weight: 850;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  background: var(--primary);
+  color: var(--on-primary);
+  padding: 1.5px 6px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
 /* ── Fila de Opción con Interruptor y Badge Dinámico ── */
 .settings-option-row {
   display: flex;
