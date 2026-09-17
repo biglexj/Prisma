@@ -62,7 +62,7 @@ use app::commands::tags::{
     image_read_exif,
 };
 use app::commands::visual_library::{
-    open_external_url, open_in_file_manager, open_path_with_default_app, show_in_file_manager, video_extract_audio_track, video_get_audio_tracks, video_get_subtitles, video_read_subtitle_vtt,
+    open_external_url, open_in_file_manager, open_path_with_default_app, show_in_file_manager, video_extract_audio_track, video_get_audio_tracks, video_get_playback_source, video_get_subtitles, video_read_subtitle_vtt,
     visual_library_add_excluded_folder, visual_library_add_folder,
     visual_library_image_preview, visual_library_list_excluded_folders,
     visual_library_list_folders, visual_library_list_items,
@@ -400,6 +400,7 @@ pub fn run() {
             video_read_subtitle_vtt,
             video_get_audio_tracks,
             video_extract_audio_track,
+            video_get_playback_source,
             playback_capabilities,
             playback_load,
             playback_next,

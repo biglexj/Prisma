@@ -98,13 +98,74 @@ pub fn load_video_thumbnail_data_url(path: &Path) -> Option<String> {
             CoUninitialize();
         }
 
-        result
+        result.or_else(|| load_video_thumbnail_ffmpeg(path))
+    }
+}
+
+pub fn load_video_thumbnail_ffmpeg(path: &Path) -> Option<String> {
+    let ffmpeg = crate::infrastructure::converter::find_ffmpeg_binary()?;
+    let path_str = path.to_string_lossy();
+    let clean_str = path_str.trim_start_matches(r"\\?\");
+
+    let mut cmd = std::process::Command::new(&ffmpeg);
+    cmd.args([
+        "-v", "error",
+        "-nostdin",
+        "-ss", "00:00:00.10",
+        "-i", clean_str,
+        "-vframes", "1",
+        "-vf", "scale='min(480,iw)':-2",
+        "-f", "image2",
+        "-c:v", "mjpeg",
+        "-q:v", "4",
+        "pipe:1",
+    ]);
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+
+    let output = cmd.output().ok()?;
+    if output.status.success() && !output.stdout.is_empty() {
+        use base64::Engine;
+        use base64::engine::general_purpose::STANDARD;
+        Some(format!("data:image/jpeg;base64,{}", STANDARD.encode(&output.stdout)))
+    } else {
+        let mut fallback_cmd = std::process::Command::new(ffmpeg);
+        fallback_cmd.args([
+            "-v", "error",
+            "-nostdin",
+            "-i", clean_str,
+            "-vframes", "1",
+            "-vf", "scale='min(480,iw)':-2",
+            "-f", "image2",
+            "-c:v", "mjpeg",
+            "-q:v", "4",
+            "pipe:1",
+        ]);
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            fallback_cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+
+        let fallback_output = fallback_cmd.output().ok()?;
+        if fallback_output.status.success() && !fallback_output.stdout.is_empty() {
+            use base64::Engine;
+            use base64::engine::general_purpose::STANDARD;
+            Some(format!("data:image/jpeg;base64,{}", STANDARD.encode(&fallback_output.stdout)))
+        } else {
+            None
+        }
     }
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn load_video_thumbnail_data_url(_path: &Path) -> Option<String> {
-    None
+pub fn load_video_thumbnail_data_url(path: &Path) -> Option<String> {
+    load_video_thumbnail_ffmpeg(path)
 }
 
 #[cfg(target_os = "windows")]
@@ -226,5 +287,20 @@ mod tests {
         let res = load_video_thumbnail_data_url(test_path);
         println!("Video thumbnail result length: {:?}", res.as_ref().map(|s| s.len()));
         assert!(res.is_some(), "Video thumbnail was successfully generated");
+    }
+
+    #[test]
+    fn test_load_mov_video_thumbnail() {
+        use super::load_video_thumbnail_data_url;
+        use std::path::Path;
+
+        let test_path = Path::new(r"D:\Vídeos\Partidos\Render\Marcar.mov");
+        if test_path.exists() {
+            let res = load_video_thumbnail_data_url(test_path);
+            println!("MOV CineForm thumbnail result length: {:?}", res.as_ref().map(|s| s.len()));
+            assert!(res.is_some(), "MOV CineForm video thumbnail was successfully generated");
+            let data = res.unwrap();
+            assert!(data.starts_with("data:image/jpeg;base64,"));
+        }
     }
 }

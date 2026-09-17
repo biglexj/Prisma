@@ -825,4 +825,16 @@ pub async fn visual_library_move_duplicates(
     .map_err(|e| format!("Error al mover duplicados: {e}"))?
 }
 
+#[tauri::command]
+pub async fn video_get_playback_source(
+    path: String,
+) -> Result<crate::features::visual_library::VideoPlaybackSource, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean = path.trim_start_matches(r"\\?\");
+        crate::features::visual_library::resolve_video_playback_source(Path::new(clean))
+    })
+    .await
+    .map_err(|e| format!("Fallo en hilo de resolución de vídeo: {e}"))?
+}
+
 

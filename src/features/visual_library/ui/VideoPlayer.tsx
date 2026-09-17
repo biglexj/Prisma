@@ -51,6 +51,16 @@ interface SubtitleTrackInfo {
   vttContent?: string;
 }
 
+interface VideoPlaybackSource {
+  playback_path: string;
+  is_proxy: boolean;
+  original_codec: string;
+  codec_display: string;
+  width: number;
+  height: number;
+  duration_secs: number;
+}
+
 export function VideoPlayer({
   path,
   videoItems = [],
@@ -102,6 +112,11 @@ export function VideoPlayer({
   // One-Shot Shuffle State
   const [localVideoItems, setLocalVideoItems] = useState<VisualLibraryItem[]>(videoItems);
   const [shuffleToastText, setShuffleToastText] = useState<string | null>(null);
+
+  // Proxy y compatibilidad de códec nativo
+  const [playbackSource, setPlaybackSource] = useState<VideoPlaybackSource | null>(null);
+  const [isResolvingSource, setIsResolvingSource] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
 
   // Filtrado reactivo de la cola de reproducción
   const filteredVideoItems = useMemo(() => {
@@ -155,7 +170,39 @@ export function VideoPlayer({
 
   const hasMedia = Boolean(path);
   const title = path ? mediaTitle(path) : "Sin vídeo seleccionado";
-  const videoSrc = path ? toSafeAssetUrl(path) : "";
+  const effectivePlaybackPath = playbackSource?.playback_path || path;
+  const videoSrc = effectivePlaybackPath ? toSafeAssetUrl(effectivePlaybackPath) : "";
+
+  // Resolución reactiva de fuente y códec de vídeo
+  useEffect(() => {
+    let active = true;
+    if (!path) {
+      setPlaybackSource(null);
+      setIsResolvingSource(false);
+      setResolveError(null);
+      return;
+    }
+
+    setIsResolvingSource(true);
+    setResolveError(null);
+    setVideoError(false);
+
+    invoke<VideoPlaybackSource>("video_get_playback_source", { path })
+      .then((src) => {
+        if (!active) return;
+        setPlaybackSource(src);
+        setIsResolvingSource(false);
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.warn("video_get_playback_source fallback:", err);
+        setIsResolvingSource(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [path]);
 
   // Sincronizar cola local si cambian los props
   useEffect(() => {
@@ -1161,6 +1208,14 @@ export function VideoPlayer({
           <h2 className="video-player-title" title={title}>
             {title}
           </h2>
+          {playbackSource?.is_proxy ? (
+            <span
+              className="video-pill-badge is-proxy"
+              title={`Reproducción fluida por proxy de alta calidad · Códec original: ${playbackSource.codec_display}`}
+            >
+              ⚡ {playbackSource.codec_display}
+            </span>
+          ) : null}
         </div>
 
         <div className="video-header-right">
@@ -1241,82 +1296,136 @@ export function VideoPlayer({
           }}
         >
           {hasMedia ? (
-            <>
-              <video
-                autoPlay
-                className="video-stage-surface"
-                onError={() => setVideoError(true)}
-                onLoadedMetadata={(e) => {
-                  const video = e.currentTarget;
-                  video.muted = false;
-                  setDuration(video.duration || 0);
-                  setPaused(false);
-                  if (initialTime && initialTime > 0) {
-                    video.currentTime = initialTime;
-                    setPosition(initialTime);
-                  }
-                  if (video.paused && !paused) {
-                    void video.play().catch(() => {});
-                  }
-
-                  // Si PiP estaba activo (ej. reemplazo de vídeo desde la galería), solicitar PiP de inmediato
-                  if (isPipActiveRef.current && document.pictureInPictureEnabled) {
-                    void requestPiPWithBoundedDimensions(video).catch(() => {});
-                  }
-
-                  // Si el elemento HTML5 soporta nativamente audioTracks y tiene datos, sincronizarlos
-                  const rawTracks = (video as unknown as { audioTracks?: { length: number; [i: number]: AudioTrackInfo } }).audioTracks;
-                  if (rawTracks && rawTracks.length > 0) {
-                    const list: AudioTrackInfo[] = [];
-                    for (let i = 0; i < rawTracks.length; i++) {
-                      list.push({
-                        index: i,
-                        id: rawTracks[i].id || String(i),
-                        label: rawTracks[i].label || `Pista ${i + 1}`,
-                        language: rawTracks[i].language || "",
-                        enabled: rawTracks[i].enabled,
-                      });
+            isResolvingSource ? (
+              <div className="video-empty-stage is-loading">
+                <div className="video-loading-spinner" />
+                <h3>Optimizando vídeo de alta fidelidad</h3>
+                <p>Generando copia de visualización fluida para {path?.split(/[\\/]/).pop()}...</p>
+                <span className="video-loading-subtext">Códec profesional detectado</span>
+              </div>
+            ) : videoError ? (
+              <div className="video-empty-stage is-error">
+                <Icon name="info" />
+                <h3>No se pudo proyectar este vídeo</h3>
+                <p>
+                  {resolveError ||
+                    (playbackSource?.original_codec
+                      ? `El códec ${playbackSource.codec_display} (${playbackSource.original_codec}) requiere un decodificador externo.`
+                      : "El formato o contenedor no es compatible con el motor de proyección directa.")}
+                </p>
+                <div className="video-error-actions">
+                  <button
+                    className="video-action-btn"
+                    onClick={() => {
+                      if (path) void invoke("open_path_with_default_app", { path: cleanPath(path) });
+                    }}
+                    type="button"
+                  >
+                    <Icon name="external-link" />
+                    <span>Abrir en reproductor del sistema</span>
+                  </button>
+                  <button
+                    className="video-action-btn"
+                    onClick={() => {
+                      if (path) {
+                        window.dispatchEvent(
+                          new CustomEvent("prisma-open-converter", {
+                            detail: { path, mode: "video" },
+                          })
+                        );
+                      }
+                    }}
+                    type="button"
+                  >
+                    <Icon name="refresh" />
+                    <span>Convertir en Prisma Convert</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <video
+                  autoPlay
+                  className="video-stage-surface"
+                  onError={(e) => {
+                    const err = e.currentTarget.error;
+                    let msg = "No se pudo decodificar el vídeo.";
+                    if (err?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+                      msg = playbackSource?.codec_display
+                        ? `El códec ${playbackSource.codec_display} (${playbackSource.original_codec}) no es compatible directamente con el visor web.`
+                        : "El formato o códec no es compatible con el reproductor.";
                     }
-                    setAudioTracksList(list);
-                    const active = list.findIndex((t) => t.enabled);
-                    if (active >= 0) setSelectedTrackIdx(active);
-                  }
-                }}
-                onEnded={handleNext}
-                onPause={() => setPaused(true)}
-                onPlay={() => setPaused(false)}
-                onTimeUpdate={(e) => {
-                  setPosition(e.currentTarget.currentTime || 0);
-                }}
-                crossOrigin="anonymous"
-                playsInline
-                ref={videoRef}
-                src={videoSrc}
-              >
-                {activeVttUrl ? (
-                  <track
-                    default
-                    kind="subtitles"
-                    label={subtitlesList[selectedSubIdx ?? 0]?.label || "Subtítulo"}
-                    src={activeVttUrl}
-                    srcLang={subtitlesList[selectedSubIdx ?? 0]?.language || "es"}
-                  />
-                ) : null}
-              </video>
-              {/* Audio secundario sincronizado cuando se selecciona Pista 2 o superior */}
-              <audio
-                ref={secondaryAudioRef}
-                style={{ display: "none" }}
-              />
-            </>
+                    setResolveError(msg);
+                    setVideoError(true);
+                  }}
+                  onLoadedMetadata={(e) => {
+                    const video = e.currentTarget;
+                    video.muted = false;
+                    setDuration(video.duration || 0);
+                    setPaused(false);
+                    if (initialTime && initialTime > 0) {
+                      video.currentTime = initialTime;
+                      setPosition(initialTime);
+                    }
+                    if (video.paused && !paused) {
+                      void video.play().catch(() => {});
+                    }
+
+                    // Si PiP estaba activo (ej. reemplazo de vídeo desde la galería), solicitar PiP de inmediato
+                    if (isPipActiveRef.current && document.pictureInPictureEnabled) {
+                      void requestPiPWithBoundedDimensions(video).catch(() => {});
+                    }
+
+                    // Si el elemento HTML5 soporta nativamente audioTracks y tiene datos, sincronizarlos
+                    const rawTracks = (video as unknown as { audioTracks?: { length: number; [i: number]: AudioTrackInfo } }).audioTracks;
+                    if (rawTracks && rawTracks.length > 0) {
+                      const list: AudioTrackInfo[] = [];
+                      for (let i = 0; i < rawTracks.length; i++) {
+                        list.push({
+                          index: i,
+                          id: rawTracks[i].id || String(i),
+                          label: rawTracks[i].label || `Pista ${i + 1}`,
+                          language: rawTracks[i].language || "",
+                          enabled: rawTracks[i].enabled,
+                        });
+                      }
+                      setAudioTracksList(list);
+                      const active = list.findIndex((t) => t.enabled);
+                      if (active >= 0) setSelectedTrackIdx(active);
+                    }
+                  }}
+                  onEnded={handleNext}
+                  onPause={() => setPaused(true)}
+                  onPlay={() => setPaused(false)}
+                  onTimeUpdate={(e) => {
+                    setPosition(e.currentTarget.currentTime || 0);
+                  }}
+                  crossOrigin="anonymous"
+                  playsInline
+                  ref={videoRef}
+                  src={videoSrc}
+                >
+                  {activeVttUrl ? (
+                    <track
+                      default
+                      kind="subtitles"
+                      label={subtitlesList[selectedSubIdx ?? 0]?.label || "Subtítulo"}
+                      src={activeVttUrl}
+                      srcLang={subtitlesList[selectedSubIdx ?? 0]?.language || "es"}
+                    />
+                  ) : null}
+                </video>
+                {/* Audio secundario sincronizado cuando se selecciona Pista 2 o superior */}
+                <audio
+                  ref={secondaryAudioRef}
+                  style={{ display: "none" }}
+                />
+              </>
+            )
           ) : (
             <div className="video-empty-stage">
               <Icon name="video" />
-              <p>
-                {videoError
-                  ? "No se pudo cargar el formato del archivo de vídeo."
-                  : "Selecciona un vídeo para iniciar la proyección."}
-              </p>
+              <p>Selecciona un vídeo para iniciar la proyección.</p>
             </div>
           )}
 

@@ -8,6 +8,16 @@ import { formatTime } from "../../playback/ui/formatters";
 import { MediaProgressBar } from "../../../shared/ui/MediaProgressBar";
 import type { QuickLookPayload } from "../model/types";
 
+interface VideoPlaybackSource {
+  playback_path: string;
+  is_proxy: boolean;
+  original_codec: string;
+  codec_display: string;
+  width: number;
+  height: number;
+  duration_secs: number;
+}
+
 interface QuickLookVideoProps {
   payload: QuickLookPayload;
   onDimensionsLoad?: (dims: { width: number; height: number }) => void;
@@ -38,17 +48,28 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
     const video = videoRef.current;
     if (!video) return;
 
+    let active = true;
     setHasError(false);
     setErrorMessage(null);
     setIsReady(false);
 
-    // Cache-buster con tamaño y fecha de modificación para evitar que Chromium
-    // sirva byte-ranges obsoletos cuando el archivo fue sobrescrito (ej. DaVinci Resolve)
-    const fileSrc = toSafeAssetUrl(payload.path);
-    const cacheKey = payload.fileSizeBytes
-      ? `?v=${payload.fileSizeBytes}_${encodeURIComponent(payload.modifiedDate || "")}`
-      : `?t=${Date.now()}`;
-    video.src = `${fileSrc}${cacheKey}`;
+    invoke<VideoPlaybackSource>("video_get_playback_source", { path: payload.path })
+      .then((src) => {
+        if (!active || !video) return;
+        const fileSrc = toSafeAssetUrl(src.playback_path);
+        const cacheKey = payload.fileSizeBytes
+          ? `?v=${payload.fileSizeBytes}_${encodeURIComponent(payload.modifiedDate || "")}`
+          : `?t=${Date.now()}`;
+        video.src = `${fileSrc}${cacheKey}`;
+      })
+      .catch(() => {
+        if (!active || !video) return;
+        const fileSrc = toSafeAssetUrl(payload.path);
+        const cacheKey = payload.fileSizeBytes
+          ? `?v=${payload.fileSizeBytes}_${encodeURIComponent(payload.modifiedDate || "")}`
+          : `?t=${Date.now()}`;
+        video.src = `${fileSrc}${cacheKey}`;
+      });
 
     video.volume = isMuted ? 0 : volume;
     video.muted = isMuted;
@@ -68,6 +89,7 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
       : Promise.resolve(() => {});
 
     return () => {
+      active = false;
       video.pause();
       // Liberar completamente el stream de red y los handles de archivo en Chromium/WebView2
       video.removeAttribute("src");
@@ -224,10 +246,22 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
     setIsReady(false);
     const video = videoRef.current;
     if (!video) return;
-    const fileSrc = toSafeAssetUrl(payload.path);
-    video.src = `${fileSrc}?retry=${Date.now()}`;
-    video.load();
-    void video.play().then(() => setIsPlaying(true)).catch(() => {});
+
+    invoke<VideoPlaybackSource>("video_get_playback_source", { path: payload.path })
+      .then((src) => {
+        if (!video) return;
+        const fileSrc = toSafeAssetUrl(src.playback_path);
+        video.src = `${fileSrc}?retry=${Date.now()}`;
+        video.load();
+        void video.play().then(() => setIsPlaying(true)).catch(() => {});
+      })
+      .catch(() => {
+        if (!video) return;
+        const fileSrc = toSafeAssetUrl(payload.path);
+        video.src = `${fileSrc}?retry=${Date.now()}`;
+        video.load();
+        void video.play().then(() => setIsPlaying(true)).catch(() => {});
+      });
   };
 
   return (
