@@ -607,11 +607,14 @@ export function VideoPlayer({
     }
   };
 
-  // handleBack: pausa el vídeo y sale de PiP antes de notificar a App.tsx
+  // handleBack: pausa el vídeo y sale de PiP y fullscreen antes de notificar a App.tsx
   const handleBack = () => {
     // Pausar inmediatamente para evitar audio residual durante el desmontaje
     if (videoRef.current && !videoRef.current.paused) {
       videoRef.current.pause();
+    }
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
     }
     if (document.pictureInPictureElement) {
       explicitAppToggleRef.current = true;
@@ -815,15 +818,16 @@ export function VideoPlayer({
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
     }
-    ignoreNextActivityRef.current = true;
-    setShowControls(false);
 
     if (!document.fullscreenElement) {
+      ignoreNextActivityRef.current = true;
+      setShowControls(false);
       void container.requestFullscreen().catch(() => {});
       setIsFullscreen(true);
     } else {
       void document.exitFullscreen().catch(() => {});
       setIsFullscreen(false);
+      setShowControls(true);
     }
   };
 
@@ -883,8 +887,12 @@ export function VideoPlayer({
     const handleFullscreenChange = () => {
       const isNowFullscreen = Boolean(document.fullscreenElement);
       setIsFullscreen(isNowFullscreen);
-      ignoreNextActivityRef.current = true;
-      setShowControls(false);
+      if (!isNowFullscreen) {
+        setShowControls(true);
+      } else {
+        ignoreNextActivityRef.current = true;
+        setShowControls(false);
+      }
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
     };
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -1048,8 +1056,12 @@ export function VideoPlayer({
             setShowAudioMenu(false);
           } else if (showSubMenu) {
             setShowSubMenu(false);
-          } else if (isFullscreen) {
-            toggleFullscreen();
+          } else if (document.fullscreenElement || isFullscreen) {
+            if (document.fullscreenElement) {
+              void document.exitFullscreen().catch(() => {});
+            }
+            setIsFullscreen(false);
+            setShowControls(true);
           } else {
             void handleBack();
           }

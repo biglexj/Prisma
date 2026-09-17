@@ -233,7 +233,9 @@ function AppContent() {
       void playback.toggle();
     }
     setActiveVideoInitialTime(initialTime);
-    setVideoReturnView(activeView);
+    if (activeView !== "video_player") {
+      setVideoReturnView(activeView);
+    }
     setActiveVideoPath(path);
     const itemsToUse = sessionItems && sessionItems.length > 0 ? sessionItems : videoLibrary.items;
     const hasPath = itemsToUse.some((it) => it.path === path);
@@ -367,14 +369,16 @@ function AppContent() {
    */
   const handlePipChange = (active: boolean, reason?: "restore" | "close") => {
     setIsPip(active);
+    const targetReturnView = videoReturnView && videoReturnView !== "video_player" ? videoReturnView : "videos";
     if (active) {
       // Entró a PiP: llevar a la vista donde estaba el usuario (ej. galería)
-      setActiveView(videoReturnView);
+      setActiveView(targetReturnView);
     } else {
       if (reason === "close") {
         // El usuario pulsó la '✕': cerrar el PiP y morir ahí (quedarse en la galería sin abrir la pantalla completa)
         setActiveVideoPath(null);
         setActiveVideoSessionItems([]);
+        setActiveView(targetReturnView);
       } else {
         // El usuario pulsó 'Volver a la pestaña' o toggle PiP: restaurar siempre el reproductor a pantalla completa y traer al frente
         setActiveView("video_player");
@@ -577,7 +581,14 @@ function AppContent() {
           if (document.fullscreenElement) {
             void document.exitFullscreen().catch(() => { });
           } else if (activeView === "video_player") {
-            setActiveView(videoReturnView);
+            const targetReturnView = videoReturnView && videoReturnView !== "video_player" ? videoReturnView : "videos";
+            setIsPip(false);
+            setIsVideoPlaying(false);
+            setIsEqualizerModalOpen(false);
+            setActiveVideoPath(null);
+            setActiveVideoInitialTime(undefined);
+            setActiveVideoSessionItems([]);
+            setActiveView(targetReturnView);
           }
           break;
         }
@@ -730,6 +741,14 @@ function AppContent() {
     activeVideoPath,
   ]);
 
+  // Salvaguarda reactiva: la vista activa nunca debe quedar en "video_player" sin vídeo cargado
+  useEffect(() => {
+    if (activeView === "video_player" && !activeVideoPath) {
+      const targetReturnView = videoReturnView && videoReturnView !== "video_player" ? videoReturnView : "videos";
+      setActiveView(targetReturnView);
+    }
+  }, [activeView, activeVideoPath, videoReturnView]);
+
   const playbackRef = useRef(playback);
   useEffect(() => {
     playbackRef.current = playback;
@@ -828,12 +847,14 @@ function AppContent() {
               ? (activeCustomLib.icon as IconName) || "folder"
               : "search";
 
+  const isCinemaMode = activeView === "video_player" && Boolean(activeVideoPath);
+
   return (
     <div
-      className={`studio-shell ${activeView === "video_player" ? "is-cinema-mode" : ""}`}
+      className={`studio-shell ${isCinemaMode ? "is-cinema-mode" : ""}`}
       data-sidebar-density={sidebarDensity}
     >
-      {activeView !== "video_player" ? (
+      {!isCinemaMode ? (
         <AppSidebar
           activeView={activeView}
           backend={playback.capabilities?.backend ?? "Conectando…"}
@@ -846,7 +867,7 @@ function AppContent() {
       ) : null}
 
       <div className="studio-workspace">
-        {activeView !== "video_player" ? (
+        {!isCinemaMode ? (
           <header className="workspace-header">
             <div className="workspace-header-title">
               <span className="workspace-kicker">PRISMA</span>
@@ -882,7 +903,7 @@ function AppContent() {
           </header>
         ) : null}
 
-        <main className={`studio-content ${activeView === "video_player" ? "is-cinema-mode" : ""}`}>
+        <main className={`studio-content ${isCinemaMode ? "is-cinema-mode" : ""}`}>
           {activeView === "home" ? (
             <HomeDashboard
               error={library.error ?? imageLibrary.error ?? videoLibrary.error}
@@ -1055,7 +1076,8 @@ function AppContent() {
                   setActiveVideoPath(null);
                   setActiveVideoInitialTime(undefined);
                   setActiveVideoSessionItems([]);
-                  setActiveView(videoReturnView);
+                  const targetReturnView = videoReturnView && videoReturnView !== "video_player" ? videoReturnView : "videos";
+                  setActiveView(targetReturnView);
                 }}
                 onPipChange={handlePipChange}
                 onPlayingChange={setIsVideoPlaying}
