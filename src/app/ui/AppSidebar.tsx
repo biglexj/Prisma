@@ -77,11 +77,22 @@ export function AppSidebar({
     })),
   ];
 
-  const allToolItems: { key: keyof typeof enabledTools; item: SidebarItem }[] = [
+  const isToolVisible = (key: keyof typeof enabledTools) => {
+    if (!enabledTools[key]) return false;
+    if (key === "wallpapers") {
+      return auroraOnlineServicesEnabled && auroraWallpapersEnabled;
+    }
+    return true;
+  };
+
+  const nativeToolItems: { key: keyof typeof enabledTools; item: SidebarItem }[] = [
     { key: "converter", item: { icon: "convert", label: "Conversor", view: "converter" } },
     { key: "renamer", item: { icon: "edit", label: "Renombrador", view: "renamer" } },
     { key: "comparator", item: { icon: "compare", label: "Comparador", view: "comparator" } },
     { key: "duplicates", item: { icon: "copy", label: "Duplicados", view: "duplicates" } },
+  ];
+
+  const ecosystemToolItems: { key: keyof typeof enabledTools; item: SidebarItem }[] = [
     { key: "luna_fetch", item: { icon: "download", label: "Luna Fetch", view: "luna_fetch" } },
     { key: "gallery_dl", item: { icon: "layers", label: "Gallery-DL", view: "gallery_dl" } },
     { key: "prisma_upscaler", item: { icon: "expand", label: "Upscaler IA", view: "prisma_upscaler" } },
@@ -91,15 +102,15 @@ export function AppSidebar({
     },
   ];
 
-  const dynamicToolItems: SidebarItem[] = allToolItems
-    .filter(({ key }) => {
-      if (!enabledTools[key]) return false;
-      if (key === "wallpapers") {
-        return auroraOnlineServicesEnabled && auroraWallpapersEnabled;
-      }
-      return true;
-    })
+  const activeNativeTools = nativeToolItems
+    .filter(({ key }) => isToolVisible(key))
     .map(({ item }) => item);
+
+  const activeEcosystemTools = ecosystemToolItems
+    .filter(({ key }) => isToolVisible(key))
+    .map(({ item }) => item);
+
+  const hasAnyTools = activeNativeTools.length > 0 || activeEcosystemTools.length > 0;
 
   return (
     <aside className={`music-sidebar density-${density}`} data-density={density}>
@@ -126,8 +137,34 @@ export function AppSidebar({
         <SidebarSection title="PRINCIPAL" items={principalItems} activeView={activeView} onNavigate={onNavigate} />
         <SidebarSection title="BIBLIOTECA" items={dynamicLibraryItems} activeView={activeView} onNavigate={onNavigate} />
         <SidebarSection title="COLECCIONES" items={collectionItems} activeView={activeView} onNavigate={onNavigate} />
-        {dynamicToolItems.length > 0 && (
-          <SidebarSection title="HERRAMIENTAS" items={dynamicToolItems} activeView={activeView} onNavigate={onNavigate} />
+        {hasAnyTools && (
+          <section className="sidebar-section">
+            <span className="sidebar-section-title sidebar-copy">HERRAMIENTAS</span>
+            {activeNativeTools.map((item) => (
+              <SidebarItemButton
+                key={item.label}
+                item={item}
+                activeView={activeView}
+                onNavigate={onNavigate}
+              />
+            ))}
+            {activeNativeTools.length > 0 && activeEcosystemTools.length > 0 && (
+              <div
+                className="sidebar-tools-divider"
+                role="separator"
+                aria-label="Separador de herramientas del ecosistema"
+                title="Herramientas del Ecosistema Aurora"
+              />
+            )}
+            {activeEcosystemTools.map((item) => (
+              <SidebarItemButton
+                key={item.label}
+                item={item}
+                activeView={activeView}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </section>
         )}
       </nav>
 
@@ -166,6 +203,29 @@ export function AppSidebar({
   );
 }
 
+function SidebarItemButton({
+  item,
+  activeView,
+  onNavigate,
+}: {
+  item: SidebarItem;
+  activeView: AppView;
+  onNavigate: (view: AppView) => void;
+}) {
+  return (
+    <button
+      className={`sidebar-item ${item.view === activeView ? "is-active" : ""}`}
+      disabled={item.soon}
+      onClick={() => item.view && onNavigate(item.view)}
+      title={item.soon ? `${item.label} · Próximamente` : item.label}
+    >
+      <Icon name={item.icon} />
+      <span className="sidebar-copy">{item.label}</span>
+      {item.soon ? <small className="sidebar-copy">PRONTO</small> : null}
+    </button>
+  );
+}
+
 function SidebarSection({
   title,
   items,
@@ -181,17 +241,12 @@ function SidebarSection({
     <section className="sidebar-section">
       <span className="sidebar-section-title sidebar-copy">{title}</span>
       {items.map((item) => (
-        <button
-          className={`sidebar-item ${item.view === activeView ? "is-active" : ""}`}
-          disabled={item.soon}
+        <SidebarItemButton
           key={item.label}
-          onClick={() => item.view && onNavigate(item.view)}
-          title={item.soon ? `${item.label} · Próximamente` : item.label}
-        >
-          <Icon name={item.icon} />
-          <span className="sidebar-copy">{item.label}</span>
-          {item.soon ? <small className="sidebar-copy">PRONTO</small> : null}
-        </button>
+          item={item}
+          activeView={activeView}
+          onNavigate={onNavigate}
+        />
       ))}
     </section>
   );

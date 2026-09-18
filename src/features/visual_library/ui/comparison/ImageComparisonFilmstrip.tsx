@@ -52,7 +52,7 @@ export const ImageComparisonFilmstrip: React.FC<ImageComparisonFilmstripProps> =
             onClick={() => setShowFilmstrip((prev) => !prev)}
             title={showFilmstrip ? "Ocultar barra de fotos" : "Mostrar barra de fotos"}
           >
-            <Icon name={showFilmstrip ? "chevronDown" : "chevronUp"} />
+            <Icon name={showFilmstrip ? "chevron-down" : "chevron-up"} />
           </button>
         </div>
 

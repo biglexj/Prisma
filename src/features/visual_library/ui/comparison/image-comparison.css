@@ -20,10 +20,28 @@
   inset: auto;
   width: 100%;
   height: 100%;
+  min-height: calc(100vh - 110px);
   flex: 1;
   z-index: 1;
   animation: none;
-  border-radius: 0;
+  border-radius: 16px;
+  background: var(--surface-container-low, #121016);
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface);
+  margin-top: 8px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.img-compare-modal-root.is-embedded .img-compare-top-bar {
+  background: var(--surface-container);
+  border-bottom: 1px solid var(--outline-variant);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+}
+
+.img-compare-modal-root.is-embedded .img-compare-stage {
+  min-height: calc(100vh - 180px);
 }
 
 @keyframes compareFadeIn {
