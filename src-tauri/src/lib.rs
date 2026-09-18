@@ -242,10 +242,11 @@ pub fn run() {
             let equalizer_item = MenuItemBuilder::with_id("equalizer", "Ecualizador & DSP").build(app)?;
             let settings_item = MenuItemBuilder::with_id("settings", "Configuración").build(app)?;
             let separator = PredefinedMenuItem::separator(app)?;
+            let restart_item = MenuItemBuilder::with_id("restart", "Reiniciar Prisma").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "Salir de Prisma").build(app)?;
 
             let tray_menu = MenuBuilder::new(app)
-                .items(&[&show_item, &equalizer_item, &settings_item, &separator, &quit_item])
+                .items(&[&show_item, &equalizer_item, &settings_item, &separator, &restart_item, &quit_item])
                 .build()?;
 
             let _tray = TrayIconBuilder::new()
@@ -280,6 +281,9 @@ pub fn run() {
                                 let _ = w.set_focus();
                                 let _ = w.emit("prisma://navigate", "settings");
                             }
+                        }
+                        "restart" => {
+                            app.restart();
                         }
                         "quit" => {
                             app.exit(0);

@@ -262,6 +262,29 @@ impl QuickLookState {
                 let _ = window.set_size(tauri::LogicalSize::new(width, height));
                 let _ = window.center();
             }
+            #[cfg(windows)]
+            {
+                if let Ok(hwnd) = window.hwnd() {
+                    use windows::Win32::Foundation::HWND;
+                    use windows::Win32::UI::WindowsAndMessaging::{
+                        ShowWindow, SW_SHOWNOACTIVATE, SetWindowPos, HWND_TOP,
+                        SWP_NOMOVE, SWP_NOSIZE, SWP_NOACTIVATE, SWP_SHOWWINDOW,
+                    };
+                    unsafe {
+                        let win_hwnd = HWND(hwnd.0);
+                        let _ = ShowWindow(win_hwnd, SW_SHOWNOACTIVATE);
+                        let _ = SetWindowPos(
+                            win_hwnd,
+                            HWND_TOP,
+                            0,
+                            0,
+                            0,
+                            0,
+                            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+                        );
+                    }
+                }
+            }
             let _ = window.emit("quicklook://preview", &payload);
         }
     }
@@ -424,6 +447,9 @@ impl QuickLookState {
         }
 
         let media_type = QuickLookMediaType::from_path(p).unwrap_or(QuickLookMediaType::Generic);
+        if !matches!(media_type, QuickLookMediaType::Image | QuickLookMediaType::Video) {
+            return Err("Solo se pueden desacoplar imágenes y vídeos".into());
+        }
         let payload = QuickLookPayload::new(path.to_string(), media_type);
         let (target_w, target_h) = resolve_media_size(&self.app_handle, media_type, p);
 
@@ -451,8 +477,8 @@ impl QuickLookState {
         .decorations(false)
         .transparent(true)
         .resizable(true)
-        .always_on_top(false)
-        .skip_taskbar(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
         .visible(false);
 
         if let Some(base) = self.app_handle.get_webview_window("quicklook") {
@@ -473,7 +499,7 @@ impl QuickLookState {
 
         let _ = window.emit("quicklook://preview", &payload);
         let _ = window.show();
-        let _ = window.set_focus();
+        let _ = window.unminimize();
 
         ql_log!("Instancia desacoplada creada: {} para {:?}", label, path);
 

@@ -368,7 +368,7 @@ export function QuickLookHeader({
               e.stopPropagation();
               onOpenDetached();
             }}
-            title="Desacoplar en ventana independiente (sin duplicar icono en la bandeja)"
+            title="Fijar en ventana flotante independiente (sin barra de tareas)"
           >
             <Icon name="layers" />
           </button>

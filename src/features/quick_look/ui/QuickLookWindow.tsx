@@ -1,12 +1,13 @@
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useState, useRef, type CSSProperties } from "react";
+import { useEffect, useState, useRef, useCallback, type CSSProperties } from "react";
 import { useTheme } from "../../../app/useTheme";
 import { Icon } from "../../../shared/ui/Icon";
 import type { QuickLookPayload } from "../model/types";
 import { quickLookClient } from "../tauri/client";
 import { QuickLookHeader } from "./QuickLookHeader";
+import { QuickLookErrorBoundary } from "./QuickLookErrorBoundary";
 import { QuickLookImage } from "./QuickLookImage";
 import { QuickLookMusic } from "./QuickLookMusic";
 import { QuickLookVideo } from "./QuickLookVideo";
@@ -34,25 +35,34 @@ export function QuickLookWindow() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isComparing, setIsComparing] = useState(false);
 
+  const requestVersionRef = useRef(0);
+  const isDetachedRef = useRef(isDetached);
+  isDetachedRef.current = isDetached;
+  const windowLabelRef = useRef(windowLabel);
+  windowLabelRef.current = windowLabel;
+
+  const refreshCurrent = useCallback(() => {
+    const version = ++requestVersionRef.current;
+    const request = isDetachedRef.current
+      ? quickLookClient.getDetachedPayload(windowLabelRef.current)
+      : quickLookClient.getCurrent();
+    return request.then((res) => {
+      if (version === requestVersionRef.current && res) {
+        setPayload(res);
+        setImageDimensions(null);
+        return res;
+      }
+      return null;
+    }).catch(() => null);
+  }, []);
+
   useEffect(() => {
     let resolved = false;
     let disposed = false;
-    let requestVersion = 0;
-    const refreshCurrent = () => {
-      const version = ++requestVersion;
-      const request = isDetached
-        ? quickLookClient.getDetachedPayload(windowLabel)
-        : quickLookClient.getCurrent();
-      request.then((res) => {
-        if (!disposed && version === requestVersion && res) {
-          resolved = true;
-          setPayload(res);
-          setImageDimensions(null);
-        }
-      }).catch(() => {});
-    };
 
-    refreshCurrent();
+    refreshCurrent().then((res) => {
+      if (res) resolved = true;
+    });
 
     // La ventana principal ya está cargada (oculta) y solo necesita un refresco
     // breve. Las instancias desacopladas se crean en frío, así que consultan su
@@ -62,7 +72,9 @@ export function QuickLookWindow() {
         window.clearInterval(startupIntervalId);
         return;
       }
-      refreshCurrent();
+      refreshCurrent().then((res) => {
+        if (res) resolved = true;
+      });
     }, 200);
     const startupTimeoutId = window.setTimeout(() => {
       window.clearInterval(startupIntervalId);
@@ -75,14 +87,14 @@ export function QuickLookWindow() {
     if (!isDetached) {
       const unlistenGlobalPreviewPromise = listen<QuickLookPayload>("quicklook://preview", (event) => {
         if (!disposed && event.payload) {
-          requestVersion++;
+          requestVersionRef.current++;
           setPayload(event.payload);
           setImageDimensions(null);
         }
       });
 
       const unlistenGlobalHidePromise = listen("quicklook://hide", () => {
-        requestVersion++;
+        requestVersionRef.current++;
         if (disposed) return;
         setPayload(null);
         setImageDimensions(null);
@@ -99,7 +111,7 @@ export function QuickLookWindow() {
       "quicklook://preview",
       (event) => {
         if (!disposed && event.payload) {
-          requestVersion++;
+          requestVersionRef.current++;
           setPayload(event.payload);
           setImageDimensions(null);
         }
@@ -109,10 +121,10 @@ export function QuickLookWindow() {
       unlistenWindowPreviewPromise.then((unlisten) => unlisten());
     });
 
-    const handleFocus = () => refreshCurrent();
+    const handleFocus = () => void refreshCurrent();
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        refreshCurrent();
+        void refreshCurrent();
       }
     };
 
@@ -121,14 +133,14 @@ export function QuickLookWindow() {
 
     return () => {
       disposed = true;
-      requestVersion++;
+      requestVersionRef.current++;
       window.clearInterval(startupIntervalId);
       window.clearTimeout(startupTimeoutId);
       cleanupFns.forEach((fn) => fn());
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [isDetached, windowLabel]);
+  }, [isDetached, refreshCurrent]);
 
   // Atajos locales de teclado (Esc cierra siempre; Espacio solo la vista previa principal)
   useEffect(() => {
@@ -141,6 +153,9 @@ export function QuickLookWindow() {
         e.preventDefault();
         e.stopPropagation();
         handleClose();
+      } else if (e.key === "F5" || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "r")) {
+        e.preventDefault();
+        void refreshCurrent();
       } else if (
         e.key.toLowerCase() === "c" &&
         !e.ctrlKey &&
@@ -170,7 +185,7 @@ export function QuickLookWindow() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isDetached, isComparing, payload]);
+  }, [isDetached, isComparing, payload, refreshCurrent]);
 
   // Seguimiento en tiempo real del estado de maximizado / tamaño de ventana
   useEffect(() => {
@@ -271,7 +286,11 @@ export function QuickLookWindow() {
               onClose={handleClose}
               onCompare={() => setIsComparing(true)}
               onEdit={["markdown", "text", "html", "lyrics", "generic", "project"].includes(payload.mediaType) ? handleEdit : undefined}
-              onOpenDetached={handleOpenDetached}
+              onOpenDetached={
+                !isDetached && (payload.mediaType === "image" || payload.mediaType === "video")
+                  ? handleOpenDetached
+                  : undefined
+              }
               onOpenInMain={handleOpenInMain}
               onStepSelection={(forward) => void quickLookClient.stepSelection(forward)}
               onToggleMaximize={handleToggleMaximize}
@@ -294,54 +313,61 @@ export function QuickLookWindow() {
             )}
 
             <div className="quicklook-body">
-              {payload.mediaType === "audio" ? (
-                <QuickLookMusic
-                  key={payload.path}
-                  onPaletteChange={setPaletteStyle}
-                  onTimeUpdate={(t) => {
-                    playbackTimeRef.current = t;
-                  }}
-                  payload={payload}
-                />
-              ) : payload.mediaType === "image" ? (
-                <QuickLookImage
-                  key={payload.path}
-                  onDimensionsLoad={setImageDimensions}
-                  payload={payload}
-                />
-              ) : payload.mediaType === "video" ? (
-                <QuickLookVideo
-                  key={`${payload.path}-${payload.fileSizeBytes}-${payload.modifiedDate || ""}`}
-                  onDimensionsLoad={setImageDimensions}
-                  onOpenInMain={handleOpenInMain}
-                  onTimeUpdate={(t) => {
-                    playbackTimeRef.current = t;
-                  }}
-                  payload={payload}
-                />
-              ) : payload.mediaType === "pdf" ? (
-                <QuickLookPdf key={payload.path} payload={payload} />
-              ) : payload.mediaType === "archive" ? (
-                <QuickLookArchive key={payload.path} payload={payload} />
-              ) : payload.mediaType === "epub" ? (
-                <QuickLookEpub key={payload.path} payload={payload} />
-              ) : payload.mediaType === "html" ? (
-                <QuickLookHtml key={payload.path} payload={payload} />
-              ) : payload.mediaType === "lyrics" ? (
-                <QuickLookLyrics key={payload.path} payload={payload} />
-              ) : payload.mediaType === "markdown" ? (
-                <QuickLookMarkdown key={payload.path} payload={payload} />
-              ) : payload.mediaType === "text" ? (
-                <QuickLookText key={payload.path} payload={payload} />
-              ) : payload.mediaType === "folder" ? (
-                <QuickLookFolder key={payload.path} payload={payload} />
-              ) : payload.mediaType === "project" ? (
-                <QuickLookProject key={payload.path} onClose={handleClose} payload={payload} />
-              ) : payload.mediaType === "playlist" ? (
-                <QuickLookPlaylist key={payload.path} payload={payload} />
-              ) : (
-                <QuickLookFallback key={payload.path} onClose={handleClose} payload={payload} />
-              )}
+              <QuickLookErrorBoundary
+                fileName={payload.fileName}
+                onOpenInMain={handleOpenInMain}
+                onRetry={() => void refreshCurrent()}
+                resetKey={payload.path}
+              >
+                {payload.mediaType === "audio" ? (
+                  <QuickLookMusic
+                    key={payload.path}
+                    onPaletteChange={setPaletteStyle}
+                    onTimeUpdate={(t) => {
+                      playbackTimeRef.current = t;
+                    }}
+                    payload={payload}
+                  />
+                ) : payload.mediaType === "image" ? (
+                  <QuickLookImage
+                    key={payload.path}
+                    onDimensionsLoad={setImageDimensions}
+                    payload={payload}
+                  />
+                ) : payload.mediaType === "video" ? (
+                  <QuickLookVideo
+                    key={`${payload.path}-${payload.fileSizeBytes}-${payload.modifiedDate || ""}`}
+                    onDimensionsLoad={setImageDimensions}
+                    onOpenInMain={handleOpenInMain}
+                    onTimeUpdate={(t) => {
+                      playbackTimeRef.current = t;
+                    }}
+                    payload={payload}
+                  />
+                ) : payload.mediaType === "pdf" ? (
+                  <QuickLookPdf key={payload.path} payload={payload} />
+                ) : payload.mediaType === "archive" ? (
+                  <QuickLookArchive key={payload.path} payload={payload} />
+                ) : payload.mediaType === "epub" ? (
+                  <QuickLookEpub key={payload.path} payload={payload} />
+                ) : payload.mediaType === "html" ? (
+                  <QuickLookHtml key={payload.path} payload={payload} />
+                ) : payload.mediaType === "lyrics" ? (
+                  <QuickLookLyrics key={payload.path} payload={payload} />
+                ) : payload.mediaType === "markdown" ? (
+                  <QuickLookMarkdown key={payload.path} payload={payload} />
+                ) : payload.mediaType === "text" ? (
+                  <QuickLookText key={payload.path} payload={payload} />
+                ) : payload.mediaType === "folder" ? (
+                  <QuickLookFolder key={payload.path} payload={payload} />
+                ) : payload.mediaType === "project" ? (
+                  <QuickLookProject key={payload.path} onClose={handleClose} payload={payload} />
+                ) : payload.mediaType === "playlist" ? (
+                  <QuickLookPlaylist key={payload.path} payload={payload} />
+                ) : (
+                  <QuickLookFallback key={payload.path} onClose={handleClose} payload={payload} />
+                )}
+              </QuickLookErrorBoundary>
             </div>
           </>
         ) : (

@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useState, useRef, useEffect } from "react";
 import { toSafeAssetUrl } from "../../../shared/mediaTree";
+import { Icon } from "../../../shared/ui/Icon";
 import type { QuickLookPayload } from "../model/types";
 
 interface QuickLookImageProps {
@@ -12,12 +13,26 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [retryKey, setRetryKey] = useState(0);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const initialPanRef = useRef({ x: 0, y: 0 });
 
-  const imgSrc = toSafeAssetUrl(payload.path);
+  const baseSrc = toSafeAssetUrl(payload.path);
+  const imgSrc = retryKey > 0 ? `${baseSrc}?r=${retryKey}` : baseSrc;
+
+  useEffect(() => {
+    setHasError(false);
+    setIsLoading(true);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    setRetryKey(0);
+  }, [payload.path]);
 
   const handleImageLoad = async (e: React.SyntheticEvent<HTMLImageElement>) => {
+    setIsLoading(false);
+    setHasError(false);
     const img = e.currentTarget;
     const nw = img.naturalWidth;
     const nh = img.naturalHeight;
@@ -61,8 +76,15 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
     }
   };
 
+  const handleImageError = () => {
+    console.warn("[QuickLookImage] Fallo al cargar la imagen:", payload.path);
+    setIsLoading(false);
+    setHasError(true);
+  };
+
   // Zoom con punto focal en dirección del cursor / lápiz de tableta gráfica
   const handleWheel = (e: React.WheelEvent) => {
+    if (hasError) return;
     e.preventDefault();
     e.stopPropagation();
     const factor = e.deltaY < 0 ? 1.15 : 0.87;
@@ -92,12 +114,13 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
   };
 
   const handleDoubleClick = () => {
+    if (hasError) return;
     setZoom((prev) => (prev > 1 ? 1 : 1.75));
     setPan({ x: 0, y: 0 });
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if ((e.button !== 0 && e.buttons !== 1) || zoom <= 1) return;
+    if ((e.button !== 0 && e.buttons !== 1) || zoom <= 1 || hasError) return;
     e.preventDefault();
     e.stopPropagation();
 
@@ -137,6 +160,36 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
     };
   }, [isDragging]);
 
+  if (hasError) {
+    return (
+      <div className="quicklook-error-boundary-state" role="alert">
+        <div className="quicklook-error-icon-wrapper">
+          <Icon name="image" />
+        </div>
+        <div className="quicklook-error-text-wrapper">
+          <h3 className="quicklook-error-title">No se pudo decodificar la imagen</h3>
+          <p className="quicklook-error-subtitle">
+            «{payload.fileName}» no pudo ser renderizada o el archivo está temporalmente en uso por otra aplicación.
+          </p>
+        </div>
+        <div className="quicklook-error-actions">
+          <button
+            type="button"
+            className="quicklook-error-btn quicklook-error-btn-secondary"
+            onClick={() => {
+              setHasError(false);
+              setIsLoading(true);
+              setRetryKey((k) => k + 1);
+            }}
+          >
+            <Icon name="refresh" />
+            <span>Reintentar decodificación</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="quicklook-image-content"
@@ -151,13 +204,15 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
         <img
           alt={payload.fileName}
           className="quicklook-image-preview"
-          decoding="async"
+          decoding="auto"
           draggable={false}
+          onError={handleImageError}
           onLoad={handleImageLoad}
           src={imgSrc}
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transition: isDragging ? "none" : "transform 0.12s ease-out",
+            transition: isDragging ? "none" : "transform 0.12s ease-out, opacity 0.2s ease-in-out",
+            opacity: isLoading ? 0.35 : 1,
           }}
         />
       </div>
