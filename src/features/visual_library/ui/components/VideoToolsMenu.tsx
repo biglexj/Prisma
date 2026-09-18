@@ -6,6 +6,7 @@ export interface VideoToolsMenuProps {
   onShowInFolder: () => void;
   onSendToMobile: () => void;
   onCapture?: () => void;
+  onCompare?: () => void;
   onOpenChange?: (isOpen: boolean) => void;
 }
 
@@ -14,6 +15,7 @@ export function VideoToolsMenu({
   onShowInFolder,
   onSendToMobile,
   onCapture,
+  onCompare,
   onOpenChange,
 }: VideoToolsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -100,6 +102,21 @@ export function VideoToolsMenu({
                 <span className="viewer-tools-item-desc">Convertir vídeo en Convertidor Prisma</span>
               </div>
             </button>
+
+            {onCompare ? (
+              <button
+                className="viewer-tools-item"
+                onClick={() => handleAction(onCompare)}
+                role="menuitem"
+              >
+                <Icon name="compare" />
+                <div className="viewer-tools-item-content">
+                  <span className="viewer-tools-item-title">Comparar</span>
+                  <span className="viewer-tools-item-desc">Comparar con otro vídeo</span>
+                </div>
+                <kbd className="viewer-tools-shortcut">C</kbd>
+              </button>
+            ) : null}
 
             <button
               className="viewer-tools-item"

@@ -14,6 +14,7 @@ import { VideoToolsMenu } from "./components/VideoToolsMenu";
 import { useVideoAudioDsp } from "./useVideoAudioDsp";
 import { useVideoSnapshot } from "../hooks/useVideoSnapshot";
 import { useSystemSettings } from "../../../app/useSystemSettings";
+import { ImageComparisonModal } from "../../comparison";
 import "./video-player.css";
 
 interface VideoPlayerProps {
@@ -112,6 +113,7 @@ export function VideoPlayer({
   // One-Shot Shuffle State
   const [localVideoItems, setLocalVideoItems] = useState<VisualLibraryItem[]>(videoItems);
   const [shuffleToastText, setShuffleToastText] = useState<string | null>(null);
+  const [isComparing, setIsComparing] = useState(false);
 
   // Proxy y compatibilidad de códec nativo
   const [playbackSource, setPlaybackSource] = useState<VideoPlaybackSource | null>(null);
@@ -251,6 +253,29 @@ export function VideoPlayer({
     });
   };
 
+  const currentVideoItem = useMemo<VisualLibraryItem | null>(() => {
+    if (!path) return null;
+    const found = localVideoItems.find((it) => it.path === path);
+    if (found) return found;
+    return {
+      path,
+      title,
+      sourcePath: path,
+      relativeFolder: "",
+      kind: "video",
+      modifiedAtMillis: Date.now(),
+      sizeBytes: 0,
+    };
+  }, [path, title, localVideoItems]);
+
+  const handleOpenComparison = () => {
+    if (videoRef.current && !videoRef.current.paused) {
+      videoRef.current.pause();
+      setPaused(true);
+    }
+    setIsComparing(true);
+  };
+
   const buildContextMenuItems = () => {
     const target = mediaDelete.menu;
     if (!target) return [];
@@ -265,6 +290,12 @@ export function VideoPlayer({
           setShuffleToastText(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
           setTimeout(() => setShuffleToastText(null), 1800);
         },
+      },
+      {
+        id: "compare",
+        label: "Comparar con otro vídeo",
+        icon: "compare" as const,
+        onSelect: handleOpenComparison,
       },
       {
         id: "snapshot",
@@ -884,7 +915,7 @@ export function VideoPlayer({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (mediaDelete.pendingDelete) return;
+      if (mediaDelete.pendingDelete || isComparing) return;
 
       if (
         e.key === "Delete" ||
@@ -993,6 +1024,9 @@ export function VideoPlayer({
           cycleAudioTrack();
           break;
         case "c":
+          e.preventDefault();
+          handleOpenComparison();
+          break;
         case "v":
           e.preventDefault();
           cycleSubtitle();
@@ -1244,6 +1278,7 @@ export function VideoPlayer({
                     })
                   );
                 }}
+                onCompare={handleOpenComparison}
                 onShowInFolder={() => {
                   void invoke("show_in_file_manager", { path: cleanPath(path) }).catch((err) => {
                     console.error("Error al mostrar en explorador:", err);
@@ -1946,6 +1981,14 @@ export function VideoPlayer({
           onCancel={mediaDelete.cancelDelete}
           onConfirm={mediaDelete.confirmDelete}
           title="Mover vídeo a la papelera"
+        />
+      ) : null}
+
+      {isComparing && currentVideoItem ? (
+        <ImageComparisonModal
+          initialItem={currentVideoItem}
+          itemsList={localVideoItems}
+          onClose={() => setIsComparing(false)}
         />
       ) : null}
     </section>
