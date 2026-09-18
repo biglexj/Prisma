@@ -5,7 +5,8 @@ import { isImagePath } from "./types";
 interface ImageComparisonEmptySlotProps {
   onPickLibrary: () => void;
   onPickExplorer: () => void;
-  onDropFile: (filePath: string) => void;
+  onDropFile?: (filePath: string) => void;
+  onDropFiles?: (filePaths: string[]) => void;
   isNativeDragOver?: boolean;
   tagLabel?: string;
   title?: string;
@@ -17,6 +18,7 @@ export function ImageComparisonEmptySlot({
   onPickLibrary,
   onPickExplorer,
   onDropFile,
+  onDropFiles,
   isNativeDragOver = false,
   tagLabel = "Imagen B (A Comparar)",
   title = "Arrastra una imagen aquí",
@@ -48,11 +50,21 @@ export function ImageComparisonEmptySlot({
     setIsHtmlDragOver(false);
 
     if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      // File path puede estar disponible en WebView2 o Electron como (file as any).path
-      const filePath = (file as unknown as { path?: string }).path;
-      if (filePath && isImagePath(filePath)) {
-        onDropFile(filePath);
+      const paths: string[] = [];
+      for (let i = 0; i < e.dataTransfer.files.length; i++) {
+        const file = e.dataTransfer.files[i];
+        const filePath = (file as unknown as { path?: string }).path;
+        if (filePath && isImagePath(filePath)) {
+          paths.push(filePath);
+        }
+      }
+
+      if (paths.length > 0) {
+        if (onDropFiles) {
+          onDropFiles(paths);
+        } else if (onDropFile) {
+          onDropFile(paths[0]);
+        }
       }
     }
   };

@@ -581,22 +581,51 @@
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.75);
   color: #fff;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 3;
-  transition: background 0.15s ease;
+  z-index: 4;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.15s ease, transform 0.15s ease, opacity 0.22s ease;
 }
 
 .duplicate-video-close-btn:hover {
-  background: rgba(239, 68, 68, 0.85);
+  background: rgba(239, 68, 68, 0.9);
+  border-color: rgba(239, 68, 68, 1);
+  transform: scale(1.1);
 }
 
 .duplicate-video-close-btn svg {
   width: 14px;
   height: 14px;
+}
+
+/* ── Comportamiento durante reproducción de vídeo (ocultar título/badge hasta hover) ── */
+.duplicate-card.is-video-playing .duplicate-card-tag {
+  right: 38px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.22s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.duplicate-card.is-video-playing .duplicate-res-badge,
+.duplicate-card.is-video-playing .duplicate-video-close-btn {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.22s cubic-bezier(0.2, 0, 0, 1), transform 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.duplicate-card.is-video-playing:hover .duplicate-card-tag,
+.duplicate-card.is-video-playing:hover .duplicate-res-badge,
+.duplicate-card.is-video-playing:hover .duplicate-video-close-btn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .duplicate-card-meta {

@@ -190,61 +190,69 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
 
       <div className="duplicates-items-grid">
         {/* Item Original / Referencia */}
-        <div className="duplicate-card is-original">
-          <div className="duplicate-card-tag is-original-tag">
-            <Icon name="star" />
-            <span>{group.original.isFromBaseFolder ? "Original (Carpeta Base)" : "Original / Referencia"}</span>
-          </div>
-          <div className="duplicate-card-thumb">
-            {activeKind === "music" ? (
-              <DuplicateMusicThumb
-                path={group.original.path}
-                isPlaying={Boolean(previewPath === group.original.path && isPreviewPlaying)}
-                onToggle={() => onTogglePreview?.(group.original.path)}
-              />
-            ) : activeKind === "video" ? (
-              <DuplicateVideoThumb
-                path={group.original.path}
-                title={group.original.title}
-                isPlaying={Boolean(previewPath === group.original.path && isPreviewPlaying)}
-                onToggle={() => onTogglePreview?.(group.original.path)}
-              />
-            ) : (
-              <img
-                src={toSafeAssetUrl(group.original.path)}
-                alt={group.original.title}
-                loading="lazy"
-                draggable={false}
-              />
-            )}
-          </div>
-          <div className="duplicate-card-meta">
-            <span className="duplicate-name" title={group.original.path}>
-              {group.original.title}
-            </span>
-            <div className="duplicate-details">
-              {group.original.width && group.original.height && (
-                <span className="dim-badge">
-                  {group.original.width} × {group.original.height} px
+        {(() => {
+          const isOriginalVideoPlaying =
+            activeKind === "video" && Boolean(previewPath === group.original.path && isPreviewPlaying);
+          return (
+            <div className={`duplicate-card is-original ${isOriginalVideoPlaying ? "is-video-playing" : ""}`}>
+              <div className="duplicate-card-tag is-original-tag">
+                <Icon name="star" />
+                <span>{group.original.isFromBaseFolder ? "Original (Carpeta Base)" : "Original / Referencia"}</span>
+              </div>
+              <div className="duplicate-card-thumb">
+                {activeKind === "music" ? (
+                  <DuplicateMusicThumb
+                    path={group.original.path}
+                    isPlaying={Boolean(previewPath === group.original.path && isPreviewPlaying)}
+                    onToggle={() => onTogglePreview?.(group.original.path)}
+                  />
+                ) : activeKind === "video" ? (
+                  <DuplicateVideoThumb
+                    path={group.original.path}
+                    title={group.original.title}
+                    isPlaying={isOriginalVideoPlaying}
+                    onToggle={() => onTogglePreview?.(group.original.path)}
+                  />
+                ) : (
+                  <img
+                    src={toSafeAssetUrl(group.original.path)}
+                    alt={group.original.title}
+                    loading="lazy"
+                    draggable={false}
+                  />
+                )}
+              </div>
+              <div className="duplicate-card-meta">
+                <span className="duplicate-name" title={group.original.path}>
+                  {group.original.title}
                 </span>
-              )}
-              <span className="size-badge">{formatBytes(group.original.sizeBytes)}</span>
+                <div className="duplicate-details">
+                  {group.original.width && group.original.height && (
+                    <span className="dim-badge">
+                      {group.original.width} × {group.original.height} px
+                    </span>
+                  )}
+                  <span className="size-badge">{formatBytes(group.original.sizeBytes)}</span>
+                </div>
+                <span className="duplicate-folder-name" title={group.original.path}>
+                  {group.original.relativeFolder || group.original.path}
+                </span>
+              </div>
             </div>
-            <span className="duplicate-folder-name" title={group.original.path}>
-              {group.original.relativeFolder || group.original.path}
-            </span>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Lista de Duplicados */}
         {group.duplicates.map((dup) => {
           const isSelected = selectedPaths.has(dup.path);
+          const isDupVideoPlaying =
+            activeKind === "video" && Boolean(previewPath === dup.path && isPreviewPlaying);
           return (
             <div
               key={dup.path}
               className={`duplicate-card is-duplicate ${isSelected ? "is-selected" : ""} ${
                 dup.hasHigherResolution ? "has-resolution-upgrade" : ""
-              }`}
+              } ${isDupVideoPlaying ? "is-video-playing" : ""}`}
               onClick={() => toggleSelectPath(dup.path)}
             >
               <div className="duplicate-card-tag is-dup-tag">
