@@ -105,9 +105,11 @@ export type IconName =
   | "convert"
   | "headphones"
   | "upload"
+  | "pin"
   | "tool";
 
 const paths: Record<IconName, ReactNode> = {
+  pin: <><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-2l-1.8-1.8a2 2 0 0 1-.6-1.4V6a2.6 2.6 0 0 0-5.2 0v5.8a2 2 0 0 1-.6 1.4L5 15v2z" /></>,
   upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></>,
   headphones: <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />,
   wifi: <><path d="M5 12.55a11 11 0 0 1 14.08 0" /><path d="M1.42 9a16 16 0 0 1 21.16 0" /><path d="M8.53 16.11a6 6 0 0 1 6.95 0" /><line x1="12" y1="20" x2="12.01" y2="20" /></>,

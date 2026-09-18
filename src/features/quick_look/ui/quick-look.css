@@ -376,6 +376,24 @@
   box-shadow: 0 2px 8px rgba(255, 177, 192, 0.35);
 }
 
+.quicklook-btn-icon-action.is-pinned,
+.quicklook-btn-icon-action.is-pinned:hover {
+  background: var(--primary, #c90045);
+  color: var(--on-primary, #ffffff);
+  border-color: var(--primary, #c90045);
+  box-shadow: 0 2px 10px rgba(201, 0, 69, 0.45);
+}
+
+.dark .quicklook-btn-icon-action.is-pinned,
+.dark .quicklook-btn-icon-action.is-pinned:hover,
+[data-theme="dark"] .quicklook-btn-icon-action.is-pinned,
+[data-theme="dark"] .quicklook-btn-icon-action.is-pinned:hover {
+  background: var(--primary, #ffb1c0);
+  color: var(--on-primary, #650025);
+  border-color: var(--primary, #ffb1c0);
+  box-shadow: 0 2px 10px rgba(255, 177, 192, 0.45);
+}
+
 .quicklook-btn-close {
   width: 28px;
   height: 28px;

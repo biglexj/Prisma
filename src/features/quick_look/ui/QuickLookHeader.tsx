@@ -8,8 +8,10 @@ interface QuickLookHeaderProps {
   payload: QuickLookPayload;
   imageDimensions: { width: number; height: number } | null;
   isMaximized: boolean;
+  isPinned?: boolean;
   onClose: () => void;
   onOpenInMain: () => void;
+  onTogglePin?: () => void;
   onEdit?: () => void;
   onCompare?: () => void;
   onToggleMaximize?: () => void;
@@ -20,8 +22,10 @@ export function QuickLookHeader({
   payload,
   imageDimensions,
   isMaximized,
+  isPinned,
   onClose,
   onOpenInMain,
+  onTogglePin,
   onEdit,
   onCompare,
   onToggleMaximize,
@@ -307,6 +311,7 @@ export function QuickLookHeader({
           </div>
         )}
 
+        {/* 1. Abrir en Prisma */}
         <button
           type="button"
           className="quicklook-btn-icon-action quicklook-btn-primary-action"
@@ -319,7 +324,22 @@ export function QuickLookHeader({
           <Icon name="external-link" />
         </button>
 
-        {/* Botón Editar para documentos y texto */}
+        {/* 2. Fijar / Bloquear ventana */}
+        {onTogglePin && (
+          <button
+            type="button"
+            className={`quicklook-btn-icon-action ${isPinned ? "is-pinned is-active" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onTogglePin();
+            }}
+            title={isPinned ? "Desbloquear ventana (reactivar seguimiento del explorador)" : "Bloquear / Fijar ventana (aislar e ignorar clics fuera)"}
+          >
+            <Icon name="pin" />
+          </button>
+        )}
+
+        {/* Botón Editar para documentos y texto si está disponible */}
         {onEdit && (
           <button
             type="button"
@@ -334,7 +354,7 @@ export function QuickLookHeader({
           </button>
         )}
 
-        {/* 2. Botón rápido de copiar ruta */}
+        {/* 3. Copiar ruta */}
         <button
           type="button"
           className="quicklook-btn-icon-action"
@@ -374,6 +394,7 @@ export function QuickLookHeader({
           </button>
         )}
 
+        {/* 6. Cerrar */}
         <button
           type="button"
           className="quicklook-btn-close"

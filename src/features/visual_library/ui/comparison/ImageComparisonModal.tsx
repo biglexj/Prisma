@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Icon } from "../../../../shared/ui/Icon";
 import { cleanPath, toSafeAssetUrl } from "../../../../shared/mediaTree";
 import { VisualThumbnail } from "../VisualThumbnail";
@@ -368,72 +369,105 @@ export function ImageComparisonModal({
   const slotBRef = useRef(slotB);
   slotBRef.current = slotB;
 
-  // Escucha nativa de Drag & Drop de Tauri v2
+  // Escucha nativa de Drag & Drop (WebView2 nativo de Tauri v2 y bus prisma://)
   useEffect(() => {
     const unlistens: UnlistenFn[] = [];
     let isCancelled = false;
 
-    listen<{ paths?: string[]; position?: { x: number; y: number } }>(
-      "prisma://native-drag-drop",
-      (event) => {
+    const handleDropPaths = (paths?: string[]) => {
+      setIsNativeDragging(false);
+      const zone = hoveredNativeDropZoneRef.current;
+      setHoveredNativeDropZone(null);
+      hoveredNativeDropZoneRef.current = null;
+
+      if (!paths || paths.length === 0) return;
+      const validPath = paths.find(isImagePath);
+      if (!validPath) return;
+
+      if (sourceModalTargetRef.current) {
+        handleAssignImagePath(validPath, sourceModalTargetRef.current.slotId);
+        setSourceModalTarget(null);
+        return;
+      }
+
+      if (isAddingNewSlotRef.current) {
+        handleAssignImagePath(validPath);
+        setIsAddingNewSlot(false);
+        return;
+      }
+      if (selectorTargetSlotIdRef.current) {
+        handleAssignImagePath(validPath, selectorTargetSlotIdRef.current);
+        setSelectorTargetSlotId(null);
+        return;
+      }
+
+      if (slotsRef.current.length < 2) {
+        handleAssignImagePath(validPath);
+        return;
+      }
+
+      if (zone === "slot-a" && slotARef.current) {
+        handleAssignImagePath(validPath, slotARef.current.id);
+      } else if (zone === "slot-b" && slotBRef.current) {
+        handleAssignImagePath(validPath, slotBRef.current.id);
+      } else {
+        handleAssignImagePath(validPath);
+      }
+    };
+
+    const handleUpdateDropPosition = (position?: { x: number; y: number }) => {
+      setIsNativeDragging(true);
+      if (position) {
+        const dpr = window.devicePixelRatio || 1;
+        const clientX = position.x / dpr;
+        const clientY = position.y / dpr;
+        const el = document.elementFromPoint(clientX, clientY);
+
+        if (el) {
+          const dropTarget = el.closest("[data-drop-zone]");
+          if (dropTarget) {
+            const zone = dropTarget.getAttribute("data-drop-zone");
+            setHoveredNativeDropZone(zone);
+            hoveredNativeDropZoneRef.current = zone;
+            return;
+          }
+        }
+
+        const midX = window.innerWidth / 2;
+        const zone = clientX < midX ? "slot-a" : "slot-b";
+        setHoveredNativeDropZone(zone);
+        hoveredNativeDropZoneRef.current = zone;
+      }
+    };
+
+    // 1. Integración directa con WebView2 (archivos arrastrados desde el Explorador de Windows)
+    try {
+      const webview = getCurrentWebview();
+      webview.onDragDropEvent((event) => {
         if (isCancelled) return;
-        setIsNativeDragging(false);
-        const zone = hoveredNativeDropZoneRef.current;
-        setHoveredNativeDropZone(null);
-        hoveredNativeDropZoneRef.current = null;
-
-        const paths = event.payload?.paths;
-        if (!paths || paths.length === 0) return;
-        const validPath = paths.find(isImagePath);
-        if (!validPath) return;
-
-        // 1. Si el modal intermedio de fuente está abierto
-        if (sourceModalTargetRef.current) {
-          handleAssignImagePath(validPath, sourceModalTargetRef.current.slotId);
-          setSourceModalTarget(null);
-          return;
+        if (event.payload.type === "enter" || event.payload.type === "over") {
+          handleUpdateDropPosition(event.payload.position);
+        } else if (event.payload.type === "drop") {
+          handleDropPaths(event.payload.paths);
+        } else if (event.payload.type === "leave") {
+          setIsNativeDragging(false);
+          setHoveredNativeDropZone(null);
+          hoveredNativeDropZoneRef.current = null;
         }
+      }).then((u) => {
+        if (isCancelled) u();
+        else unlistens.push(u);
+      }).catch(() => {});
+    } catch {}
 
-        // 2. Si el selector de biblioteca está abierto
-        if (isAddingNewSlotRef.current) {
-          handleAssignImagePath(validPath);
-          setIsAddingNewSlot(false);
-          return;
-        }
-        if (selectorTargetSlotIdRef.current) {
-          handleAssignImagePath(validPath, selectorTargetSlotIdRef.current);
-          setSelectorTargetSlotId(null);
-          return;
-        }
-
-        // 3. Si Slot B está vacío, asignarlo directamente a Slot B
-        if (slotsRef.current.length < 2) {
-          handleAssignImagePath(validPath);
-          return;
-        }
-
-        // 4. Si se soltó sobre una zona específica o mitad de pantalla
-        if (zone === "slot-a" && slotARef.current) {
-          handleAssignImagePath(validPath, slotARef.current.id);
-        } else if (zone === "slot-b" && slotBRef.current) {
-          handleAssignImagePath(validPath, slotBRef.current.id);
-        } else if (zone === "filmstrip") {
-          handleAssignImagePath(validPath);
-        } else {
-          handleAssignImagePath(validPath);
-        }
-      },
-    ).then((u) => {
-      if (isCancelled) u();
-      else unlistens.push(u);
-    }).catch(() => {});
+    // 2. Bus interno prisma://
+    listen<{ paths?: string[]; position?: { x: number; y: number } }>("prisma://native-drag-drop", (event) => {
+      if (!isCancelled) handleDropPaths(event.payload?.paths);
+    }).then((u) => (isCancelled ? u() : unlistens.push(u))).catch(() => {});
 
     listen("prisma://native-drag-enter", () => {
       if (!isCancelled) setIsNativeDragging(true);
-    }).then((u) => {
-      if (isCancelled) u();
-      else unlistens.push(u);
-    }).catch(() => {});
+    }).then((u) => (isCancelled ? u() : unlistens.push(u))).catch(() => {});
 
     listen("prisma://native-drag-leave", () => {
       if (!isCancelled) {
@@ -441,43 +475,11 @@ export function ImageComparisonModal({
         setHoveredNativeDropZone(null);
         hoveredNativeDropZoneRef.current = null;
       }
-    }).then((u) => {
-      if (isCancelled) u();
-      else unlistens.push(u);
-    }).catch(() => {});
+    }).then((u) => (isCancelled ? u() : unlistens.push(u))).catch(() => {});
 
-    listen<{ position?: { x: number; y: number } }>(
-      "prisma://native-drag-over",
-      (event) => {
-        if (isCancelled) return;
-        setIsNativeDragging(true);
-
-        if (event.payload?.position) {
-          const dpr = window.devicePixelRatio || 1;
-          const clientX = event.payload.position.x / dpr;
-          const clientY = event.payload.position.y / dpr;
-          const el = document.elementFromPoint(clientX, clientY);
-
-          if (el) {
-            const dropTarget = el.closest("[data-drop-zone]");
-            if (dropTarget) {
-              const zone = dropTarget.getAttribute("data-drop-zone");
-              setHoveredNativeDropZone(zone);
-              hoveredNativeDropZoneRef.current = zone;
-              return;
-            }
-          }
-
-          const midX = window.innerWidth / 2;
-          const zone = clientX < midX ? "slot-a" : "slot-b";
-          setHoveredNativeDropZone(zone);
-          hoveredNativeDropZoneRef.current = zone;
-        }
-      },
-    ).then((u) => {
-      if (isCancelled) u();
-      else unlistens.push(u);
-    }).catch(() => {});
+    listen<{ position?: { x: number; y: number } }>("prisma://native-drag-over", (event) => {
+      if (!isCancelled) handleUpdateDropPosition(event.payload?.position);
+    }).then((u) => (isCancelled ? u() : unlistens.push(u))).catch(() => {});
 
     return () => {
       isCancelled = true;
@@ -1178,20 +1180,9 @@ export function ImageComparisonModal({
           currentItems={slots.map((s) => s.item)}
           availableItems={itemsList.length > 0 ? itemsList : [initialItem]}
           onSelect={handleSelectSlotImage}
-          onClose={() => {
-            setSelectorTargetSlotId(null);
-            setIsAddingNewSlot(false);
-          }}
-          title={
-            isAddingNewSlot
-              ? "Seleccionar de la biblioteca"
-              : `Cambiar foto #${slots.findIndex((s) => s.id === selectorTargetSlotId) + 1}`
-          }
-          subtitle={
-            isAddingNewSlot && slots.length >= 2
-              ? "Al añadir se cambiará a vista de cuadrícula para ver todas las fotos a la vez"
-              : undefined
-          }
+          onClose={() => { setSelectorTargetSlotId(null); setIsAddingNewSlot(false); }}
+          title={isAddingNewSlot ? "Seleccionar de la biblioteca" : `Cambiar foto #${slots.findIndex((s) => s.id === selectorTargetSlotId) + 1}`}
+          subtitle={isAddingNewSlot && slots.length >= 2 ? "Al añadir se cambiará a vista de cuadrícula para ver todas las fotos a la vez" : undefined}
         />
       )}
     </div>

@@ -38,6 +38,7 @@ pub fn quick_look_toggle(state: State<'_, QuickLookState>) {
 
 #[tauri::command]
 pub fn quick_look_hide(state: State<'_, QuickLookState>) {
+    state.set_pinned(false);
     state.hide();
 }
 
@@ -253,9 +254,11 @@ pub fn quick_look_set_comparing(
     if window.label() == "quicklook" {
         if comparing {
             let scale = window.scale_factor().unwrap_or(1.0);
+            let mut current_h = 0.0;
             if let (Ok(pos), Ok(size)) = (window.outer_position(), window.inner_size()) {
                 let log_pos = pos.to_logical::<f64>(scale);
                 let log_size = size.to_logical::<f64>(scale);
+                current_h = log_size.height;
                 let mut guard = PREV_COMPARISON_BOUNDS.lock().unwrap();
                 *guard = Some((log_pos.x, log_pos.y, log_size.width, log_size.height));
             }
@@ -273,9 +276,10 @@ pub fn quick_look_set_comparing(
                 })
                 .unwrap_or((1920.0, 1080.0));
 
-            // Dimensiones ergonómicas para comparador: min 58% ancho pantalla o 960px, min 65% alto o 620px
+            // Dimensiones ergonómicas para comparador: min 58% ancho pantalla o 960px.
+            // La altura NUNCA debe encogerse respecto a la altura actual que ya tenía la imagen:
             let comp_w = (screen_w * 0.58).round().max(960.0).min(screen_w * 0.90);
-            let comp_h = (screen_h * 0.65).round().max(620.0).min(screen_h * 0.88);
+            let comp_h = (screen_h * 0.65).round().max(620.0).max(current_h).min(screen_h * 0.92);
 
             let _ = window.set_size(tauri::LogicalSize::new(comp_w, comp_h));
             let _ = window.center();
@@ -294,10 +298,25 @@ pub fn quick_look_set_comparing(
 }
 
 #[tauri::command]
+pub fn quick_look_set_pinned(
+    state: State<'_, QuickLookState>,
+    pinned: bool,
+) -> Result<(), String> {
+    state.set_pinned(pinned);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn quick_look_is_pinned(state: State<'_, QuickLookState>) -> bool {
+    state.is_pinned()
+}
+
+#[tauri::command]
 pub fn quick_look_close_window(
     window: tauri::WebviewWindow,
     state: State<'_, QuickLookState>,
 ) -> Result<(), String> {
+    state.set_pinned(false);
     let label = window.label().to_string();
     if label == "quicklook" {
         state.hide();

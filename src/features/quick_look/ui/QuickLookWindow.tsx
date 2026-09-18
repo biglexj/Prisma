@@ -34,6 +34,17 @@ export function QuickLookWindow() {
   const [paletteStyle, setPaletteStyle] = useState<CSSProperties | undefined>(undefined);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isComparing, setIsComparing] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+
+  useEffect(() => {
+    quickLookClient.isPinned().then(setIsPinned).catch(() => {});
+  }, []);
+
+  const handleTogglePin = useCallback(async () => {
+    const next = !isPinned;
+    setIsPinned(next);
+    await quickLookClient.setPinned(next).catch(() => {});
+  }, [isPinned]);
 
   const handleStartComparing = useCallback(() => {
     setIsComparing(true);
@@ -266,6 +277,8 @@ export function QuickLookWindow() {
 
   const handleClose = () => {
     handleStopComparing();
+    setIsPinned(false);
+    void quickLookClient.setPinned(false).catch(() => {});
     playbackTimeRef.current = 0;
     // Ocultar la ventana nativa de forma inmediata para que no parpadee ningún fallback
     void getCurrentWebviewWindow().hide().catch(() => {});
@@ -296,12 +309,14 @@ export function QuickLookWindow() {
             <QuickLookHeader
               imageDimensions={imageDimensions}
               isMaximized={isMaximized}
+              isPinned={isPinned}
               onClose={handleClose}
               onCompare={handleStartComparing}
               onEdit={["markdown", "text", "html", "lyrics", "generic", "project"].includes(payload.mediaType) ? handleEdit : undefined}
               onOpenInMain={handleOpenInMain}
               onStepSelection={(forward) => void quickLookClient.stepSelection(forward)}
               onToggleMaximize={handleToggleMaximize}
+              onTogglePin={handleTogglePin}
               payload={payload}
             />
 

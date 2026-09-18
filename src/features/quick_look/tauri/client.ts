@@ -37,4 +37,12 @@ export const quickLookClient = {
   openWithDefaultApp(path: string): Promise<void> {
     return invoke("open_path_with_default_app", { path });
   },
+
+  setPinned(pinned: boolean): Promise<void> {
+    return invoke("quick_look_set_pinned", { pinned });
+  },
+
+  isPinned(): Promise<boolean> {
+    return invoke("quick_look_is_pinned");
+  },
 };

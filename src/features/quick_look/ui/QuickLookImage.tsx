@@ -14,7 +14,6 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [retryKey, setRetryKey] = useState(0);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const initialPanRef = useRef({ x: 0, y: 0 });
@@ -25,19 +24,16 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
 
   useEffect(() => {
     setHasError(false);
-    setIsLoading(true);
     setZoom(1);
     setPan({ x: 0, y: 0 });
     setRetryKey(0);
 
     if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
-      setIsLoading(false);
       onDimensionsLoad?.({ width: imgRef.current.naturalWidth, height: imgRef.current.naturalHeight });
     }
   }, [payload.path, onDimensionsLoad]);
 
   const handleImageLoad = async (e: React.SyntheticEvent<HTMLImageElement>) => {
-    setIsLoading(false);
     setHasError(false);
     const img = e.currentTarget;
     const nw = img.naturalWidth;
@@ -77,8 +73,8 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
         const targetW = fittedW;
         const targetH = fittedH + headerH;
 
-        void invoke("quick_look_set_size", { width: targetW, height: targetH }).catch(() => {});
-      } catch {}
+        void invoke("quick_look_set_size", { width: targetW, height: targetH }).catch(() => { });
+      } catch { }
     }
   };
 
@@ -132,7 +128,7 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
 
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {}
+    } catch { }
 
     setIsDragging(true);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
@@ -184,7 +180,6 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
             className="quicklook-error-btn quicklook-error-btn-secondary"
             onClick={() => {
               setHasError(false);
-              setIsLoading(true);
               setRetryKey((k) => k + 1);
             }}
           >
@@ -207,11 +202,6 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
       }}
     >
       <div className="quicklook-image-wrapper">
-        {isLoading && (
-          <div className="quicklook-image-loading-indicator">
-            <Icon name="refresh" />
-          </div>
-        )}
         <img
           ref={imgRef}
           alt={payload.fileName}
@@ -223,8 +213,7 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
           src={imgSrc}
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transition: isDragging ? "none" : "transform 0.12s ease-out, opacity 0.2s ease-in-out",
-            opacity: isLoading ? 0.35 : 1,
+            transition: isDragging ? "none" : "transform 0.12s ease-out",
           }}
         />
       </div>

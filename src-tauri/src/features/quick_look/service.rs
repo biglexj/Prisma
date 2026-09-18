@@ -34,6 +34,7 @@ pub struct QuickLookState {
     detached_counter: Arc<AtomicU32>,
     current_selection: Arc<Mutex<Option<SelectionInfo>>>,
     is_comparing: Arc<AtomicBool>,
+    is_pinned: Arc<AtomicBool>,
 }
 
 impl QuickLookState {
@@ -47,6 +48,7 @@ impl QuickLookState {
             detached_counter: Arc::new(AtomicU32::new(0)),
             current_selection: Arc::new(Mutex::new(None)),
             is_comparing: Arc::new(AtomicBool::new(false)),
+            is_pinned: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -58,6 +60,15 @@ impl QuickLookState {
     #[allow(dead_code)]
     pub fn is_comparing(&self) -> bool {
         self.is_comparing.load(Ordering::SeqCst)
+    }
+
+    pub fn set_pinned(&self, pinned: bool) {
+        self.is_pinned.store(pinned, Ordering::SeqCst);
+        ql_log!("Modo fijado/bloqueado: {}", pinned);
+    }
+
+    pub fn is_pinned(&self) -> bool {
+        self.is_pinned.load(Ordering::SeqCst)
     }
 
     pub fn init(&self) {
@@ -84,8 +95,8 @@ impl QuickLookState {
     }
 
     pub fn toggle(&self) {
-        if self.is_comparing.load(Ordering::SeqCst) {
-            ql_log!("Toggle ignorado: el comparador está activo");
+        if self.is_comparing.load(Ordering::SeqCst) || self.is_pinned.load(Ordering::SeqCst) {
+            ql_log!("Toggle ignorado: ventana fijada o en comparativa activa");
             return;
         }
 
@@ -208,8 +219,8 @@ impl QuickLookState {
                     continue;
                 }
 
-                // En modo comparador, NO cerrar ni reaccionar a clics fuera o en Explorer
-                if state.is_comparing.load(Ordering::SeqCst) {
+                // En modo comparador o cuando la ventana está fijada/bloqueada, NO cerrar ni reaccionar a clics fuera o en Explorer
+                if state.is_comparing.load(Ordering::SeqCst) || state.is_pinned.load(Ordering::SeqCst) {
                     empty_count = 0;
                     outside_count = 0;
                     continue;
