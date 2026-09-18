@@ -25,7 +25,6 @@ Llega **Prisma v1.1.4**, una versión que transforma el **Comparador Multimedia*
 ### 📦 Descargas oficiales
 
 - 💾 [Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.4/Prisma_1.1.4_x64-setup.exe)
-- 📦 [Descargar Instalador MSI (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.4/Prisma_1.1.4_x64_en-US.msi)
 
 ---
 
