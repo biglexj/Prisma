@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Icon } from "../../../shared/ui/Icon";
-import { isSupportedMediaPath } from "../model/types";
+import { Icon, type IconName } from "../../../shared/ui/Icon";
+import { isSupportedMediaPath, getMediaType, type ComparisonMediaType } from "../model/types";
 
 interface ImageComparisonEmptySlotProps {
   onPickLibrary: () => void;
@@ -12,6 +12,7 @@ interface ImageComparisonEmptySlotProps {
   title?: string;
   subtitle?: string;
   dropZone?: string;
+  mediaType?: "any" | ComparisonMediaType;
 }
 
 export function ImageComparisonEmptySlot({
@@ -21,13 +22,62 @@ export function ImageComparisonEmptySlot({
   onDropFiles,
   isNativeDragOver = false,
   tagLabel = "Elemento B (A Comparar)",
-  title = "Arrastra una imagen o vídeo aquí",
+  title,
   subtitle = "o elige una fuente para contrastar con el archivo base",
   dropZone = "slot-b",
+  mediaType = "any",
 }: ImageComparisonEmptySlotProps) {
   const [isHtmlDragOver, setIsHtmlDragOver] = useState(false);
 
   const isDragActive = isNativeDragOver || isHtmlDragOver;
+  const resolvedMediaType = mediaType || "any";
+
+  const defaultTitle =
+    resolvedMediaType === "image"
+      ? "Arrastra una imagen aquí"
+      : resolvedMediaType === "video"
+        ? "Arrastra un vídeo aquí"
+        : resolvedMediaType === "audio"
+          ? "Arrastra una pista de audio aquí"
+          : "Arrastra una imagen, vídeo o audio aquí";
+
+  const displayTitle = title ?? defaultTitle;
+
+  const defaultIconName: IconName =
+    resolvedMediaType === "image"
+      ? "image"
+      : resolvedMediaType === "video"
+        ? "video"
+        : resolvedMediaType === "audio"
+          ? "music"
+          : "layers";
+
+  const dropActiveTitle =
+    resolvedMediaType === "image"
+      ? "¡Suelta la imagen aquí!"
+      : resolvedMediaType === "video"
+        ? "¡Suelta el vídeo aquí!"
+        : resolvedMediaType === "audio"
+          ? "¡Suelta el audio aquí!"
+          : "¡Suelta el archivo aquí!";
+
+  const formatsHint =
+    resolvedMediaType === "image"
+      ? "Formatos: Fotos (PNG, JPG, WEBP, AVIF, GIF, BMP, SVG...)"
+      : resolvedMediaType === "video"
+        ? "Formatos: Vídeos (MP4, WEBM, MKV, MOV, AVI, WMV...)"
+        : resolvedMediaType === "audio"
+          ? "Formatos: Audios (MP3, FLAC, WAV, M4A, OGG, OPUS, AIFF...)"
+          : "Formatos: Fotos (PNG, JPG...), Vídeos (MP4, MKV...) y Audios (MP3, FLAC, WAV...)";
+
+  const libraryTooltip =
+    resolvedMediaType === "image"
+      ? "Seleccionar foto de tu biblioteca"
+      : resolvedMediaType === "video"
+        ? "Seleccionar vídeo de tu biblioteca"
+        : resolvedMediaType === "audio"
+          ? "Seleccionar audio o música de tu biblioteca"
+          : "Seleccionar foto, vídeo o audio de tu biblioteca";
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -55,7 +105,9 @@ export function ImageComparisonEmptySlot({
         const file = e.dataTransfer.files[i];
         const filePath = (file as unknown as { path?: string }).path;
         if (filePath && isSupportedMediaPath(filePath)) {
-          paths.push(filePath);
+          if (resolvedMediaType === "any" || getMediaType(filePath) === resolvedMediaType) {
+            paths.push(filePath);
+          }
         }
       }
 
@@ -86,10 +138,10 @@ export function ImageComparisonEmptySlot({
       <div className="img-compare-empty-slot-content">
         <div className="img-compare-empty-drop-card">
           <div className="img-compare-empty-icon-circle">
-            <Icon name={isDragActive ? "download" : "image"} />
+            <Icon name={isDragActive ? "download" : defaultIconName} />
           </div>
 
-          <h3 className="img-compare-empty-title">{isDragActive ? "¡Suelta el archivo aquí!" : title}</h3>
+          <h3 className="img-compare-empty-title">{isDragActive ? dropActiveTitle : displayTitle}</h3>
           <p className="img-compare-empty-sub">{subtitle}</p>
 
           <div className="img-compare-empty-actions">
@@ -97,7 +149,7 @@ export function ImageComparisonEmptySlot({
               type="button"
               className="img-compare-empty-btn is-library"
               onClick={onPickLibrary}
-              title="Seleccionar foto o vídeo de tu biblioteca"
+              title={libraryTooltip}
             >
               <Icon name="layers" />
               <span>Biblioteca</span>
@@ -115,7 +167,7 @@ export function ImageComparisonEmptySlot({
           </div>
 
           <div className="img-compare-empty-formats-hint">
-            <span>Formatos: Fotos (PNG, JPG, WEBP, AVIF...) y Vídeos (MP4, WEBM, MKV, MOV...)</span>
+            <span>{formatsHint}</span>
           </div>
         </div>
       </div>

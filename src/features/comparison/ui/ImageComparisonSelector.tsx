@@ -7,10 +7,16 @@ import { VisualThumbnail } from "../../visual_library/ui/VisualThumbnail";
 import type { VisualLibraryItem } from "../../visual_library/model/types";
 import {
   isSupportedMediaPath,
+  isImagePath,
+  isVideoPath,
+  isAudioPath,
+  getMediaType,
   createVisualItemFromPath,
   SUPPORTED_IMAGE_EXTENSIONS,
   SUPPORTED_VIDEO_EXTENSIONS,
+  SUPPORTED_AUDIO_EXTENSIONS,
   SUPPORTED_ALL_MEDIA_EXTENSIONS,
+  type ComparisonMediaType,
 } from "../model/types";
 
 interface ImageComparisonSelectorProps {
@@ -22,6 +28,7 @@ interface ImageComparisonSelectorProps {
   title?: string;
   subtitle?: string;
   maxSelectable?: number;
+  restrictMediaType?: ComparisonMediaType;
 }
 
 interface FolderEntry {
@@ -55,12 +62,15 @@ export function ImageComparisonSelector({
   onSelect,
   onSelectMultiple,
   onClose,
-  title = "Seleccionar imagen para comparar",
+  title = "Seleccionar archivo para comparar",
   subtitle,
   maxSelectable = 1,
+  restrictMediaType,
 }: ImageComparisonSelectorProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [mediaKindFilter, setMediaKindFilter] = useState<"all" | "image" | "video">("all");
+  const [mediaKindFilter, setMediaKindFilter] = useState<"all" | "image" | "video" | "audio">(
+    restrictMediaType || "all",
+  );
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -75,7 +85,10 @@ export function ImageComparisonSelector({
       setIsDragOver(false);
       const paths = event.payload?.paths;
       if (paths && paths.length > 0) {
-        const mediaPaths = paths.filter(isSupportedMediaPath);
+        let mediaPaths = paths.filter(isSupportedMediaPath);
+        if (restrictMediaType) {
+          mediaPaths = mediaPaths.filter((p) => getMediaType(p) === restrictMediaType);
+        }
         if (mediaPaths.length > 0) {
           const newItems = mediaPaths.map(createVisualItemFromPath);
           if (maxSelectable > 1 && onSelectMultiple && newItems.length > 1) {
@@ -108,18 +121,25 @@ export function ImageComparisonSelector({
       isCancelled = true;
       unlistens.forEach((u) => u());
     };
-  }, [maxSelectable, onSelect, onSelectMultiple]);
+  }, [maxSelectable, onSelect, onSelectMultiple, restrictMediaType]);
 
   const currentPathSet = useMemo(
     () => new Set(currentItems.map((it) => it.path)),
     [currentItems],
   );
 
-  // Filter available items by media kind (all / image / video)
+  // Filter available items by media kind (all / image / video / audio)
   const itemsByKind = useMemo(() => {
-    if (mediaKindFilter === "all") return availableItems;
-    return availableItems.filter((it) => it.kind === mediaKindFilter);
-  }, [availableItems, mediaKindFilter]);
+    const targetKind = restrictMediaType || (mediaKindFilter !== "all" ? mediaKindFilter : null);
+    if (!targetKind) return availableItems;
+
+    return availableItems.filter((it) => {
+      if (targetKind === "image") return it.kind === "image" || isImagePath(it.path);
+      if (targetKind === "video") return it.kind === "video" || isVideoPath(it.path);
+      if (targetKind === "audio") return it.kind === ("audio" as any) || isAudioPath(it.path);
+      return true;
+    });
+  }, [availableItems, mediaKindFilter, restrictMediaType]);
 
   // Group items by folders
   const { folderEntries, folderItemMap } = useMemo(() => {
@@ -211,22 +231,36 @@ export function ImageComparisonSelector({
 
   const handleBrowseCustomFile = async () => {
     try {
+      let filters = [
+        {
+          name: "Multimedia (Fotos, Vídeos y Música)",
+          extensions: SUPPORTED_ALL_MEDIA_EXTENSIONS,
+        },
+        {
+          name: "Imágenes",
+          extensions: SUPPORTED_IMAGE_EXTENSIONS,
+        },
+        {
+          name: "Vídeos",
+          extensions: SUPPORTED_VIDEO_EXTENSIONS,
+        },
+        {
+          name: "Música / Audios",
+          extensions: SUPPORTED_AUDIO_EXTENSIONS,
+        },
+      ];
+
+      if (restrictMediaType === "image") {
+        filters = [{ name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS }];
+      } else if (restrictMediaType === "video") {
+        filters = [{ name: "Vídeos", extensions: SUPPORTED_VIDEO_EXTENSIONS }];
+      } else if (restrictMediaType === "audio") {
+        filters = [{ name: "Música / Audios", extensions: SUPPORTED_AUDIO_EXTENSIONS }];
+      }
+
       const selected = await open({
         multiple: maxSelectable > 1,
-        filters: [
-          {
-            name: "Multimedia (Fotos y Vídeos)",
-            extensions: SUPPORTED_ALL_MEDIA_EXTENSIONS,
-          },
-          {
-            name: "Imágenes",
-            extensions: SUPPORTED_IMAGE_EXTENSIONS,
-          },
-          {
-            name: "Vídeos",
-            extensions: SUPPORTED_VIDEO_EXTENSIONS,
-          },
-        ],
+        filters,
       });
 
       if (!selected) return;
@@ -239,7 +273,14 @@ export function ImageComparisonSelector({
 
       if (filePaths.length === 0) return;
 
-      const newItems: VisualLibraryItem[] = filePaths.map(createVisualItemFromPath);
+      let filteredPaths = filePaths.filter(isSupportedMediaPath);
+      if (restrictMediaType) {
+        filteredPaths = filteredPaths.filter((p) => getMediaType(p) === restrictMediaType);
+      }
+
+      if (filteredPaths.length === 0) return;
+
+      const newItems: VisualLibraryItem[] = filteredPaths.map(createVisualItemFromPath);
 
       if (maxSelectable > 1 && onSelectMultiple && newItems.length > 1) {
         onSelectMultiple(newItems);
@@ -296,9 +337,12 @@ export function ImageComparisonSelector({
     setIsDragOver(false);
     if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files);
-      const paths = files
+      let paths = files
         .map((f) => (f as unknown as { path?: string }).path)
         .filter((p): p is string => Boolean(p && isSupportedMediaPath(p)));
+      if (restrictMediaType) {
+        paths = paths.filter((p) => getMediaType(p) === restrictMediaType);
+      }
       if (paths.length > 0) {
         const newItems = paths.map(createVisualItemFromPath);
         if (maxSelectable > 1 && onSelectMultiple && newItems.length > 1) {
@@ -326,7 +370,15 @@ export function ImageComparisonSelector({
           <div className="img-compare-selector-drag-overlay">
             <div className="img-compare-drag-glow-box">
               <Icon name="download" />
-              <h3>¡Suelta la imagen o vídeo aquí!</h3>
+              <h3>
+                {restrictMediaType === "image"
+                  ? "¡Suelta la imagen aquí!"
+                  : restrictMediaType === "video"
+                    ? "¡Suelta el vídeo aquí!"
+                    : restrictMediaType === "audio"
+                      ? "¡Suelta el audio aquí!"
+                      : "¡Suelta la imagen, vídeo o audio aquí!"}
+              </h3>
               <p>Se añadirá inmediatamente a la comparativa</p>
             </div>
           </div>
@@ -374,36 +426,79 @@ export function ImageComparisonSelector({
           </div>
 
           <div className="img-compare-kind-pills">
-            <button
-              type="button"
-              className={`img-compare-kind-pill ${mediaKindFilter === "all" ? "is-active" : ""}`}
-              onClick={() => setMediaKindFilter("all")}
-            >
-              <span>Todo</span>
-            </button>
-            <button
-              type="button"
-              className={`img-compare-kind-pill ${mediaKindFilter === "image" ? "is-active" : ""}`}
-              onClick={() => setMediaKindFilter("image")}
-            >
-              <Icon name="image" />
-              <span>Fotos</span>
-            </button>
-            <button
-              type="button"
-              className={`img-compare-kind-pill ${mediaKindFilter === "video" ? "is-active" : ""}`}
-              onClick={() => setMediaKindFilter("video")}
-            >
-              <Icon name="video" />
-              <span>Vídeos</span>
-            </button>
+            {restrictMediaType ? (
+              <button
+                type="button"
+                className="img-compare-kind-pill is-active"
+                title="Modo restringido para evitar colisión de formatos"
+              >
+                <Icon
+                  name={
+                    restrictMediaType === "image"
+                      ? "image"
+                      : restrictMediaType === "video"
+                        ? "video"
+                        : "music"
+                  }
+                />
+                <span>
+                  {restrictMediaType === "image"
+                    ? "Solo Fotos"
+                    : restrictMediaType === "video"
+                      ? "Solo Vídeos"
+                      : "Solo Audios"}
+                </span>
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className={`img-compare-kind-pill ${mediaKindFilter === "all" ? "is-active" : ""}`}
+                  onClick={() => setMediaKindFilter("all")}
+                >
+                  <span>Todo</span>
+                </button>
+                <button
+                  type="button"
+                  className={`img-compare-kind-pill ${mediaKindFilter === "image" ? "is-active" : ""}`}
+                  onClick={() => setMediaKindFilter("image")}
+                >
+                  <Icon name="image" />
+                  <span>Fotos</span>
+                </button>
+                <button
+                  type="button"
+                  className={`img-compare-kind-pill ${mediaKindFilter === "video" ? "is-active" : ""}`}
+                  onClick={() => setMediaKindFilter("video")}
+                >
+                  <Icon name="video" />
+                  <span>Vídeos</span>
+                </button>
+                <button
+                  type="button"
+                  className={`img-compare-kind-pill ${mediaKindFilter === "audio" ? "is-active" : ""}`}
+                  onClick={() => setMediaKindFilter("audio")}
+                >
+                  <Icon name="music" />
+                  <span>Audios</span>
+                </button>
+              </>
+            )}
           </div>
 
           <button
             type="button"
             className="img-compare-browse-btn"
             onClick={handleBrowseCustomFile}
-            title="Seleccionar otra imagen o vídeo desde cualquier carpeta del equipo"
+            title={
+              restrictMediaType === "image"
+                ? "Seleccionar otra imagen desde cualquier carpeta del equipo"
+                : restrictMediaType === "video"
+                  ? "Seleccionar otro vídeo desde cualquier carpeta del equipo"
+                  : restrictMediaType === "audio"
+                    ? "Seleccionar otro audio desde cualquier carpeta del equipo"
+                    : "Seleccionar cualquier archivo multimedia desde el equipo"
+            }
           >
             <Icon name="folder-open" />
             <span>Examinar archivo...</span>

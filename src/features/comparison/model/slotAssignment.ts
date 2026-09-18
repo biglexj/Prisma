@@ -1,5 +1,5 @@
 import type { ComparisonImageSlot, ComparisonMode } from "./types";
-import { createVisualItemFromPath, isSupportedMediaPath } from "./types";
+import { createVisualItemFromPath, isSupportedMediaPath, getMediaType } from "./types";
 
 export interface SlotAssignmentResult {
   slots: ComparisonImageSlot[];
@@ -10,6 +10,7 @@ export interface SlotAssignmentResult {
 
 /**
  * Calcula la asignación inteligente de slots al arrastrar archivos sueltos o lotes de fotos/vídeos/música.
+ * Aplica restricción por tipo (imagen, vídeo, audio) para evitar colisiones y conflictos de reproducción.
  */
 export function assignDroppedPathsToSlots(
   prev: ComparisonImageSlot[],
@@ -17,7 +18,21 @@ export function assignDroppedPathsToSlots(
   targetZone?: "slot-a" | "slot-b" | null,
   lastHoveredZone?: "slot-a" | "slot-b" | null,
 ): SlotAssignmentResult {
-  const validPaths = filePaths.filter(isSupportedMediaPath);
+  let validPaths = filePaths.filter(isSupportedMediaPath);
+  if (validPaths.length === 0) {
+    return { slots: prev };
+  }
+
+  // Restricción estricta: si ya hay elementos cargados, solo admitir archivos del mismo tipo.
+  // Si está vacío, el primer elemento del lote define el tipo exclusivo.
+  const baseType = prev.length > 0
+    ? getMediaType(prev[0].item.path)
+    : getMediaType(validPaths[0]);
+
+  if (baseType) {
+    validPaths = validPaths.filter((p) => getMediaType(p) === baseType);
+  }
+
   if (validPaths.length === 0) {
     return { slots: prev };
   }

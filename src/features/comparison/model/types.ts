@@ -56,6 +56,8 @@ export const SUPPORTED_ALL_MEDIA_EXTENSIONS = [
   ...SUPPORTED_AUDIO_EXTENSIONS,
 ];
 
+export type ComparisonMediaType = "image" | "video" | "audio";
+
 export function isImagePath(filePath: string): boolean {
   const ext = filePath.split(".").pop()?.toLowerCase() || "";
   return SUPPORTED_IMAGE_EXTENSIONS.includes(ext);
@@ -74,6 +76,13 @@ export function isAudioPath(filePath: string): boolean {
 export function isSupportedMediaPath(filePath: string): boolean {
   const ext = filePath.split(".").pop()?.toLowerCase() || "";
   return SUPPORTED_ALL_MEDIA_EXTENSIONS.includes(ext);
+}
+
+export function getMediaType(filePath: string): ComparisonMediaType | null {
+  if (isAudioPath(filePath)) return "audio";
+  if (isVideoPath(filePath)) return "video";
+  if (isImagePath(filePath)) return "image";
+  return null;
 }
 
 export function createVisualItemFromPath(filePath: string): VisualLibraryItem {

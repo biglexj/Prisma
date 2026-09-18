@@ -9,11 +9,13 @@ import {
   isVideoPath,
   isAudioPath,
   isSupportedMediaPath,
+  getMediaType,
   createVisualItemFromPath,
   SUPPORTED_IMAGE_EXTENSIONS,
   SUPPORTED_VIDEO_EXTENSIONS,
   SUPPORTED_AUDIO_EXTENSIONS,
   SUPPORTED_ALL_MEDIA_EXTENSIONS,
+  type ComparisonMediaType,
 } from "../model/types";
 import { ImageComparisonSelector } from "./ImageComparisonSelector";
 import { ImageComparisonEmptySlot } from "./ImageComparisonEmptySlot";
@@ -444,7 +446,17 @@ export function ImageComparisonModal({
     }
   };
 
+  const currentMediaType: "any" | ComparisonMediaType =
+    slots.length > 0 ? (getMediaType(slots[0].item.path) || "any") : "any";
+
   const handleAssignImagePath = (filePath: string, targetSlotId?: string) => {
+    if (!isSupportedMediaPath(filePath)) return;
+    if (slots.length > 0) {
+      const baseType = getMediaType(slots[0].item.path);
+      if (baseType && getMediaType(filePath) !== baseType) {
+        return;
+      }
+    }
     const item = createVisualItemFromPath(filePath);
     if (targetSlotId) {
       setSlots((prev) => {
@@ -490,14 +502,23 @@ export function ImageComparisonModal({
 
   const handlePickExplorerForSlotA = async () => {
     try {
+      let filters = [
+        { name: "Multimedia (Fotos, Vídeos y Música)", extensions: SUPPORTED_ALL_MEDIA_EXTENSIONS },
+        { name: "Música / Audios", extensions: SUPPORTED_AUDIO_EXTENSIONS },
+        { name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS },
+        { name: "Vídeos", extensions: SUPPORTED_VIDEO_EXTENSIONS },
+      ];
+      if (currentMediaType === "image") {
+        filters = [{ name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS }];
+      } else if (currentMediaType === "video") {
+        filters = [{ name: "Vídeos", extensions: SUPPORTED_VIDEO_EXTENSIONS }];
+      } else if (currentMediaType === "audio") {
+        filters = [{ name: "Música / Audios", extensions: SUPPORTED_AUDIO_EXTENSIONS }];
+      }
+
       const selected = await open({
         multiple: true,
-        filters: [
-          { name: "Multimedia (Fotos, Vídeos y Música)", extensions: SUPPORTED_ALL_MEDIA_EXTENSIONS },
-          { name: "Música / Audios", extensions: SUPPORTED_AUDIO_EXTENSIONS },
-          { name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS },
-          { name: "Vídeos", extensions: SUPPORTED_VIDEO_EXTENSIONS },
-        ],
+        filters,
       });
       if (selected) {
         const paths = Array.isArray(selected) ? selected : [selected];
@@ -508,14 +529,23 @@ export function ImageComparisonModal({
 
   const handlePickExplorerForSlotB = async () => {
     try {
+      let filters = [
+        { name: "Multimedia (Fotos, Vídeos y Música)", extensions: SUPPORTED_ALL_MEDIA_EXTENSIONS },
+        { name: "Música / Audios", extensions: SUPPORTED_AUDIO_EXTENSIONS },
+        { name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS },
+        { name: "Vídeos", extensions: SUPPORTED_VIDEO_EXTENSIONS },
+      ];
+      if (currentMediaType === "image") {
+        filters = [{ name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS }];
+      } else if (currentMediaType === "video") {
+        filters = [{ name: "Vídeos", extensions: SUPPORTED_VIDEO_EXTENSIONS }];
+      } else if (currentMediaType === "audio") {
+        filters = [{ name: "Música / Audios", extensions: SUPPORTED_AUDIO_EXTENSIONS }];
+      }
+
       const selected = await open({
         multiple: true,
-        filters: [
-          { name: "Multimedia (Fotos, Vídeos y Música)", extensions: SUPPORTED_ALL_MEDIA_EXTENSIONS },
-          { name: "Música / Audios", extensions: SUPPORTED_AUDIO_EXTENSIONS },
-          { name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS },
-          { name: "Vídeos", extensions: SUPPORTED_VIDEO_EXTENSIONS },
-        ],
+        filters,
       });
       if (selected) {
         const paths = Array.isArray(selected) ? selected : [selected];
@@ -802,6 +832,8 @@ export function ImageComparisonModal({
               <ImageComparisonEmptySlot
                 dropZone="slot-a"
                 tagLabel="Elemento A (Base)"
+                mediaType={currentMediaType}
+                subtitle="o elige una fuente para comenzar la comparación"
                 onPickLibrary={() => setIsAddingNewSlot(true)}
                 onPickExplorer={handlePickExplorerForSlotA}
                 onDropFile={(path) => handleAssignMultipleImagePaths([path], "slot-a")}
@@ -876,6 +908,7 @@ export function ImageComparisonModal({
               <ImageComparisonEmptySlot
                 dropZone="slot-b"
                 tagLabel="Elemento B (A Comparar)"
+                mediaType={currentMediaType}
                 onPickLibrary={() => setIsAddingNewSlot(true)}
                 onPickExplorer={handlePickExplorerForSlotB}
                 onDropFile={(path) => handleAssignMultipleImagePaths([path], "slot-b")}
@@ -1082,10 +1115,21 @@ export function ImageComparisonModal({
         <ImageComparisonSelector
           currentItems={slots.map((s) => s.item)}
           availableItems={itemsList.length > 0 ? itemsList : (initialItem ? [initialItem] : [])}
+          restrictMediaType={currentMediaType !== "any" ? currentMediaType : undefined}
           onSelect={handleSelectSlotImage}
           onClose={() => { setSelectorTargetSlotId(null); setIsAddingNewSlot(false); }}
-          title={isAddingNewSlot ? "Seleccionar de la biblioteca" : `Cambiar foto #${slots.findIndex((s) => s.id === selectorTargetSlotId) + 1}`}
-          subtitle={isAddingNewSlot && slots.length >= 2 ? "Al añadir se cambiará a vista de cuadrícula para ver todas las fotos a la vez" : undefined}
+          title={
+            isAddingNewSlot
+              ? currentMediaType === "image"
+                ? "Seleccionar foto de la biblioteca"
+                : currentMediaType === "video"
+                  ? "Seleccionar vídeo de la biblioteca"
+                  : currentMediaType === "audio"
+                    ? "Seleccionar audio de la biblioteca"
+                    : "Seleccionar de la biblioteca"
+              : `Cambiar archivo #${slots.findIndex((s) => s.id === selectorTargetSlotId) + 1}`
+          }
+          subtitle={isAddingNewSlot && slots.length >= 2 ? "Al añadir se cambiará a vista de cuadrícula para ver todos a la vez" : undefined}
         />
       )}
     </div>

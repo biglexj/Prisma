@@ -40,7 +40,7 @@ import { PrismaUpscalerView } from "../features/prisma_upscaler/ui/PrismaUpscale
 import { WallpapersView } from "../features/wallpapers/ui/WallpapersView";
 import { BatchRenamerView } from "../features/renamer/ui/BatchRenamerView";
 import { DuplicatesScannerModal } from "../features/visual_library/ui/duplicates/DuplicatesScannerModal";
-import { ImageComparisonModal } from "../features/comparison";
+import { ImageComparisonModal, createVisualItemFromPath } from "../features/comparison";
 import { DspEqualizerView } from "../features/dsp/ui/DspEqualizerView";
 import { DspEqualizerModal } from "../features/dsp/ui/DspEqualizerModal";
 import { DspProvider } from "../features/dsp/DspContext";
@@ -1154,7 +1154,7 @@ function AppContent() {
           {activeView === "comparator" ? (
             <ImageComparisonModal
               embedded={true}
-              itemsList={[...imageLibrary.items, ...videoLibrary.items]}
+              itemsList={[...imageLibrary.items, ...videoLibrary.items, ...library.items.map((it) => createVisualItemFromPath(it.path))]}
               onClose={() => setActiveView("home")}
             />
           ) : null}
