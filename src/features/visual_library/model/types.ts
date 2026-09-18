@@ -13,7 +13,7 @@ export interface VisualLibraryItem {
   title: string;
   sourcePath: string;
   relativeFolder: string;
-  kind: VisualMediaKind;
+  kind: VisualMediaKind | "audio";
   modifiedAtMillis: number;
   sizeBytes: number;
   isExcluded?: boolean;

@@ -684,6 +684,12 @@
   transition: all 0.15s ease;
 }
 
+.dark .duplicate-btn-action {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary, #f1f5f9);
+}
+
 .duplicate-btn-action:hover {
   background: var(--accent, #6366f1);
   color: #fff;

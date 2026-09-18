@@ -340,22 +340,24 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                     </button>
                   )}
 
-                  {(activeKind === "image" || activeKind === "video") && (
-                    <button
-                      type="button"
-                      className="duplicate-btn-action"
-                      onClick={() =>
-                        handleOpenComparison(
-                          toVisualLibraryItem(group.original),
-                          toVisualLibraryItem(dup)
-                        )
-                      }
-                      title="Comparar frente a frente en visor interactivo"
-                    >
-                      <Icon name="split" />
-                      <span>Comparar</span>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="duplicate-btn-action"
+                    onClick={() =>
+                      handleOpenComparison(
+                        toVisualLibraryItem(group.original),
+                        toVisualLibraryItem(dup)
+                      )
+                    }
+                    title={
+                      activeKind === "music"
+                        ? "Comparar audios frente a frente en reproductor interactivo"
+                        : "Comparar frente a frente en visor interactivo"
+                    }
+                  >
+                    <Icon name="split" />
+                    <span>Comparar</span>
+                  </button>
                 </div>
               </div>
             </div>

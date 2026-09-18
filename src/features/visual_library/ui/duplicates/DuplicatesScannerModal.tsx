@@ -644,7 +644,7 @@ export function DuplicatesScannerModal({
     title: cand.title,
     sourcePath: cand.path,
     relativeFolder: cand.relativeFolder,
-    kind: activeKind === "video" ? "video" : "image",
+    kind: activeKind === "music" ? "audio" : activeKind === "video" ? "video" : "image",
     modifiedAtMillis: cand.modifiedAtMillis,
     sizeBytes: cand.sizeBytes,
   });
