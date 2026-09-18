@@ -35,6 +35,16 @@ export function QuickLookWindow() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isComparing, setIsComparing] = useState(false);
 
+  const handleStartComparing = useCallback(() => {
+    setIsComparing(true);
+    void invoke("quick_look_set_comparing", { comparing: true }).catch(() => {});
+  }, []);
+
+  const handleStopComparing = useCallback(() => {
+    setIsComparing(false);
+    void invoke("quick_look_set_comparing", { comparing: false }).catch(() => {});
+  }, []);
+
   const requestVersionRef = useRef(0);
   const isDetachedRef = useRef(isDetached);
   isDetachedRef.current = isDetached;
@@ -90,6 +100,7 @@ export function QuickLookWindow() {
           requestVersionRef.current++;
           setPayload(event.payload);
           setImageDimensions(null);
+          handleStopComparing();
         }
       });
 
@@ -99,6 +110,7 @@ export function QuickLookWindow() {
         setPayload(null);
         setImageDimensions(null);
         setPaletteStyle(undefined);
+        handleStopComparing();
       });
 
       cleanupFns.push(() => {
@@ -114,6 +126,7 @@ export function QuickLookWindow() {
           requestVersionRef.current++;
           setPayload(event.payload);
           setImageDimensions(null);
+          handleStopComparing();
         }
       }
     );
@@ -255,6 +268,7 @@ export function QuickLookWindow() {
   };
 
   const handleClose = () => {
+    handleStopComparing();
     playbackTimeRef.current = 0;
     if (isDetached) {
       void getCurrentWebviewWindow().close().catch(() => {});
@@ -284,7 +298,7 @@ export function QuickLookWindow() {
               imageDimensions={imageDimensions}
               isMaximized={isMaximized}
               onClose={handleClose}
-              onCompare={() => setIsComparing(true)}
+              onCompare={handleStartComparing}
               onEdit={["markdown", "text", "html", "lyrics", "generic", "project"].includes(payload.mediaType) ? handleEdit : undefined}
               onOpenDetached={
                 !isDetached && (payload.mediaType === "image" || payload.mediaType === "video")
@@ -308,7 +322,7 @@ export function QuickLookWindow() {
                   modifiedAtMillis: Date.now(),
                   sizeBytes: 0,
                 }}
-                onClose={() => setIsComparing(false)}
+                onClose={handleStopComparing}
               />
             )}
 

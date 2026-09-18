@@ -336,6 +336,16 @@ export function QuickLookHeader({
           </button>
         )}
 
+        {/* Botón rápido de copiar ruta */}
+        <button
+          type="button"
+          className="quicklook-btn-icon-action"
+          onClick={handleCopyPath}
+          title={copiedPath ? "¡Ruta copiada!" : "Copiar ruta del archivo"}
+        >
+          <Icon name={copiedPath ? "check" : "copy"} />
+        </button>
+
         {onCompare && payload.mediaType === "image" && (
           <button
             type="button"
@@ -349,16 +359,6 @@ export function QuickLookHeader({
             <Icon name="compare" />
           </button>
         )}
-
-        {/* Botón rápido de copiar ruta */}
-        <button
-          type="button"
-          className="quicklook-btn-icon-action"
-          onClick={handleCopyPath}
-          title={copiedPath ? "¡Ruta copiada!" : "Copiar ruta del archivo"}
-        >
-          <Icon name={copiedPath ? "check" : "copy"} />
-        </button>
 
         {onOpenDetached && (
           <button

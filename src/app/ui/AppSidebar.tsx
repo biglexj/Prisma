@@ -4,7 +4,8 @@ import { useSystemSettings, type SidebarDensity } from "../useSystemSettings";
 import { APP_VERSION, APP_AUTHOR } from "../../shared/version";
 import "./app-sidebar.css";
 
-const APP_ICON_SRC = "/icon/Icon.png";
+const APP_ICON_SRC = "/icon/icon.png";
+const APP_ICON_FALLBACK = "/icon.png";
 
 export type AppView =
   | "home"
@@ -102,7 +103,16 @@ export function AppSidebar({
     <aside className={`music-sidebar density-${density}`} data-density={density}>
       <div className="brand-lockup">
         <div className="brand-mark">
-          <img src={APP_ICON_SRC} alt="Prisma" />
+          <img
+            src={APP_ICON_SRC}
+            alt="Prisma"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (!target.src.endsWith(APP_ICON_FALLBACK)) {
+                target.src = APP_ICON_FALLBACK;
+              }
+            }}
+          />
         </div>
         <div className="sidebar-copy">
           <strong>Prisma</strong>

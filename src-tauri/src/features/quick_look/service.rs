@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
@@ -33,6 +33,7 @@ pub struct QuickLookState {
     detached_payloads: Arc<Mutex<HashMap<String, QuickLookPayload>>>,
     detached_counter: Arc<AtomicU32>,
     current_selection: Arc<Mutex<Option<SelectionInfo>>>,
+    is_comparing: Arc<AtomicBool>,
 }
 
 impl QuickLookState {
@@ -45,7 +46,18 @@ impl QuickLookState {
             detached_payloads: Arc::new(Mutex::new(HashMap::new())),
             detached_counter: Arc::new(AtomicU32::new(0)),
             current_selection: Arc::new(Mutex::new(None)),
+            is_comparing: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    pub fn set_comparing(&self, comparing: bool) {
+        self.is_comparing.store(comparing, Ordering::SeqCst);
+        ql_log!("Modo comparador: {}", comparing);
+    }
+
+    #[allow(dead_code)]
+    pub fn is_comparing(&self) -> bool {
+        self.is_comparing.load(Ordering::SeqCst)
     }
 
     pub fn init(&self) {
@@ -72,6 +84,11 @@ impl QuickLookState {
     }
 
     pub fn toggle(&self) {
+        if self.is_comparing.load(Ordering::SeqCst) {
+            ql_log!("Toggle ignorado: el comparador está activo");
+            return;
+        }
+
         if is_preview_open() {
             ql_log!("Toggle: la vista previa ya estaba abierta, cerrando...");
             self.hide();
@@ -188,6 +205,13 @@ impl QuickLookState {
                 std::thread::sleep(std::time::Duration::from_millis(80));
 
                 if !state.can_hide_on_unfocus() {
+                    continue;
+                }
+
+                // En modo comparador, NO cerrar ni reaccionar a clics fuera o en Explorer
+                if state.is_comparing.load(Ordering::SeqCst) {
+                    empty_count = 0;
+                    outside_count = 0;
                     continue;
                 }
 
@@ -338,6 +362,9 @@ impl QuickLookState {
     }
 
     pub fn handle_navigation(&self) {
+        if self.is_comparing.load(Ordering::SeqCst) {
+            return;
+        }
         self.refresh_selection_from_foreground(self.preview_revision.load(Ordering::SeqCst));
     }
 
@@ -374,6 +401,7 @@ impl QuickLookState {
     }
 
     pub fn hide(&self) {
+        self.is_comparing.store(false, Ordering::SeqCst);
         self.preview_revision.fetch_add(1, Ordering::SeqCst);
         set_preview_open(false);
         *self.current_selection.lock().unwrap() = None;
@@ -466,10 +494,13 @@ impl QuickLookState {
             }
         };
 
+        let url = WebviewUrl::App(
+            format!("index.html?quicklook=true&detached=true&label={}#quicklook", label).into(),
+        );
         let mut builder = WebviewWindowBuilder::new(
             &self.app_handle,
             &label,
-            WebviewUrl::App("index.html#quicklook".into()),
+            url,
         )
         .title(format!("Prisma · {}", payload.file_name))
         .inner_size(target_w, target_h)
@@ -497,7 +528,15 @@ impl QuickLookState {
             .unwrap()
             .insert(label.clone(), payload.clone());
 
-        let _ = window.emit("quicklook://preview", &payload);
+        let win_clone = window.clone();
+        let payload_clone = payload.clone();
+        std::thread::spawn(move || {
+            for delay in [80, 250, 500] {
+                std::thread::sleep(std::time::Duration::from_millis(delay));
+                let _ = win_clone.emit("quicklook://preview", &payload_clone);
+            }
+        });
+
         let _ = window.show();
         let _ = window.unminimize();
 

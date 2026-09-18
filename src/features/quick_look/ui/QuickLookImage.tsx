@@ -18,6 +18,7 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
   const [retryKey, setRetryKey] = useState(0);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const initialPanRef = useRef({ x: 0, y: 0 });
+  const imgRef = useRef<HTMLImageElement | null>(null);
 
   const baseSrc = toSafeAssetUrl(payload.path);
   const imgSrc = retryKey > 0 ? `${baseSrc}?r=${retryKey}` : baseSrc;
@@ -28,7 +29,12 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
     setZoom(1);
     setPan({ x: 0, y: 0 });
     setRetryKey(0);
-  }, [payload.path]);
+
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setIsLoading(false);
+      onDimensionsLoad?.({ width: imgRef.current.naturalWidth, height: imgRef.current.naturalHeight });
+    }
+  }, [payload.path, onDimensionsLoad]);
 
   const handleImageLoad = async (e: React.SyntheticEvent<HTMLImageElement>) => {
     setIsLoading(false);
@@ -201,7 +207,13 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
       }}
     >
       <div className="quicklook-image-wrapper">
+        {isLoading && (
+          <div className="quicklook-image-loading-indicator">
+            <Icon name="refresh" />
+          </div>
+        )}
         <img
+          ref={imgRef}
           alt={payload.fileName}
           className="quicklook-image-preview"
           decoding="auto"

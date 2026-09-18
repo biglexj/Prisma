@@ -7,6 +7,7 @@ import "./app/styles.css";
 
 const isQuickLook =
   window.location.hash === "#quicklook" ||
+  window.location.search.includes("quicklook=true") ||
   getCurrentWebviewWindow().label.startsWith("quicklook");
 
 if (isQuickLook) {

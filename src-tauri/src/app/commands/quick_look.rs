@@ -8,6 +8,7 @@ use crate::infrastructure::autostart::{is_autostart_enabled, set_autostart};
 
 static MINIMIZE_TO_TRAY: AtomicBool = AtomicBool::new(true);
 static PREV_BOUNDS: Mutex<Option<HashMap<String, (f64, f64, f64, f64)>>> = Mutex::new(None);
+static PREV_COMPARISON_BOUNDS: Mutex<Option<(f64, f64, f64, f64)>> = Mutex::new(None);
 static WINDOWS_MAXIMIZED: Mutex<Option<HashMap<String, bool>>> = Mutex::new(None);
 
 pub fn reset_maximize_state() {
@@ -20,6 +21,9 @@ pub fn reset_maximize_state() {
         if let Some(m) = lock.as_mut() {
             m.remove("quicklook");
         }
+    }
+    if let Ok(mut lock) = PREV_COMPARISON_BOUNDS.lock() {
+        *lock = None;
     }
 }
 
@@ -233,6 +237,57 @@ pub fn quick_look_set_size(window: tauri::WebviewWindow, width: f64, height: f64
         let _ = window.set_size(tauri::LogicalSize::new(width, height));
         if window.label() == "quicklook" {
             let _ = window.center();
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn quick_look_set_comparing(
+    window: tauri::WebviewWindow,
+    state: State<'_, QuickLookState>,
+    comparing: bool,
+) -> Result<(), String> {
+    state.set_comparing(comparing);
+
+    if window.label() == "quicklook" {
+        if comparing {
+            let scale = window.scale_factor().unwrap_or(1.0);
+            if let (Ok(pos), Ok(size)) = (window.outer_position(), window.inner_size()) {
+                let log_pos = pos.to_logical::<f64>(scale);
+                let log_size = size.to_logical::<f64>(scale);
+                let mut guard = PREV_COMPARISON_BOUNDS.lock().unwrap();
+                *guard = Some((log_pos.x, log_pos.y, log_size.width, log_size.height));
+            }
+
+            let (screen_w, screen_h) = window
+                .current_monitor()
+                .ok()
+                .flatten()
+                .map(|m| {
+                    let s = m.scale_factor();
+                    (
+                        (m.size().width as f64 / s).round(),
+                        (m.size().height as f64 / s).round(),
+                    )
+                })
+                .unwrap_or((1920.0, 1080.0));
+
+            // Dimensiones ergonómicas para comparador: min 58% ancho pantalla o 960px, min 65% alto o 620px
+            let comp_w = (screen_w * 0.58).round().max(960.0).min(screen_w * 0.90);
+            let comp_h = (screen_h * 0.65).round().max(620.0).min(screen_h * 0.88);
+
+            let _ = window.set_size(tauri::LogicalSize::new(comp_w, comp_h));
+            let _ = window.center();
+        } else {
+            let prev = {
+                let mut guard = PREV_COMPARISON_BOUNDS.lock().unwrap();
+                guard.take()
+            };
+            if let Some((x, y, w, h)) = prev {
+                let _ = window.set_size(tauri::LogicalSize::new(w, h));
+                let _ = window.set_position(tauri::LogicalPosition::new(x, y));
+            }
         }
     }
     Ok(())

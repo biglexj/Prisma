@@ -938,6 +938,29 @@ input[type="range"].quicklook-seek-bar::-webkit-slider-thumb {
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.quicklook-image-loading-indicator {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--primary, #d0bcff);
+  z-index: 2;
+}
+
+.quicklook-image-loading-indicator svg {
+  width: 32px;
+  height: 32px;
+  animation: ql-loading-spin 0.9s linear infinite;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes ql-loading-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* =========================================================================
    3. VISTA DE VÍDEO (LIGERA)
    ========================================================================= */

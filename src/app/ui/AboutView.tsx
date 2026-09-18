@@ -5,7 +5,8 @@ import { useScrollRestoration } from "../../shared/useScrollRestoration";
 import { APP_VERSION, APP_AUTHOR, APP_BUILD_NAME } from "../../shared/version";
 import "./about-view.css";
 
-const APP_ICON_SRC = "/icon/Icon.png";
+const APP_ICON_SRC = "/icon/icon.png";
+const APP_ICON_FALLBACK = "/icon.png";
 const DONATION_DIRECT_URL = "https://www.biglexj.com/donaciones";
 const BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/biglexj";
 const GITHUB_URL = "https://github.com/biglexj";
@@ -45,7 +46,17 @@ export function AboutView() {
         <div className="about-hero-content">
           <div className="about-hero-brand">
             <div className="about-app-icon-wrap">
-              <img src={APP_ICON_SRC} alt="Prisma Logo" className="about-app-icon" />
+              <img
+                src={APP_ICON_SRC}
+                alt="Prisma Logo"
+                className="about-app-icon"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.src.endsWith(APP_ICON_FALLBACK)) {
+                    target.src = APP_ICON_FALLBACK;
+                  }
+                }}
+              />
             </div>
             <div className="about-hero-text">
               <div className="about-title-row">
