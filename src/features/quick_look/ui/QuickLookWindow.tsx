@@ -298,7 +298,19 @@ export function QuickLookWindow() {
   return (
     <div
       className="quicklook-root"
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(e) => {
+        const selection = window.getSelection()?.toString();
+        if (selection && selection.trim().length > 0) return;
+        const target = e.target as HTMLElement | null;
+        if (
+          target?.closest(
+            ".quicklook-markdown-body, .quicklook-code-content, .quicklook-text-viewport, .quicklook-lyrics-content, .quicklook-html-container, input, textarea",
+          )
+        ) {
+          return;
+        }
+        e.preventDefault();
+      }}
     >
       <div
         className={`quicklook-card ${paletteStyle ? "has-palette" : ""} ${isMaximized ? "is-maximized" : ""}`}

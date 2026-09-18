@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Icon, type IconName } from "../../../shared/ui/Icon";
 import type { QuickLookPayload } from "../model/types";
 import "./quick-look-markdown.css";
@@ -83,6 +83,38 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
         <code>{code}</code>
       </pre>
     </div>
+  );
+}
+
+function InlineCode({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleClick = (e: React.MouseEvent) => {
+    const sel = window.getSelection()?.toString();
+    if (!sel || sel.trim().length === 0 || sel.trim() === code.trim()) {
+      e.stopPropagation();
+      void navigator.clipboard.writeText(code.trim());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    }
+  };
+
+  const isHex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(code.trim());
+
+  return (
+    <code
+      className={`md-inline-code ${copied ? "is-copied" : ""} ${isHex ? "is-hex-color" : ""}`}
+      onClick={handleClick}
+      title={
+        copied
+          ? "¡Copiado al portapapeles!"
+          : isHex
+          ? `Clic para copiar color ${code}`
+          : `Clic para copiar: "${code}"`
+      }
+    >
+      {copied ? "¡Copiado!" : code}
+    </code>
   );
 }
 
@@ -215,11 +247,9 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
             </a>
           );
         } else if (match[7]) {
-          // Código inline
+          // Código inline (copiable al clic y seleccionable)
           parts.push(
-            <code key={`code-${cursor}`} className="md-inline-code">
-              {match[8]}
-            </code>
+            <InlineCode key={`code-${cursor}`} code={match[8]} />
           );
         } else if (match[9]) {
           // Negrita
@@ -547,6 +577,57 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
     return elements;
   }, [content]);
 
+  const [selectionRange, setSelectionRange] = useState<{
+    text: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [selectionCopied, setSelectionCopied] = useState(false);
+
+  useEffect(() => {
+    const handleMouseUp = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed) {
+        setSelectionRange(null);
+        return;
+      }
+      const text = sel.toString().trim();
+      if (!text) {
+        setSelectionRange(null);
+        return;
+      }
+
+      try {
+        const range = sel.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        if (rect && rect.width > 0 && rect.height > 0) {
+          setSelectionRange({
+            text,
+            x: rect.left + rect.width / 2,
+            y: rect.top - 8,
+          });
+          setSelectionCopied(false);
+        }
+      } catch {
+        setSelectionRange(null);
+      }
+    };
+
+    const handleSelectionChange = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed) {
+        setSelectionRange(null);
+      }
+    };
+
+    document.addEventListener("selectionchange", handleSelectionChange);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
   return (
     <div className="quicklook-text-container quicklook-markdown-container">
       <div className="quicklook-text-toolbar">
@@ -598,6 +679,36 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
           <pre className="quicklook-code-content">
             <code>{content}</code>
           </pre>
+        </div>
+      )}
+
+      {/* Botón flotante al seleccionar texto */}
+      {selectionRange && (
+        <div
+          className="quicklook-selection-tooltip"
+          style={{
+            position: "fixed",
+            left: `${selectionRange.x}px`,
+            top: `${selectionRange.y}px`,
+            transform: "translate(-50%, -100%)",
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="quicklook-selection-copy-btn"
+            onClick={() => {
+              void navigator.clipboard.writeText(selectionRange.text);
+              setSelectionCopied(true);
+              setTimeout(() => {
+                setSelectionRange(null);
+                setSelectionCopied(false);
+              }, 1200);
+            }}
+          >
+            <Icon name={selectionCopied ? "check" : "copy"} />
+            <span>{selectionCopied ? "¡Copiado!" : "Copiar"}</span>
+          </button>
         </div>
       )}
     </div>

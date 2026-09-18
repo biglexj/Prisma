@@ -1280,6 +1280,18 @@ input[type="range"].quicklook-seek-bar::-webkit-slider-thumb {
   white-space: pre-wrap;
   word-break: break-all;
   min-width: 0;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.quicklook-code-content * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.quicklook-code-content ::selection {
+  background: color-mix(in srgb, var(--primary, #c90045) 30%, transparent);
+  color: inherit;
 }
 
 /* ── Markdown Viewer Expressive ── */
