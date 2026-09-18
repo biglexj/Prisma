@@ -107,10 +107,12 @@ export function QuickLookWindow() {
       const unlistenGlobalHidePromise = listen("quicklook://hide", () => {
         requestVersionRef.current++;
         if (disposed) return;
-        setPayload(null);
-        setImageDimensions(null);
-        setPaletteStyle(undefined);
         handleStopComparing();
+        window.setTimeout(() => {
+          setPayload(null);
+          setImageDimensions(null);
+          setPaletteStyle(undefined);
+        }, 120);
       });
 
       cleanupFns.push(() => {
@@ -257,11 +259,6 @@ export function QuickLookWindow() {
     }
   };
 
-  const handleOpenDetached = () => {
-    if (!payload) return;
-    void quickLookClient.openDetached(payload.path).catch(() => {});
-  };
-
   const handleEdit = () => {
     if (!payload) return;
     void quickLookClient.editFile(payload.path).catch(() => {});
@@ -270,17 +267,19 @@ export function QuickLookWindow() {
   const handleClose = () => {
     handleStopComparing();
     playbackTimeRef.current = 0;
+    // Ocultar la ventana nativa de forma inmediata para que no parpadee ningún fallback
+    void getCurrentWebviewWindow().hide().catch(() => {});
+    void quickLookClient.hide().catch(() => {});
     if (isDetached) {
       void getCurrentWebviewWindow().close().catch(() => {});
       void quickLookClient.closeWindow().catch(() => {});
       return;
     }
-    setPayload(null);
-    setPaletteStyle(undefined);
-    setIsMaximized(false);
-    void quickLookClient.hide().catch(() => {
-      void getCurrentWebviewWindow().hide().catch(() => {});
-    });
+    window.setTimeout(() => {
+      setPayload(null);
+      setPaletteStyle(undefined);
+      setIsMaximized(false);
+    }, 150);
   };
 
   return (
@@ -300,11 +299,6 @@ export function QuickLookWindow() {
               onClose={handleClose}
               onCompare={handleStartComparing}
               onEdit={["markdown", "text", "html", "lyrics", "generic", "project"].includes(payload.mediaType) ? handleEdit : undefined}
-              onOpenDetached={
-                !isDetached && (payload.mediaType === "image" || payload.mediaType === "video")
-                  ? handleOpenDetached
-                  : undefined
-              }
               onOpenInMain={handleOpenInMain}
               onStepSelection={(forward) => void quickLookClient.stepSelection(forward)}
               onToggleMaximize={handleToggleMaximize}

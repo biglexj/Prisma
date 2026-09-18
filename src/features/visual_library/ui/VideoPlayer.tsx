@@ -173,35 +173,12 @@ export function VideoPlayer({
   const effectivePlaybackPath = playbackSource?.playback_path || path;
   const videoSrc = effectivePlaybackPath ? toSafeAssetUrl(effectivePlaybackPath) : "";
 
-  // Resolución reactiva de fuente y códec de vídeo
+  // Reiniciar estado de proxy al cambiar de vídeo para reproducción directa inmediata
   useEffect(() => {
-    let active = true;
-    if (!path) {
-      setPlaybackSource(null);
-      setIsResolvingSource(false);
-      setResolveError(null);
-      return;
-    }
-
-    setIsResolvingSource(true);
+    setPlaybackSource(null);
+    setIsResolvingSource(false);
     setResolveError(null);
     setVideoError(false);
-
-    invoke<VideoPlaybackSource>("video_get_playback_source", { path })
-      .then((src) => {
-        if (!active) return;
-        setPlaybackSource(src);
-        setIsResolvingSource(false);
-      })
-      .catch((err) => {
-        if (!active) return;
-        console.warn("video_get_playback_source fallback:", err);
-        setIsResolvingSource(false);
-      });
-
-    return () => {
-      active = false;
-    };
   }, [path]);
 
   // Sincronizar cola local si cambian los props
@@ -1361,6 +1338,35 @@ export function VideoPlayer({
                   className="video-stage-surface"
                   onError={(e) => {
                     const err = e.currentTarget.error;
+                    // Si el reproductor web directo falla (ej. códec profesional CineForm / ProRes / RLE no reproducible directamente),
+                    // solicitar resolución de proxy de alta fidelidad como respaldo automático y transparente
+                    if (path && !playbackSource && !isResolvingSource) {
+                      setIsResolvingSource(true);
+                      setVideoError(false);
+                      setResolveError(null);
+                      invoke<VideoPlaybackSource>("video_get_playback_source", { path })
+                        .then((src) => {
+                          if (src.is_proxy && src.playback_path !== path) {
+                            setPlaybackSource(src);
+                            setIsResolvingSource(false);
+                            setVideoError(false);
+                          } else {
+                            setIsResolvingSource(false);
+                            const msg = src.codec_display
+                              ? `El códec ${src.codec_display} (${src.original_codec}) requiere un decodificador externo.`
+                              : "El formato o códec no es compatible con el reproductor.";
+                            setResolveError(msg);
+                            setVideoError(true);
+                          }
+                        })
+                        .catch(() => {
+                          setIsResolvingSource(false);
+                          setResolveError("No se pudo proyectar este vídeo.");
+                          setVideoError(true);
+                        });
+                      return;
+                    }
+
                     let msg = "No se pudo decodificar el vídeo.";
                     if (err?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
                       msg = playbackSource?.codec_display

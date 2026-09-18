@@ -44,32 +44,23 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
   const [volume, setVolume] = useState(0.85);
   const [prevVolume, setPrevVolume] = useState(0.85);
 
+  const triedProxyRef = useRef(false);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     let active = true;
+    triedProxyRef.current = false;
     setHasError(false);
     setErrorMessage(null);
     setIsReady(false);
 
-    invoke<VideoPlaybackSource>("video_get_playback_source", { path: payload.path })
-      .then((src) => {
-        if (!active || !video) return;
-        const fileSrc = toSafeAssetUrl(src.playback_path);
-        const cacheKey = payload.fileSizeBytes
-          ? `?v=${payload.fileSizeBytes}_${encodeURIComponent(payload.modifiedDate || "")}`
-          : `?t=${Date.now()}`;
-        video.src = `${fileSrc}${cacheKey}`;
-      })
-      .catch(() => {
-        if (!active || !video) return;
-        const fileSrc = toSafeAssetUrl(payload.path);
-        const cacheKey = payload.fileSizeBytes
-          ? `?v=${payload.fileSizeBytes}_${encodeURIComponent(payload.modifiedDate || "")}`
-          : `?t=${Date.now()}`;
-        video.src = `${fileSrc}${cacheKey}`;
-      });
+    const fileSrc = toSafeAssetUrl(payload.path);
+    const cacheKey = payload.fileSizeBytes
+      ? `?v=${payload.fileSizeBytes}_${encodeURIComponent(payload.modifiedDate || "")}`
+      : `?t=${Date.now()}`;
+    video.src = `${fileSrc}${cacheKey}`;
 
     video.volume = isMuted ? 0 : volume;
     video.muted = isMuted;
@@ -224,7 +215,27 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
 
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const video = e.currentTarget;
-    const err = video.error;
+    if (!triedProxyRef.current && payload.path) {
+      triedProxyRef.current = true;
+      invoke<VideoPlaybackSource>("video_get_playback_source", { path: payload.path })
+        .then((src) => {
+          if (src.is_proxy && src.playback_path !== payload.path && videoRef.current) {
+            videoRef.current.src = toSafeAssetUrl(src.playback_path);
+            videoRef.current.load();
+            void videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+            return;
+          }
+          applyVideoError(video.error);
+        })
+        .catch(() => {
+          applyVideoError(video.error);
+        });
+      return;
+    }
+    applyVideoError(video.error);
+  };
+
+  const applyVideoError = (err: MediaError | null) => {
     let message = "No se pudo reproducir este archivo de vídeo.";
     if (err) {
       if (err.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {

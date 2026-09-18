@@ -6,28 +6,26 @@ import "./quick-look-exif.css";
 
 interface QuickLookHeaderProps {
   payload: QuickLookPayload;
-  imageDimensions?: { width: number; height: number } | null;
-  isMaximized?: boolean;
-  onToggleMaximize?: () => void;
-  onOpenInMain: () => void;
-  onOpenDetached?: () => void;
-  onCompare?: () => void;
-  onEdit?: () => void;
-  onStepSelection?: (forward: boolean) => void;
+  imageDimensions: { width: number; height: number } | null;
+  isMaximized: boolean;
   onClose: () => void;
+  onOpenInMain: () => void;
+  onEdit?: () => void;
+  onCompare?: () => void;
+  onToggleMaximize?: () => void;
+  onStepSelection: (forward: boolean) => void;
 }
 
 export function QuickLookHeader({
   payload,
   imageDimensions,
-  isMaximized = false,
-  onToggleMaximize,
-  onOpenInMain,
-  onOpenDetached,
-  onCompare,
-  onEdit,
-  onStepSelection,
+  isMaximized,
   onClose,
+  onOpenInMain,
+  onEdit,
+  onCompare,
+  onToggleMaximize,
+  onStepSelection,
 }: QuickLookHeaderProps) {
   const [showExif, setShowExif] = useState(false);
   const [copiedPath, setCopiedPath] = useState(false);
@@ -336,7 +334,7 @@ export function QuickLookHeader({
           </button>
         )}
 
-        {/* Botón rápido de copiar ruta */}
+        {/* 2. Botón rápido de copiar ruta */}
         <button
           type="button"
           className="quicklook-btn-icon-action"
@@ -346,6 +344,7 @@ export function QuickLookHeader({
           <Icon name={copiedPath ? "check" : "copy"} />
         </button>
 
+        {/* 4. Comparar imagen */}
         {onCompare && payload.mediaType === "image" && (
           <button
             type="button"
@@ -360,20 +359,7 @@ export function QuickLookHeader({
           </button>
         )}
 
-        {onOpenDetached && (
-          <button
-            type="button"
-            className="quicklook-btn-icon-action"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenDetached();
-            }}
-            title="Fijar en ventana flotante independiente (sin barra de tareas)"
-          >
-            <Icon name="layers" />
-          </button>
-        )}
-
+        {/* 5. Expandir / Maximizar */}
         {onToggleMaximize && (
           <button
             type="button"
