@@ -39,6 +39,8 @@
   --interactive-outline: color-mix(in srgb, var(--on-surface) 18%, transparent);
   --elevation-hover: 0 10px 26px rgb(0 0 0 / 22%);
   --header-height: 56px;
+  --text-primary: var(--on-surface);
+  --text-secondary: var(--on-surface-variant);
 }
 
 /* ── Dark mode tokens ─────────────────────────────────────────── */

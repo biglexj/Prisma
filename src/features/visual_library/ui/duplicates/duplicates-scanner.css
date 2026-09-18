@@ -1526,11 +1526,16 @@
 .duplicates-compact-folder-path {
   font-size: 0.82rem;
   font-weight: 500;
-  color: var(--text-primary, #f1f3f9);
+  color: var(--on-surface, #1e191b);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   opacity: 0.9;
+}
+
+.dark .duplicates-compact-folder-path,
+[data-theme="dark"] .duplicates-compact-folder-path {
+  color: var(--on-surface, #f1f3f9);
 }
 
 .duplicates-compact-folder-btn {
@@ -1539,14 +1544,21 @@
   gap: 0.35rem;
   padding: 0.3rem 0.75rem;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-primary, #f1f3f9);
+  background: var(--surface-container, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--outline-variant, rgba(0, 0, 0, 0.12));
+  color: var(--on-surface, #1e191b);
   font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
+}
+
+.dark .duplicates-compact-folder-btn,
+[data-theme="dark"] .duplicates-compact-folder-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--on-surface, #f1f3f9);
 }
 
 .duplicates-compact-folder-btn:hover {
@@ -1808,16 +1820,26 @@
 .duplicates-hero-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--text-primary, #f1f3f9);
+  color: var(--on-surface, #1e191b);
   margin: 0 0 0.5rem 0;
+}
+
+.dark .duplicates-hero-title,
+[data-theme="dark"] .duplicates-hero-title {
+  color: var(--on-surface, #f1f3f9);
 }
 
 .duplicates-hero-desc {
   font-size: 0.88rem;
-  color: var(--text-secondary, #9ca3af);
+  color: var(--on-surface-variant, #6a595d);
   margin: 0 0 1.5rem 0;
   line-height: 1.5;
   max-width: 440px;
+}
+
+.dark .duplicates-hero-desc,
+[data-theme="dark"] .duplicates-hero-desc {
+  color: var(--on-surface-variant, #9ca3af);
 }
 
 .duplicates-hero-btn {
