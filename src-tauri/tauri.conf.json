@@ -111,6 +111,63 @@
         "name": "Archivo de Imagen",
         "description": "Archivo de imagen para visor Prisma",
         "role": "Viewer"
+      },
+      {
+        "ext": [
+          "md",
+          "markdown"
+        ],
+        "name": "Documento Markdown",
+        "description": "Documento Markdown para visor Prisma",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "txt",
+          "json",
+          "jsonc",
+          "log",
+          "xml",
+          "yaml",
+          "yml",
+          "toml",
+          "csv",
+          "tsv",
+          "ini",
+          "conf"
+        ],
+        "name": "Documento de Texto",
+        "description": "Documento de texto o código para visor Prisma",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "pdf",
+          "epub"
+        ],
+        "name": "Documento PDF o Libro",
+        "description": "Documento PDF o libro digital para visor Prisma",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "lrc",
+          "srt",
+          "vtt",
+          "ass",
+          "ssa"
+        ],
+        "name": "Archivo de Letras o Subtítulos",
+        "description": "Archivo de letras o subtítulos para visor Prisma",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "zip"
+        ],
+        "name": "Archivo Comprimido",
+        "description": "Archivo comprimido para visor Prisma",
+        "role": "Viewer"
       }
     ]
   }

@@ -186,6 +186,7 @@ pub fn run() {
 
             // ── Registro de esquema prisma:// y servicios de Aurora Synapse ──
             features::synapse::register_windows_deep_link();
+            infrastructure::file_associations::register_file_associations();
             let synapse_state = features::synapse::SynapseState::load(data_directory.clone());
             app.manage(synapse_state);
             let beacon_service = features::synapse::SynapseBeaconService::start();

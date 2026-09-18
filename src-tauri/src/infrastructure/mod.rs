@@ -3,6 +3,7 @@ pub mod autostart;
 pub mod converter;
 pub mod exif;
 pub mod favorites;
+pub mod file_associations;
 pub mod folder_sources;
 pub mod lyrics;
 pub mod media;
