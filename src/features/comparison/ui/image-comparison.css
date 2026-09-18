@@ -1785,3 +1785,185 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   AUDIO CARD & VINYL VISUALIZER (COMPARADOR DE MÚSICA)
+   ═══════════════════════════════════════════════════════════ */
+
+.img-compare-audio-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 2.5rem 2rem;
+  max-width: 420px;
+  width: 90%;
+  background: var(--color-surface-container-high, rgba(30, 26, 44, 0.7));
+  border: 1px solid var(--color-outline-variant, rgba(255, 255, 255, 0.12));
+  border-radius: 28px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+  user-select: none;
+  animation: compareFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.img-compare-audio-disc-wrap {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.img-compare-audio-cover {
+  width: 160px;
+  height: 160px;
+  border-radius: 20px;
+  object-fit: cover;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.img-compare-audio-cover.is-active {
+  transform: scale(1.05);
+  box-shadow: 0 16px 40px rgba(208, 188, 255, 0.35);
+  border-color: var(--color-primary, #d0bcff);
+}
+
+.img-compare-audio-vinyl {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #252528 0%, #151518 70%, #0d0d10 100%);
+  border: 3px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.img-compare-audio-vinyl.is-active {
+  animation: spinVinyl 12s linear infinite;
+  box-shadow: 0 0 32px rgba(208, 188, 255, 0.3);
+  border-color: var(--color-primary, #d0bcff);
+}
+
+@keyframes spinVinyl {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.img-compare-vinyl-grooves {
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.img-compare-vinyl-center {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary, #d0bcff), #a855f7);
+  color: #121214;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.img-compare-vinyl-center svg {
+  width: 26px;
+  height: 26px;
+}
+
+/* Equalizer animated bars */
+.img-compare-audio-equalizer {
+  position: absolute;
+  bottom: -10px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 24px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.eq-bar {
+  width: 3px;
+  background: var(--color-primary, #d0bcff);
+  border-radius: 2px;
+  animation: eqBounce 0.8s ease-in-out infinite alternate;
+}
+
+.eq-1 { height: 12px; animation-delay: 0.1s; }
+.eq-2 { height: 18px; animation-delay: 0.3s; }
+.eq-3 { height: 10px; animation-delay: 0.2s; }
+.eq-4 { height: 15px; animation-delay: 0.4s; }
+
+@keyframes eqBounce {
+  0% { height: 4px; }
+  100% { height: 20px; }
+}
+
+.img-compare-audio-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.img-compare-audio-format-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: rgba(208, 188, 255, 0.15);
+  color: var(--color-primary, #d0bcff);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.img-compare-audio-title-text {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.img-compare-audio-status {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.img-compare-thumbnail-audio-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(208, 188, 255, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%);
+  color: var(--color-primary, #d0bcff);
+}
+
+.img-compare-thumbnail-audio-placeholder svg {
+  width: 28px;
+  height: 28px;
+  opacity: 0.9;
+}

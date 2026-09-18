@@ -87,6 +87,12 @@ export const DuplicatesEmptyState: React.FC<DuplicatesEmptyStateProps> = ({
               hoveredDropZoneRef.current = "single";
             }
           }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDraggingOver(false);
+            setHoveredDropZone(null);
+            hoveredDropZoneRef.current = null;
+          }}
         >
           <div className="duplicates-hero-icon">
             <Icon name="folder-open" />

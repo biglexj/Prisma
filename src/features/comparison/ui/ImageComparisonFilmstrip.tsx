@@ -2,6 +2,7 @@ import React from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import { VisualThumbnail } from "../../visual_library/ui/VisualThumbnail";
 import type { ComparisonImageSlot, ComparisonMode } from "../model/types";
+import { isAudioPath } from "../model/types";
 
 interface ImageComparisonFilmstripProps {
   slots: ComparisonImageSlot[];
@@ -44,13 +45,13 @@ export const ImageComparisonFilmstrip: React.FC<ImageComparisonFilmstripProps> =
         <div className="img-compare-filmstrip-header">
           <span className="img-compare-filmstrip-label">
             <Icon name="compare" />
-            <span>Fotos en comparativa ({slots.length}/6)</span>
+            <span>Elementos en comparativa ({slots.length}/6)</span>
           </span>
           <button
             type="button"
             className="img-compare-filmstrip-toggle"
             onClick={() => setShowFilmstrip((prev) => !prev)}
-            title={showFilmstrip ? "Ocultar barra de fotos" : "Mostrar barra de fotos"}
+            title={showFilmstrip ? "Ocultar barra de elementos" : "Mostrar barra de elementos"}
           >
             <Icon name={showFilmstrip ? "chevron-down" : "chevron-up"} />
           </button>
@@ -62,6 +63,7 @@ export const ImageComparisonFilmstrip: React.FC<ImageComparisonFilmstripProps> =
               const isA = slot.id === slotA?.id;
               const isB = slot.id === slotB?.id;
               const isFlickActive = mode === "flick" && activeFlickIndex === index;
+              const isAudio = isAudioPath(slot.item.path);
 
               return (
                 <div
@@ -81,12 +83,18 @@ export const ImageComparisonFilmstrip: React.FC<ImageComparisonFilmstripProps> =
                   title={`${slot.item.title}\n(Clic para activar en comparativa)`}
                 >
                   <div className="img-compare-filmstrip-thumb">
-                    <VisualThumbnail
-                      path={slot.item.path}
-                      alt={slot.item.title}
-                      className="img-compare-thumbnail-media"
-                      fit="cover"
-                    />
+                    {isAudio ? (
+                      <div className="img-compare-thumbnail-audio-placeholder">
+                        <Icon name="music" />
+                      </div>
+                    ) : (
+                      <VisualThumbnail
+                        path={slot.item.path}
+                        alt={slot.item.title}
+                        className="img-compare-thumbnail-media"
+                        fit="cover"
+                      />
+                    )}
                     {(mode === "split" || mode === "curtain") && (
                       <>
                         {isA && <span className="img-compare-slot-pill is-a">Slot A</span>}

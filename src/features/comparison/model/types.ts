@@ -37,9 +37,23 @@ export const SUPPORTED_VIDEO_EXTENSIONS = [
   "ts",
 ];
 
+export const SUPPORTED_AUDIO_EXTENSIONS = [
+  "mp3",
+  "flac",
+  "wav",
+  "m4a",
+  "aac",
+  "ogg",
+  "opus",
+  "wma",
+  "aiff",
+  "alac",
+];
+
 export const SUPPORTED_ALL_MEDIA_EXTENSIONS = [
   ...SUPPORTED_IMAGE_EXTENSIONS,
   ...SUPPORTED_VIDEO_EXTENSIONS,
+  ...SUPPORTED_AUDIO_EXTENSIONS,
 ];
 
 export function isImagePath(filePath: string): boolean {
@@ -52,6 +66,11 @@ export function isVideoPath(filePath: string): boolean {
   return SUPPORTED_VIDEO_EXTENSIONS.includes(ext);
 }
 
+export function isAudioPath(filePath: string): boolean {
+  const ext = filePath.split(".").pop()?.toLowerCase() || "";
+  return SUPPORTED_AUDIO_EXTENSIONS.includes(ext);
+}
+
 export function isSupportedMediaPath(filePath: string): boolean {
   const ext = filePath.split(".").pop()?.toLowerCase() || "";
   return SUPPORTED_ALL_MEDIA_EXTENSIONS.includes(ext);
@@ -61,12 +80,13 @@ export function createVisualItemFromPath(filePath: string): VisualLibraryItem {
   const normalized = filePath.replace(/\\/g, "/");
   const fileName = normalized.split("/").pop() || "Archivo";
   const isVideo = isVideoPath(filePath);
+  const isAudio = isAudioPath(filePath);
   return {
     path: filePath,
     title: fileName,
     sourcePath: filePath,
     relativeFolder: "",
-    kind: isVideo ? "video" : "image",
+    kind: isAudio ? ("audio" as any) : isVideo ? "video" : "image",
     modifiedAtMillis: Date.now(),
     sizeBytes: 0,
   };

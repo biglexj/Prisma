@@ -1,8 +1,7 @@
 import React from "react";
 import { Icon } from "../../../shared/ui/Icon";
-import { toSafeAssetUrl } from "../../../shared/mediaTree";
 import type { ComparisonImageSlot } from "../model/types";
-import { isVideoPath } from "../model/types";
+import { ComparisonMediaLayer } from "./ComparisonMediaLayer";
 
 interface ImageComparisonCurtainProps {
   slotA?: ComparisonImageSlot;
@@ -14,8 +13,8 @@ interface ImageComparisonCurtainProps {
   handlePanStart: (e: React.PointerEvent, slotId: string) => void;
   handleCurtainPointerDown: (e: React.PointerEvent) => void;
   onBackToSplit: () => void;
-  videoRefA?: (el: HTMLVideoElement | null) => void;
-  videoRefB?: (el: HTMLVideoElement | null) => void;
+  videoRefA?: (el: HTMLVideoElement | HTMLAudioElement | null) => void;
+  videoRefB?: (el: HTMLVideoElement | HTMLAudioElement | null) => void;
   isMutedA?: boolean;
   isMutedB?: boolean;
 }
@@ -69,22 +68,11 @@ export const ImageComparisonCurtain: React.FC<ImageComparisonCurtainProps> = ({
           transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
         }}
       >
-        {slotA.item.kind === "video" || isVideoPath(slotA.item.path) ? (
-          <video
-            ref={videoRefA}
-            src={toSafeAssetUrl(slotA.item.path)}
-            className="img-compare-media-element img-compare-video-element"
-            playsInline
-            loop
-            muted={isMutedA}
-          />
-        ) : (
-          <img
-            src={toSafeAssetUrl(slotA.item.path)}
-            alt={slotA.item.title}
-            draggable={false}
-          />
-        )}
+        <ComparisonMediaLayer
+          slot={slotA}
+          videoRef={videoRefA}
+          isMuted={isMutedA}
+        />
       </div>
 
       {/* Layer B (Clipped Over Top) */}
@@ -96,22 +84,11 @@ export const ImageComparisonCurtain: React.FC<ImageComparisonCurtainProps> = ({
           transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
         }}
       >
-        {slotB.item.kind === "video" || isVideoPath(slotB.item.path) ? (
-          <video
-            ref={videoRefB}
-            src={toSafeAssetUrl(slotB.item.path)}
-            className="img-compare-media-element img-compare-video-element"
-            playsInline
-            loop
-            muted={isMutedB}
-          />
-        ) : (
-          <img
-            src={toSafeAssetUrl(slotB.item.path)}
-            alt={slotB.item.title}
-            draggable={false}
-          />
-        )}
+        <ComparisonMediaLayer
+          slot={slotB}
+          videoRef={videoRefB}
+          isMuted={isMutedB}
+        />
       </div>
 
       {/* Draggable Divider Handle */}

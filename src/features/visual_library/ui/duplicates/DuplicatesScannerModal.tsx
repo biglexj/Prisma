@@ -151,34 +151,55 @@ export function DuplicatesScannerModal({
     });
   };
 
+  const ensureFolderPath = (rawPath: string): { folder: string; wasFile: boolean } => {
+    const clean = cleanPath(rawPath);
+    if (/\.[a-zA-Z0-9]{1,8}$/.test(clean)) {
+      const lastSlash = Math.max(clean.lastIndexOf("/"), clean.lastIndexOf("\\"));
+      if (lastSlash > 0) {
+        return { folder: clean.substring(0, lastSlash), wasFile: true };
+      }
+    }
+    return { folder: clean, wasFile: false };
+  };
+
   const applyDroppedPaths = useCallback(
     (rawPaths: string[], dropZoneHint?: "single" | "base" | "target" | null) => {
+      setIsDraggingOver(false);
+      setHoveredDropZone(null);
+      hoveredDropZoneRef.current = null;
+
       if (!rawPaths || rawPaths.length === 0) return;
       const paths = rawPaths.map(cleanPath).filter(Boolean);
       if (paths.length === 0) return;
 
+      const firstParsed = ensureFolderPath(paths[0]);
+      const secondParsed = paths[1] ? ensureFolderPath(paths[1]) : null;
+      const fileWarning = firstParsed.wasFile
+        ? " (Se seleccionó su carpeta contenedora automáticamente)"
+        : "";
+
       if (scanMode === "two_folders") {
-        if (paths.length >= 2) {
-          setBaseFolder(paths[0]);
-          setTargetFolder(paths[1]);
-          setStatusMessage("¡Ambas carpetas asignadas automáticamente (Base y Depuración)!");
+        if (paths.length >= 2 && secondParsed) {
+          setBaseFolder(firstParsed.folder);
+          setTargetFolder(secondParsed.folder);
+          setStatusMessage("¡Ambas carpetas asignadas automáticamente (Base y Depuración)!" + fileWarning);
           return;
         }
 
         const chosenZone = dropZoneHint || hoveredDropZoneRef.current;
         if (chosenZone === "base") {
-          setBaseFolder(paths[0]);
-          setStatusMessage(`Carpeta Base asignada: ${paths[0]}`);
+          setBaseFolder(firstParsed.folder);
+          setStatusMessage(`Carpeta Base asignada: ${firstParsed.folder}${fileWarning}`);
         } else if (chosenZone === "target") {
-          setTargetFolder(paths[0]);
-          setStatusMessage(`Carpeta a Depurar asignada: ${paths[0]}`);
+          setTargetFolder(firstParsed.folder);
+          setStatusMessage(`Carpeta a Depurar asignada: ${firstParsed.folder}${fileWarning}`);
         } else {
           if (!baseFolder) {
-            setBaseFolder(paths[0]);
-            setStatusMessage(`Carpeta Base asignada: ${paths[0]}`);
+            setBaseFolder(firstParsed.folder);
+            setStatusMessage(`Carpeta Base asignada: ${firstParsed.folder}${fileWarning}`);
           } else {
-            setTargetFolder(paths[0]);
-            setStatusMessage(`Carpeta a Depurar asignada: ${paths[0]}`);
+            setTargetFolder(firstParsed.folder);
+            setStatusMessage(`Carpeta a Depurar asignada: ${firstParsed.folder}${fileWarning}`);
           }
         }
       } else {
@@ -186,8 +207,8 @@ export function DuplicatesScannerModal({
         if (scanMode === "library") {
           setScanMode("single_folder");
         }
-        setSingleFolder(paths[0]);
-        setStatusMessage(`Carpeta cargada para análisis: ${paths[0]}`);
+        setSingleFolder(firstParsed.folder);
+        setStatusMessage(`Carpeta cargada para análisis: ${firstParsed.folder}${fileWarning}`);
       }
     },
     [scanMode, baseFolder],
@@ -649,6 +670,12 @@ export function DuplicatesScannerModal({
           hoveredDropZoneRef.current = null;
         }
       }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDraggingOver(false);
+        setHoveredDropZone(null);
+        hoveredDropZoneRef.current = null;
+      }}
     >
       <div
         className={embedded ? "duplicates-workspace-card" : "duplicates-modal-card"}
@@ -659,6 +686,12 @@ export function DuplicatesScannerModal({
           if (e.dataTransfer) {
             e.dataTransfer.dropEffect = "copy";
           }
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDraggingOver(false);
+          setHoveredDropZone(null);
+          hoveredDropZoneRef.current = null;
         }}
         style={{ position: "relative" }}
       >
