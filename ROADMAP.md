@@ -30,6 +30,13 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.1.4**
+  - **Instancia Múltiple Flotante (Pin), Blindaje de Renderizado Quick Look y Rescate Tray**:
+    - **Instancia Múltiple Flotante (Pin)**: Exclusiva para imágenes y vídeos, con fijación en primer plano (*Always-on-Top*), sin duplicar iconos en la barra de tareas de Windows (`skip_taskbar: true`), oculta en instancias secundarias y con intercambio continuo y fluido desde el Explorador de Windows sin pérdida de foco.
+    - **Blindaje de Renderizado Quick Look**: Incorporación de `QuickLookErrorBoundary` para aislamiento de excepciones en visores, soporte de estados de error/carga en `QuickLookImage` con botón de reintento interactivo, decodificación segura (`decoding="auto"`) y atajo de recarga rápida (`F5` / `Ctrl + R`).
+    - **Opción de Rescate en Bandeja de Sistema**: Acción «Reiniciar Prisma» (`app.restart()`) en el menú del System Tray para refrescar la app al vuelo ante cualquier eventualidad.
+    - **Soporte de Códecs y Estabilidad**: Compatibilidad extendida para vídeo QuickTime `.mov` (CineForm/Apple ProRes) con proxy transparente en caché ultrarrápida y corrección del atajo `Escape` en el reproductor de vídeo principal.
+
 - [x] **v1.1.3**
   - **Super-Resolución Neuronal por IA en Segundo Plano (Prisma Upscaler Vulkan)**:
     - Inferencia nativa y silenciosa (`realesrgan-ncnn-vulkan.exe`) con flag `CREATE_NO_WINDOW`, ejecutando super-resolución por GPU sin abrir consolas ni ventanas externas.

@@ -15,6 +15,28 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.1.4] - 2026-09-17
+
+### Resumen
+Presentamos **Prisma v1.1.4**, una actualización enfocada en la ergonomía multitarea, la resiliencia en la previsualización de medios y el control continuo del sistema. Esta versión perfecciona la **Instancia Múltiple Flotante (Pin)** en Quick Look exclusivamente para imágenes y vídeos, manteniendo ventanas secundarias ancladas al frente sin duplicar iconos en la barra de tareas de Windows y garantizando el intercambio dinámico continuo de archivos desde el Explorador. Asimismo, se incorpora un **Blindaje Integral de Renderizado** con recuperación automática ante errores de decodificación y atajo de recarga rápida, soporte optimizado para clips de vídeo profesionales **QuickTime `.mov`** (CineForm y Apple ProRes) mediante proxies acelerados en segundo plano, y la nueva opción de salvaguarda **«Reiniciar Prisma»** accesible directamente desde el menú de la bandeja del sistema.
+
+### Detalles
+- **Instancia Múltiple Flotante (Pin) para Imágenes y Vídeos**:
+  - Exclusividad optimizada: la función de desacoplar en ventana independiente (`layers`) se reserva exclusivamente para fotografías e ilustraciones y clips de vídeo, ocultándose en ventanas ya desacopladas para evitar capas innecesarias.
+  - Ventanas ancladas en primer plano: las instancias desacopladas se configuran automáticamente como flotantes fijas (*Always-on-Top*), permitiendo mantener referencias visuales en pantalla mientras se trabaja en otras aplicaciones o carpetas.
+  - Barra de tareas limpia y minimalista: las ventanas secundarias no generan botones adicionales en la barra de tareas de Windows, preservando un entorno de trabajo ordenado.
+  - Navegación fluida en el Explorador: al desacoplar un medio, el Explorador de Windows conserva el foco activo y la ventana principal de Quick Look continúa alternando y actualizando previsualizaciones de manera dinámica e ininterrumpida.
+- **Blindaje de Renderizado y Recuperación en Quick Look**:
+  - Aislamiento de fallos con recuperación en caliente: integración de un componente de captura de errores que previene congelamientos en la interfaz ante imágenes corruptas o archivos temporalmente en uso, ofreciendo una tarjeta descriptiva con opciones de «Reintentar decodificación» y «Abrir en Prisma».
+  - Al seleccionar o navegar al siguiente archivo, el visor se restablece de forma automática y transparente sin requerir el reinicio de la aplicación.
+  - Decodificación robusta con gestión de estados de carga e invalidación inteligente de caché.
+  - Atajos de teclado para recarga rápida (`F5` y `Ctrl + R`) directamente dentro de la ventana de Quick Look.
+- **Opción de Salvaguarda en la Bandeja del Sistema (System Tray)**:
+  - Nueva acción «Reiniciar Prisma» añadida en el menú contextual del icono de la bandeja de Windows, permitiendo relanzar la aplicación instantáneamente ante cualquier eventualidad sin necesidad de cerrar y buscar el ejecutable manualmente.
+- **Soporte de Vídeo QuickTime `.mov` y Estabilidad**:
+  - Compatibilidad ampliada con archivos `.mov` codificados en CineForm o Apple ProRes mediante generación transparente de proxies ligeros en caché temporal de alta velocidad.
+  - Corrección de estabilidad al pulsar la tecla Escape dentro del reproductor de vídeo principal.
+
 ## [1.1.3] - 2026-09-15
 
 ### Resumen

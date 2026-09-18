@@ -20,4 +20,4 @@
   - [x] Compilación frontend con `bun run build`.
   - [x] Comprobación de compilación Rust y pruebas con `cargo check` / `cargo test` (34 tests superados exitosamente).
   - [x] Documentar evidencia en `VALIDATION.md` y formalizar en `APPROVAL.md`.
-  - [ ] Generar checkpoint commit en rama `preview`.
+  - [x] Generar checkpoint commit en rama `preview`.
