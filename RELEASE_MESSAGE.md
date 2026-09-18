@@ -10,6 +10,8 @@ Llega **Prisma v1.1.4**, una versión que transforma el **Comparador Multimedia*
 - 🎵 **Comparativa de Música y Audio**: Visualiza y reproduce pistas de audio con carátula de metadatos Lofty, disco de vinilo giratorio y espectro de barras ecualizadoras en tiempo real.
 - 🔊 **Hover Audio Focus**: Pasa el cursor sobre cualquier ranura de vídeo o audio para activar su sonido al instante y silenciar la contraria sin pausar ni perder la sincronía temporal.
 - 🛡️ **Restricción Estricta Anti-Colisiones**: El primer medio añadido fija el formato de la comparativa; las ranuras vacías, el explorador y la biblioteca se adaptan automáticamente para admitir únicamente archivos compatibles (foto con foto, vídeo con vídeo o audio con audio).
+- ⚡ **Comparar desde el Reproductor de Vídeo**: Acceso directo con el atajo `C`, el menú de *Herramientas* o clic derecho para pausar y comparar vídeos al vuelo.
+- 🔍 **Comparar Duplicados de Música**: Nuevo botón «Comparar» en los resultados de duplicados de audio para analizar diferencias de bitrate y calidad acústica.
 - ❌ **Botón de Cierre (X) Global**: Disponible permanentemente en la cabecera tanto con una sola ranura en espera como en comparaciones activas.
 - 🧹 **Resiliencia en Buscador de Duplicados**: Arrastrar un archivo suelto sobre el área de escaneo ya no bloquea la interfaz; se deduce automáticamente el directorio de forma limpia.
 - 📌 **Instancia Múltiple Flotante (*Always-on-Top*)**: Fija fotografías, ilustraciones o vídeos en ventanas independientes flotantes sin que se pierdan detrás del Explorador.

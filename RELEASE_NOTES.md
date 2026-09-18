@@ -26,8 +26,10 @@ Presentamos **Prisma v1.1.4**, una actualización mayor enfocada en la evolució
   - Comparativa de audio y música: reproducción de pistas con carátula de álbum embebida, disco de vinilo giratorio y espectro de ecualización reactivo en tiempo real.
   - Tecnología *Hover Audio Focus*: conmuta el foco sonoro instantáneamente entre ranuras al pasar el cursor sobre cualquier medio reproducible, silenciando el elemento secundario sin desincronizar el tiempo de reproducción.
   - Restricción estricta por tipo de medio: el primer archivo añadido determina el formato exclusivo de la sesión (imagen con imagen, vídeo con vídeo o audio con audio), impidiendo colisiones y adaptando automáticamente las ranuras vacías, las pestañas del selector de biblioteca y los filtros del Explorador de Windows.
+  - Integración en reproductor de vídeo: acceso directo al comparador con la tecla `C`, menú de *Herramientas* o clic derecho para enfrentar clips al instante con pausa automática.
   - Botón de cierre global (X): disponible permanentemente en la cabecera tanto con un elemento en espera como en comparativas completas para un retorno ágil.
-- **Resiliencia en el Buscador de Duplicados**:
+- **Resiliencia y Mejoras en el Buscador de Duplicados**:
+  - Botón «Comparar» en duplicados de música: permite enfrentar auditivamente y en paralelo dos versiones o bitrates desde las tarjetas de resultados.
   - Corrección de bloqueo ante arrastre de archivos: soltar un archivo individual sobre el área de escaneo ya no congela la navegación ni bloquea las pestañas; el sistema deduce automáticamente la carpeta contenedora y restablece los estados de arrastre limpiamente.
 - **Instancia Múltiple Flotante (Pin) para Imágenes y Vídeos**:
   - Desacople flotante (*Always-on-Top*): fija imágenes y vídeos en ventanas secundarias independientes para mantener referencias visuales continuas mientras trabajas en otras aplicaciones.
