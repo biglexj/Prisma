@@ -14,7 +14,6 @@ import {
 } from "./types";
 import { ImageComparisonSelector } from "./ImageComparisonSelector";
 import { ImageComparisonEmptySlot } from "./ImageComparisonEmptySlot";
-import { ImageComparisonSourceModal } from "./ImageComparisonSourceModal";
 import "./image-comparison.css";
 
 interface ImageComparisonModalProps {
@@ -41,13 +40,6 @@ export function ImageComparisonModal({
   const [activeSlotAId, setActiveSlotAId] = useState<string>("slot-0");
   const [activeSlotBId, setActiveSlotBId] = useState<string>("slot-1");
   const [showFilmstrip, setShowFilmstrip] = useState(true);
-
-  // Modal intermedio compacto (Arrastrar / Biblioteca / Explorador)
-  const [sourceModalTarget, setSourceModalTarget] = useState<{
-    mode: "add" | "replace";
-    slotId?: string;
-    title?: string;
-  } | null>(null);
 
   // Estados de Drag & Drop nativo
   const [isNativeDragging, setIsNativeDragging] = useState(false);
@@ -356,8 +348,6 @@ export function ImageComparisonModal({
     undefined;
 
   // Refs reactivos para listeners de soltado nativo
-  const sourceModalTargetRef = useRef(sourceModalTarget);
-  sourceModalTargetRef.current = sourceModalTarget;
   const isAddingNewSlotRef = useRef(isAddingNewSlot);
   isAddingNewSlotRef.current = isAddingNewSlot;
   const selectorTargetSlotIdRef = useRef(selectorTargetSlotId);
@@ -383,12 +373,6 @@ export function ImageComparisonModal({
       if (!paths || paths.length === 0) return;
       const validPath = paths.find(isImagePath);
       if (!validPath) return;
-
-      if (sourceModalTargetRef.current) {
-        handleAssignImagePath(validPath, sourceModalTargetRef.current.slotId);
-        setSourceModalTarget(null);
-        return;
-      }
 
       if (isAddingNewSlotRef.current) {
         handleAssignImagePath(validPath);
@@ -490,7 +474,7 @@ export function ImageComparisonModal({
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (selectorTargetSlotId || isAddingNewSlot || sourceModalTarget) return;
+      if (selectorTargetSlotId || isAddingNewSlot) return;
 
       if (e.key === "Escape") {
         e.preventDefault();
@@ -520,7 +504,7 @@ export function ImageComparisonModal({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectorTargetSlotId, isAddingNewSlot, sourceModalTarget, mode, slots.length, onClose, handleSwapPrimary, toggleFullscreen, handleResetZoom]);
+  }, [selectorTargetSlotId, isAddingNewSlot, mode, slots.length, onClose, handleSwapPrimary, toggleFullscreen, handleResetZoom]);
 
   return (
     <div
@@ -559,7 +543,7 @@ export function ImageComparisonModal({
               className={`img-compare-pill ${mode === "curtain" ? "is-active" : ""}`}
               onClick={() => {
                 if (slots.length < 2) {
-                  setSourceModalTarget({ mode: "add", title: "Añadir imagen a la comparativa" });
+                  setIsAddingNewSlot(true);
                   return;
                 }
                 setMode("curtain");
@@ -583,7 +567,7 @@ export function ImageComparisonModal({
               className={`img-compare-pill ${mode === "flick" ? "is-active" : ""}`}
               onClick={() => {
                 if (slots.length < 2) {
-                  setSourceModalTarget({ mode: "add", title: "Añadir imagen a la comparativa" });
+                  setIsAddingNewSlot(true);
                   return;
                 }
                 setMode("flick");
@@ -647,12 +631,7 @@ export function ImageComparisonModal({
             <button
               type="button"
               className="img-compare-btn is-accent"
-              onClick={() =>
-                setSourceModalTarget({
-                  mode: "add",
-                  title: "Añadir imagen a la comparativa",
-                })
-              }
+              onClick={() => setIsAddingNewSlot(true)}
               title="Añadir otra imagen a la comparativa (hasta 6 imágenes)"
             >
               <Icon name="plus" />
@@ -706,13 +685,7 @@ export function ImageComparisonModal({
                 <button
                   type="button"
                   className="img-compare-slot-change-btn"
-                  onClick={() =>
-                    setSourceModalTarget({
-                      mode: "replace",
-                      slotId: slotA.id,
-                      title: "Cambiar Imagen A (Base)",
-                    })
-                  }
+                  onClick={() => setSelectorTargetSlotId(slotA.id)}
                   title="Cambiar imagen A"
                 >
                   <Icon name="edit" />
@@ -771,13 +744,7 @@ export function ImageComparisonModal({
                   <button
                     type="button"
                     className="img-compare-slot-change-btn"
-                    onClick={() =>
-                      setSourceModalTarget({
-                        mode: "replace",
-                        slotId: slotB.id,
-                        title: "Cambiar Imagen B",
-                      })
-                    }
+                    onClick={() => setSelectorTargetSlotId(slotB.id)}
                     title="Cambiar imagen B"
                   >
                     <Icon name="edit" />
@@ -813,12 +780,7 @@ export function ImageComparisonModal({
               </div>
             ) : (
               <ImageComparisonEmptySlot
-                onPickLibrary={() =>
-                  setSourceModalTarget({
-                    mode: "add",
-                    title: "Añadir imagen a la comparativa",
-                  })
-                }
+                onPickLibrary={() => setIsAddingNewSlot(true)}
                 onPickExplorer={handlePickExplorerForSlotB}
                 onDropFile={handleAssignImagePath}
                 isNativeDragOver={hoveredNativeDropZone === "slot-b" || isNativeDragging}
@@ -911,13 +873,7 @@ export function ImageComparisonModal({
                   <button
                     type="button"
                     className="img-compare-slot-change-btn"
-                    onClick={() =>
-                      setSourceModalTarget({
-                        mode: "replace",
-                        slotId: slot.id,
-                        title: `Cambiar foto #${index + 1}`,
-                      })
-                    }
+                    onClick={() => setSelectorTargetSlotId(slot.id)}
                     title="Cambiar imagen"
                   >
                     <Icon name="edit" />
@@ -1103,13 +1059,7 @@ export function ImageComparisonModal({
                           <button
                             type="button"
                             className="img-compare-mini-btn"
-                            onClick={() =>
-                              setSourceModalTarget({
-                                mode: "replace",
-                                slotId: slot.id,
-                                title: `Cambiar foto #${index + 1}`,
-                              })
-                            }
+                            onClick={() => setSelectorTargetSlotId(slot.id)}
                             title="Cambiar esta foto..."
                           >
                             <Icon name="edit" />
@@ -1134,12 +1084,7 @@ export function ImageComparisonModal({
                   <button
                     type="button"
                     className="img-compare-filmstrip-add-btn"
-                    onClick={() =>
-                      setSourceModalTarget({
-                        mode: "add",
-                        title: "Añadir imagen a la comparativa",
-                      })
-                    }
+                    onClick={() => setIsAddingNewSlot(true)}
                     title="Añadir otra foto a la comparativa"
                   >
                     <Icon name="plus" />
@@ -1151,28 +1096,6 @@ export function ImageComparisonModal({
           </div>
         </div>
       </main>
-
-      {/* Modal Intermedio Compacto de Elección de Fuente */}
-      {sourceModalTarget && (
-        <ImageComparisonSourceModal
-          isOpen={Boolean(sourceModalTarget)}
-          onClose={() => setSourceModalTarget(null)}
-          title={sourceModalTarget.title}
-          isNativeDragOver={hoveredNativeDropZone === "source-modal"}
-          onSelectPath={(filePath) => {
-            handleAssignImagePath(filePath, sourceModalTarget.slotId);
-            setSourceModalTarget(null);
-          }}
-          onOpenLibrary={() => {
-            if (sourceModalTarget.mode === "add") {
-              setIsAddingNewSlot(true);
-            } else if (sourceModalTarget.slotId) {
-              setSelectorTargetSlotId(sourceModalTarget.slotId);
-            }
-            setSourceModalTarget(null);
-          }}
-        />
-      )}
 
       {/* Image Selector Dialog (Biblioteca con Miniaturas) */}
       {(selectorTargetSlotId || isAddingNewSlot) && (

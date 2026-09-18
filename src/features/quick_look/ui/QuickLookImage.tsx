@@ -80,7 +80,6 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
 
   const handleImageError = () => {
     console.warn("[QuickLookImage] Fallo al cargar la imagen:", payload.path);
-    setIsLoading(false);
     setHasError(true);
   };
 
