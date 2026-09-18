@@ -6,8 +6,12 @@ export const quickLookClient = {
     return invoke("quick_look_hide");
   },
 
-  openInMain(path: string, currentTime?: number): Promise<void> {
-    return invoke("quick_look_open_in_main", { path, currentTime });
+  openInMain(path: string, currentTime?: number, editMode?: boolean): Promise<void> {
+    return invoke("quick_look_open_in_main", {
+      path,
+      currentTime: currentTime ?? null,
+      editMode: editMode ?? null,
+    });
   },
 
   openDetached(path: string): Promise<string> {
@@ -31,7 +35,11 @@ export const quickLookClient = {
   },
 
   editFile(path: string): Promise<void> {
-    return invoke("quick_look_edit_file", { path });
+    return invoke("quick_look_open_in_main", {
+      path,
+      currentTime: null,
+      editMode: true,
+    });
   },
 
   openWithDefaultApp(path: string): Promise<void> {

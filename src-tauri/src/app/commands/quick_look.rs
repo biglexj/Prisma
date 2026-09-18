@@ -47,8 +47,9 @@ pub fn quick_look_open_in_main(
     state: State<'_, QuickLookState>,
     path: String,
     current_time: Option<f64>,
+    edit_mode: Option<bool>,
 ) {
-    state.open_in_main(path, current_time);
+    state.open_in_main(path, current_time, edit_mode);
 }
 
 #[tauri::command]

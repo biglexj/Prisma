@@ -445,12 +445,12 @@ impl QuickLookState {
         }
     }
 
-    pub fn open_in_main(&self, path: String, current_time: Option<f64>) {
+    pub fn open_in_main(&self, path: String, current_time: Option<f64>, edit_mode: Option<bool>) {
         if let Some(main_window) = self.app_handle.get_webview_window("main") {
             let _ = main_window.unminimize();
             let _ = main_window.show();
             let _ = main_window.set_focus();
-            let payload = OpenMediaPayload { path, current_time };
+            let payload = OpenMediaPayload { path, current_time, edit_mode };
             let _ = main_window.emit("prisma://open-media", payload);
         }
 
@@ -574,6 +574,7 @@ impl QuickLookState {
 pub struct OpenMediaPayload {
     pub path: String,
     pub current_time: Option<f64>,
+    pub edit_mode: Option<bool>,
 }
 
 fn get_screen_bounds(app_handle: &tauri::AppHandle) -> (f64, f64) {

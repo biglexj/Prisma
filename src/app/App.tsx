@@ -83,6 +83,7 @@ function AppContent() {
   const [videoReturnView, setVideoReturnView] = useState<AppView>("videos");
   const [activeInitialImagePath, setActiveInitialImagePath] = useState<string | null>(null);
   const [activeDocumentItem, setActiveDocumentItem] = useState<CustomLibraryItem | null>(null);
+  const [activeDocumentInitialMode, setActiveDocumentInitialMode] = useState<"preview" | "split" | "code" | undefined>(undefined);
   const [isPip, setIsPip] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -255,7 +256,7 @@ function AppContent() {
     }
   }, [activeView, isPip, playback, videoLibrary.items]);
 
-  const handleOpenFile = useCallback((filePath: string, initialTime?: number) => {
+  const handleOpenFile = useCallback((filePath: string, initialTime?: number, editMode?: boolean) => {
     const lower = filePath.toLowerCase();
     const isPlaylist = /\.(m3u|m3u8|pls|xspf)$/i.test(lower);
     const isAudio = /\.(mp3|flac|wav|aac|m4a|ogg|opus|wma)$/.test(lower);
@@ -340,6 +341,8 @@ function AppContent() {
         modifiedTimestamp: Date.now(),
       };
       setActiveDocumentItem(docItem);
+      const isMd = ext === "md" || ext === "markdown";
+      setActiveDocumentInitialMode(editMode ? (isMd ? "split" : "code") : undefined);
     } else {
       if (document.pictureInPictureElement) {
         void document.exitPictureInPicture().catch(() => { });
@@ -395,7 +398,7 @@ function AppContent() {
       })
       .catch(() => { });
 
-    const unlistenPromise = listen<string | { path: string; currentTime?: number; title?: string; artist?: string }>("prisma://open-media", (event) => {
+    const unlistenPromise = listen<string | { path: string; currentTime?: number; title?: string; artist?: string; editMode?: boolean }>("prisma://open-media", (event) => {
       if (resumeTimeoutRef.current) {
         window.clearTimeout(resumeTimeoutRef.current);
         resumeTimeoutRef.current = null;
@@ -408,6 +411,7 @@ function AppContent() {
         const currentTime = typeof event.payload === "object" ? event.payload.currentTime : undefined;
         const title = typeof event.payload === "object" ? event.payload.title : undefined;
         const artist = typeof event.payload === "object" ? event.payload.artist : undefined;
+        const editMode = typeof event.payload === "object" ? event.payload.editMode : undefined;
 
         // Si la ruta recibida no existe en Windows (ej. viene de Android /storage/...)
         const isAndroidOrInvalidPath = !filePath || filePath.startsWith("/storage/") || filePath.startsWith("content://") || (!filePath.includes(":\\") && !filePath.startsWith("\\\\"));
@@ -427,7 +431,7 @@ function AppContent() {
           });
 
           if (foundMusic) {
-            handleOpenFile(foundMusic.path, currentTime);
+            handleOpenFile(foundMusic.path, currentTime, editMode);
             return;
           }
 
@@ -442,7 +446,7 @@ function AppContent() {
           return;
         }
 
-        handleOpenFile(filePath, currentTime);
+        handleOpenFile(filePath, currentTime, editMode);
       }
     });
 
@@ -1105,18 +1109,13 @@ function AppContent() {
             />
           ) : null}
 
-          {activeView === "about" ? (
-            <AboutView />
-          ) : null}
+          {activeView === "about" ? <AboutView /> : null}
 
           {activeView === "favorites" ? (
             <FavoritesView
               images={imageLibrary.items}
               musicItems={library.items}
-              onOpenImage={(path) => {
-                setActiveInitialImagePath(path);
-                setActiveView("images");
-              }}
+              onOpenImage={(path) => { setActiveInitialImagePath(path); setActiveView("images"); }}
               onPlayMusic={playMusicItem}
               onPlayVideo={playVideoItem}
               videos={videoLibrary.items}
@@ -1127,10 +1126,7 @@ function AppContent() {
             <HistoryView
               images={imageLibrary.items}
               musicItems={library.items}
-              onOpenImage={(path) => {
-                setActiveInitialImagePath(path);
-                setActiveView("images");
-              }}
+              onOpenImage={(path) => { setActiveInitialImagePath(path); setActiveView("images"); }}
               onPlayMusic={playMusicItem}
               onPlayVideo={playVideoItem}
               videos={videoLibrary.items}
@@ -1139,9 +1135,7 @@ function AppContent() {
           {activeView === "playlists" ? (
             <PlaylistsView
               onPlayMusic={playMusicItem}
-              onPlayQueue={(items, idx, name) => {
-                playback.playQueue(items, idx, name);
-              }}
+              onPlayQueue={(items, idx, name) => playback.playQueue(items, idx, name)}
               onPlayVideo={playVideoItem}
             />
           ) : null}
@@ -1181,7 +1175,11 @@ function AppContent() {
       {activeDocumentItem ? (
         <DocumentViewer
           item={activeDocumentItem}
-          onClose={() => setActiveDocumentItem(null)}
+          initialMode={activeDocumentInitialMode}
+          onClose={() => {
+            setActiveDocumentItem(null);
+            setActiveDocumentInitialMode(undefined);
+          }}
         />
       ) : null}
 

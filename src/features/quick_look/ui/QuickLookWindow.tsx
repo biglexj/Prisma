@@ -272,7 +272,14 @@ export function QuickLookWindow() {
 
   const handleEdit = () => {
     if (!payload) return;
-    void quickLookClient.editFile(payload.path).catch(() => {});
+    const targetPath = payload.path;
+    setPayload(null);
+    setPaletteStyle(undefined);
+    setIsMaximized(false);
+    void quickLookClient.openInMain(targetPath, undefined, true);
+    if (isDetached) {
+      handleClose();
+    }
   };
 
   const handleClose = () => {
@@ -390,9 +397,9 @@ export function QuickLookWindow() {
                 ) : payload.mediaType === "lyrics" ? (
                   <QuickLookLyrics key={payload.path} payload={payload} />
                 ) : payload.mediaType === "markdown" ? (
-                  <QuickLookMarkdown key={payload.path} payload={payload} />
+                  <QuickLookMarkdown key={payload.path} onEdit={handleEdit} payload={payload} />
                 ) : payload.mediaType === "text" ? (
-                  <QuickLookText key={payload.path} payload={payload} />
+                  <QuickLookText key={payload.path} onEdit={handleEdit} payload={payload} />
                 ) : payload.mediaType === "folder" ? (
                   <QuickLookFolder key={payload.path} payload={payload} />
                 ) : payload.mediaType === "project" ? (

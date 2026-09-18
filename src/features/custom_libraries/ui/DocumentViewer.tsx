@@ -16,6 +16,7 @@ interface DocumentViewerProps {
   onClose: () => void;
   onSelectDoc?: (item: CustomLibraryItem) => void;
   externalAppCommand?: string | null;
+  initialMode?: "preview" | "split" | "code";
 }
 
 function formatBytes(bytes: number): string {
@@ -74,6 +75,7 @@ export function DocumentViewer({
   onClose,
   onSelectDoc,
   externalAppCommand,
+  initialMode,
 }: DocumentViewerProps) {
   const ext = item.extension.toLowerCase();
   const isPdf = ext === "pdf";
@@ -92,16 +94,22 @@ export function DocumentViewer({
   const [projectThumbnail, setProjectThumbnail] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"preview" | "split" | "code">(isMarkdown ? "preview" : "code");
+  const [viewMode, setViewMode] = useState<"preview" | "split" | "code">(initialMode || (isMarkdown ? "preview" : "code"));
   const [isFullWidth, setIsFullWidth] = useState<boolean>(false);
   const [fontFamily, setFontFamily] = useState<"sans" | "serif" | "mono">(isMarkdown ? "sans" : "mono");
   const [fontSize, setFontSize] = useState<number>(15);
 
+  useEffect(() => {
+    if (initialMode) {
+      setViewMode(initialMode);
+    }
+  }, [initialMode, item.path]);
+
   const effectiveSizeBytes = useMemo(() => {
-    if (item.sizeBytes > 0) return item.sizeBytes;
     if (textContent !== null) {
       return new TextEncoder().encode(textContent).length;
     }
+    if (item.sizeBytes > 0) return item.sizeBytes;
     return 0;
   }, [item.sizeBytes, textContent]);
   const [copied, setCopied] = useState<boolean>(false);
@@ -211,12 +219,23 @@ export function DocumentViewer({
     }
   };
 
+  useEffect(() => {
+    if (!loading && (viewMode === "split" || viewMode === "code")) {
+      const timer = setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [viewMode, loading]);
+
   // Atajos de teclado (Escape para salir, Flechas para navegar, Ctrl+S para guardar)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        if (textContent !== null && isDirty) {
+        if (textContent !== null) {
           void handleSave();
         }
         return;
@@ -251,7 +270,7 @@ export function DocumentViewer({
       window.removeEventListener("prisma-gallery-next", onRemoteNext);
       window.removeEventListener("prisma-gallery-escape", onRemoteEscape);
     };
-  }, [onClose, hasPrev, hasNext, currentIndex, isPdf, textContent, isSaving]);
+  }, [onClose, hasPrev, hasNext, currentIndex, isPdf, textContent, isSaving, isDirty]);
 
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Tab") {
@@ -606,6 +625,7 @@ export function DocumentViewer({
                     </div>
                     <textarea
                       className="doc-viewer-textarea"
+                      placeholder="Escribe o pega texto aquí... (Ctrl+S para guardar)"
                       onChange={(e) => {
                         const val = e.target.value;
                         setTextContent(val);
@@ -641,10 +661,28 @@ export function DocumentViewer({
                 } doc-viewer-font-${fontFamily}`}
                 style={{ fontSize: `${fontSize}px` }}
               >
-                <div
-                  className="doc-viewer-md-rendered"
-                  dangerouslySetInnerHTML={{ __html: renderedMarkdownHtml }}
-                />
+                {renderedMarkdownHtml ? (
+                  <div
+                    className="doc-viewer-md-rendered"
+                    dangerouslySetInnerHTML={{ __html: renderedMarkdownHtml }}
+                  />
+                ) : (
+                  <div className="doc-viewer-empty-preview">
+                    <div className="doc-viewer-empty-icon">
+                      <Icon name="file-text" />
+                    </div>
+                    <h3>Documento vacío</h3>
+                    <p>Este archivo no contiene texto aún.</p>
+                    <button
+                      type="button"
+                      className="doc-viewer-empty-btn"
+                      onClick={() => setViewMode("split")}
+                    >
+                      <Icon name="edit" />
+                      <span>Comenzar a escribir o pegar contenido</span>
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div
@@ -660,6 +698,7 @@ export function DocumentViewer({
                 </div>
                 <textarea
                   className="doc-viewer-textarea"
+                  placeholder="Escribe o pega texto aquí... (Ctrl+S para guardar)"
                   onChange={(e) => {
                     const val = e.target.value;
                     setTextContent(val);

@@ -5,6 +5,7 @@ import "./quick-look-markdown.css";
 
 interface QuickLookMarkdownProps {
   payload: QuickLookPayload;
+  onEdit?: () => void;
 }
 
 function splitTableRow(row: string): string[] {
@@ -133,7 +134,7 @@ function getAlertIcon(type: string): IconName {
   }
 }
 
-export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
+export function QuickLookMarkdown({ payload, onEdit }: QuickLookMarkdownProps) {
   const [viewMode, setViewMode] = useState<"rendered" | "raw">("rendered");
   const [copied, setCopied] = useState(false);
   const content = payload.textContent || "";
@@ -147,7 +148,24 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
 
   // Convert basic Markdown to safe structured HTML React elements
   const renderedElements = useMemo(() => {
-    if (!content) return <p className="md-empty">Documento vacío.</p>;
+    if (!content) {
+      return (
+        <div className="md-empty-state">
+          <p className="md-empty">Documento vacío.</p>
+          {onEdit && (
+            <button
+              className="quicklook-md-empty-edit-btn"
+              onClick={onEdit}
+              type="button"
+              title="Abrir editor de documentos en Prisma"
+            >
+              <Icon name="edit" />
+              <span>Editar en Prisma</span>
+            </button>
+          )}
+        </div>
+      );
+    }
 
     const elements: React.ReactNode[] = [];
     let inCodeBlock = false;
@@ -654,6 +672,17 @@ export function QuickLookMarkdown({ payload }: QuickLookMarkdownProps) {
           <span className="quicklook-text-stats">
             {lines.length} {lines.length === 1 ? "línea" : "líneas"} • {content.length} caracteres
           </span>
+          {onEdit && (
+            <button
+              className="quicklook-copy-btn quicklook-edit-btn"
+              onClick={onEdit}
+              type="button"
+              title="Abrir editor completo en Prisma"
+            >
+              <Icon name="edit" />
+              <span>Editar</span>
+            </button>
+          )}
           <button
             className={`quicklook-copy-btn ${copied ? "is-copied" : ""}`}
             onClick={handleCopy}

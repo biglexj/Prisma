@@ -348,7 +348,7 @@ export function QuickLookHeader({
               e.stopPropagation();
               onEdit();
             }}
-            title="Editar con el editor predeterminado de Windows"
+            title="Editar en Prisma (Editor de documentos)"
           >
             <Icon name="edit" />
           </button>

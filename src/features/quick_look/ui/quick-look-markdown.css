@@ -472,3 +472,60 @@
   width: 13px;
   height: 13px;
 }
+
+/* ── Estado de documento vacío y acción de edición en QuickLook ── */
+.md-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  gap: 16px;
+  min-height: 220px;
+  text-align: center;
+}
+
+.md-empty-state .md-empty {
+  font-size: 0.95rem;
+  color: var(--on-surface-variant);
+  margin: 0;
+  font-style: italic;
+}
+
+.quicklook-md-empty-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 1px solid var(--primary);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+.quicklook-md-empty-edit-btn:hover {
+  background: var(--primary);
+  color: var(--on-primary, #ffffff);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.quicklook-md-empty-edit-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.quicklook-edit-btn {
+  color: var(--primary) !important;
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent) !important;
+}
+
+.quicklook-edit-btn:hover {
+  background: var(--primary-container) !important;
+  color: var(--on-primary-container) !important;
+}

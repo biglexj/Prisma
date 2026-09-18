@@ -4,9 +4,10 @@ import type { QuickLookPayload } from "../model/types";
 
 interface QuickLookTextProps {
   payload: QuickLookPayload;
+  onEdit?: () => void;
 }
 
-export function QuickLookText({ payload }: QuickLookTextProps) {
+export function QuickLookText({ payload, onEdit }: QuickLookTextProps) {
   const [copied, setCopied] = useState(false);
   const content = payload.textContent || "Archivo de texto vacío.";
   const lines = content.split("\n");
@@ -23,6 +24,17 @@ export function QuickLookText({ payload }: QuickLookTextProps) {
         <span className="quicklook-text-stats">
           {lines.length} {lines.length === 1 ? "línea" : "líneas"} • {content.length} caracteres
         </span>
+        {onEdit && (
+          <button
+            className="quicklook-copy-btn quicklook-edit-btn"
+            onClick={onEdit}
+            type="button"
+            title="Abrir editor completo en Prisma"
+          >
+            <Icon name="edit" />
+            <span>Editar</span>
+          </button>
+        )}
         <button
           className={`quicklook-copy-btn ${copied ? "is-copied" : ""}`}
           onClick={handleCopy}

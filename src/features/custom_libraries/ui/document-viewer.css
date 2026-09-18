@@ -778,3 +778,67 @@
 @keyframes docViewerSpin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Estado vacío en modo vista previa de documentos ── */
+.doc-viewer-empty-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  gap: 16px;
+  text-align: center;
+  color: var(--on-surface-variant);
+}
+
+.doc-viewer-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--surface-container-high);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doc-viewer-empty-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.doc-viewer-empty-preview h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--on-surface);
+}
+
+.doc-viewer-empty-preview p {
+  font-size: 0.9rem;
+  margin: 0;
+  color: var(--on-surface-variant);
+}
+
+.doc-viewer-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary, #ffffff);
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.doc-viewer-empty-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  filter: brightness(1.08);
+}
