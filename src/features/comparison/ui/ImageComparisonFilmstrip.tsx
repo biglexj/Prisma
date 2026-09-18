@@ -1,7 +1,7 @@
 import React from "react";
-import { Icon } from "../../../../shared/ui/Icon";
-import { VisualThumbnail } from "../VisualThumbnail";
-import type { ComparisonImageSlot, ComparisonMode } from "./types";
+import { Icon } from "../../../shared/ui/Icon";
+import { VisualThumbnail } from "../../visual_library/ui/VisualThumbnail";
+import type { ComparisonImageSlot, ComparisonMode } from "../model/types";
 
 interface ImageComparisonFilmstripProps {
   slots: ComparisonImageSlot[];

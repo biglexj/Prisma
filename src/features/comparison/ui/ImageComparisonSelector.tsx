@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { Icon } from "../../../../shared/ui/Icon";
-import { cleanPath } from "../../../../shared/mediaTree";
-import { VisualThumbnail } from "../VisualThumbnail";
-import type { VisualLibraryItem } from "../../model/types";
-import { isImagePath, createVisualItemFromPath } from "./types";
+import { Icon } from "../../../shared/ui/Icon";
+import { cleanPath } from "../../../shared/mediaTree";
+import { VisualThumbnail } from "../../visual_library/ui/VisualThumbnail";
+import type { VisualLibraryItem } from "../../visual_library/model/types";
+import { isImagePath, createVisualItemFromPath } from "../model/types";
 
 interface ImageComparisonSelectorProps {
   currentItems: VisualLibraryItem[];

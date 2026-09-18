@@ -1,4 +1,4 @@
-import type { VisualLibraryItem } from "../../model/types";
+import type { VisualLibraryItem } from "../../visual_library/model/types";
 
 export type ComparisonMode = "split" | "curtain" | "grid" | "flick";
 

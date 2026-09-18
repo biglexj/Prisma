@@ -40,7 +40,7 @@ import { PrismaUpscalerView } from "../features/prisma_upscaler/ui/PrismaUpscale
 import { WallpapersView } from "../features/wallpapers/ui/WallpapersView";
 import { BatchRenamerView } from "../features/renamer/ui/BatchRenamerView";
 import { DuplicatesScannerModal } from "../features/visual_library/ui/duplicates/DuplicatesScannerModal";
-import { ImageComparisonModal } from "../features/visual_library/ui/comparison/ImageComparisonModal";
+import { ImageComparisonModal } from "../features/comparison";
 import { DspEqualizerView } from "../features/dsp/ui/DspEqualizerView";
 import { DspEqualizerModal } from "../features/dsp/ui/DspEqualizerModal";
 import { DspProvider } from "../features/dsp/DspContext";

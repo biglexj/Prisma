@@ -14,7 +14,7 @@ import type {
 } from "../../model/types";
 import { DuplicateGroupCard, type DuplicateScanKind } from "./DuplicateGroupCard";
 import { DuplicatesEmptyState } from "./DuplicatesEmptyState";
-import { ImageComparisonModal } from "../comparison/ImageComparisonModal";
+import { ImageComparisonModal } from "../../../comparison";
 import "./duplicates-scanner.css";
 
 interface DuplicatesScannerModalProps {

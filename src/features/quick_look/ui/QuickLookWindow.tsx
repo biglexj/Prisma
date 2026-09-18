@@ -22,7 +22,7 @@ import { QuickLookHtml } from "./QuickLookHtml";
 import { QuickLookArchive } from "./QuickLookArchive";
 import { QuickLookEpub } from "./QuickLookEpub";
 import { QuickLookFallback } from "./QuickLookFallback";
-import { ImageComparisonModal } from "../../visual_library/ui/comparison/ImageComparisonModal";
+import { ImageComparisonModal } from "../../comparison";
 import "./quick-look.css";
 
 export function QuickLookWindow() {

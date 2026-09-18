@@ -8,11 +8,37 @@
   z-index: 9500;
   display: flex;
   flex-direction: column;
-  background-color: var(--color-bg, #0f0d13);
-  color: var(--color-text, #f3edf7);
+  background-color: #0c0a10;
+  color: #f3edf7;
   user-select: none;
   overflow: hidden;
   animation: compareFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Explicit dark mode tokens to avoid light theme inheritance & preserve media contrast */
+  --primary: #d0bcff;
+  --on-primary: #381e72;
+  --primary-container: #4f378b;
+  --on-primary-container: #eaddff;
+  --surface: #0e0c13;
+  --surface-container-lowest: #08060a;
+  --surface-container-low: #121017;
+  --surface-container: #191621;
+  --surface-container-high: #231f2d;
+  --surface-container-highest: #2e2a39;
+  --on-surface: #f3edf7;
+  --on-surface-variant: #cac4d0;
+  --outline: #938f99;
+  --outline-variant: rgba(255, 255, 255, 0.12);
+  --color-bg: #0c0a10;
+  --color-text: #f3edf7;
+  --color-surface-container: #191621;
+  --color-surface-container-high: #231f2d;
+  --color-surface-container-highest: #2e2a39;
+  --color-primary: #d0bcff;
+  --color-on-primary: #381e72;
+  --color-primary-container: #4f378b;
+  --color-on-surface-variant: #cac4d0;
+  --color-outline-variant: rgba(255, 255, 255, 0.12);
 }
 
 .img-compare-modal-root.is-embedded {
@@ -25,17 +51,18 @@
   z-index: 1;
   animation: none;
   border-radius: 16px;
-  background: var(--surface-container-low, #121016);
-  border: 1px solid var(--outline-variant);
-  color: var(--on-surface);
+  background: #0e0c13;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f3edf7;
   margin-top: 8px;
   margin-bottom: 16px;
   box-sizing: border-box;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
 .img-compare-modal-root.is-embedded .img-compare-top-bar {
-  background: var(--surface-container);
-  border-bottom: 1px solid var(--outline-variant);
+  background: #14121a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
 }
@@ -63,10 +90,10 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 16px;
-  background: var(--color-surface-container, rgba(33, 27, 44, 0.88));
+  background: #14121a;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--color-outline-variant, rgba(255, 255, 255, 0.08));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 10;
   flex-shrink: 0;
 }

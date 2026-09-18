@@ -11,7 +11,7 @@ import { RenameMediaDialog } from "../../../shared/ui/RenameMediaDialog";
 import { addToHistory } from "../../../shared/useHistory";
 import type { VisualLibraryItem } from "../model/types";
 import { ImageEditor } from "./editor/ImageEditor";
-import { ImageComparisonModal } from "./comparison/ImageComparisonModal";
+import { ImageComparisonModal } from "../../comparison";
 import { quickLookClient } from "../../quick_look/tauri/client";
 import { ViewerToolsMenu } from "./components/ViewerToolsMenu";
 import { ImageInfoDrawer } from "./components/ImageInfoDrawer";

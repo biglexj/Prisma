@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Icon } from "../../../../shared/ui/Icon";
-import { isImagePath } from "./types";
+import { Icon } from "../../../shared/ui/Icon";
+import { isImagePath } from "../model/types";
 
 interface ImageComparisonEmptySlotProps {
   onPickLibrary: () => void;

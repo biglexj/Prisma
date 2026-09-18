@@ -1,7 +1,7 @@
 import React from "react";
-import { Icon } from "../../../../shared/ui/Icon";
-import { toSafeAssetUrl } from "../../../../shared/mediaTree";
-import type { ComparisonImageSlot } from "./types";
+import { Icon } from "../../../shared/ui/Icon";
+import { toSafeAssetUrl } from "../../../shared/mediaTree";
+import type { ComparisonImageSlot } from "../model/types";
 
 interface ImageComparisonCurtainProps {
   slotA?: ComparisonImageSlot;

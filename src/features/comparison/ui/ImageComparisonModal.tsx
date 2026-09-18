@@ -2,16 +2,16 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { Icon } from "../../../../shared/ui/Icon";
-import { cleanPath, toSafeAssetUrl } from "../../../../shared/mediaTree";
-import { VisualThumbnail } from "../VisualThumbnail";
-import type { VisualLibraryItem } from "../../model/types";
-import type { ComparisonMode, ComparisonImageSlot } from "./types";
+import { Icon } from "../../../shared/ui/Icon";
+import { cleanPath, toSafeAssetUrl } from "../../../shared/mediaTree";
+import { VisualThumbnail } from "../../visual_library/ui/VisualThumbnail";
+import type { VisualLibraryItem } from "../../visual_library/model/types";
+import type { ComparisonMode, ComparisonImageSlot } from "../model/types";
 import {
   isImagePath,
   createVisualItemFromPath,
   SUPPORTED_IMAGE_EXTENSIONS,
-} from "./types";
+} from "../model/types";
 import { ImageComparisonSelector } from "./ImageComparisonSelector";
 import { ImageComparisonEmptySlot } from "./ImageComparisonEmptySlot";
 import { ImageComparisonFilmstrip } from "./ImageComparisonFilmstrip";
