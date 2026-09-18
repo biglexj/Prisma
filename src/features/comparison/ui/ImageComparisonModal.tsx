@@ -3,19 +3,23 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Icon } from "../../../shared/ui/Icon";
-import { cleanPath, toSafeAssetUrl } from "../../../shared/mediaTree";
-import { VisualThumbnail } from "../../visual_library/ui/VisualThumbnail";
 import type { VisualLibraryItem } from "../../visual_library/model/types";
 import type { ComparisonMode, ComparisonImageSlot } from "../model/types";
 import {
-  isImagePath,
+  isVideoPath,
+  isSupportedMediaPath,
   createVisualItemFromPath,
   SUPPORTED_IMAGE_EXTENSIONS,
+  SUPPORTED_VIDEO_EXTENSIONS,
+  SUPPORTED_ALL_MEDIA_EXTENSIONS,
 } from "../model/types";
 import { ImageComparisonSelector } from "./ImageComparisonSelector";
 import { ImageComparisonEmptySlot } from "./ImageComparisonEmptySlot";
 import { ImageComparisonFilmstrip } from "./ImageComparisonFilmstrip";
 import { ImageComparisonCurtain } from "./ImageComparisonCurtain";
+import { ImageComparisonTopBar } from "./ImageComparisonTopBar";
+import { ComparisonMediaLayer } from "./ComparisonMediaLayer";
+import { ComparisonVideoTransport } from "./ComparisonVideoTransport";
 import "./image-comparison.css";
 
 interface ImageComparisonModalProps {
@@ -45,6 +49,14 @@ export function ImageComparisonModal({
   const [activeSlotBId, setActiveSlotBId] = useState<string>("slot-1");
   const [showFilmstrip, setShowFilmstrip] = useState(true);
 
+  // Estados para vídeo sincronizado y audio inteligente (Hover Audio Focus)
+  const videoElementsRef = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const [isPlayingVideos, setIsPlayingVideos] = useState(false);
+  const [videoCurrentTime, setVideoCurrentTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [audioFocusSlotId, setAudioFocusSlotId] = useState<string | null>(null);
+
   // Estados de Drag & Drop nativo
   const [isNativeDragging, setIsNativeDragging] = useState(false);
   const [hoveredNativeDropZone, setHoveredNativeDropZone] = useState<string | null>(null);
@@ -73,6 +85,115 @@ export function ImageComparisonModal({
 
     return list;
   });
+
+  const hasVideos = slots.some((s) => s.item.kind === "video" || isVideoPath(s.item.path));
+
+  // Registrar elementos video de cada slot
+  const registerVideoRef = useCallback((slotId: string, el: HTMLVideoElement | null) => {
+    if (!slotId) return;
+    if (el) {
+      videoElementsRef.current.set(slotId, el);
+      if (el.duration && !isNaN(el.duration)) {
+        setVideoDuration((prev) => Math.max(prev, el.duration));
+      }
+    } else {
+      videoElementsRef.current.delete(slotId);
+    }
+  }, []);
+
+  // Inicializar foco de audio en el primer vídeo si aún no se ha definido
+  useEffect(() => {
+    const firstVideo = slots.find((s) => s.item.kind === "video" || isVideoPath(s.item.path));
+    if (firstVideo && !audioFocusSlotId) {
+      setAudioFocusSlotId(firstVideo.id);
+    }
+  }, [slots, audioFocusSlotId]);
+
+  // Enrutamiento de audio al pasar el ratón (Hover Audio Focus)
+  const handleSlotPointerEnter = useCallback((slotId: string) => {
+    setAudioFocusSlotId(slotId);
+    videoElementsRef.current.forEach((video, id) => {
+      video.muted = id !== slotId;
+    });
+  }, []);
+
+  // Sincronización de reproducción dual
+  const handleTogglePlayVideos = useCallback(() => {
+    setIsPlayingVideos((prev) => {
+      const next = !prev;
+      videoElementsRef.current.forEach((video) => {
+        if (next) {
+          void video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      });
+      return next;
+    });
+  }, []);
+
+  const handleSeekVideos = useCallback((time: number) => {
+    setVideoCurrentTime(time);
+    videoElementsRef.current.forEach((video) => {
+      video.currentTime = time;
+    });
+  }, []);
+
+  const handleRestartVideos = useCallback(() => {
+    setVideoCurrentTime(0);
+    videoElementsRef.current.forEach((video) => {
+      video.currentTime = 0;
+      void video.play().catch(() => {});
+    });
+    setIsPlayingVideos(true);
+  }, []);
+
+  const handleChangePlaybackRate = useCallback((rate: number) => {
+    setPlaybackRate(rate);
+    videoElementsRef.current.forEach((video) => {
+      video.playbackRate = rate;
+    });
+  }, []);
+
+  // Bucle de sincronización de tiempo durante reproducción
+  useEffect(() => {
+    if (!isPlayingVideos) return;
+    const interval = setInterval(() => {
+      const primaryVideo = (audioFocusSlotId && videoElementsRef.current.get(audioFocusSlotId)) ||
+        Array.from(videoElementsRef.current.values())[0];
+      if (primaryVideo) {
+        setVideoCurrentTime(primaryVideo.currentTime);
+        if (primaryVideo.duration && !isNaN(primaryVideo.duration)) {
+          setVideoDuration(primaryVideo.duration);
+        }
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [isPlayingVideos, audioFocusSlotId]);
+
+  const handleMediaLoaded = (e: React.SyntheticEvent<HTMLImageElement | HTMLVideoElement>, slotId: string) => {
+    const el = e.currentTarget;
+    let width = 0;
+    let height = 0;
+    if ("naturalWidth" in el) {
+      width = el.naturalWidth;
+      height = el.naturalHeight;
+    } else if ("videoWidth" in el) {
+      width = el.videoWidth;
+      height = el.videoHeight;
+      if (el.duration && !isNaN(el.duration)) {
+        setVideoDuration((prev) => Math.max(prev, el.duration));
+      }
+    }
+    if (width > 0) {
+      setSlots((prev) =>
+        prev.map((s) => (s.id === slotId && !s.width ? { ...s, width, height } : s)),
+      );
+    }
+  };
+
+  const audioFocusSlot = slots.find((s) => s.id === audioFocusSlotId);
+  const audioFocusTitle = audioFocusSlot ? audioFocusSlot.item.title : undefined;
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const curtainRef = useRef<HTMLDivElement | null>(null);
@@ -332,9 +453,9 @@ export function ImageComparisonModal({
     }
   };
 
-  // Asignación por lotes para cuando el usuario arrastra 2 o más fotos a la vez
+  // Asignación por lotes para cuando el usuario arrastra 2 o más fotos/vídeos a la vez
   const handleAssignMultipleImagePaths = useCallback((filePaths: string[], targetZone?: "slot-a" | "slot-b" | null) => {
-    const validPaths = filePaths.filter(isImagePath);
+    const validPaths = filePaths.filter(isSupportedMediaPath);
     if (validPaths.length === 0) return;
 
     setSlots((prev) => {
@@ -476,7 +597,11 @@ export function ImageComparisonModal({
     try {
       const selected = await open({
         multiple: true,
-        filters: [{ name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS }],
+        filters: [
+          { name: "Multimedia (Fotos y Vídeos)", extensions: SUPPORTED_ALL_MEDIA_EXTENSIONS },
+          { name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS },
+          { name: "Vídeos", extensions: SUPPORTED_VIDEO_EXTENSIONS },
+        ],
       });
       if (selected) {
         const paths = Array.isArray(selected) ? selected : [selected];
@@ -489,7 +614,11 @@ export function ImageComparisonModal({
     try {
       const selected = await open({
         multiple: true,
-        filters: [{ name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS }],
+        filters: [
+          { name: "Multimedia (Fotos y Vídeos)", extensions: SUPPORTED_ALL_MEDIA_EXTENSIONS },
+          { name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS },
+          { name: "Vídeos", extensions: SUPPORTED_VIDEO_EXTENSIONS },
+        ],
       });
       if (selected) {
         const paths = Array.isArray(selected) ? selected : [selected];
@@ -541,7 +670,7 @@ export function ImageComparisonModal({
       hoveredNativeDropZoneRef.current = null;
 
       if (!paths || paths.length === 0) return;
-      const validPaths = paths.filter(isImagePath);
+      const validPaths = paths.filter(isSupportedMediaPath);
       if (validPaths.length === 0) return;
 
       if (isAddingNewSlotRef.current) {
@@ -652,9 +781,13 @@ export function ImageComparisonModal({
       } else if (e.key.toLowerCase() === "s" && !e.ctrlKey && !e.metaKey) {
         e.preventDefault();
         handleSwapPrimary();
-      } else if (e.key === " " && mode === "flick") {
+      } else if (e.key === " ") {
         e.preventDefault();
-        setActiveFlickIndex((prev) => (prev + 1) % slots.length);
+        if (mode === "flick") {
+          setActiveFlickIndex((prev) => (prev + 1) % slots.length);
+        } else if (hasVideos) {
+          handleTogglePlayVideos();
+        }
       } else if (e.key.toLowerCase() === "f") {
         e.preventDefault();
         toggleFullscreen();
@@ -666,7 +799,18 @@ export function ImageComparisonModal({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectorTargetSlotId, isAddingNewSlot, mode, slots.length, onClose, handleSwapPrimary, toggleFullscreen, handleResetZoom]);
+  }, [
+    selectorTargetSlotId,
+    isAddingNewSlot,
+    mode,
+    slots.length,
+    onClose,
+    handleSwapPrimary,
+    toggleFullscreen,
+    handleResetZoom,
+    hasVideos,
+    handleTogglePlayVideos,
+  ]);
 
   return (
     <div
@@ -674,152 +818,23 @@ export function ImageComparisonModal({
       className={`img-compare-modal-root ${isFullscreen ? "is-fullscreen" : ""} ${embedded ? "is-embedded" : ""}`}
     >
       {/* Top Action Bar */}
-      <header className="img-compare-top-bar" onClick={(e) => e.stopPropagation()}>
-        <div className="img-compare-top-left">
-          <button
-            type="button"
-            className="img-compare-btn is-icon"
-            onClick={onClose}
-            title={embedded ? "Volver al Inicio" : "Volver al visor (Esc)"}
-          >
-            <Icon name="arrow-left" />
-          </button>
-          <div className="img-compare-badge-title">
-            <Icon name="compare" />
-            <span>Comparador ({slots.length} foto{slots.length === 1 ? "" : "s"})</span>
-          </div>
-
-          {/* Mode Switcher */}
-          <div className="img-compare-mode-pills">
-            <button
-              type="button"
-              className={`img-compare-pill ${mode === "split" ? "is-active" : ""}`}
-              onClick={() => setMode("split")}
-              title="Lado a lado (1)"
-            >
-              <Icon name="columns" />
-              <span>Lado a lado</span>
-            </button>
-            <button
-              type="button"
-              className={`img-compare-pill ${mode === "curtain" ? "is-active" : ""}`}
-              onClick={() => {
-                if (slots.length < 2) {
-                  setIsAddingNewSlot(true);
-                  return;
-                }
-                setMode("curtain");
-              }}
-              title={slots.length < 2 ? "Añade una segunda foto para usar cortinilla (2)" : "Cortinilla interactiva antes/después (2)"}
-            >
-              <Icon name="split" />
-              <span>Cortinilla</span>
-            </button>
-            <button
-              type="button"
-              className={`img-compare-pill ${mode === "grid" ? "is-active" : ""}`}
-              onClick={() => setMode("grid")}
-              title="Cuadrícula multi-imagen (3)"
-            >
-              <Icon name="grid" />
-              <span>Cuadrícula</span>
-            </button>
-            <button
-              type="button"
-              className={`img-compare-pill ${mode === "flick" ? "is-active" : ""}`}
-              onClick={() => {
-                if (slots.length < 2) {
-                  setIsAddingNewSlot(true);
-                  return;
-                }
-                setMode("flick");
-              }}
-              title={slots.length < 2 ? "Añade una segunda foto para alternar A/B (4)" : "Alternar rápido A/B (4)"}
-            >
-              <Icon name="sparkles" />
-              <span>Alternar A/B</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="img-compare-top-right">
-          {mode === "split" && (
-            <button
-              type="button"
-              className="img-compare-btn"
-              onClick={() =>
-                setSplitOrientation((prev) =>
-                  prev === "horizontal" ? "vertical" : "horizontal",
-                )
-              }
-              title="Alternar orientación vertical / horizontal"
-            >
-              <Icon name="aspect-ratio" />
-              <span>{splitOrientation === "horizontal" ? "Vertical" : "Horizontal"}</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            className={`img-compare-btn ${syncZoom ? "is-active" : ""}`}
-            onClick={() => setSyncZoom((prev) => !prev)}
-            title={syncZoom ? "Zoom y desplazamiento sincronizado activo" : "Activar zoom sincronizado"}
-          >
-            <Icon name="link" />
-            <span>Sincronizar Zoom</span>
-          </button>
-
-          <button
-            type="button"
-            className="img-compare-btn"
-            onClick={handleSwapPrimary}
-            title="Intercambiar fotos A ↔ B (S)"
-          >
-            <Icon name="shuffle" />
-            <span>Intercambiar</span>
-          </button>
-
-          <button
-            type="button"
-            className="img-compare-btn"
-            onClick={handleResetZoom}
-            title="Restablecer zoom normal (R)"
-          >
-            <Icon name="fit-screen" />
-            <span>100%</span>
-          </button>
-
-          {slots.length < 6 && (
-            <button
-              type="button"
-              className="img-compare-btn is-accent"
-              onClick={() => setIsAddingNewSlot(true)}
-              title="Añadir otra imagen a la comparativa (hasta 6 imágenes)"
-            >
-              <Icon name="plus" />
-              <span>Añadir foto</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            className="img-compare-btn is-icon"
-            onClick={toggleFullscreen}
-            title="Pantalla completa (F)"
-          >
-            <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen"} />
-          </button>
-
-          <button
-            type="button"
-            className="img-compare-btn is-icon"
-            onClick={onClose}
-            title="Cerrar comparativa (Esc)"
-          >
-            <Icon name="close" />
-          </button>
-        </div>
-      </header>
+      <ImageComparisonTopBar
+        mode={mode}
+        setMode={setMode}
+        splitOrientation={splitOrientation}
+        setSplitOrientation={setSplitOrientation}
+        syncZoom={syncZoom}
+        setSyncZoom={setSyncZoom}
+        slotsCount={slots.length}
+        hasVideos={hasVideos}
+        isFullscreen={isFullscreen}
+        toggleFullscreen={toggleFullscreen}
+        handleSwapPrimary={handleSwapPrimary}
+        handleResetZoom={handleResetZoom}
+        setIsAddingNewSlot={setIsAddingNewSlot}
+        onClose={onClose}
+        embedded={embedded}
+      />
 
       {/* Main Stage */}
       <main className="img-compare-stage">
@@ -833,13 +848,25 @@ export function ImageComparisonModal({
                 data-drop-zone="slot-a"
                 onWheel={(e) => handleSlotWheel(e, slotA.id)}
                 onPointerDown={(e) => handlePanStart(e, slotA.id)}
+                onPointerEnter={() => handleSlotPointerEnter(slotA.id)}
                 style={{ cursor: slotA.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
               >
                 <div className="img-compare-slot-header">
-                  <span className="img-compare-slot-tag is-a">Imagen A (Base)</span>
+                  <span className="img-compare-slot-tag is-a">
+                    {slotA.item.kind === "video" || isVideoPath(slotA.item.path) ? "Vídeo A (Base)" : "Elemento A (Base)"}
+                  </span>
                   <span className="img-compare-slot-title" title={slotA.item.path}>
                     {slotA.item.title}
                   </span>
+                  {(slotA.item.kind === "video" || isVideoPath(slotA.item.path)) && (
+                    <span
+                      className={`img-compare-audio-badge ${audioFocusSlotId === slotA.id ? "is-active" : ""}`}
+                      title={audioFocusSlotId === slotA.id ? "Audio activo (pasa el ratón para cambiar)" : "Silenciado"}
+                    >
+                      <Icon name={audioFocusSlotId === slotA.id ? "volume" : "volume-mute"} />
+                      <span>{audioFocusSlotId === slotA.id ? "Audio" : "Mudo"}</span>
+                    </span>
+                  )}
                   {slotA.width && slotA.height && (
                     <span className="img-compare-dims-pill">
                       {slotA.width} × {slotA.height} px
@@ -849,7 +876,7 @@ export function ImageComparisonModal({
                     type="button"
                     className="img-compare-slot-change-btn"
                     onClick={() => setSelectorTargetSlotId(slotA.id)}
-                    title="Cambiar imagen A"
+                    title="Cambiar archivo A"
                   >
                     <Icon name="edit" />
                     <span>Cambiar</span>
@@ -859,43 +886,24 @@ export function ImageComparisonModal({
                       type="button"
                       className="img-compare-slot-remove-btn"
                       onClick={() => handleRemoveSlot(slotA.id)}
-                      title="Quitar imagen A"
+                      title="Quitar de comparativa"
                     >
                       <Icon name="close" />
                     </button>
                   )}
                 </div>
 
-                <div
-                  className="img-compare-layer"
-                  style={{
-                    transform: `translate(${slotA.pan.x}px, ${slotA.pan.y}px) scale(${slotA.zoom})`,
-                    transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
-                  }}
-                >
-                  <img
-                    src={toSafeAssetUrl(slotA.item.path)}
-                    alt={slotA.item.title}
-                    draggable={false}
-                    onLoad={(e) => {
-                      const img = e.currentTarget;
-                      if (img.naturalWidth && !slotA.width) {
-                        setSlots((prev) =>
-                          prev.map((s) =>
-                            s.id === slotA.id
-                              ? { ...s, width: img.naturalWidth, height: img.naturalHeight }
-                              : s,
-                          ),
-                        );
-                      }
-                    }}
-                  />
-                </div>
+                <ComparisonMediaLayer
+                  slot={slotA}
+                  onMediaLoad={handleMediaLoaded}
+                  videoRef={(el) => registerVideoRef(slotA.id, el)}
+                  isMuted={audioFocusSlotId ? audioFocusSlotId !== slotA.id : false}
+                />
               </div>
             ) : (
               <ImageComparisonEmptySlot
                 dropZone="slot-a"
-                tagLabel="Imagen A (Base)"
+                tagLabel="Elemento A (Base)"
                 onPickLibrary={() => setIsAddingNewSlot(true)}
                 onPickExplorer={handlePickExplorerForSlotA}
                 onDropFile={(path) => handleAssignMultipleImagePaths([path], "slot-a")}
@@ -913,13 +921,25 @@ export function ImageComparisonModal({
                 data-drop-zone="slot-b"
                 onWheel={(e) => handleSlotWheel(e, slotB.id)}
                 onPointerDown={(e) => handlePanStart(e, slotB.id)}
+                onPointerEnter={() => handleSlotPointerEnter(slotB.id)}
                 style={{ cursor: slotB.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
               >
                 <div className="img-compare-slot-header">
-                  <span className="img-compare-slot-tag is-b">Imagen B</span>
+                  <span className="img-compare-slot-tag is-b">
+                    {slotB.item.kind === "video" || isVideoPath(slotB.item.path) ? "Vídeo B" : "Elemento B"}
+                  </span>
                   <span className="img-compare-slot-title" title={slotB.item.path}>
                     {slotB.item.title}
                   </span>
+                  {(slotB.item.kind === "video" || isVideoPath(slotB.item.path)) && (
+                    <span
+                      className={`img-compare-audio-badge ${audioFocusSlotId === slotB.id ? "is-active" : ""}`}
+                      title={audioFocusSlotId === slotB.id ? "Audio activo (pasa el ratón para cambiar)" : "Silenciado"}
+                    >
+                      <Icon name={audioFocusSlotId === slotB.id ? "volume" : "volume-mute"} />
+                      <span>{audioFocusSlotId === slotB.id ? "Audio" : "Mudo"}</span>
+                    </span>
+                  )}
                   {slotB.width && slotB.height && (
                     <span className="img-compare-dims-pill">
                       {slotB.width} × {slotB.height} px
@@ -929,7 +949,7 @@ export function ImageComparisonModal({
                     type="button"
                     className="img-compare-slot-change-btn"
                     onClick={() => setSelectorTargetSlotId(slotB.id)}
-                    title="Cambiar imagen B"
+                    title="Cambiar archivo B"
                   >
                     <Icon name="edit" />
                     <span>Cambiar</span>
@@ -939,43 +959,24 @@ export function ImageComparisonModal({
                       type="button"
                       className="img-compare-slot-remove-btn"
                       onClick={() => handleRemoveSlot(slotB.id)}
-                      title="Quitar imagen B"
+                      title="Quitar de comparativa"
                     >
                       <Icon name="close" />
                     </button>
                   )}
                 </div>
 
-                <div
-                  className="img-compare-layer"
-                  style={{
-                    transform: `translate(${slotB.pan.x}px, ${slotB.pan.y}px) scale(${slotB.zoom})`,
-                    transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
-                  }}
-                >
-                  <img
-                    src={toSafeAssetUrl(slotB.item.path)}
-                    alt={slotB.item.title}
-                    draggable={false}
-                    onLoad={(e) => {
-                      const img = e.currentTarget;
-                      if (img.naturalWidth && !slotB.width) {
-                        setSlots((prev) =>
-                          prev.map((s) =>
-                            s.id === slotB.id
-                              ? { ...s, width: img.naturalWidth, height: img.naturalHeight }
-                              : s,
-                          ),
-                        );
-                      }
-                    }}
-                  />
-                </div>
+                <ComparisonMediaLayer
+                  slot={slotB}
+                  onMediaLoad={handleMediaLoaded}
+                  videoRef={(el) => registerVideoRef(slotB.id, el)}
+                  isMuted={audioFocusSlotId ? audioFocusSlotId !== slotB.id : true}
+                />
               </div>
             ) : (
               <ImageComparisonEmptySlot
                 dropZone="slot-b"
-                tagLabel="Imagen B (A Comparar)"
+                tagLabel="Elemento B (A Comparar)"
                 onPickLibrary={() => setIsAddingNewSlot(true)}
                 onPickExplorer={handlePickExplorerForSlotB}
                 onDropFile={(path) => handleAssignMultipleImagePaths([path], "slot-b")}
@@ -998,16 +999,20 @@ export function ImageComparisonModal({
             handlePanStart={handlePanStart}
             handleCurtainPointerDown={handleCurtainPointerDown}
             onBackToSplit={() => setMode("split")}
+            videoRefA={(el) => slotA && registerVideoRef(slotA.id, el)}
+            videoRefB={(el) => slotB && registerVideoRef(slotB.id, el)}
+            isMutedA={audioFocusSlotId ? audioFocusSlotId !== slotA?.id : false}
+            isMutedB={audioFocusSlotId ? audioFocusSlotId !== slotB?.id : true}
           />
         )}
 
-        {/* ── MODE 3: GRID (2 to 6 Images) ── */}
+        {/* ── MODE 3: GRID (2 to 6 Items) ── */}
         {mode === "grid" && (
           slots.length === 0 ? (
             <div className="img-compare-empty-curtain-notice">
               <Icon name="grid" />
-              <h3>No hay imágenes en la comparativa</h3>
-              <p>Añade imágenes de tu biblioteca o cárgalas en el modo Lado a lado.</p>
+              <h3>No hay elementos en la comparativa</h3>
+              <p>Añade fotos o vídeos de tu biblioteca o cárgalos en el modo Lado a lado.</p>
               <button
                 type="button"
                 className="img-compare-btn is-accent"
@@ -1019,56 +1024,62 @@ export function ImageComparisonModal({
             </div>
           ) : (
             <div className={`img-compare-grid-view count-${slots.length}`}>
-              {slots.map((slot, index) => (
-                <div
-                  key={slot.id}
-                  className="img-compare-grid-cell"
-                  onWheel={(e) => handleSlotWheel(e, slot.id)}
-                  onPointerDown={(e) => handlePanStart(e, slot.id)}
-                  style={{ cursor: slot.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
-                >
-                  <div className="img-compare-slot-header">
-                    <span className={`img-compare-slot-tag is-idx-${index % 4}`}>
-                      Foto #{index + 1}
-                    </span>
-                    <span className="img-compare-slot-title" title={slot.item.path}>
-                      {slot.item.title}
-                    </span>
-                    <button
-                      type="button"
-                      className="img-compare-slot-change-btn"
-                      onClick={() => setSelectorTargetSlotId(slot.id)}
-                      title="Cambiar imagen"
-                    >
-                      <Icon name="edit" />
-                    </button>
-                    {slots.length > 2 && (
+              {slots.map((slot, index) => {
+                const isVideo = slot.item.kind === "video" || isVideoPath(slot.item.path);
+                return (
+                  <div
+                    key={slot.id}
+                    className="img-compare-grid-cell"
+                    onWheel={(e) => handleSlotWheel(e, slot.id)}
+                    onPointerDown={(e) => handlePanStart(e, slot.id)}
+                    onPointerEnter={() => handleSlotPointerEnter(slot.id)}
+                    style={{ cursor: slot.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
+                  >
+                    <div className="img-compare-slot-header">
+                      <span className={`img-compare-slot-tag is-idx-${index % 4}`}>
+                        {isVideo ? "Vídeo" : "Foto"} #{index + 1}
+                      </span>
+                      <span className="img-compare-slot-title" title={slot.item.path}>
+                        {slot.item.title}
+                      </span>
+                      {isVideo && (
+                        <span
+                          className={`img-compare-audio-badge ${audioFocusSlotId === slot.id ? "is-active" : ""}`}
+                          title={audioFocusSlotId === slot.id ? "Audio activo" : "Silenciado"}
+                        >
+                          <Icon name={audioFocusSlotId === slot.id ? "volume" : "volume-mute"} />
+                          <span>{audioFocusSlotId === slot.id ? "Audio" : "Mudo"}</span>
+                        </span>
+                      )}
                       <button
                         type="button"
-                        className="img-compare-slot-remove-btn"
-                        onClick={() => handleRemoveSlot(slot.id)}
-                        title="Quitar de comparativa"
+                        className="img-compare-slot-change-btn"
+                        onClick={() => setSelectorTargetSlotId(slot.id)}
+                        title="Cambiar elemento"
                       >
-                        <Icon name="close" />
+                        <Icon name="edit" />
                       </button>
-                    )}
-                  </div>
+                      {slots.length > 2 && (
+                        <button
+                          type="button"
+                          className="img-compare-slot-remove-btn"
+                          onClick={() => handleRemoveSlot(slot.id)}
+                          title="Quitar de comparativa"
+                        >
+                          <Icon name="close" />
+                        </button>
+                      )}
+                    </div>
 
-                  <div
-                    className="img-compare-layer"
-                    style={{
-                      transform: `translate(${slot.pan.x}px, ${slot.pan.y}px) scale(${slot.zoom})`,
-                      transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
-                    }}
-                  >
-                    <img
-                      src={toSafeAssetUrl(slot.item.path)}
-                      alt={slot.item.title}
-                      draggable={false}
+                    <ComparisonMediaLayer
+                      slot={slot}
+                      onMediaLoad={handleMediaLoaded}
+                      videoRef={(el) => registerVideoRef(slot.id, el)}
+                      isMuted={audioFocusSlotId ? audioFocusSlotId !== slot.id : true}
                     />
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )
         )}
@@ -1078,8 +1089,8 @@ export function ImageComparisonModal({
           slots.length < 2 ? (
             <div className="img-compare-empty-curtain-notice">
               <Icon name="sparkles" />
-              <h3>Se requieren al menos 2 fotos para Alternar A/B</h3>
-              <p>Carga una segunda foto para alternar instantáneamente entre ellas con un clic o espacio.</p>
+              <h3>Se requieren al menos 2 elementos para Alternar A/B</h3>
+              <p>Carga un segundo archivo para alternar instantáneamente entre ellos con un clic o espacio.</p>
               <button
                 type="button"
                 className="img-compare-btn is-accent"
@@ -1095,15 +1106,22 @@ export function ImageComparisonModal({
               onClick={() => setActiveFlickIndex((prev) => (prev + 1) % slots.length)}
               onWheel={(e) => handleSlotWheel(e, slots[activeFlickIndex].id)}
               onPointerDown={(e) => handlePanStart(e, slots[activeFlickIndex].id)}
+              onPointerEnter={() => handleSlotPointerEnter(slots[activeFlickIndex].id)}
             >
               <div className="img-compare-flick-header">
                 <div className="img-compare-flick-badge">
                   <span className={`img-compare-slot-tag is-idx-${activeFlickIndex % 4}`}>
-                    Foto #{activeFlickIndex + 1}
+                    {slots[activeFlickIndex].item.kind === "video" || isVideoPath(slots[activeFlickIndex].item.path) ? "Vídeo" : "Foto"} #{activeFlickIndex + 1}
                   </span>
                   <span className="img-compare-slot-title" title={slots[activeFlickIndex].item.path}>
                     {slots[activeFlickIndex].item.title}
                   </span>
+                  {(slots[activeFlickIndex].item.kind === "video" || isVideoPath(slots[activeFlickIndex].item.path)) && (
+                    <span className="img-compare-audio-badge is-active">
+                      <Icon name="volume" />
+                      <span>Audio Activo</span>
+                    </span>
+                  )}
                   {slots[activeFlickIndex].width && slots[activeFlickIndex].height && (
                     <span className="img-compare-dims-pill">
                       {slots[activeFlickIndex].width} × {slots[activeFlickIndex].height} px
@@ -1115,35 +1133,30 @@ export function ImageComparisonModal({
                 </div>
               </div>
 
-              <div
-                className="img-compare-layer"
-                style={{
-                  transform: `translate(${slots[activeFlickIndex].pan.x}px, ${slots[activeFlickIndex].pan.y}px) scale(${slots[activeFlickIndex].zoom})`,
-                  transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
-                }}
-              >
-                <img
-                  key={slots[activeFlickIndex].id}
-                  src={toSafeAssetUrl(slots[activeFlickIndex].item.path)}
-                  alt={slots[activeFlickIndex].item.title}
-                  draggable={false}
-                  onLoad={(e) => {
-                    const img = e.currentTarget;
-                    const activeSlot = slots[activeFlickIndex];
-                    if (img.naturalWidth && !activeSlot.width) {
-                      setSlots((prev) =>
-                        prev.map((s) =>
-                          s.id === activeSlot.id
-                            ? { ...s, width: img.naturalWidth, height: img.naturalHeight }
-                            : s,
-                        ),
-                      );
-                    }
-                  }}
-                />
-              </div>
+              <ComparisonMediaLayer
+                key={slots[activeFlickIndex].id}
+                slot={slots[activeFlickIndex]}
+                onMediaLoad={handleMediaLoaded}
+                videoRef={(el) => registerVideoRef(slots[activeFlickIndex].id, el)}
+                isMuted={false}
+              />
             </div>
           )
+        )}
+
+        {/* Barra Flotante de Controles de Vídeo Sincronizado */}
+        {hasVideos && (
+          <ComparisonVideoTransport
+            isPlaying={isPlayingVideos}
+            onTogglePlay={handleTogglePlayVideos}
+            currentTime={videoCurrentTime}
+            duration={videoDuration}
+            onSeek={handleSeekVideos}
+            onRestart={handleRestartVideos}
+            playbackRate={playbackRate}
+            onChangePlaybackRate={handleChangePlaybackRate}
+            audioFocusTitle={audioFocusTitle}
+          />
         )}
 
         {/* Barra Flotante de Slots (Filmstrip de Comparativa) */}

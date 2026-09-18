@@ -1154,7 +1154,7 @@ function AppContent() {
           {activeView === "comparator" ? (
             <ImageComparisonModal
               embedded={true}
-              itemsList={imageLibrary.items}
+              itemsList={[...imageLibrary.items, ...videoLibrary.items]}
               onClose={() => setActiveView("home")}
             />
           ) : null}

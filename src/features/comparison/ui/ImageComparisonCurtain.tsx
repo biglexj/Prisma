@@ -2,6 +2,7 @@ import React from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import { toSafeAssetUrl } from "../../../shared/mediaTree";
 import type { ComparisonImageSlot } from "../model/types";
+import { isVideoPath } from "../model/types";
 
 interface ImageComparisonCurtainProps {
   slotA?: ComparisonImageSlot;
@@ -13,6 +14,10 @@ interface ImageComparisonCurtainProps {
   handlePanStart: (e: React.PointerEvent, slotId: string) => void;
   handleCurtainPointerDown: (e: React.PointerEvent) => void;
   onBackToSplit: () => void;
+  videoRefA?: (el: HTMLVideoElement | null) => void;
+  videoRefB?: (el: HTMLVideoElement | null) => void;
+  isMutedA?: boolean;
+  isMutedB?: boolean;
 }
 
 export const ImageComparisonCurtain: React.FC<ImageComparisonCurtainProps> = ({
@@ -25,6 +30,10 @@ export const ImageComparisonCurtain: React.FC<ImageComparisonCurtainProps> = ({
   handlePanStart,
   handleCurtainPointerDown,
   onBackToSplit,
+  videoRefA,
+  videoRefB,
+  isMutedA = true,
+  isMutedB = true,
 }) => {
   if (!slotA || !slotB) {
     return (
@@ -60,11 +69,22 @@ export const ImageComparisonCurtain: React.FC<ImageComparisonCurtainProps> = ({
           transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
         }}
       >
-        <img
-          src={toSafeAssetUrl(slotA.item.path)}
-          alt={slotA.item.title}
-          draggable={false}
-        />
+        {slotA.item.kind === "video" || isVideoPath(slotA.item.path) ? (
+          <video
+            ref={videoRefA}
+            src={toSafeAssetUrl(slotA.item.path)}
+            className="img-compare-media-element img-compare-video-element"
+            playsInline
+            loop
+            muted={isMutedA}
+          />
+        ) : (
+          <img
+            src={toSafeAssetUrl(slotA.item.path)}
+            alt={slotA.item.title}
+            draggable={false}
+          />
+        )}
       </div>
 
       {/* Layer B (Clipped Over Top) */}
@@ -76,11 +96,22 @@ export const ImageComparisonCurtain: React.FC<ImageComparisonCurtainProps> = ({
           transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
         }}
       >
-        <img
-          src={toSafeAssetUrl(slotB.item.path)}
-          alt={slotB.item.title}
-          draggable={false}
-        />
+        {slotB.item.kind === "video" || isVideoPath(slotB.item.path) ? (
+          <video
+            ref={videoRefB}
+            src={toSafeAssetUrl(slotB.item.path)}
+            className="img-compare-media-element img-compare-video-element"
+            playsInline
+            loop
+            muted={isMutedB}
+          />
+        ) : (
+          <img
+            src={toSafeAssetUrl(slotB.item.path)}
+            alt={slotB.item.title}
+            draggable={false}
+          />
+        )}
       </div>
 
       {/* Draggable Divider Handle */}

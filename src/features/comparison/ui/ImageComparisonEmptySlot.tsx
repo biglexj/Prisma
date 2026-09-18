@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
-import { isImagePath } from "../model/types";
+import { isSupportedMediaPath } from "../model/types";
 
 interface ImageComparisonEmptySlotProps {
   onPickLibrary: () => void;
@@ -20,9 +20,9 @@ export function ImageComparisonEmptySlot({
   onDropFile,
   onDropFiles,
   isNativeDragOver = false,
-  tagLabel = "Imagen B (A Comparar)",
-  title = "Arrastra una imagen aquí",
-  subtitle = "o elige una fuente para contrastar con la imagen base",
+  tagLabel = "Elemento B (A Comparar)",
+  title = "Arrastra una imagen o vídeo aquí",
+  subtitle = "o elige una fuente para contrastar con el archivo base",
   dropZone = "slot-b",
 }: ImageComparisonEmptySlotProps) {
   const [isHtmlDragOver, setIsHtmlDragOver] = useState(false);
@@ -54,7 +54,7 @@ export function ImageComparisonEmptySlot({
       for (let i = 0; i < e.dataTransfer.files.length; i++) {
         const file = e.dataTransfer.files[i];
         const filePath = (file as unknown as { path?: string }).path;
-        if (filePath && isImagePath(filePath)) {
+        if (filePath && isSupportedMediaPath(filePath)) {
           paths.push(filePath);
         }
       }
@@ -89,7 +89,7 @@ export function ImageComparisonEmptySlot({
             <Icon name={isDragActive ? "download" : "image"} />
           </div>
 
-          <h3 className="img-compare-empty-title">{isDragActive ? "¡Suelta la imagen aquí!" : title}</h3>
+          <h3 className="img-compare-empty-title">{isDragActive ? "¡Suelta el archivo aquí!" : title}</h3>
           <p className="img-compare-empty-sub">{subtitle}</p>
 
           <div className="img-compare-empty-actions">
@@ -97,7 +97,7 @@ export function ImageComparisonEmptySlot({
               type="button"
               className="img-compare-empty-btn is-library"
               onClick={onPickLibrary}
-              title="Seleccionar foto de las carpetas de tu biblioteca"
+              title="Seleccionar foto o vídeo de tu biblioteca"
             >
               <Icon name="layers" />
               <span>Biblioteca</span>
@@ -107,7 +107,7 @@ export function ImageComparisonEmptySlot({
               type="button"
               className="img-compare-empty-btn is-explorer"
               onClick={onPickExplorer}
-              title="Examinar y abrir cualquier imagen desde tu disco"
+              title="Examinar y abrir cualquier archivo desde tu disco"
             >
               <Icon name="folder-open" />
               <span>Explorador</span>
@@ -115,7 +115,7 @@ export function ImageComparisonEmptySlot({
           </div>
 
           <div className="img-compare-empty-formats-hint">
-            <span>Formatos: PNG, JPG, WEBP, AVIF, GIF, BMP, SVG</span>
+            <span>Formatos: Fotos (PNG, JPG, WEBP, AVIF...) y Vídeos (MP4, WEBM, MKV, MOV...)</span>
           </div>
         </div>
       </div>

@@ -340,7 +340,7 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
                     </button>
                   )}
 
-                  {activeKind === "image" && (
+                  {(activeKind === "image" || activeKind === "video") && (
                     <button
                       type="button"
                       className="duplicate-btn-action"

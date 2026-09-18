@@ -1579,3 +1579,209 @@
   margin: 0;
   max-width: 400px;
 }
+/* ────────────────────────────────────────────────────────
+   VIDEO & AUDIO FOCUS — Comparador Multimedia
+──────────────────────────────────────────────────────── */
+
+/* Elemento <video> dentro del comparador */
+.img-compare-video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: 0;
+  background: #000;
+}
+
+/* Badge de estado de audio en el header de cada slot */
+.img-compare-audio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  cursor: default;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.img-compare-audio-badge svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+}
+
+.img-compare-audio-badge.is-active {
+  background: rgba(201, 0, 69, 0.18);
+  color: #ff6b9d;
+  border-color: rgba(201, 0, 69, 0.35);
+}
+
+.img-compare-audio-badge.is-active svg {
+  opacity: 1;
+  color: #ff6b9d;
+}
+
+/* ────────────────────────────────────────────────────────
+   BARRA DE TRANSPORTE DE VÍDEO SINCRONIZADO
+──────────────────────────────────────────────────────── */
+.img-compare-video-transport {
+  position: absolute;
+  bottom: calc(var(--filmstrip-height, 72px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  pointer-events: all;
+}
+
+.img-compare-transport-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: rgba(18, 12, 28, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+}
+
+.img-compare-transport-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.img-compare-transport-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.img-compare-transport-btn:hover {
+  background: rgba(255, 255, 255, 0.13);
+  color: #fff;
+}
+
+.img-compare-transport-btn.is-play-pause {
+  width: 36px;
+  height: 36px;
+  background: rgba(201, 0, 69, 0.22);
+  color: #ff6b9d;
+  border-radius: 10px;
+}
+
+.img-compare-transport-btn.is-play-pause:hover {
+  background: rgba(201, 0, 69, 0.38);
+  color: #ff93bc;
+}
+
+.img-compare-transport-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.img-compare-transport-btn.is-play-pause svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Scrubber / timeline */
+.img-compare-transport-scrubber {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 180px;
+}
+
+.img-compare-transport-time {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-variant-numeric: tabular-nums;
+  min-width: 38px;
+}
+
+.img-compare-transport-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  outline: none;
+}
+
+.img-compare-transport-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ff6b9d;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.img-compare-transport-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.35);
+}
+
+/* Velocidad */
+.img-compare-transport-rate {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  min-width: 38px;
+  text-align: center;
+}
+
+.img-compare-transport-rate:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* Indicador de foco de audio */
+.img-compare-transport-audio-focus {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.71rem;
+  color: rgba(255, 107, 157, 0.85);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.img-compare-transport-audio-focus svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.img-compare-transport-audio-focus span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

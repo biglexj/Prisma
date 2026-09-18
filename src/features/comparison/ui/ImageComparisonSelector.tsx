@@ -5,7 +5,13 @@ import { Icon } from "../../../shared/ui/Icon";
 import { cleanPath } from "../../../shared/mediaTree";
 import { VisualThumbnail } from "../../visual_library/ui/VisualThumbnail";
 import type { VisualLibraryItem } from "../../visual_library/model/types";
-import { isImagePath, createVisualItemFromPath } from "../model/types";
+import {
+  isSupportedMediaPath,
+  createVisualItemFromPath,
+  SUPPORTED_IMAGE_EXTENSIONS,
+  SUPPORTED_VIDEO_EXTENSIONS,
+  SUPPORTED_ALL_MEDIA_EXTENSIONS,
+} from "../model/types";
 
 interface ImageComparisonSelectorProps {
   currentItems: VisualLibraryItem[];
@@ -54,6 +60,7 @@ export function ImageComparisonSelector({
   maxSelectable = 1,
 }: ImageComparisonSelectorProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [mediaKindFilter, setMediaKindFilter] = useState<"all" | "image" | "video">("all");
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -68,9 +75,9 @@ export function ImageComparisonSelector({
       setIsDragOver(false);
       const paths = event.payload?.paths;
       if (paths && paths.length > 0) {
-        const imagePaths = paths.filter(isImagePath);
-        if (imagePaths.length > 0) {
-          const newItems = imagePaths.map(createVisualItemFromPath);
+        const mediaPaths = paths.filter(isSupportedMediaPath);
+        if (mediaPaths.length > 0) {
+          const newItems = mediaPaths.map(createVisualItemFromPath);
           if (maxSelectable > 1 && onSelectMultiple && newItems.length > 1) {
             onSelectMultiple(newItems);
           } else if (newItems[0]) {
@@ -108,12 +115,18 @@ export function ImageComparisonSelector({
     [currentItems],
   );
 
+  // Filter available items by media kind (all / image / video)
+  const itemsByKind = useMemo(() => {
+    if (mediaKindFilter === "all") return availableItems;
+    return availableItems.filter((it) => it.kind === mediaKindFilter);
+  }, [availableItems, mediaKindFilter]);
+
   // Group items by folders
   const { folderEntries, folderItemMap } = useMemo(() => {
     const map = new Map<string, VisualLibraryItem[]>();
     const nameMap = new Map<string, string>();
 
-    for (const it of availableItems) {
+    for (const it of itemsByKind) {
       const { key, name } = getItemFolderInfo(it);
       nameMap.set(key, name);
       const list = map.get(key);
@@ -132,7 +145,7 @@ export function ImageComparisonSelector({
 
     entries.sort((a, b) => b.count - a.count);
     return { folderEntries: entries, folderItemMap: map };
-  }, [availableItems]);
+  }, [itemsByKind]);
 
   // Determine initial folder based on the primary image being viewed
   const initialFolderKey = useMemo(() => {
@@ -150,15 +163,15 @@ export function ImageComparisonSelector({
   // Reset pagination when folder or search query changes
   useEffect(() => {
     setVisibleCount(BATCH_SIZE);
-  }, [selectedFolderKey, searchTerm]);
+  }, [selectedFolderKey, searchTerm, mediaKindFilter]);
 
   // Filter items by folder
   const itemsInSelectedFolder = useMemo(() => {
     if (selectedFolderKey === "ALL") {
-      return availableItems;
+      return itemsByKind;
     }
-    return folderItemMap.get(selectedFolderKey) || availableItems;
-  }, [selectedFolderKey, folderItemMap, availableItems]);
+    return folderItemMap.get(selectedFolderKey) || itemsByKind;
+  }, [selectedFolderKey, folderItemMap, itemsByKind]);
 
   // Filter items by search query
   const filteredItems = useMemo(() => {
@@ -175,12 +188,12 @@ export function ImageComparisonSelector({
   const globalMatchesCount = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     if (!term || selectedFolderKey === "ALL") return 0;
-    return availableItems.filter(
+    return itemsByKind.filter(
       (it) =>
         it.title.toLowerCase().includes(term) ||
         it.path.toLowerCase().includes(term),
     ).length;
-  }, [availableItems, searchTerm, selectedFolderKey]);
+  }, [itemsByKind, searchTerm, selectedFolderKey]);
 
   // Windowed display list for ultra-smooth 60fps rendering
   const displayedItems = useMemo(() => {
@@ -202,8 +215,16 @@ export function ImageComparisonSelector({
         multiple: maxSelectable > 1,
         filters: [
           {
+            name: "Multimedia (Fotos y Vídeos)",
+            extensions: SUPPORTED_ALL_MEDIA_EXTENSIONS,
+          },
+          {
             name: "Imágenes",
-            extensions: ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "avif"],
+            extensions: SUPPORTED_IMAGE_EXTENSIONS,
+          },
+          {
+            name: "Vídeos",
+            extensions: SUPPORTED_VIDEO_EXTENSIONS,
           },
         ],
       });
@@ -218,18 +239,7 @@ export function ImageComparisonSelector({
 
       if (filePaths.length === 0) return;
 
-      const newItems: VisualLibraryItem[] = filePaths.map((p) => {
-        const fileName = p.replace(/\\/g, "/").split("/").pop() || "Imagen";
-        return {
-          path: p,
-          title: fileName,
-          sourcePath: p,
-          relativeFolder: "",
-          kind: "image",
-          modifiedAtMillis: Date.now(),
-          sizeBytes: 0,
-        };
-      });
+      const newItems: VisualLibraryItem[] = filePaths.map(createVisualItemFromPath);
 
       if (maxSelectable > 1 && onSelectMultiple && newItems.length > 1) {
         onSelectMultiple(newItems);
@@ -288,7 +298,7 @@ export function ImageComparisonSelector({
       const files = Array.from(e.dataTransfer.files);
       const paths = files
         .map((f) => (f as unknown as { path?: string }).path)
-        .filter((p): p is string => Boolean(p && isImagePath(p)));
+        .filter((p): p is string => Boolean(p && isSupportedMediaPath(p)));
       if (paths.length > 0) {
         const newItems = paths.map(createVisualItemFromPath);
         if (maxSelectable > 1 && onSelectMultiple && newItems.length > 1) {
@@ -316,7 +326,7 @@ export function ImageComparisonSelector({
           <div className="img-compare-selector-drag-overlay">
             <div className="img-compare-drag-glow-box">
               <Icon name="download" />
-              <h3>¡Suelta la imagen aquí!</h3>
+              <h3>¡Suelta la imagen o vídeo aquí!</h3>
               <p>Se añadirá inmediatamente a la comparativa</p>
             </div>
           </div>
@@ -341,7 +351,7 @@ export function ImageComparisonSelector({
           </button>
         </header>
 
-        {/* Toolbar con buscador y botón de examinar */}
+        {/* Toolbar con buscador, filtro de medio y botón de examinar */}
         <div className="img-compare-selector-toolbar">
           <div className="img-compare-search-wrap">
             <Icon name="search" />
@@ -363,11 +373,37 @@ export function ImageComparisonSelector({
             )}
           </div>
 
+          <div className="img-compare-kind-pills">
+            <button
+              type="button"
+              className={`img-compare-kind-pill ${mediaKindFilter === "all" ? "is-active" : ""}`}
+              onClick={() => setMediaKindFilter("all")}
+            >
+              <span>Todo</span>
+            </button>
+            <button
+              type="button"
+              className={`img-compare-kind-pill ${mediaKindFilter === "image" ? "is-active" : ""}`}
+              onClick={() => setMediaKindFilter("image")}
+            >
+              <Icon name="image" />
+              <span>Fotos</span>
+            </button>
+            <button
+              type="button"
+              className={`img-compare-kind-pill ${mediaKindFilter === "video" ? "is-active" : ""}`}
+              onClick={() => setMediaKindFilter("video")}
+            >
+              <Icon name="video" />
+              <span>Vídeos</span>
+            </button>
+          </div>
+
           <button
             type="button"
             className="img-compare-browse-btn"
             onClick={handleBrowseCustomFile}
-            title="Seleccionar otra imagen desde cualquier carpeta del equipo"
+            title="Seleccionar otra imagen o vídeo desde cualquier carpeta del equipo"
           >
             <Icon name="folder-open" />
             <span>Examinar archivo...</span>
