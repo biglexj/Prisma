@@ -1,30 +1,22 @@
-# 🚀 Prisma v1.1.4 — Comparador Multimedia Universal, Vídeos y Música Sincronizados y Blindaje de Sistema
+# 🚀 Prisma v1.1.5 — Delegación Fluida de Edición de Documentos y Editor Integrado
 
-Llega **Prisma v1.1.4**, una versión que transforma el **Comparador Multimedia** en una suite universal completa y eleva la solidez técnica: ahora soporta reproducción dual y en cuadrícula de **vídeos sincronizados** con barra de transporte unificada, confrontación de **pistas de música y audio** con vinilo animado y ecualizador dinámico, la innovadora tecnología **Hover Audio Focus** para conmutar sonido con solo mover el cursor, y una **restricción estricta por tipo de medio** para evitar cualquier colisión entre fotos, vídeos y música. Además, incorpora la nueva **Instancia Múltiple Flotante (Pin)** en Quick Look sin saturar la barra de tareas de Windows, un **Blindaje Integral de Renderizado** ante errores de decodificación (`F5`), la opción de salvaguarda **«Reiniciar Prisma»** en el System Tray y corrección de resiliencia en el **Buscador de Duplicados**.
+Llega **Prisma v1.1.5**, una actualización que optimiza la experiencia de lectura y edición de documentos: al solicitar editar cualquier archivo Markdown o de texto plano desde Quick Look, el sistema delega automáticamente la acción a la ventana principal de Prisma abriendo el **editor integrado** en vista dividida (*split-screen*) o código fuente, con foco inmediato en el área de trabajo para escribir o pegar texto al instante.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- 🎬 **Comparador de Vídeos Sincronizados**: Compara clips de vídeo cara a cara con reproducción simultánea y una barra flotante de transporte para controlar Play/Pausa, línea de tiempo unificada y velocidad de reproducción (0.5x–2x).
-- 🎵 **Comparativa de Música y Audio**: Visualiza y reproduce pistas de audio con carátula de metadatos Lofty, disco de vinilo giratorio y espectro de barras ecualizadoras en tiempo real.
-- 🔊 **Hover Audio Focus**: Pasa el cursor sobre cualquier ranura de vídeo o audio para activar su sonido al instante y silenciar la contraria sin pausar ni perder la sincronía temporal.
-- 🛡️ **Restricción Estricta Anti-Colisiones**: El primer medio añadido fija el formato de la comparativa; las ranuras vacías, el explorador y la biblioteca se adaptan automáticamente para admitir únicamente archivos compatibles (foto con foto, vídeo con vídeo o audio con audio).
-- ⚡ **Comparar desde el Reproductor de Vídeo**: Acceso directo con el atajo `C`, el menú de *Herramientas* o clic derecho para pausar y comparar vídeos al vuelo.
-- 🔍 **Comparar Duplicados de Música**: Nuevo botón «Comparar» en los resultados de duplicados de audio para analizar diferencias de bitrate y calidad acústica.
-- ❌ **Botón de Cierre (X) Global**: Disponible permanentemente en la cabecera tanto con una sola ranura en espera como en comparaciones activas.
-- 🧹 **Resiliencia en Buscador de Duplicados**: Arrastrar un archivo suelto sobre el área de escaneo ya no bloquea la interfaz; se deduce automáticamente el directorio de forma limpia.
-- 📌 **Instancia Múltiple Flotante (*Always-on-Top*)**: Fija fotografías, ilustraciones o vídeos en ventanas independientes flotantes sin que se pierdan detrás del Explorador.
-- 🪟 **Barra de Tareas Impecable**: Las ventanas secundarias desacopladas nunca generan iconos adicionales en la barra de tareas de Windows (`skip_taskbar`).
-- 🛡️ **Blindaje de Renderizado y Recuperación**: Manejador de errores en Quick Look que previene congelamientos, ofreciendo botón de reintento y recarga rápida (`F5` / `Ctrl + R`).
-- ⚡ **Opción «Reiniciar Prisma» en la Bandeja**: Reinicia la aplicación instantáneamente desde el menú del System Tray con un solo clic.
-- 🎞️ **Compatibilidad QuickTime `.mov`**: Soporte acelerado para vídeos CineForm y Apple ProRes mediante proxies transparentes.
+- 📝 **Delegación Inteligente Quick Look → Editor Integrado**: Pulsa editar en Quick Look para transferir el archivo sin fricción al editor de Prisma con soporte para Markdown y código fuente.
+- ⚡ **Foco Inmediato para Escribir y Pegar**: El cursor se activa automáticamente en el área de texto nada más abrirse, listo para escribir o pegar con `Ctrl + V`.
+- 💾 **Guardado Rápido con `Ctrl + S`**: Persistencia directa en disco de las modificaciones realizadas desde cualquier modalidad del editor.
+- 📄 **Experiencia Mejorada en Documentos Vacíos**: Vista previa amigable en documentos de 0 bytes con botón directo para comenzar a redactar o pegar contenido.
+- 🔍 **Botones de Edición Contextuales**: Botón de edición accesible en la cabecera, en la barra de utilidades de Quick Look y en la vista previa.
 
 ---
 
 ### 📦 Descargas oficiales
 
-- 💾 [Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.4/Prisma_1.1.4_x64-setup.exe)
+- 💾 [Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.5/Prisma_1.1.5_x64-setup.exe)
 
 ---
 

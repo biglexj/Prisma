@@ -15,6 +15,18 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.1.5] - 2026-09-18
+
+### Resumen
+**Prisma v1.1.5** perfecciona el flujo de trabajo con documentos y notas, integrando la delegación fluida de edición desde Quick Look hacia el editor integrado de la suite. Al solicitar editar un archivo Markdown o de texto plano (incluso documentos recién creados o vacíos de 0 bytes), Quick Look cede el paso de forma limpia y transfiere el archivo a la ventana principal de Prisma, abriendo el documento directamente en su entorno de edición dividida (*split-screen*) o código fuente, con enfoque inmediato en el área de trabajo para comenzar a escribir o pegar contenido al instante.
+
+### Detalles
+- **Delegación de Edición Quick Look → Editor Integrado**:
+  - Al pulsar el botón de edición en la cabecera o la barra de herramientas de Quick Look, el archivo se transfiere instantáneamente al visor/editor principal de Prisma en modo edición.
+  - Sincronización transparente de foco: el cursor se sitúa de inmediato en el área de texto, listo para escribir o pegar con `Ctrl + V`.
+  - Atajo rápido `Ctrl + S`: guardado directo y confiable en disco de los cambios efectuados desde cualquier vista del editor.
+  - Estado visual para documentos vacíos: interfaz amigable en vista previa con llamada a la acción para comenzar a redactar o pegar texto con un solo clic.
+
 ## [1.1.4] - 2026-09-18
 
 ### Resumen

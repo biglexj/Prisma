@@ -33,6 +33,13 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.1.5**
+  - **Delegación de Edición Quick Look → Editor Integrado Prisma**:
+    - Conexión del flujo de edición entre Quick Look y la suite principal: al pulsar el botón de edición (`[✏️]`) en documentos Markdown o de texto plano, la acción delega instantáneamente a `DocumentViewer` en la ventana principal de Prisma.
+    - Apertura directa en modo edición (`split` para Markdown, `code` para texto) con autoenfoque reactivo del `<textarea>` para comenzar a escribir o pegar (`Ctrl + V`) inmediatamente.
+    - Persistencia ágil en disco mediante atajo `Ctrl + S` y botones de acción rápida en cabecera y barra de utilidades de Quick Look.
+    - Estado de vista previa enriquecido para documentos vacíos con botón directo para redactar o insertar contenido.
+
 - [x] **v1.1.4**
   - **Comparador Multimedia Universal (Vídeos y Música Sincronizados), Instancia Múltiple Flotante y Rescate Tray**:
     - **Comparador Multimedia Universal**: Soporte nativo para confrontación de vídeo con reproducción sincronizada dual y barra de transporte unificada (Play/Pausa, posición temporal, velocidad 0.5x–2x). Comparativa de pistas de música y audio con vinilo animado, carátulas y ecualizador reactivo. Tecnología *Hover Audio Focus* para conmutar sonido dinámicamente con el cursor. Integración directa en el reproductor de vídeo con atajo `C` y clic derecho, y botón «Comparar» en las tarjetas de duplicados de música.

@@ -1,7 +1,7 @@
 [package]
 name = "prisma"
-version = "1.1.4"
-description = "Visor y reproductor multimedia local-first"
+version = "1.1.5"
+description = "Prisma - Tu espacio de fotos y música"
 authors = ["Biglex J"]
 edition = "2024"
 rust-version = "1.85"
