@@ -1,19 +1,22 @@
-# 🚀 Prisma v1.1.4 — Instancia Múltiple Flotante (Pin), Blindaje de Renderizado y Rescate Tray
+# 🚀 Prisma v1.1.4 — Comparador Multimedia Universal, Vídeos y Música Sincronizados y Blindaje de Sistema
 
-Llega **Prisma v1.1.4**, una versión que eleva la ergonomía multitarea y la solidez técnica: la nueva **Instancia Múltiple Flotante (Pin)** para imágenes y vídeos con ventanas secundarias siempre visibles al frente sin duplicar iconos en la barra de tareas de Windows, un **Blindaje Integral de Renderizado** con recuperación automática ante fallos de decodificación y atajo de recarga rápida (`F5`), la opción de salvaguarda **«Reiniciar Prisma»** en la bandeja del sistema, y la compatibilidad optimizada con clips **QuickTime `.mov`** profesionales.
+Llega **Prisma v1.1.4**, una versión que transforma el **Comparador Multimedia** en una suite universal completa y eleva la solidez técnica: ahora soporta reproducción dual y en cuadrícula de **vídeos sincronizados** con barra de transporte unificada, confrontación de **pistas de música y audio** con vinilo animado y ecualizador dinámico, la innovadora tecnología **Hover Audio Focus** para conmutar sonido con solo mover el cursor, y una **restricción estricta por tipo de medio** para evitar cualquier colisión entre fotos, vídeos y música. Además, incorpora la nueva **Instancia Múltiple Flotante (Pin)** en Quick Look sin saturar la barra de tareas de Windows, un **Blindaje Integral de Renderizado** ante errores de decodificación (`F5`), la opción de salvaguarda **«Reiniciar Prisma»** en el System Tray y corrección de resiliencia en el **Buscador de Duplicados**.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- 📌 **Instancia Múltiple Flotante (*Always-on-Top*)**: Fija fotografías, ilustraciones o vídeos en ventanas independientes flotantes sin que se pierdan detrás del Explorador, ideal para comparar o usar de referencia continua.
-- 🧹 **Barra de Tareas Impecable**: Las ventanas desacopladas nunca generan iconos adicionales en la barra de tareas de Windows (`skip_taskbar`), manteniendo tu espacio de trabajo despejado.
-- 🎯 **Exclusividad Ergonómica**: El botón de desacoplar (`layers`) se habilita únicamente para imágenes y vídeos, y se oculta de forma inteligente en ventanas ya desacopladas.
-- 🔄 **Navegación Dinámica sin Bloqueos**: Al desacoplar un archivo, el Explorador de Windows conserva su selección y la ventana principal de Quick Look sigue alternando previsualizaciones fluidamente con teclado y ratón.
-- 🛡️ **Blindaje de Renderizado y Recuperación en Caliente**: Nuevo manejador de errores que previene congelamientos en la interfaz; si un archivo experimenta un fallo temporal, muestra una tarjeta descriptiva con botón de «Reintentar» y se restablece al navegar al siguiente archivo.
-- ⌨️ **Atajo de Recarga Rápida**: Pulsa `F5` o `Ctrl + R` directamente dentro de Quick Look para refrescar la vista previa en cualquier instante.
-- ⚡ **Opción «Reiniciar Prisma» en la Bandeja**: Reinicia la aplicación instantáneamente desde el menú del System Tray con un solo clic si deseas refrescar los servicios multimedia.
-- 🎬 **Compatibilidad de Vídeo `.mov` Optimizada**: Soporte acelerado para vídeos QuickTime con códecs CineForm y Apple ProRes mediante proxies transparentes en caché ultra-rápida.
+- 🎬 **Comparador de Vídeos Sincronizados**: Compara clips de vídeo cara a cara con reproducción simultánea y una barra flotante de transporte para controlar Play/Pausa, línea de tiempo unificada y velocidad de reproducción (0.5x–2x).
+- 🎵 **Comparativa de Música y Audio**: Visualiza y reproduce pistas de audio con carátula de metadatos Lofty, disco de vinilo giratorio y espectro de barras ecualizadoras en tiempo real.
+- 🔊 **Hover Audio Focus**: Pasa el cursor sobre cualquier ranura de vídeo o audio para activar su sonido al instante y silenciar la contraria sin pausar ni perder la sincronía temporal.
+- 🛡️ **Restricción Estricta Anti-Colisiones**: El primer medio añadido fija el formato de la comparativa; las ranuras vacías, el explorador y la biblioteca se adaptan automáticamente para admitir únicamente archivos compatibles (foto con foto, vídeo con vídeo o audio con audio).
+- ❌ **Botón de Cierre (X) Global**: Disponible permanentemente en la cabecera tanto con una sola ranura en espera como en comparaciones activas.
+- 🧹 **Resiliencia en Buscador de Duplicados**: Arrastrar un archivo suelto sobre el área de escaneo ya no bloquea la interfaz; se deduce automáticamente el directorio de forma limpia.
+- 📌 **Instancia Múltiple Flotante (*Always-on-Top*)**: Fija fotografías, ilustraciones o vídeos en ventanas independientes flotantes sin que se pierdan detrás del Explorador.
+- 🪟 **Barra de Tareas Impecable**: Las ventanas secundarias desacopladas nunca generan iconos adicionales en la barra de tareas de Windows (`skip_taskbar`).
+- 🛡️ **Blindaje de Renderizado y Recuperación**: Manejador de errores en Quick Look que previene congelamientos, ofreciendo botón de reintento y recarga rápida (`F5` / `Ctrl + R`).
+- ⚡ **Opción «Reiniciar Prisma» en la Bandeja**: Reinicia la aplicación instantáneamente desde el menú del System Tray con un solo clic.
+- 🎞️ **Compatibilidad QuickTime `.mov`**: Soporte acelerado para vídeos CineForm y Apple ProRes mediante proxies transparentes.
 
 ---
 

@@ -31,7 +31,10 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 ## 🟢 Completado
 
 - [x] **v1.1.4**
-  - **Instancia Múltiple Flotante (Pin), Blindaje de Renderizado Quick Look y Rescate Tray**:
+  - **Comparador Multimedia Universal (Vídeos y Música Sincronizados), Instancia Múltiple Flotante y Rescate Tray**:
+    - **Comparador Multimedia Universal**: Soporte nativo para confrontación de vídeo con reproducción sincronizada dual y barra de transporte unificada (Play/Pausa, posición temporal, velocidad 0.5x–2x). Comparativa de pistas de música y audio con vinilo animado, carátulas y ecualizador reactivo. Tecnología *Hover Audio Focus* para conmutar sonido dinámicamente con el cursor.
+    - **Restricción Estricta por Tipo de Medio**: Prevención total de colisiones entre imágenes, vídeos y audios; adaptación dinámica de ranuras vacías, selectores y diálogos de explorador. Botón de cierre global (X) en todos los estados.
+    - **Resiliencia en Buscador de Duplicados**: Corrección del congelamiento de navegación al arrastrar archivos sueltos sobre la zona de escaneo.
     - **Instancia Múltiple Flotante (Pin)**: Exclusiva para imágenes y vídeos, con fijación en primer plano (*Always-on-Top*), sin duplicar iconos en la barra de tareas de Windows (`skip_taskbar: true`), oculta en instancias secundarias y con intercambio continuo y fluido desde el Explorador de Windows sin pérdida de foco.
     - **Blindaje de Renderizado Quick Look**: Incorporación de `QuickLookErrorBoundary` para aislamiento de excepciones en visores, soporte de estados de error/carga en `QuickLookImage` con botón de reintento interactivo, decodificación segura (`decoding="auto"`) y atajo de recarga rápida (`F5` / `Ctrl + R`).
     - **Opción de Rescate en Bandeja de Sistema**: Acción «Reiniciar Prisma» (`app.restart()`) en el menú del System Tray para refrescar la app al vuelo ante cualquier eventualidad.

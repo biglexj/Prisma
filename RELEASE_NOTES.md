@@ -15,27 +15,32 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
-## [1.1.4] - 2026-09-17
+## [1.1.4] - 2026-09-18
 
 ### Resumen
-Presentamos **Prisma v1.1.4**, una actualización enfocada en la ergonomía multitarea, la resiliencia en la previsualización de medios y el control continuo del sistema. Esta versión perfecciona la **Instancia Múltiple Flotante (Pin)** en Quick Look exclusivamente para imágenes y vídeos, manteniendo ventanas secundarias ancladas al frente sin duplicar iconos en la barra de tareas de Windows y garantizando el intercambio dinámico continuo de archivos desde el Explorador. Asimismo, se incorpora un **Blindaje Integral de Renderizado** con recuperación automática ante errores de decodificación y atajo de recarga rápida, soporte optimizado para clips de vídeo profesionales **QuickTime `.mov`** (CineForm y Apple ProRes) mediante proxies acelerados en segundo plano, y la nueva opción de salvaguarda **«Reiniciar Prisma»** accesible directamente desde el menú de la bandeja del sistema.
+Presentamos **Prisma v1.1.4**, una actualización mayor enfocada en la evolución del **Comparador Multimedia**, la ergonomía multitarea y la solidez integral del sistema. El comparador ahora soporta de forma nativa la confrontación dual y en cuadrícula tanto de **vídeos sincronizados** como de **pistas de audio y música**, incorporando una barra de transporte unificada, visualización de carátulas con vinilo animado y la tecnología **Hover Audio Focus** para alternar el sonido al vuelo con solo mover el cursor. Para garantizar máxima estabilidad, se introduce una **restricción estricta por tipo de medio** que previene cualquier colisión entre imágenes, vídeos y audios, adaptando dinámicamente las ranuras, el explorador y la biblioteca. Asimismo, se perfecciona la **Instancia Múltiple Flotante (Pin)** en Quick Look para mantener medios al frente sin saturar la barra de tareas de Windows, se añade un **Blindaje Integral de Renderizado** ante errores de decodificación, soporte optimizado para clips **QuickTime `.mov`**, la opción de salvaguarda **«Reiniciar Prisma»** en la bandeja del sistema y una corrección clave de resiliencia en el **Buscador de Duplicados**.
 
 ### Detalles
+- **Comparador Multimedia Universal (Vídeos Sincronizados, Música e Imágenes)**:
+  - Soporte de vídeo sincronizado: reproducción dual simultánea con barra flotante de transporte unificada (Play/Pausa, scrubber de posición temporal, control de velocidad 0.5x–2x y reinicio).
+  - Comparativa de audio y música: reproducción de pistas con carátula de álbum embebida, disco de vinilo giratorio y espectro de ecualización reactivo en tiempo real.
+  - Tecnología *Hover Audio Focus*: conmuta el foco sonoro instantáneamente entre ranuras al pasar el cursor sobre cualquier medio reproducible, silenciando el elemento secundario sin desincronizar el tiempo de reproducción.
+  - Restricción estricta por tipo de medio: el primer archivo añadido determina el formato exclusivo de la sesión (imagen con imagen, vídeo con vídeo o audio con audio), impidiendo colisiones y adaptando automáticamente las ranuras vacías, las pestañas del selector de biblioteca y los filtros del Explorador de Windows.
+  - Botón de cierre global (X): disponible permanentemente en la cabecera tanto con un elemento en espera como en comparativas completas para un retorno ágil.
+- **Resiliencia en el Buscador de Duplicados**:
+  - Corrección de bloqueo ante arrastre de archivos: soltar un archivo individual sobre el área de escaneo ya no congela la navegación ni bloquea las pestañas; el sistema deduce automáticamente la carpeta contenedora y restablece los estados de arrastre limpiamente.
 - **Instancia Múltiple Flotante (Pin) para Imágenes y Vídeos**:
-  - Exclusividad optimizada: la función de desacoplar en ventana independiente (`layers`) se reserva exclusivamente para fotografías e ilustraciones y clips de vídeo, ocultándose en ventanas ya desacopladas para evitar capas innecesarias.
-  - Ventanas ancladas en primer plano: las instancias desacopladas se configuran automáticamente como flotantes fijas (*Always-on-Top*), permitiendo mantener referencias visuales en pantalla mientras se trabaja en otras aplicaciones o carpetas.
-  - Barra de tareas limpia y minimalista: las ventanas secundarias no generan botones adicionales en la barra de tareas de Windows, preservando un entorno de trabajo ordenado.
-  - Navegación fluida en el Explorador: al desacoplar un medio, el Explorador de Windows conserva el foco activo y la ventana principal de Quick Look continúa alternando y actualizando previsualizaciones de manera dinámica e ininterrumpida.
+  - Desacople flotante (*Always-on-Top*): fija imágenes y vídeos en ventanas secundarias independientes para mantener referencias visuales continuas mientras trabajas en otras aplicaciones.
+  - Barra de tareas despejada: las ventanas secundarias no generan botones adicionales en la barra de tareas de Windows (`skip_taskbar`), preservando un entorno limpio.
+  - Navegación ininterrumpida: al desacoplar un archivo, el Explorador de Windows conserva su foco y la ventana principal de Quick Look continúa alternando medios con normalidad.
 - **Blindaje de Renderizado y Recuperación en Quick Look**:
-  - Aislamiento de fallos con recuperación en caliente: integración de un componente de captura de errores que previene congelamientos en la interfaz ante imágenes corruptas o archivos temporalmente en uso, ofreciendo una tarjeta descriptiva con opciones de «Reintentar decodificación» y «Abrir en Prisma».
-  - Al seleccionar o navegar al siguiente archivo, el visor se restablece de forma automática y transparente sin requerir el reinicio de la aplicación.
-  - Decodificación robusta con gestión de estados de carga e invalidación inteligente de caché.
-  - Atajos de teclado para recarga rápida (`F5` y `Ctrl + R`) directamente dentro de la ventana de Quick Look.
+  - Aislamiento de fallos con recuperación en caliente ante imágenes corruptas o archivos bloqueados por el sistema, ofreciendo tarjeta de reintento y restablecimiento automático al cambiar de archivo.
+  - Atajos de teclado para recarga rápida (`F5` y `Ctrl + R`) directamente dentro del visor.
 - **Opción de Salvaguarda en la Bandeja del Sistema (System Tray)**:
-  - Nueva acción «Reiniciar Prisma» añadida en el menú contextual del icono de la bandeja de Windows, permitiendo relanzar la aplicación instantáneamente ante cualquier eventualidad sin necesidad de cerrar y buscar el ejecutable manualmente.
+  - Nueva acción «Reiniciar Prisma» en el menú contextual de la bandeja de Windows para relanzar la aplicación con un solo clic.
 - **Soporte de Vídeo QuickTime `.mov` y Estabilidad**:
-  - Compatibilidad ampliada con archivos `.mov` codificados en CineForm o Apple ProRes mediante generación transparente de proxies ligeros en caché temporal de alta velocidad.
-  - Corrección de estabilidad al pulsar la tecla Escape dentro del reproductor de vídeo principal.
+  - Compatibilidad ampliada con archivos `.mov` (CineForm y Apple ProRes) mediante proxies acelerados en caché temporal de alta velocidad.
+  - Corrección de estabilidad al pulsar Escape dentro del reproductor principal.
 
 ## [1.1.3] - 2026-09-15
 
