@@ -21,6 +21,7 @@ export type AppView =
   | "playlists"
   | "history"
   | "renamer"
+  | "comparator"
   | "duplicates"
   | (string & {});
 
@@ -79,6 +80,7 @@ export function AppSidebar({
   const allToolItems: { key: keyof typeof enabledTools; item: SidebarItem }[] = [
     { key: "converter", item: { icon: "convert", label: "Conversor", view: "converter" } },
     { key: "renamer", item: { icon: "edit", label: "Renombrador", view: "renamer" } },
+    { key: "comparator", item: { icon: "compare", label: "Comparador", view: "comparator" } },
     { key: "duplicates", item: { icon: "copy", label: "Duplicados", view: "duplicates" } },
     { key: "luna_fetch", item: { icon: "download", label: "Luna Fetch", view: "luna_fetch" } },
     { key: "gallery_dl", item: { icon: "layers", label: "Gallery-DL", view: "gallery_dl" } },

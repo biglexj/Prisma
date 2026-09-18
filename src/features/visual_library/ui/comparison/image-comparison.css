@@ -15,6 +15,17 @@
   animation: compareFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.img-compare-modal-root.is-embedded {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  z-index: 1;
+  animation: none;
+  border-radius: 0;
+}
+
 @keyframes compareFadeIn {
   from {
     opacity: 0;
@@ -1490,4 +1501,36 @@
 .img-compare-viewport.is-drag-over {
   border: 2px dashed var(--color-primary, #d0bcff) !important;
   box-shadow: inset 0 0 30px rgba(208, 188, 255, 0.25);
+}
+
+/* ── EMPTY STATE NOTICES ── */
+.img-compare-empty-curtain-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--color-text-secondary, #cac4d0);
+}
+
+.img-compare-empty-curtain-notice svg {
+  width: 48px;
+  height: 48px;
+  opacity: 0.5;
+  color: var(--primary, #c90045);
+}
+
+.img-compare-empty-curtain-notice h3 {
+  font-size: 1.2rem;
+  color: var(--color-text, #f3edf7);
+  margin: 0;
+}
+
+.img-compare-empty-curtain-notice p {
+  font-size: 0.95rem;
+  margin: 0;
+  max-width: 400px;
 }

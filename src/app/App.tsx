@@ -40,6 +40,7 @@ import { PrismaUpscalerView } from "../features/prisma_upscaler/ui/PrismaUpscale
 import { WallpapersView } from "../features/wallpapers/ui/WallpapersView";
 import { BatchRenamerView } from "../features/renamer/ui/BatchRenamerView";
 import { DuplicatesScannerModal } from "../features/visual_library/ui/duplicates/DuplicatesScannerModal";
+import { ImageComparisonModal } from "../features/visual_library/ui/comparison/ImageComparisonModal";
 import { DspEqualizerView } from "../features/dsp/ui/DspEqualizerView";
 import { DspEqualizerModal } from "../features/dsp/ui/DspEqualizerModal";
 import { DspProvider } from "../features/dsp/DspContext";
@@ -63,6 +64,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   history: "Historial",
   playlists: "Listas de reproducción",
   renamer: "Renombrador por Lotes",
+  comparator: "Comparador Multimedia",
   equalizer: "Ecualizador & DSP",
   converter: "Convertidor Prisma",
   luna_fetch: "Luna Fetch",
@@ -87,16 +89,8 @@ function AppContent() {
   const [synapseToastFile, setSynapseToastFile] = useState<SynapseReceivedFile | null>(null);
   const [sendModalFile, setSendModalFile] = useState<{ path: string; title?: string } | null>(null);
   const {
-    theme,
-    setTheme,
-    accentColor,
-    setAccentColor,
-    backgroundVariant,
-    setBackgroundVariant,
-    dynamicMusicTheme,
-    setDynamicMusicTheme,
-    applyMusicPalette,
-    isMusicPaletteActive,
+    theme, setTheme, accentColor, setAccentColor, backgroundVariant, setBackgroundVariant,
+    dynamicMusicTheme, setDynamicMusicTheme, applyMusicPalette, isMusicPaletteActive,
   } = useTheme();
   const { confirmDeletion, sidebarDensity, auroraOnlineServicesEnabled } = useSystemSettings();
   const playback = usePlaybackController();
@@ -106,10 +100,7 @@ function AppContent() {
   const { libraries: customLibrariesList } = useCustomLibraries();
 
   useGlobalFileDrop({
-    activeView,
-    onAddMusicFolder: library.addFolder,
-    onAddImageFolder: imageLibrary.addFolder,
-    onAddVideoFolder: videoLibrary.addFolder,
+    activeView, onAddMusicFolder: library.addFolder, onAddImageFolder: imageLibrary.addFolder, onAddVideoFolder: videoLibrary.addFolder,
   });
 
   // Sincronización del tema dinámico reactivo global con la pista en reproducción activa
@@ -664,6 +655,11 @@ function AppContent() {
     };
     window.addEventListener("prisma-open-duplicates", handleOpenDuplicates);
 
+    const handleOpenComparator = () => {
+      setActiveView("comparator");
+    };
+    window.addEventListener("prisma-open-comparator", handleOpenComparator);
+
     const handleGlobalContextMenu = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       const isEditable =
@@ -692,6 +688,7 @@ function AppContent() {
       window.removeEventListener("prisma-open-converter", handleOpenConverter);
       window.removeEventListener("prisma-open-renamer", handleOpenRenamer);
       window.removeEventListener("prisma-open-duplicates", handleOpenDuplicates);
+      window.removeEventListener("prisma-open-comparator", handleOpenComparator);
       window.removeEventListener("prisma-send-to-supergallery", handleSendToSuperGallery);
       window.removeEventListener("contextmenu", handleGlobalContextMenu);
       unlistenPromise.then((unlisten) => unlisten());
@@ -822,30 +819,26 @@ function AppContent() {
 
   const activeCustomLib = customLibrariesList.find((l) => `custom_${l.id}` === activeView);
   const searchPlaceholder =
-    activeView === "images"
-      ? "Buscar en tus imágenes…"
-      : activeView === "videos"
-        ? "Buscar en tus vídeos…"
-        : activeView === "music"
-          ? "Buscar en tu música…"
-          : activeView === "duplicates"
-            ? "Buscar duplicados…"
-            : activeCustomLib
-              ? `Buscar en ${activeCustomLib.label}…`
-              : "Buscar en Prisma…";
+    (
+      {
+        images: "Buscar en tus imágenes…",
+        videos: "Buscar en tus vídeos…",
+        music: "Buscar en tu música…",
+        comparator: "Buscar en comparador…",
+        duplicates: "Buscar duplicados…",
+      } as Record<string, string>
+    )[activeView] ?? (activeCustomLib ? `Buscar en ${activeCustomLib.label}…` : "Buscar en Prisma…");
 
   const searchIcon: IconName =
-    activeView === "images"
-      ? "image"
-      : activeView === "videos"
-        ? "video"
-        : activeView === "music"
-          ? "music"
-          : activeView === "duplicates"
-            ? "copy"
-            : activeCustomLib
-              ? (activeCustomLib.icon as IconName) || "folder"
-              : "search";
+    (
+      {
+        images: "image",
+        videos: "video",
+        music: "music",
+        comparator: "compare",
+        duplicates: "copy",
+      } as Record<string, IconName>
+    )[activeView] ?? ((activeCustomLib?.icon as IconName) || "search");
 
   const isCinemaMode = activeView === "video_player" && Boolean(activeVideoPath);
 
@@ -1158,6 +1151,13 @@ function AppContent() {
             />
           ) : null}
           {activeView === "renamer" ? <BatchRenamerView /> : null}
+          {activeView === "comparator" ? (
+            <ImageComparisonModal
+              embedded={true}
+              itemsList={imageLibrary.items}
+              onClose={() => setActiveView("home")}
+            />
+          ) : null}
           {activeView === "converter" ? <PrismaConvertView /> : null}
           {activeView === "duplicates" ? (
             <DuplicatesScannerModal

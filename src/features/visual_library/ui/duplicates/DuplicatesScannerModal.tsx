@@ -69,6 +69,55 @@ export function DuplicatesScannerModal({
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [hoveredDropZone, setHoveredDropZone] = useState<"single" | "base" | "target" | null>(null);
   const hoveredDropZoneRef = useRef<"single" | "base" | "target" | null>(null);
+  const [previewPath, setPreviewPath] = useState<string | null>(null);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+
+  const handleTogglePreview = (path: string) => {
+    if (previewPath === path) {
+      if (isPreviewPlaying) {
+        audioPreviewRef.current?.pause();
+        setIsPreviewPlaying(false);
+      } else {
+        if (activeKind === "music") {
+          audioPreviewRef.current?.play().catch(() => {});
+        }
+        setIsPreviewPlaying(true);
+      }
+    } else {
+      audioPreviewRef.current?.pause();
+      setPreviewPath(path);
+      setIsPreviewPlaying(true);
+      if (activeKind === "music") {
+        if (!audioPreviewRef.current) {
+          audioPreviewRef.current = new Audio();
+          audioPreviewRef.current.onended = () => setIsPreviewPlaying(false);
+        }
+        audioPreviewRef.current.src = toSafeAssetUrl(path);
+        audioPreviewRef.current.play().catch(() => {});
+      }
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+        audioPreviewRef.current.src = "";
+        audioPreviewRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (audioPreviewRef.current) {
+      audioPreviewRef.current.pause();
+      audioPreviewRef.current.src = "";
+    }
+    setPreviewPath(null);
+    setIsPreviewPlaying(false);
+  }, [activeKind, scanMode]);
+
   const [internalComparisonPair, setInternalComparisonPair] = useState<{
     original: VisualLibraryItem;
     duplicate: VisualLibraryItem;
@@ -882,26 +931,9 @@ export function DuplicatesScannerModal({
                 className={`duplicates-folder-card is-base ${hoveredDropZone === "base" ? "is-drag-over" : ""}`}
                 data-drop-zone="base"
                 onClick={handlePickBaseFolder}
-                onDragEnter={() => {
-                  setHoveredDropZone("base");
-                  hoveredDropZoneRef.current = "base";
-                }}
-                onDragLeave={() => {
-                  if (hoveredDropZoneRef.current === "base") {
-                    setHoveredDropZone(null);
-                    hoveredDropZoneRef.current = null;
-                  }
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  if (e.dataTransfer) {
-                    e.dataTransfer.dropEffect = "copy";
-                  }
-                  if (hoveredDropZoneRef.current !== "base") {
-                    setHoveredDropZone("base");
-                    hoveredDropZoneRef.current = "base";
-                  }
-                }}
+                onDragEnter={() => { setHoveredDropZone("base"); hoveredDropZoneRef.current = "base"; }}
+                onDragLeave={() => { if (hoveredDropZoneRef.current === "base") { setHoveredDropZone(null); hoveredDropZoneRef.current = null; } }}
+                onDragOver={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = "copy"; if (hoveredDropZoneRef.current !== "base") { setHoveredDropZone("base"); hoveredDropZoneRef.current = "base"; } }}
               >
                 <div className="folder-card-label">
                   <Icon name="star" />
@@ -943,26 +975,9 @@ export function DuplicatesScannerModal({
                 className={`duplicates-folder-card is-target ${hoveredDropZone === "target" ? "is-drag-over" : ""}`}
                 data-drop-zone="target"
                 onClick={handlePickTargetFolder}
-                onDragEnter={() => {
-                  setHoveredDropZone("target");
-                  hoveredDropZoneRef.current = "target";
-                }}
-                onDragLeave={() => {
-                  if (hoveredDropZoneRef.current === "target") {
-                    setHoveredDropZone(null);
-                    hoveredDropZoneRef.current = null;
-                  }
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  if (e.dataTransfer) {
-                    e.dataTransfer.dropEffect = "copy";
-                  }
-                  if (hoveredDropZoneRef.current !== "target") {
-                    setHoveredDropZone("target");
-                    hoveredDropZoneRef.current = "target";
-                  }
-                }}
+                onDragEnter={() => { setHoveredDropZone("target"); hoveredDropZoneRef.current = "target"; }}
+                onDragLeave={() => { if (hoveredDropZoneRef.current === "target") { setHoveredDropZone(null); hoveredDropZoneRef.current = null; } }}
+                onDragOver={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = "copy"; if (hoveredDropZoneRef.current !== "target") { setHoveredDropZone("target"); hoveredDropZoneRef.current = "target"; } }}
               >
                 <div className="folder-card-label">
                   <Icon name="trash" />
@@ -1159,6 +1174,9 @@ export function DuplicatesScannerModal({
                   group={group}
                   activeKind={activeKind}
                   selectedPaths={selectedPaths}
+                  previewPath={previewPath}
+                  isPreviewPlaying={isPreviewPlaying}
+                  onTogglePreview={handleTogglePreview}
                   toggleGroupSelection={toggleGroupSelection}
                   toggleSelectPath={toggleSelectPath}
                   handleReplaceBase={handleReplaceBase}

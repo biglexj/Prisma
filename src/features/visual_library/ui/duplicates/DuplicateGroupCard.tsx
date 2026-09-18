@@ -1,6 +1,8 @@
 import React from "react";
 import { Icon } from "../../../../shared/ui/Icon";
 import { toSafeAssetUrl } from "../../../../shared/mediaTree";
+import { VideoThumbnail } from "../VideoThumbnail";
+import { useMusicArtwork } from "../../../music_library/useMusicArtwork";
 import type {
   DuplicateGroup,
   DuplicateCandidate,
@@ -13,6 +15,9 @@ interface DuplicateGroupCardProps {
   group: DuplicateGroup;
   activeKind: DuplicateScanKind;
   selectedPaths: Set<string>;
+  previewPath?: string | null;
+  isPreviewPlaying?: boolean;
+  onTogglePreview?: (path: string) => void;
   toggleGroupSelection: (group: DuplicateGroup) => void;
   toggleSelectPath: (path: string) => void;
   handleReplaceBase: (originalPath: string, upgradedPath: string) => void;
@@ -21,10 +26,97 @@ interface DuplicateGroupCardProps {
   formatBytes: (bytes: number) => string;
 }
 
+interface DuplicateMusicThumbProps {
+  path: string;
+  isPlaying: boolean;
+  onToggle: () => void;
+}
+
+const DuplicateMusicThumb: React.FC<DuplicateMusicThumbProps> = ({ path, isPlaying, onToggle }) => {
+  const artwork = useMusicArtwork(path);
+  return (
+    <div
+      className={`duplicate-music-thumb ${isPlaying ? "is-playing" : ""}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+    >
+      {artwork ? (
+        <img src={artwork} alt="Portada" className="duplicate-music-cover" />
+      ) : (
+        <div className="duplicate-music-placeholder">
+          <Icon name="music" />
+        </div>
+      )}
+      <button
+        type="button"
+        className={`duplicate-preview-play-btn ${isPlaying ? "is-playing" : ""}`}
+        title={isPlaying ? "Pausar audio" : "Escuchar audio"}
+      >
+        <Icon name={isPlaying ? "pause" : "play"} />
+      </button>
+    </div>
+  );
+};
+
+interface DuplicateVideoThumbProps {
+  path: string;
+  title: string;
+  isPlaying: boolean;
+  onToggle: () => void;
+}
+
+const DuplicateVideoThumb: React.FC<DuplicateVideoThumbProps> = ({ path, title, isPlaying, onToggle }) => {
+  if (isPlaying) {
+    return (
+      <div className="duplicate-video-player-box" onClick={(e) => e.stopPropagation()}>
+        <video
+          src={toSafeAssetUrl(path)}
+          controls
+          autoPlay
+          className="duplicate-inline-video"
+          onEnded={onToggle}
+        />
+        <button
+          type="button"
+          className="duplicate-video-close-btn"
+          onClick={onToggle}
+          title="Cerrar reproductor"
+        >
+          <Icon name="close" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="duplicate-video-thumb-box"
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle();
+      }}
+    >
+      <VideoThumbnail path={path} title={title} fit="cover" />
+      <button
+        type="button"
+        className="duplicate-preview-play-btn"
+        title="Previsualizar vídeo"
+      >
+        <Icon name="play" />
+      </button>
+    </div>
+  );
+};
+
 export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
   group,
   activeKind,
   selectedPaths,
+  previewPath,
+  isPreviewPlaying,
+  onTogglePreview,
   toggleGroupSelection,
   toggleSelectPath,
   handleReplaceBase,
@@ -105,9 +197,18 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
           </div>
           <div className="duplicate-card-thumb">
             {activeKind === "music" ? (
-              <div className="music-thumb-placeholder" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", width: "100%", background: "var(--surface-container-high, rgba(255,255,255,0.05))" }}>
-                <Icon name="music" />
-              </div>
+              <DuplicateMusicThumb
+                path={group.original.path}
+                isPlaying={Boolean(previewPath === group.original.path && isPreviewPlaying)}
+                onToggle={() => onTogglePreview?.(group.original.path)}
+              />
+            ) : activeKind === "video" ? (
+              <DuplicateVideoThumb
+                path={group.original.path}
+                title={group.original.title}
+                isPlaying={Boolean(previewPath === group.original.path && isPreviewPlaying)}
+                onToggle={() => onTogglePreview?.(group.original.path)}
+              />
             ) : (
               <img
                 src={toSafeAssetUrl(group.original.path)}
@@ -176,9 +277,18 @@ export const DuplicateGroupCard: React.FC<DuplicateGroupCardProps> = ({
 
               <div className="duplicate-card-thumb">
                 {activeKind === "music" ? (
-                  <div className="music-thumb-placeholder" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", width: "100%", background: "var(--surface-container-high, rgba(255,255,255,0.05))" }}>
-                    <Icon name="music" />
-                  </div>
+                  <DuplicateMusicThumb
+                    path={dup.path}
+                    isPlaying={Boolean(previewPath === dup.path && isPreviewPlaying)}
+                    onToggle={() => onTogglePreview?.(dup.path)}
+                  />
+                ) : activeKind === "video" ? (
+                  <DuplicateVideoThumb
+                    path={dup.path}
+                    title={dup.title}
+                    isPlaying={Boolean(previewPath === dup.path && isPreviewPlaying)}
+                    onToggle={() => onTogglePreview?.(dup.path)}
+                  />
                 ) : (
                   <img
                     src={toSafeAssetUrl(dup.path)}

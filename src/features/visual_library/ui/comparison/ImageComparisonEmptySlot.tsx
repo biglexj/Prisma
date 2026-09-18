@@ -10,6 +10,7 @@ interface ImageComparisonEmptySlotProps {
   tagLabel?: string;
   title?: string;
   subtitle?: string;
+  dropZone?: string;
 }
 
 export function ImageComparisonEmptySlot({
@@ -20,6 +21,7 @@ export function ImageComparisonEmptySlot({
   tagLabel = "Imagen B (A Comparar)",
   title = "Arrastra una imagen aquí",
   subtitle = "o elige una fuente para contrastar con la imagen base",
+  dropZone = "slot-b",
 }: ImageComparisonEmptySlotProps) {
   const [isHtmlDragOver, setIsHtmlDragOver] = useState(false);
 
@@ -62,7 +64,7 @@ export function ImageComparisonEmptySlot({
       onDragEnter={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      data-drop-zone="slot-b"
+      data-drop-zone={dropZone}
     >
       <div className="img-compare-slot-header">
         <span className="img-compare-slot-tag is-b">{tagLabel}</span>

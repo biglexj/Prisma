@@ -26,6 +26,13 @@ const TOOL_DEFINITIONS: ToolItemDef[] = [
     tags: ["Numeración", "Prefijo / Sufijo", "Reemplazo", "Deshacer"],
   },
   {
+    key: "comparator",
+    label: "Comparador Multimedia",
+    icon: "compare",
+    description: "Comparativa interactiva lado a lado, cortinilla antes/después, alternar rápido A/B y cuadrícula multi-imagen con zoom sincronizado.",
+    tags: ["Lado a Lado", "Cortinilla", "Alternar A/B", "Zoom Sincronizado"],
+  },
+  {
     key: "duplicates",
     label: "Buscador de Duplicados",
     icon: "copy",

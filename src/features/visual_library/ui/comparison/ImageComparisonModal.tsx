@@ -14,13 +14,15 @@ import {
 } from "./types";
 import { ImageComparisonSelector } from "./ImageComparisonSelector";
 import { ImageComparisonEmptySlot } from "./ImageComparisonEmptySlot";
+import { ImageComparisonFilmstrip } from "./ImageComparisonFilmstrip";
 import "./image-comparison.css";
 
 interface ImageComparisonModalProps {
-  initialItem: VisualLibraryItem;
+  initialItem?: VisualLibraryItem;
   secondItem?: VisualLibraryItem;
   itemsList?: VisualLibraryItem[];
   onClose: () => void;
+  embedded?: boolean;
 }
 
 export function ImageComparisonModal({
@@ -28,6 +30,7 @@ export function ImageComparisonModal({
   secondItem,
   itemsList = [],
   onClose,
+  embedded = false,
 }: ImageComparisonModalProps) {
   const [mode, setMode] = useState<ComparisonMode>("split");
   const [syncZoom, setSyncZoom] = useState(true);
@@ -46,18 +49,19 @@ export function ImageComparisonModal({
   const [hoveredNativeDropZone, setHoveredNativeDropZone] = useState<string | null>(null);
   const hoveredNativeDropZoneRef = useRef<string | null>(null);
 
-  // Initialize slots (solo con la imagen inicial para esperar la 2da foto deliberadamente)
+  // Initialize slots (vacío si no hay initialItem, para modo herramienta independiente)
   const [slots, setSlots] = useState<ComparisonImageSlot[]>(() => {
-    const list: ComparisonImageSlot[] = [
-      {
+    const list: ComparisonImageSlot[] = [];
+    if (initialItem) {
+      list.push({
         id: "slot-0",
         item: initialItem,
         zoom: 1,
         pan: { x: 0, y: 0 },
-      },
-    ];
+      });
+    }
 
-    if (secondItem && secondItem.path !== initialItem.path) {
+    if (secondItem && secondItem.path !== initialItem?.path) {
       list.push({
         id: "slot-1",
         item: secondItem,
@@ -253,9 +257,27 @@ export function ImageComparisonModal({
 
   // Slot replacement / addition
   const handleSelectSlotImage = (item: VisualLibraryItem) => {
-    if (isAddingNewSlot || slots.length < 2) {
+    if (selectorTargetSlotId) {
+      const exists = slots.some((s) => s.id === selectorTargetSlotId);
+      if (exists) {
+        setSlots((prev) =>
+          prev.map((s) => (s.id === selectorTargetSlotId ? { ...s, item, zoom: 1, pan: { x: 0, y: 0 } } : s)),
+        );
+      } else {
+        const newSlot: ComparisonImageSlot = {
+          id: selectorTargetSlotId,
+          item,
+          zoom: 1,
+          pan: { x: 0, y: 0 },
+        };
+        setSlots((prev) => [...prev, newSlot]);
+      }
+      if (selectorTargetSlotId === "slot-0") setActiveSlotAId("slot-0");
+      if (selectorTargetSlotId === "slot-1") setActiveSlotBId("slot-1");
+      setSelectorTargetSlotId(null);
+    } else if (isAddingNewSlot || slots.length < 2) {
       if (slots.length >= 6) return;
-      const newSlotId = `slot-${Date.now()}`;
+      const newSlotId = slots.length === 0 ? "slot-0" : `slot-${Date.now()}`;
       const newSlot: ComparisonImageSlot = {
         id: newSlotId,
         item,
@@ -268,40 +290,39 @@ export function ImageComparisonModal({
       if (slots.length >= 2 && (mode === "split" || mode === "curtain")) {
         setMode("grid");
       }
-      setActiveSlotBId(newSlotId);
-    } else if (selectorTargetSlotId) {
-      setSlots((prev) =>
-        prev.map((s) => (s.id === selectorTargetSlotId ? { ...s, item, zoom: 1, pan: { x: 0, y: 0 } } : s)),
-      );
-      setSelectorTargetSlotId(null);
+      if (slots.length === 0) {
+        setActiveSlotAId(newSlotId);
+      } else {
+        setActiveSlotBId(newSlotId);
+      }
     }
   };
 
   const handleAssignImagePath = (filePath: string, targetSlotId?: string) => {
     const item = createVisualItemFromPath(filePath);
     if (targetSlotId) {
-      setSlots((prev) =>
-        prev.map((s) => (s.id === targetSlotId ? { ...s, item, zoom: 1, pan: { x: 0, y: 0 } } : s)),
-      );
-    } else if (slots.length < 2) {
+      setSlots((prev) => {
+        const exists = prev.some((s) => s.id === targetSlotId);
+        if (exists) {
+          return prev.map((s) => (s.id === targetSlotId ? { ...s, item, zoom: 1, pan: { x: 0, y: 0 } } : s));
+        }
+        return [...prev, { id: targetSlotId, item, zoom: 1, pan: { x: 0, y: 0 } }];
+      });
+      if (targetSlotId === "slot-0") setActiveSlotAId("slot-0");
+      if (targetSlotId === "slot-1") setActiveSlotBId("slot-1");
+    } else if (slots.length === 0) {
+      const newSlot: ComparisonImageSlot = { id: "slot-0", item, zoom: 1, pan: { x: 0, y: 0 } };
+      setSlots([newSlot]);
+      setActiveSlotAId("slot-0");
+    } else if (slots.length === 1) {
       const newSlotId = `slot-${Date.now()}`;
-      const newSlot: ComparisonImageSlot = {
-        id: newSlotId,
-        item,
-        zoom: 1,
-        pan: { x: 0, y: 0 },
-      };
+      const newSlot: ComparisonImageSlot = { id: newSlotId, item, zoom: 1, pan: { x: 0, y: 0 } };
       setSlots((prev) => [...prev, newSlot]);
       setActiveSlotBId(newSlotId);
     } else {
       if (slots.length >= 6) return;
       const newSlotId = `slot-${Date.now()}`;
-      const newSlot: ComparisonImageSlot = {
-        id: newSlotId,
-        item,
-        zoom: 1,
-        pan: { x: 0, y: 0 },
-      };
+      const newSlot: ComparisonImageSlot = { id: newSlotId, item, zoom: 1, pan: { x: 0, y: 0 } };
       setSlots((prev) => [...prev, newSlot]);
       if (mode === "split" || mode === "curtain") {
         setMode("grid");
@@ -310,25 +331,31 @@ export function ImageComparisonModal({
     }
   };
 
+  const handlePickExplorerForSlotA = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS }],
+      });
+      if (selected && typeof selected === "string" && isImagePath(selected)) {
+        handleAssignImagePath(selected, slotA?.id ?? "slot-0");
+      }
+    } catch {}
+  };
+
   const handlePickExplorerForSlotB = async () => {
     try {
       const selected = await open({
         multiple: false,
-        filters: [
-          {
-            name: "Imágenes",
-            extensions: SUPPORTED_IMAGE_EXTENSIONS,
-          },
-        ],
+        filters: [{ name: "Imágenes", extensions: SUPPORTED_IMAGE_EXTENSIONS }],
       });
       if (selected && typeof selected === "string" && isImagePath(selected)) {
-        handleAssignImagePath(selected);
+        handleAssignImagePath(selected, slotB?.id ?? "slot-1");
       }
     } catch {}
   };
 
   const handleRemoveSlot = (slotId: string) => {
-    if (slots.length <= 1) return;
     setSlots((prev) => prev.filter((s) => s.id !== slotId));
 
     if (activeSlotAId === slotId) {
@@ -341,7 +368,7 @@ export function ImageComparisonModal({
     }
   };
 
-  const slotA = slots.find((s) => s.id === activeSlotAId) || slots[0];
+  const slotA = slots.find((s) => s.id === activeSlotAId) || slots[0] || undefined;
   const slotB =
     slots.find((s) => s.id === activeSlotBId && s.id !== slotA?.id) ||
     slots.find((s) => s.id !== slotA?.id) ||
@@ -390,10 +417,10 @@ export function ImageComparisonModal({
         return;
       }
 
-      if (zone === "slot-a" && slotARef.current) {
-        handleAssignImagePath(validPath, slotARef.current.id);
-      } else if (zone === "slot-b" && slotBRef.current) {
-        handleAssignImagePath(validPath, slotBRef.current.id);
+      if (zone === "slot-a") {
+        handleAssignImagePath(validPath, slotARef.current?.id ?? "slot-0");
+      } else if (zone === "slot-b") {
+        handleAssignImagePath(validPath, slotBRef.current?.id ?? "slot-1");
       } else {
         handleAssignImagePath(validPath);
       }
@@ -509,7 +536,7 @@ export function ImageComparisonModal({
   return (
     <div
       ref={containerRef}
-      className={`img-compare-modal-root ${isFullscreen ? "is-fullscreen" : ""}`}
+      className={`img-compare-modal-root ${isFullscreen ? "is-fullscreen" : ""} ${embedded ? "is-embedded" : ""}`}
     >
       {/* Top Action Bar */}
       <header className="img-compare-top-bar" onClick={(e) => e.stopPropagation()}>
@@ -518,13 +545,13 @@ export function ImageComparisonModal({
             type="button"
             className="img-compare-btn is-icon"
             onClick={onClose}
-            title="Volver al visor (Esc)"
+            title={embedded ? "Volver al Inicio" : "Volver al visor (Esc)"}
           >
             <Icon name="arrow-left" />
           </button>
           <div className="img-compare-badge-title">
             <Icon name="compare" />
-            <span>Comparativa ({slots.length} fotos)</span>
+            <span>Comparador ({slots.length} foto{slots.length === 1 ? "" : "s"})</span>
           </div>
 
           {/* Mode Switcher */}
@@ -665,60 +692,80 @@ export function ImageComparisonModal({
         {mode === "split" && (
           <div className={`img-compare-split-view is-${splitOrientation}`}>
             {/* Panel A */}
-            <div
-              className={`img-compare-viewport ${hoveredNativeDropZone === "slot-a" ? "is-drag-over" : ""}`}
-              data-drop-zone="slot-a"
-              onWheel={(e) => handleSlotWheel(e, slotA.id)}
-              onPointerDown={(e) => handlePanStart(e, slotA.id)}
-              style={{ cursor: slotA.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
-            >
-              <div className="img-compare-slot-header">
-                <span className="img-compare-slot-tag is-a">Imagen A (Base)</span>
-                <span className="img-compare-slot-title" title={slotA.item.path}>
-                  {slotA.item.title}
-                </span>
-                {slotA.width && slotA.height && (
-                  <span className="img-compare-dims-pill">
-                    {slotA.width} × {slotA.height} px
-                  </span>
-                )}
-                <button
-                  type="button"
-                  className="img-compare-slot-change-btn"
-                  onClick={() => setSelectorTargetSlotId(slotA.id)}
-                  title="Cambiar imagen A"
-                >
-                  <Icon name="edit" />
-                  <span>Cambiar</span>
-                </button>
-              </div>
-
+            {slotA ? (
               <div
-                className="img-compare-layer"
-                style={{
-                  transform: `translate(${slotA.pan.x}px, ${slotA.pan.y}px) scale(${slotA.zoom})`,
-                  transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
-                }}
+                className={`img-compare-viewport ${hoveredNativeDropZone === "slot-a" ? "is-drag-over" : ""}`}
+                data-drop-zone="slot-a"
+                onWheel={(e) => handleSlotWheel(e, slotA.id)}
+                onPointerDown={(e) => handlePanStart(e, slotA.id)}
+                style={{ cursor: slotA.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
               >
-                <img
-                  src={toSafeAssetUrl(slotA.item.path)}
-                  alt={slotA.item.title}
-                  draggable={false}
-                  onLoad={(e) => {
-                    const img = e.currentTarget;
-                    if (img.naturalWidth && !slotA.width) {
-                      setSlots((prev) =>
-                        prev.map((s) =>
-                          s.id === slotA.id
-                            ? { ...s, width: img.naturalWidth, height: img.naturalHeight }
-                            : s,
-                        ),
-                      );
-                    }
+                <div className="img-compare-slot-header">
+                  <span className="img-compare-slot-tag is-a">Imagen A (Base)</span>
+                  <span className="img-compare-slot-title" title={slotA.item.path}>
+                    {slotA.item.title}
+                  </span>
+                  {slotA.width && slotA.height && (
+                    <span className="img-compare-dims-pill">
+                      {slotA.width} × {slotA.height} px
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="img-compare-slot-change-btn"
+                    onClick={() => setSelectorTargetSlotId(slotA.id)}
+                    title="Cambiar imagen A"
+                  >
+                    <Icon name="edit" />
+                    <span>Cambiar</span>
+                  </button>
+                  {slots.length > 1 && (
+                    <button
+                      type="button"
+                      className="img-compare-slot-remove-btn"
+                      onClick={() => handleRemoveSlot(slotA.id)}
+                      title="Quitar imagen A"
+                    >
+                      <Icon name="close" />
+                    </button>
+                  )}
+                </div>
+
+                <div
+                  className="img-compare-layer"
+                  style={{
+                    transform: `translate(${slotA.pan.x}px, ${slotA.pan.y}px) scale(${slotA.zoom})`,
+                    transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
                   }}
-                />
+                >
+                  <img
+                    src={toSafeAssetUrl(slotA.item.path)}
+                    alt={slotA.item.title}
+                    draggable={false}
+                    onLoad={(e) => {
+                      const img = e.currentTarget;
+                      if (img.naturalWidth && !slotA.width) {
+                        setSlots((prev) =>
+                          prev.map((s) =>
+                            s.id === slotA.id
+                              ? { ...s, width: img.naturalWidth, height: img.naturalHeight }
+                              : s,
+                          ),
+                        );
+                      }
+                    }}
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <ImageComparisonEmptySlot
+                dropZone="slot-a"
+                onPickLibrary={() => setIsAddingNewSlot(true)}
+                onPickExplorer={handlePickExplorerForSlotA}
+                onDropFile={(path) => handleAssignImagePath(path, "slot-0")}
+                isNativeDragOver={hoveredNativeDropZone === "slot-a" || isNativeDragging}
+              />
+            )}
 
             <div className="img-compare-split-divider" />
 
@@ -750,6 +797,16 @@ export function ImageComparisonModal({
                     <Icon name="edit" />
                     <span>Cambiar</span>
                   </button>
+                  {slots.length > 1 && (
+                    <button
+                      type="button"
+                      className="img-compare-slot-remove-btn"
+                      onClick={() => handleRemoveSlot(slotB.id)}
+                      title="Quitar imagen B"
+                    >
+                      <Icon name="close" />
+                    </button>
+                  )}
                 </div>
 
                 <div
@@ -780,9 +837,10 @@ export function ImageComparisonModal({
               </div>
             ) : (
               <ImageComparisonEmptySlot
+                dropZone="slot-b"
                 onPickLibrary={() => setIsAddingNewSlot(true)}
                 onPickExplorer={handlePickExplorerForSlotB}
-                onDropFile={handleAssignImagePath}
+                onDropFile={(path) => handleAssignImagePath(path, "slot-1")}
                 isNativeDragOver={hoveredNativeDropZone === "slot-b" || isNativeDragging}
               />
             )}
@@ -790,318 +848,253 @@ export function ImageComparisonModal({
         )}
 
         {/* ── MODE 2: CURTAIN (Before / After Slider) ── */}
-        {mode === "curtain" && slotB && (
-          <div
-            ref={curtainRef}
-            className="img-compare-curtain-view"
-            onWheel={(e) => handleSlotWheel(e, slotA.id)}
-            onPointerDown={(e) => handlePanStart(e, slotA.id)}
-            style={{ cursor: slotA.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
-          >
-            {/* Layer A (Underneath) */}
-            <div
-              className="img-compare-curtain-layer is-underneath"
-              style={{
-                transform: `translate(${slotA.pan.x}px, ${slotA.pan.y}px) scale(${slotA.zoom})`,
-                transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
-              }}
-            >
-              <img
-                src={toSafeAssetUrl(slotA.item.path)}
-                alt={slotA.item.title}
-                draggable={false}
-              />
+        {mode === "curtain" && (
+          (!slotA || !slotB) ? (
+            <div className="img-compare-empty-curtain-notice">
+              <Icon name="split" />
+              <h3>Se requieren 2 imágenes para la Cortinilla interactiva</h3>
+              <p>Carga una foto en el Slot A y otra en el Slot B para deslizar el antes y después.</p>
+              <button
+                type="button"
+                className="img-compare-btn is-accent"
+                onClick={() => setMode("split")}
+              >
+                <Icon name="columns" />
+                <span>Volver a Lado a lado</span>
+              </button>
             </div>
-
-            {/* Layer B (Clipped Over Top) */}
+          ) : (
             <div
-              className="img-compare-curtain-layer is-clipped"
-              style={{
-                clipPath: `polygon(${curtainPosition}% 0, 100% 0, 100% 100%, ${curtainPosition}% 100%)`,
-                transform: `translate(${slotA.pan.x}px, ${slotA.pan.y}px) scale(${slotA.zoom})`,
-                transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
-              }}
+              ref={curtainRef}
+              className="img-compare-curtain-view"
+              onWheel={(e) => handleSlotWheel(e, slotA.id)}
+              onPointerDown={(e) => handlePanStart(e, slotA.id)}
+              style={{ cursor: slotA.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
             >
-              <img
-                src={toSafeAssetUrl(slotB.item.path)}
-                alt={slotB.item.title}
-                draggable={false}
-              />
-            </div>
+              {/* Layer A (Underneath) */}
+              <div
+                className="img-compare-curtain-layer is-underneath"
+                style={{
+                  transform: `translate(${slotA.pan.x}px, ${slotA.pan.y}px) scale(${slotA.zoom})`,
+                  transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
+                }}
+              >
+                <img
+                  src={toSafeAssetUrl(slotA.item.path)}
+                  alt={slotA.item.title}
+                  draggable={false}
+                />
+              </div>
 
-            {/* Draggable Divider Handle */}
-            <div
-              className="img-compare-curtain-divider"
-              style={{ left: `${curtainPosition}%` }}
-              onPointerDown={handleCurtainPointerDown}
-            >
-              <div className="img-compare-curtain-handle" title="Arrastra hacia los lados para comparar">
-                <Icon name="split" />
+              {/* Layer B (Clipped Over Top) */}
+              <div
+                className="img-compare-curtain-layer is-clipped"
+                style={{
+                  clipPath: `polygon(${curtainPosition}% 0, 100% 0, 100% 100%, ${curtainPosition}% 100%)`,
+                  transform: `translate(${slotA.pan.x}px, ${slotA.pan.y}px) scale(${slotA.zoom})`,
+                  transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
+                }}
+              >
+                <img
+                  src={toSafeAssetUrl(slotB.item.path)}
+                  alt={slotB.item.title}
+                  draggable={false}
+                />
+              </div>
+
+              {/* Draggable Divider Handle */}
+              <div
+                className="img-compare-curtain-divider"
+                style={{ left: `${curtainPosition}%` }}
+                onPointerDown={handleCurtainPointerDown}
+              >
+                <div className="img-compare-curtain-handle" title="Arrastra hacia los lados para comparar">
+                  <Icon name="split" />
+                </div>
+              </div>
+
+              {/* Labels */}
+              <div className="img-compare-curtain-label is-left">
+                <span className="img-compare-slot-tag is-a">A</span>
+                <span>{slotA.item.title}</span>
+              </div>
+              <div className="img-compare-curtain-label is-right">
+                <span>{slotB.item.title}</span>
+                <span className="img-compare-slot-tag is-b">B</span>
               </div>
             </div>
-
-            {/* Labels */}
-            <div className="img-compare-curtain-label is-left">
-              <span className="img-compare-slot-tag is-a">A</span>
-              <span>{slotA.item.title}</span>
-            </div>
-            <div className="img-compare-curtain-label is-right">
-              <span>{slotB.item.title}</span>
-              <span className="img-compare-slot-tag is-b">B</span>
-            </div>
-          </div>
+          )
         )}
 
         {/* ── MODE 3: GRID (2 to 6 Images) ── */}
         {mode === "grid" && (
-          <div className={`img-compare-grid-view count-${slots.length}`}>
-            {slots.map((slot, index) => (
-              <div
-                key={slot.id}
-                className="img-compare-grid-cell"
-                onWheel={(e) => handleSlotWheel(e, slot.id)}
-                onPointerDown={(e) => handlePanStart(e, slot.id)}
-                style={{ cursor: slot.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
+          slots.length === 0 ? (
+            <div className="img-compare-empty-curtain-notice">
+              <Icon name="grid" />
+              <h3>No hay imágenes en la comparativa</h3>
+              <p>Añade imágenes de tu biblioteca o cárgalas en el modo Lado a lado.</p>
+              <button
+                type="button"
+                className="img-compare-btn is-accent"
+                onClick={() => setMode("split")}
               >
-                <div className="img-compare-slot-header">
-                  <span className={`img-compare-slot-tag is-idx-${index % 4}`}>
-                    Foto #{index + 1}
-                  </span>
-                  <span className="img-compare-slot-title" title={slot.item.path}>
-                    {slot.item.title}
-                  </span>
-                  <button
-                    type="button"
-                    className="img-compare-slot-change-btn"
-                    onClick={() => setSelectorTargetSlotId(slot.id)}
-                    title="Cambiar imagen"
-                  >
-                    <Icon name="edit" />
-                  </button>
-                  {slots.length > 2 && (
+                <Icon name="columns" />
+                <span>Ir a Lado a lado</span>
+              </button>
+            </div>
+          ) : (
+            <div className={`img-compare-grid-view count-${slots.length}`}>
+              {slots.map((slot, index) => (
+                <div
+                  key={slot.id}
+                  className="img-compare-grid-cell"
+                  onWheel={(e) => handleSlotWheel(e, slot.id)}
+                  onPointerDown={(e) => handlePanStart(e, slot.id)}
+                  style={{ cursor: slot.zoom > 1 ? (draggingSlotId ? "grabbing" : "grab") : "default" }}
+                >
+                  <div className="img-compare-slot-header">
+                    <span className={`img-compare-slot-tag is-idx-${index % 4}`}>
+                      Foto #{index + 1}
+                    </span>
+                    <span className="img-compare-slot-title" title={slot.item.path}>
+                      {slot.item.title}
+                    </span>
                     <button
                       type="button"
-                      className="img-compare-slot-remove-btn"
-                      onClick={() => handleRemoveSlot(slot.id)}
-                      title="Quitar de comparativa"
+                      className="img-compare-slot-change-btn"
+                      onClick={() => setSelectorTargetSlotId(slot.id)}
+                      title="Cambiar imagen"
                     >
-                      <Icon name="close" />
+                      <Icon name="edit" />
                     </button>
-                  )}
-                </div>
+                    {slots.length > 2 && (
+                      <button
+                        type="button"
+                        className="img-compare-slot-remove-btn"
+                        onClick={() => handleRemoveSlot(slot.id)}
+                        title="Quitar de comparativa"
+                      >
+                        <Icon name="close" />
+                      </button>
+                    )}
+                  </div>
 
-                <div
-                  className="img-compare-layer"
-                  style={{
-                    transform: `translate(${slot.pan.x}px, ${slot.pan.y}px) scale(${slot.zoom})`,
-                    transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
-                  }}
-                >
-                  <img
-                    src={toSafeAssetUrl(slot.item.path)}
-                    alt={slot.item.title}
-                    draggable={false}
-                  />
+                  <div
+                    className="img-compare-layer"
+                    style={{
+                      transform: `translate(${slot.pan.x}px, ${slot.pan.y}px) scale(${slot.zoom})`,
+                      transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
+                    }}
+                  >
+                    <img
+                      src={toSafeAssetUrl(slot.item.path)}
+                      alt={slot.item.title}
+                      draggable={false}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
         )}
 
         {/* ── MODE 4: FLICK (Instant A/B Toggle) ── */}
         {mode === "flick" && (
-          <div
-            className="img-compare-flick-view"
-            onClick={() => setActiveFlickIndex((prev) => (prev + 1) % slots.length)}
-            onWheel={(e) => handleSlotWheel(e, slots[activeFlickIndex].id)}
-            onPointerDown={(e) => handlePanStart(e, slots[activeFlickIndex].id)}
-          >
-            <div className="img-compare-flick-header">
-              <div className="img-compare-flick-badge">
-                <span className={`img-compare-slot-tag is-idx-${activeFlickIndex % 4}`}>
-                  Foto #{activeFlickIndex + 1}
-                </span>
-                <span className="img-compare-slot-title" title={slots[activeFlickIndex].item.path}>
-                  {slots[activeFlickIndex].item.title}
-                </span>
-                {slots[activeFlickIndex].width && slots[activeFlickIndex].height && (
-                  <span className="img-compare-dims-pill">
-                    {slots[activeFlickIndex].width} × {slots[activeFlickIndex].height} px
+          slots.length < 2 ? (
+            <div className="img-compare-empty-curtain-notice">
+              <Icon name="sparkles" />
+              <h3>Se requieren al menos 2 fotos para Alternar A/B</h3>
+              <p>Carga una segunda foto para alternar instantáneamente entre ellas con un clic o espacio.</p>
+              <button
+                type="button"
+                className="img-compare-btn is-accent"
+                onClick={() => setMode("split")}
+              >
+                <Icon name="columns" />
+                <span>Volver a Lado a lado</span>
+              </button>
+            </div>
+          ) : (
+            <div
+              className="img-compare-flick-view"
+              onClick={() => setActiveFlickIndex((prev) => (prev + 1) % slots.length)}
+              onWheel={(e) => handleSlotWheel(e, slots[activeFlickIndex].id)}
+              onPointerDown={(e) => handlePanStart(e, slots[activeFlickIndex].id)}
+            >
+              <div className="img-compare-flick-header">
+                <div className="img-compare-flick-badge">
+                  <span className={`img-compare-slot-tag is-idx-${activeFlickIndex % 4}`}>
+                    Foto #{activeFlickIndex + 1}
                   </span>
-                )}
-                <span className="img-compare-flick-hint">
-                  (Haz clic o pulsa Espacio para alternar)
-                </span>
+                  <span className="img-compare-slot-title" title={slots[activeFlickIndex].item.path}>
+                    {slots[activeFlickIndex].item.title}
+                  </span>
+                  {slots[activeFlickIndex].width && slots[activeFlickIndex].height && (
+                    <span className="img-compare-dims-pill">
+                      {slots[activeFlickIndex].width} × {slots[activeFlickIndex].height} px
+                    </span>
+                  )}
+                  <span className="img-compare-flick-hint">
+                    (Haz clic o pulsa Espacio para alternar)
+                  </span>
+                </div>
+              </div>
+
+              <div
+                className="img-compare-layer"
+                style={{
+                  transform: `translate(${slots[activeFlickIndex].pan.x}px, ${slots[activeFlickIndex].pan.y}px) scale(${slots[activeFlickIndex].zoom})`,
+                  transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
+                }}
+              >
+                <img
+                  key={slots[activeFlickIndex].id}
+                  src={toSafeAssetUrl(slots[activeFlickIndex].item.path)}
+                  alt={slots[activeFlickIndex].item.title}
+                  draggable={false}
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
+                    const activeSlot = slots[activeFlickIndex];
+                    if (img.naturalWidth && !activeSlot.width) {
+                      setSlots((prev) =>
+                        prev.map((s) =>
+                          s.id === activeSlot.id
+                            ? { ...s, width: img.naturalWidth, height: img.naturalHeight }
+                            : s,
+                        ),
+                      );
+                    }
+                  }}
+                />
               </div>
             </div>
-
-            <div
-              className="img-compare-layer"
-              style={{
-                transform: `translate(${slots[activeFlickIndex].pan.x}px, ${slots[activeFlickIndex].pan.y}px) scale(${slots[activeFlickIndex].zoom})`,
-                transition: draggingSlotId ? "none" : "transform 0.1s ease-out",
-              }}
-            >
-              <img
-                key={slots[activeFlickIndex].id}
-                src={toSafeAssetUrl(slots[activeFlickIndex].item.path)}
-                alt={slots[activeFlickIndex].item.title}
-                draggable={false}
-                onLoad={(e) => {
-                  const img = e.currentTarget;
-                  const activeSlot = slots[activeFlickIndex];
-                  if (img.naturalWidth && !activeSlot.width) {
-                    setSlots((prev) =>
-                      prev.map((s) =>
-                        s.id === activeSlot.id
-                          ? { ...s, width: img.naturalWidth, height: img.naturalHeight }
-                          : s,
-                      ),
-                    );
-                  }
-                }}
-              />
-            </div>
-          </div>
+          )
         )}
 
         {/* Barra Flotante de Slots (Filmstrip de Comparativa) */}
-        <div className="img-compare-filmstrip-bar">
-          <div className="img-compare-filmstrip">
-            <div className="img-compare-filmstrip-header">
-              <span className="img-compare-filmstrip-label">
-                <Icon name="compare" />
-                <span>Fotos en comparativa ({slots.length}/6)</span>
-              </span>
-              <button
-                type="button"
-                className="img-compare-filmstrip-toggle"
-                onClick={() => setShowFilmstrip((prev) => !prev)}
-                title={showFilmstrip ? "Ocultar barra de fotos" : "Mostrar barra de fotos"}
-              >
-                <Icon name={showFilmstrip ? "chevronDown" : "chevronUp"} />
-              </button>
-            </div>
-
-            {showFilmstrip && (
-              <div className="img-compare-filmstrip-items">
-                {slots.map((slot, index) => {
-                  const isA = slot.id === slotA?.id;
-                  const isB = slot.id === slotB?.id;
-                  const isFlickActive = mode === "flick" && activeFlickIndex === index;
-
-                  return (
-                    <div
-                      key={slot.id}
-                      className={`img-compare-filmstrip-card ${isA ? "is-slot-a" : ""} ${isB ? "is-slot-b" : ""} ${isFlickActive ? "is-flick" : ""}`}
-                      onClick={() => {
-                        if (mode === "split" || mode === "curtain") {
-                          if (!isA && !isB) {
-                            setActiveSlotBId(slot.id);
-                          } else if (isB) {
-                            handleSwapPrimary();
-                          }
-                        } else if (mode === "flick") {
-                          setActiveFlickIndex(index);
-                        }
-                      }}
-                      title={`${slot.item.title}\n(Clic para activar en comparativa)`}
-                    >
-                      <div className="img-compare-filmstrip-thumb">
-                        <VisualThumbnail
-                          path={slot.item.path}
-                          alt={slot.item.title}
-                          className="img-compare-thumbnail-media"
-                          fit="cover"
-                        />
-                        {(mode === "split" || mode === "curtain") && (
-                          <>
-                            {isA && <span className="img-compare-slot-pill is-a">Slot A</span>}
-                            {isB && <span className="img-compare-slot-pill is-b">Slot B</span>}
-                            {!isA && !isB && (
-                              <span className="img-compare-slot-pill is-alt">#{index + 1}</span>
-                            )}
-                          </>
-                        )}
-                        {mode === "grid" && (
-                          <span className="img-compare-slot-pill is-grid">#{index + 1}</span>
-                        )}
-                        {mode === "flick" && (
-                          <span className={`img-compare-slot-pill ${isFlickActive ? "is-a" : "is-alt"}`}>
-                            #{index + 1}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="img-compare-filmstrip-meta">
-                        <span className="img-compare-filmstrip-name">{slot.item.title}</span>
-                        <div className="img-compare-filmstrip-btns" onClick={(e) => e.stopPropagation()}>
-                          {(mode === "split" || mode === "curtain") && !isA && (
-                            <button
-                              type="button"
-                              className="img-compare-mini-btn"
-                              onClick={() => setActiveSlotAId(slot.id)}
-                              title="Fijar en Slot A"
-                            >
-                              A
-                            </button>
-                          )}
-                          {(mode === "split" || mode === "curtain") && !isB && (
-                            <button
-                              type="button"
-                              className="img-compare-mini-btn"
-                              onClick={() => setActiveSlotBId(slot.id)}
-                              title="Fijar en Slot B"
-                            >
-                              B
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="img-compare-mini-btn"
-                            onClick={() => setSelectorTargetSlotId(slot.id)}
-                            title="Cambiar esta foto..."
-                          >
-                            <Icon name="edit" />
-                          </button>
-                          {slots.length > 2 && (
-                            <button
-                              type="button"
-                              className="img-compare-mini-btn is-danger"
-                              onClick={() => handleRemoveSlot(slot.id)}
-                              title="Quitar de la comparativa"
-                            >
-                              <Icon name="close" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {slots.length < 6 && (
-                  <button
-                    type="button"
-                    className="img-compare-filmstrip-add-btn"
-                    onClick={() => setIsAddingNewSlot(true)}
-                    title="Añadir otra foto a la comparativa"
-                  >
-                    <Icon name="plus" />
-                    <span>Añadir</span>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
+        <ImageComparisonFilmstrip
+          slots={slots}
+          slotA={slotA}
+          slotB={slotB}
+          mode={mode}
+          activeFlickIndex={activeFlickIndex}
+          showFilmstrip={showFilmstrip}
+          setShowFilmstrip={setShowFilmstrip}
+          setActiveSlotAId={setActiveSlotAId}
+          setActiveSlotBId={setActiveSlotBId}
+          setActiveFlickIndex={setActiveFlickIndex}
+          handleSwapPrimary={handleSwapPrimary}
+          setSelectorTargetSlotId={setSelectorTargetSlotId}
+          handleRemoveSlot={handleRemoveSlot}
+          setIsAddingNewSlot={setIsAddingNewSlot}
+        />
       </main>
 
       {/* Image Selector Dialog (Biblioteca con Miniaturas) */}
       {(selectorTargetSlotId || isAddingNewSlot) && (
         <ImageComparisonSelector
           currentItems={slots.map((s) => s.item)}
-          availableItems={itemsList.length > 0 ? itemsList : [initialItem]}
+          availableItems={itemsList.length > 0 ? itemsList : (initialItem ? [initialItem] : [])}
           onSelect={handleSelectSlotImage}
           onClose={() => { setSelectorTargetSlotId(null); setIsAddingNewSlot(false); }}
           title={isAddingNewSlot ? "Seleccionar de la biblioteca" : `Cambiar foto #${slots.findIndex((s) => s.id === selectorTargetSlotId) + 1}`}

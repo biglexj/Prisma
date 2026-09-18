@@ -61,6 +61,7 @@ export function useGlobalFileDrop({
     if (
       activeView === "duplicates" ||
       activeView === "renamer" ||
+      activeView === "comparator" ||
       activeView === "converter" ||
       activeView === "prisma_upscaler"
     ) {
