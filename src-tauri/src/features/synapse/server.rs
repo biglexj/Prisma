@@ -424,16 +424,17 @@ fn handle_client(stream: TcpStream, app: AppHandle) {
                     };
                     let _ = app.emit("prisma://file-received", file_event);
 
-                    // Traer ventana al frente y previsualizar directamente
-                    bring_main_window_to_front(&app);
-                    let open_event = SynapseOpenMediaEvent {
-                        path: saved_path_str.clone(),
-                        current_time: Some(0.0),
-                        autoplay: Some(true),
-                        title: Some(file_name.clone()),
-                        artist: None,
-                    };
-                    let _ = app.emit("prisma://open-media", open_event);
+                    // Disparar notificación nativa de escritorio no invasiva en Windows
+                    {
+                        use tauri_plugin_notification::NotificationExt;
+                        let size_mb = (file_data.len() as f64 / (1024.0 * 1024.0)).max(0.01);
+                        let _ = app
+                            .notification()
+                            .builder()
+                            .title("Aurora Synapse · LAN")
+                            .body(format!("Archivo recibido: {file_name} ({size_mb:.1} MB)\nGuardado en Descargas\\Prisma"))
+                            .show();
+                    }
 
                     let resp = SynapseActionResponse {
                         success: true,

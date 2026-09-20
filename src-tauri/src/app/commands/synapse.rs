@@ -578,3 +578,10 @@ pub async fn upscale_image_native(
     .await
     .map_err(|e| format!("Error en tarea de escalado: {e}"))?
 }
+
+#[tauri::command]
+pub fn synapse_get_initial_send_file(
+    state: State<'_, crate::app::state::InitialSynapseSendState>,
+) -> Option<String> {
+    state.0.lock().ok()?.take()
+}

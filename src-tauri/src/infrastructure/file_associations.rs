@@ -203,7 +203,20 @@ pub mod windows_associations {
             unsafe { let _ = RegCloseKey(key); }
         }
 
-        // ── 6. Notificar al Explorador de Windows para refrescar asociaciones ──
+        // ── 6. Menú Contextual del Explorador de Windows: "Enviar con Aurora Synapse" ──
+        let synapse_send_command = format!("\"{}\" --synapse-send \"%1\"", exe_path_str);
+        if let Some(key) = create_or_open_key(HKEY_CURRENT_USER, "Software\\Classes\\*\\shell\\Prisma.SynapseSend") {
+            set_reg_sz(key, None, "Enviar con Aurora Synapse");
+            set_reg_sz(key, Some("MUIVerb"), "Enviar con Aurora Synapse");
+            set_reg_sz(key, Some("Icon"), &icon_entry);
+            unsafe { let _ = RegCloseKey(key); }
+        }
+        if let Some(key) = create_or_open_key(HKEY_CURRENT_USER, "Software\\Classes\\*\\shell\\Prisma.SynapseSend\\command") {
+            set_reg_sz(key, None, &synapse_send_command);
+            unsafe { let _ = RegCloseKey(key); }
+        }
+
+        // ── 7. Notificar al Explorador de Windows para refrescar asociaciones ──
         unsafe {
             SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, None, None);
         }

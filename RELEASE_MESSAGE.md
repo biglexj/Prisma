@@ -1,22 +1,22 @@
-# 🚀 Prisma v1.1.5 — Delegación Fluida de Edición de Documentos y Editor Integrado
+# 🚀 Prisma v1.1.6 — Aurora Synapse no Invasivo, Notificaciones y Menú Compartir en Windows
 
-Llega **Prisma v1.1.5**, una actualización que optimiza la experiencia de lectura y edición de documentos: al solicitar editar cualquier archivo Markdown o de texto plano desde Quick Look, el sistema delega automáticamente la acción a la ventana principal de Prisma abriendo el **editor integrado** en vista dividida (*split-screen*) o código fuente, con foco inmediato en el área de trabajo para escribir o pegar texto al instante.
+Llega **Prisma v1.1.6**, una actualización diseñada para garantizar una experiencia de transferencia fluida y respetuosa con el usuario a través de **Aurora Synapse**: ahora, al recibir archivos multimedia y documentos desde tu teléfono o dispositivos del ecosistema, Prisma ya no interrumpe tu trabajo abriéndose forzosamente ni arrancando la reproducción de golpe. En su lugar, emite una notificación de escritorio nativa de Windows informando la llegada y guardado en Descargas, mientras que la suite te permite abrir el archivo bajo demanda con un solo clic. Además, se añade la opción directa «Enviar con Aurora Synapse» en el menú contextual de Windows para compartir archivos con tus dispositivos móviles al instante.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- 📝 **Delegación Inteligente Quick Look → Editor Integrado**: Pulsa editar en Quick Look para transferir el archivo sin fricción al editor de Prisma con soporte para Markdown y código fuente.
-- ⚡ **Foco Inmediato para Escribir y Pegar**: El cursor se activa automáticamente en el área de texto nada más abrirse, listo para escribir o pegar con `Ctrl + V`.
-- 💾 **Guardado Rápido con `Ctrl + S`**: Persistencia directa en disco de las modificaciones realizadas desde cualquier modalidad del editor.
-- 📄 **Experiencia Mejorada en Documentos Vacíos**: Vista previa amigable en documentos de 0 bytes con botón directo para comenzar a redactar o pegar contenido.
-- 🔍 **Botones de Edición Contextuales**: Botón de edición accesible en la cabecera, en la barra de utilidades de Quick Look y en la vista previa.
+- 🔕 **Recepción no Invasiva vía LAN**: Olvídate de aperturas bruscas o desminimizados intempestivos al transferir archivos desde el móvil; tu flujo de trabajo permanece intacto.
+- 🔔 **Notificaciones Nativas de Windows**: Alerta visual limpia del sistema operativo informando el nombre, tamaño y ubicación de los archivos recibidos en `Downloads/Prisma`.
+- 📲 **Apertura Bajo Demanda**: Indicador flotante en pantalla con botón «Abrir» para visualizar o reproducir el contenido cuando tú lo decidas.
+- 🔄 **Actualización Silenciosa de Bibliotecas**: Tus colecciones de música, fotos y vídeos se sincronizan reactivamente en segundo plano sin recargas molestas.
+- 📤 **Menú Contextual de Windows («Enviar con Aurora Synapse»)**: Comparte cualquier archivo de tu PC a tu teléfono o Super Galería directamente desde el Explorador de archivos con un solo clic.
 
 ---
 
 ### 📦 Descargas oficiales
 
-- 💾 [Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.5/Prisma_1.1.5_x64-setup.exe)
+- 💾 [Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.6/Prisma_1.1.6_x64-setup.exe)
 
 ---
 

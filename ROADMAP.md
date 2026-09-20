@@ -8,7 +8,10 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [ ] **Refinamiento de Instancia Múltiple Flotante / Ventanas Fijadas (Pin Always-on-Top en Quick Look)**:
+- [ ] **v1.1.6 — Aurora Synapse: Recepción no Invasiva, Notificaciones Nativas y Menú «Enviar con Aurora Synapse»**:
+  - **Recepción no Invasiva**: Desactivación del desminimizado y apertura forzada (`bring_main_window_to_front` y `open-media`) al recibir archivos por LAN desde el móvil o Super Galería.
+  - **Notificaciones Nativas del SO**: Integración de notificaciones de escritorio en Windows para informar la recepción y guardado en `Downloads/Prisma` con apertura consentida bajo demanda.
+  - **Integración con Menú Contextual de Windows**: Registro en shell de «Enviar con Aurora Synapse» (`--synapse-send`) enlazado a `SendToSuperGalleryModal` para transferir archivos a dispositivos LAN con un clic.
   - **Aislamiento Multi-instancia Real**: Garantizar que abrir un nuevo archivo o navegar desde el explorador no cierre ni altere las ventanas ya fijadas, permitiendo abrir y mantener múltiples instancias de referencia abiertas simultáneamente sin colisión de estado.
   - **Fluidez de Arrastre y Movimiento de Ventana**: Optimizar el arrastre nativo (`start_dragging` / render loop) de la ventana secundaria para eliminar saltos (*judder*) o retrasos visuales durante el desplazamiento sobre la pantalla.
   - **Optimización de Rendimiento Gráfico**: Acelerar el renderizado y decodificación de medios en ventanas secundarias desacopladas para mantener suavidad absoluta a altos fotogramas.

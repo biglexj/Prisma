@@ -54,9 +54,9 @@ use app::commands::renamer::{
 };
 use app::commands::synapse::{
     check_prisma_upscaler_engine, launch_gallery_dl, launch_luna_fetch, launch_prisma_upscaler,
-    synapse_get_discovered_devices, synapse_get_downloads_dir, synapse_get_status,
-    synapse_send_file_to_device, synapse_set_downloads_dir, synapse_update_playback,
-    upscale_image_native,
+    synapse_get_discovered_devices, synapse_get_downloads_dir, synapse_get_initial_send_file,
+    synapse_get_status, synapse_send_file_to_device, synapse_set_downloads_dir,
+    synapse_update_playback, upscale_image_native,
 };
 use app::commands::tags::{
     audio_batch_write_tags, audio_read_tags, audio_save_lyrics, audio_write_tags,
@@ -71,7 +71,10 @@ use app::commands::visual_library::{
     visual_library_replace_duplicate, visual_library_rescan_folder, visual_library_scan_duplicates, visual_library_sync_pip_icon,
 };
 use app::commands::wallpapers::{wallpaper_save_and_apply, wallpaper_set_desktop};
-use app::state::{FavoritesState, InitialFileState, MusicLibraryState, PlaybackProbeState, VisualLibraryState};
+use app::state::{
+    FavoritesState, InitialFileState, InitialSynapseSendState, MusicLibraryState,
+    PlaybackProbeState, VisualLibraryState,
+};
 use features::quick_look::QuickLookState;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -81,6 +84,23 @@ use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let raw_initial_arg = std::env::args().nth(1).filter(|path| !path.starts_with('-'));
+
+    // Detección de argumento --synapse-send para envío directo a través de la red LAN
+    let all_args: Vec<String> = std::env::args().collect();
+    let initial_synapse_send_file = all_args
+        .windows(2)
+        .find_map(|w| {
+            if w[0] == "--synapse-send" {
+                Some(w[1].clone())
+            } else {
+                None
+            }
+        })
+        .or_else(|| {
+            all_args.iter().find_map(|a| {
+                a.strip_prefix("--synapse-send=").map(|s| s.to_string())
+            })
+        });
     
     let initial_file = if let Some(ref arg) = raw_initial_arg {
         if arg.starts_with("prisma://") || arg.starts_with("aurora-synapse://") {
@@ -115,7 +135,35 @@ pub fn run() {
 
     if !is_dev_mode {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
-            let maybe_arg = args.into_iter().skip(1).find(|arg| !arg.starts_with('-'));
+            let incoming_args: Vec<String> = args;
+
+            // Manejo de envío directo por menú contextual (--synapse-send)
+            let synapse_send = incoming_args
+                .windows(2)
+                .find_map(|w| {
+                    if w[0] == "--synapse-send" {
+                        Some(w[1].clone())
+                    } else {
+                        None
+                    }
+                })
+                .or_else(|| {
+                    incoming_args.iter().find_map(|a| {
+                        a.strip_prefix("--synapse-send=").map(|s| s.to_string())
+                    })
+                });
+
+            if let Some(send_file) = synapse_send {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.unminimize();
+                    let _ = w.show();
+                    let _ = w.set_focus();
+                    let _ = app.emit("prisma://synapse-send", send_file);
+                }
+                return;
+            }
+
+            let maybe_arg = incoming_args.into_iter().skip(1).find(|arg| !arg.starts_with('-'));
 
             if let Some(arg_str) = maybe_arg {
                 if arg_str.starts_with("prisma://") || arg_str.starts_with("aurora-synapse://") {
@@ -166,6 +214,7 @@ pub fn run() {
 
     builder
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_filename(if is_dev_mode { ".window-state-dev.json" } else { ".window-state-v2.json" })
@@ -175,6 +224,7 @@ pub fn run() {
         )
         .manage(PlaybackProbeState::new())
         .manage(InitialFileState(std::sync::Mutex::new(initial_file_for_main)))
+        .manage(InitialSynapseSendState(std::sync::Mutex::new(initial_synapse_send_file)))
         .manage(RenamerState::default())
         .manage(std::sync::Arc::new(crate::infrastructure::media::passthru::PassthruService::new()))
         .setup(move |app| {
@@ -470,6 +520,7 @@ pub fn run() {
             synapse_get_status,
             synapse_set_downloads_dir,
             synapse_get_downloads_dir,
+            synapse_get_initial_send_file,
             synapse_update_playback,
             synapse_get_discovered_devices,
             synapse_send_file_to_device,

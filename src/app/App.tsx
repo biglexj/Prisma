@@ -392,11 +392,10 @@ function AppContent() {
   };
 
   useEffect(() => {
-    invoke<string | null>("get_initial_file")
-      .then((filePath) => {
-        if (filePath) handleOpenFile(filePath);
-      })
-      .catch(() => { });
+    invoke<string | null>("get_initial_file").then((fp) => { if (fp) handleOpenFile(fp); }).catch(() => { });
+    invoke<string | null>("synapse_get_initial_send_file").then((fp) => {
+      if (fp) setSendModalFile({ path: fp, title: fp.replace(/.*[/\\]/, "") });
+    }).catch(() => { });
 
     const unlistenPromise = listen<string | { path: string; currentTime?: number; title?: string; artist?: string; editMode?: boolean }>("prisma://open-media", (event) => {
       if (resumeTimeoutRef.current) {
@@ -457,6 +456,10 @@ function AppContent() {
         imageLibrary.refresh();
         videoLibrary.refresh();
       }
+    });
+
+    const unlistenSynapseSendPromise = listen<string>("prisma://synapse-send", (event) => {
+      if (event.payload) setSendModalFile({ path: event.payload, title: event.payload.replace(/.*[/\\]/, "") });
     });
 
     const unlistenNavigatePromise = listen<string>("prisma://navigate", (event) => {
@@ -697,6 +700,7 @@ function AppContent() {
       window.removeEventListener("contextmenu", handleGlobalContextMenu);
       unlistenPromise.then((unlisten) => unlisten());
       unlistenFileReceivedPromise.then((unlisten) => unlisten());
+      unlistenSynapseSendPromise.then((unlisten) => unlisten());
       unlistenNavigatePromise.then((unlisten) => unlisten());
       unlistenRemotePromise.then((unlisten) => unlisten());
     };

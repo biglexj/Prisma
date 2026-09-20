@@ -15,6 +15,21 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.1.6] - 2026-09-20
+
+### Resumen
+**Prisma v1.1.6** refina la experiencia de continuidad y transferencia de archivos con **Aurora Synapse**, priorizando la concentración y el control del usuario. Al recibir música, fotos, vídeos o documentos transferidos desde el teléfono móvil u otros dispositivos del ecosistema, Prisma procesa y resguarda los contenidos en segundo plano sin interrumpir la sesión activa ni desminimizar o robar el foco de pantalla de manera intrusiva. En su lugar, el sistema emite una elegante notificación de escritorio en Windows informando el nombre del archivo y su peso, mientras que el indicador flotante de la suite permite abrir el contenido bajo demanda con un solo clic. Además, se incorpora la opción «Enviar con Aurora Synapse» directamente en el menú contextual del Explorador de Windows para compartir cualquier archivo local hacia dispositivos móviles en la red local de forma instantánea.
+
+### Detalles
+- **Recepción no Invasiva en Aurora Synapse**:
+  - Eliminación de la apertura forzada y reproducción automática intempestiva al recibir archivos por LAN.
+  - Actualización reactiva y silenciosa de las bibliotecas de música, imágenes y vídeos al completar la transferencia.
+  - Notificaciones nativas de escritorio en Windows con información detallada de archivo y guardado en Descargas.
+  - Apertura consentida y suave mediante la cápsula flotante integrada al pulsar «Abrir».
+- **Integración con el Explorador de Windows («Enviar con Aurora Synapse»)**:
+  - Registro de comando en el menú contextual de Windows para enviar archivos rápidamente.
+  - Soporte de parámetro de transferencia directa con apertura automática del diálogo de selección de dispositivos de red.
+
 ## [1.1.5] - 2026-09-18
 
 ### Resumen

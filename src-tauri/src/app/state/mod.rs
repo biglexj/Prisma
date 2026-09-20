@@ -20,6 +20,7 @@ use crate::{
 };
 
 pub struct InitialFileState(pub Mutex<Option<String>>);
+pub struct InitialSynapseSendState(pub Mutex<Option<String>>);
 
 pub struct PlaybackProbeState {
     runtime: Mutex<PlaybackRuntime>,
