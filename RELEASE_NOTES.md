@@ -15,32 +15,24 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
-## [1.1.6] - 2026-09-20
+## [1.1.5] - 2026-09-20
 
 ### Resumen
-**Prisma v1.1.6** refina la experiencia de continuidad y transferencia de archivos con **Aurora Synapse**, priorizando la concentración y el control del usuario. Al recibir música, fotos, vídeos o documentos transferidos desde el teléfono móvil u otros dispositivos del ecosistema, Prisma procesa y resguarda los contenidos en segundo plano sin interrumpir la sesión activa ni desminimizar o robar el foco de pantalla de manera intrusiva. En su lugar, el sistema emite una elegante notificación de escritorio en Windows informando el nombre del archivo y su peso, mientras que el indicador flotante de la suite permite abrir el contenido bajo demanda con un solo clic. Además, se incorpora la opción «Enviar con Aurora Synapse» directamente en el menú contextual del Explorador de Windows para compartir cualquier archivo local hacia dispositivos móviles en la red local de forma instantánea.
-
-### Detalles
-- **Recepción no Invasiva en Aurora Synapse**:
-  - Eliminación de la apertura forzada y reproducción automática intempestiva al recibir archivos por LAN.
-  - Actualización reactiva y silenciosa de las bibliotecas de música, imágenes y vídeos al completar la transferencia.
-  - Notificaciones nativas de escritorio en Windows con información detallada de archivo y guardado en Descargas.
-  - Apertura consentida y suave mediante la cápsula flotante integrada al pulsar «Abrir».
-- **Integración con el Explorador de Windows («Enviar con Aurora Synapse»)**:
-  - Registro de comando en el menú contextual de Windows para enviar archivos rápidamente.
-  - Soporte de parámetro de transferencia directa con apertura automática del diálogo de selección de dispositivos de red.
-
-## [1.1.5] - 2026-09-18
-
-### Resumen
-**Prisma v1.1.5** perfecciona el flujo de trabajo con documentos y notas, integrando la delegación fluida de edición desde Quick Look hacia el editor integrado de la suite. Al solicitar editar un archivo Markdown o de texto plano (incluso documentos recién creados o vacíos de 0 bytes), Quick Look cede el paso de forma limpia y transfiere el archivo a la ventana principal de Prisma, abriendo el documento directamente en su entorno de edición dividida (*split-screen*) o código fuente, con enfoque inmediato en el área de trabajo para comenzar a escribir o pegar contenido al instante.
+**Prisma v1.1.5** introduce mejoras sustanciales en ergonomía, continuidad de trabajo y respeto a la atención del usuario. Por un lado, optimiza el flujo de redacción y notas integrando la delegación fluida de edición desde Quick Look hacia el editor integrado de la suite: al editar cualquier documento Markdown o de texto plano, la acción transfiere el archivo directamente al entorno de edición en vista dividida (*split-screen*) o código fuente con foco reactivo inmediato. Por otro lado, revoluciona la experiencia con **Aurora Synapse** al recibir archivos desde el teléfono móvil u otros dispositivos LAN; Prisma ahora resguarda los contenidos en segundo plano y emite notificaciones nativas de escritorio en Windows sin desminimizar ni robar el foco de la pantalla de manera invasiva, incorporando además la opción «Enviar con Aurora Synapse» en el menú contextual del Explorador de Windows para compartir archivos al instante.
 
 ### Detalles
 - **Delegación de Edición Quick Look → Editor Integrado**:
-  - Al pulsar el botón de edición en la cabecera o la barra de herramientas de Quick Look, el archivo se transfiere instantáneamente al visor/editor principal de Prisma en modo edición.
-  - Sincronización transparente de foco: el cursor se sitúa de inmediato en el área de texto, listo para escribir o pegar con `Ctrl + V`.
-  - Atajo rápido `Ctrl + S`: guardado directo y confiable en disco de los cambios efectuados desde cualquier vista del editor.
-  - Estado visual para documentos vacíos: interfaz amigable en vista previa con llamada a la acción para comenzar a redactar o pegar texto con un solo clic.
+  - Transferencia instantánea desde la cabecera y barra de Quick Look al editor de Prisma en modo edición.
+  - Sincronización transparente de foco en el área de texto para comenzar a escribir o pegar (`Ctrl + V`) de inmediato.
+  - Atajo rápido `Ctrl + S` para guardado directo y confiable en disco de los cambios efectuados.
+  - Estado de vista previa enriquecido para documentos vacíos con botón directo para redactar o insertar contenido.
+- **Recepción no Invasiva en Aurora Synapse**:
+  - Eliminación de la apertura forzada y reproducción automática intempestiva al recibir archivos por LAN.
+  - Sincronización silenciosa de las bibliotecas de música, fotos y vídeos al completar la transferencia.
+  - Notificaciones nativas de escritorio en Windows informando nombre, peso y guardado en Descargas.
+  - Apertura consentida y suave mediante la cápsula flotante integrada al pulsar «Abrir».
+- **Integración con el Explorador de Windows («Enviar con Aurora Synapse»)**:
+  - Registro de comando en el menú contextual de Windows (`--synapse-send`) para transmitir cualquier archivo a dispositivos móviles en red LAN con un solo clic.
 
 ## [1.1.4] - 2026-09-18
 
