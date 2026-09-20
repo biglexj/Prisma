@@ -1,7 +1,7 @@
-# Plan: Synapse — Recepción no invasiva, Notificaciones nativas e Integración Windows (v1.1.6)
+# Plan: Synapse — Recepción no invasiva, Notificaciones nativas e Integración Windows (v1.1.5)
 
 ## Objetivo
-Resolver la intrusión al recibir archivos vía Aurora Synapse desde el teléfono a la PC (eliminando la apertura y reproducción forzada "de golpe"), sustituyéndola por notificaciones del sistema no invasivas con apertura bajo demanda, elevar la versión del proyecto a `v1.1.6`, e implementar / diseñar la integración en el menú contextual de Windows ("Enviar con Aurora Synapse") y el contrato de Compartir de Windows 11 ("Compartir por medio").
+Resolver la intrusión al recibir archivos vía Aurora Synapse desde el teléfono a la PC (eliminando la apertura y reproducción forzada "de golpe"), sustituyéndola por notificaciones del sistema no invasivas con apertura bajo demanda, consolidar el alcance dentro de `v1.1.5` (dado que aún no existía release pública remota), e implementar la integración en el menú contextual de Windows ("Enviar con Aurora Synapse") y la arquitectura para el diálogo Compartir de Windows.
 
 ## Alcance
 1. **Recepción no invasiva en Synapse (`server.rs`)**:

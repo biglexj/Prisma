@@ -1,15 +1,13 @@
-# Tareas: Synapse — Notificaciones y Compartir (v1.1.6)
+# Tareas: Synapse — Notificaciones y Compartir (v1.1.5)
 
 ## Estado
 En validación / Completado.
 
 ## Checklist
 
-### 1. Versionado y Ciclo v1.1.6
-- [x] Incrementar versión a `1.1.6` en `package.json`.
-- [x] Incrementar versión a `1.1.6` en `src-tauri/Cargo.toml`.
-- [x] Incrementar versión a `1.1.6` en `src-tauri/tauri.conf.json`.
-- [x] Registrar hito activo en `ROADMAP.md` y preparar cabecera en `RELEASE_NOTES.md` y `RELEASE_MESSAGE.md`.
+### 1. Consolidación de Ciclo v1.1.5
+- [x] Consolidar versión en `1.1.5` en `package.json`, `Cargo.toml` y `tauri.conf.json` (al no haber sido publicada en GitHub Releases).
+- [x] Registrar hito en `ROADMAP.md`, `RELEASE_NOTES.md` y `RELEASE_MESSAGE.md`.
 
 ### 2. Recepción no invasiva en Synapse
 - [x] Modificar `src-tauri/src/features/synapse/server.rs`:
