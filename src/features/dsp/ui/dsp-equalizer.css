@@ -174,10 +174,13 @@
 }
 
 .dsp-dropdown-list {
-  /* Sumatoria para mínimo 7 elementos sin corte:
-     (7 items × 38px) + (6 gaps × 4px) + (padding vertical 12px) = 302px ~ 308px */
-  max-height: 308px;
+  /* Cálculo exacto para albergar los 7 presets base sin provocar scroll vertical:
+     7 ítems × 36px (252px) + 6 gaps × 4px (24px) + 12px padding vertical = 288px.
+     Con max-height: 298px, los 7 presets encajan holgados y sin barra de scroll.
+     Si se añaden presets adicionales personalizados (>7), el scroll se activa con fluidez. */
+  max-height: 298px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   padding: 6px;
@@ -202,14 +205,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  min-height: 38px;
-  line-height: 1.25;
-  padding: 8px 12px;
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
+  line-height: 1.2;
+  padding: 0 12px;
   border-radius: 10px;
   background: transparent;
   border: 1px solid transparent;
   color: var(--on-surface);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   text-align: left;
@@ -218,13 +223,20 @@
   flex-shrink: 0;
 }
 
+.dsp-preset-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
 .dsp-dropdown-item:hover {
   background: rgba(255, 255, 255, 0.08);
 }
 
 .dsp-dropdown-item.active {
-  background: rgba(233, 30, 99, 0.2);
-  border-color: rgba(233, 30, 99, 0.35);
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 38%, transparent);
   color: var(--primary);
   font-weight: 800;
 }

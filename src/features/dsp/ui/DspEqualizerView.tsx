@@ -1,4 +1,4 @@
-import React, { useId, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { EQ_BAND_RANGES, EQ_FREQUENCIES, type DspEffectsConfig } from "../model/types";
 import { useDsp } from "../DspContext";
 import { Icon } from "../../../shared/ui/Icon";
@@ -150,7 +150,26 @@ interface DspEqualizerViewProps {
 
 export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }: DspEqualizerViewProps) {
   const dsp = useDsp();
-  const isVisualizerActive = dsp.enabled && (dsp.globalPassthruEnabled ? Boolean(dsp.globalPassthruStatus?.isRunning && dsp.globalPassthruStatus?.hasSignal) : isPlaying);
+  const [mediaPlaying, setMediaPlaying] = useState(false);
+
+  // Monitorización complementaria de elementos multimedia activos en el DOM
+  useEffect(() => {
+    const checkMedia = () => {
+      const mediaElements = Array.from(document.querySelectorAll<HTMLMediaElement>("audio, video"));
+      const anyPlaying = mediaElements.some((el) => !el.paused && !el.ended && el.currentTime > 0);
+      setMediaPlaying(anyPlaying);
+    };
+    checkMedia();
+    const interval = setInterval(checkMedia, 400);
+    return () => clearInterval(interval);
+  }, []);
+
+  // La animación del espectro se activa con reproducción interna de Prisma (Música/Vídeo) o con señal Global de Windows
+  const isVisualizerActive =
+    dsp.enabled &&
+    (Boolean(isPlaying) ||
+      mediaPlaying ||
+      Boolean(dsp.globalPassthruEnabled && dsp.globalPassthruStatus?.isRunning && dsp.globalPassthruStatus?.hasSignal));
   const [isDeviceMenuOpen, setIsDeviceMenuOpen] = useState(false);
   const [isPresetMenuOpen, setIsPresetMenuOpen] = useState(false);
   const [newPresetName, setNewPresetName] = useState("");
@@ -371,7 +390,6 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
                         type="button"
                       >
                         <span className="dsp-preset-name">{preset.name}</span>
-                        {preset.isBuiltIn && <span className="dsp-builtin-badge">Stock</span>}
                         {!preset.isBuiltIn && (
                           <button
                             className="dsp-delete-preset-btn"

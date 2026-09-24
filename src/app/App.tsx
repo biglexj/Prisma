@@ -105,7 +105,8 @@ function AppContent() {
   });
 
   // Sincronización del tema dinámico reactivo global con la pista en reproducción activa
-  const isAudioPlaying = (!playback.snapshot.paused && Boolean(playback.snapshot.path || playback.queue.currentItem)) || false;
+  const isAudioPlaying = (!playback.snapshot.paused && Boolean(playback.snapshot.path || playback.queue.currentItem || (playback.snapshot.positionSeconds !== null && (playback.snapshot.durationSeconds ?? 0) > 0))) || false;
+  const isPrismaPlaying = isAudioPlaying || isVideoPlaying;
   const currentPlayingAudioPath = isAudioPlaying ? (playback.snapshot.path || playback.queue.currentItem?.path || null) : null;
   const currentArtwork = useMusicArtwork(currentPlayingAudioPath, Boolean(currentPlayingAudioPath));
   const currentAlbumPalette = useAlbumPalette(currentArtwork);
@@ -1145,7 +1146,7 @@ function AppContent() {
           ) : null}
           {activeView === "equalizer" ? (
             <DspEqualizerView
-              isPlaying={(!playback.snapshot.paused && Boolean(playback.snapshot.path || playback.queue.currentItem)) || isVideoPlaying}
+              isPlaying={isPrismaPlaying}
             />
           ) : null}
           {activeView === "renamer" ? <BatchRenamerView /> : null}
@@ -1202,7 +1203,7 @@ function AppContent() {
 
       <DspEqualizerModal
         isOpen={isEqualizerModalOpen}
-        isPlaying={(!playback.snapshot.paused && Boolean(playback.snapshot.path || playback.queue.currentItem)) || isVideoPlaying}
+        isPlaying={isPrismaPlaying}
         onClose={() => setIsEqualizerModalOpen(false)}
       />
     </div>
