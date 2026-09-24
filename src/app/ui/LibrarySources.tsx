@@ -278,9 +278,9 @@ export function LibrarySources({
       </div>
 
       <header className="section-heading library-excluded-heading">
-        <span className="preview-kicker">OCULTAR EN LÍNEA DE TIEMPO</span>
-        <h2>Carpetas Ocultas del Tiempo</h2>
-        <p>Especifica subcarpetas que Prisma no mostrará en la línea de tiempo ni feeds principales. Seguirán estando disponibles en las vistas de Carpetas y Árbol.</p>
+        <span className="preview-kicker">CARPETAS OCULTAS</span>
+        <h2>Carpetas Ocultas de la Biblioteca</h2>
+        <p>Especifica subcarpetas que Prisma ocultará completamente de la biblioteca (Línea de tiempo, Carpetas y Árbol). Tus archivos en disco permanecen intactos.</p>
       </header>
 
       <div className={gridClass}>

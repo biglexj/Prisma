@@ -198,8 +198,8 @@ export function VisualLibrary({
   const visibleItems = sortedNonExcludedItems.slice(0, VISIBLE_ITEM_LIMIT);
   const timelineSections = groupByTimeline(visibleItems, sortItemList);
 
-  // Árbol jerárquico y colecciones: muestran toda la estructura de carpetas y subcarpetas
-  const treeLevel = resolveTreeLevel(allMatchingItems, currentFolderPath, favorites.favorites, {
+  // Árbol jerárquico y colecciones: respetan las carpetas excluidas de la biblioteca
+  const treeLevel = resolveTreeLevel(nonExcludedItems, currentFolderPath, favorites.favorites, {
     allName: isImage ? "Todas las imágenes" : "Todos los vídeos",
     mediaType: isImage ? "image" : "video",
   });
@@ -213,7 +213,7 @@ export function VisualLibrary({
   const currentActiveList = activeImageSessionList ?? (
     isInsideFolder
       ? (sortedDirectItems.length > 0 ? sortedDirectItems : sortItemList(treeLevel.allRecursiveItems))
-      : (viewMode === "timeline" ? sortedNonExcludedItems : sortItemList(allMatchingItems))
+      : (viewMode === "timeline" ? sortedNonExcludedItems : sortItemList(nonExcludedItems))
   );
 
   const handleSelectImage = (item: VisualLibraryItem, queueList?: VisualLibraryItem[]) => {
@@ -837,7 +837,7 @@ export function VisualLibrary({
       ) : (
         /* ── 3. Vista en Árbol Expandible (Lienzo Style) ── */
         <MediaTreeView
-          items={allMatchingItems}
+          items={nonExcludedItems}
           mediaType={isImage ? "image" : "video"}
           onPlayFolder={!isImage ? (folderItems) => handlePlayFolderVideos(folderItems) : undefined}
           onPlayItem={(item, list) => {

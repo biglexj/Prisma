@@ -92,9 +92,9 @@ export function MediaTreeView<T extends MediaTreeItem>({
     });
   };
 
-  // Construcción de la estructura de árbol jerárquico (Muestra todas las carpetas registradas)
+  // Construcción de la estructura de árbol jerárquico (Muestra todas las carpetas registradas no excluidas)
   const rootNodes = useMemo(() => {
-    const validItems = items;
+    const validItems = items.filter((it) => !(it as any).isExcluded);
     const favItems = validItems.filter((it) => favorites.isFavorite(it.path));
 
     const favNode: TreeNode<T> = {

@@ -42,13 +42,19 @@ pub fn is_path_excluded(path: &Path, excluded_paths: &[String]) -> bool {
     }
     let canonical_target = path.canonicalize().ok().unwrap_or_else(|| path.to_path_buf());
     let target_str = canonical_target.to_string_lossy();
-    let norm_target = target_str.replace('/', "\\").to_lowercase();
+    let norm_target = target_str
+        .trim_start_matches(r"\\?\")
+        .replace('/', "\\")
+        .to_lowercase();
 
     for excluded in excluded_paths {
         let ex_path = Path::new(excluded);
         let canonical_ex = ex_path.canonicalize().ok().unwrap_or_else(|| ex_path.to_path_buf());
         let ex_str = canonical_ex.to_string_lossy();
-        let norm_ex = ex_str.replace('/', "\\").to_lowercase();
+        let norm_ex = ex_str
+            .trim_start_matches(r"\\?\")
+            .replace('/', "\\")
+            .to_lowercase();
 
         let prefix_with_slash = format!("{}\\", norm_ex.trim_end_matches('\\'));
         if norm_target == norm_ex || norm_target.starts_with(&prefix_with_slash) {

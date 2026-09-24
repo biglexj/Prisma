@@ -246,8 +246,8 @@ export function MusicLibrary({
     return albumGroups.find((g) => g.folderKey === selectedAlbumKey) || null;
   }, [albumGroups, selectedAlbumKey]);
 
-  // Árbol jerárquico y colecciones: muestran toda la estructura de carpetas
-  const treeLevel = resolveTreeLevel(allMatchingItems, currentFolderPath, favorites.favorites, {
+  // Árbol jerárquico y colecciones: respetan las carpetas excluidas de la biblioteca
+  const treeLevel = resolveTreeLevel(nonExcludedItems, currentFolderPath, favorites.favorites, {
     allName: "Todas las canciones",
     mediaType: "music",
   });
@@ -257,7 +257,7 @@ export function MusicLibrary({
   const isInsideFolder = currentFolderPath !== "";
 
   const handlePlayAll = () => {
-    const listToPlay = viewMode === "timeline" ? nonExcludedItems : (isInsideFolder ? treeLevel.allRecursiveItems : allMatchingItems);
+    const listToPlay = isInsideFolder ? treeLevel.allRecursiveItems : nonExcludedItems;
     if (listToPlay.length === 0) return;
     const queueItems = listToPlay.map(toQueueItem);
     if (onPlayFolder) {
@@ -989,7 +989,7 @@ export function MusicLibrary({
       ) : (
         /* ── 3. Vista en Árbol Expandible ── */
         <MediaTreeView
-          items={allMatchingItems}
+          items={nonExcludedItems}
           mediaType="music"
           onAddFolderToQueue={onAddToQueue ? (folderItems) => onAddToQueue(folderItems.map(toQueueItem)) : undefined}
           onAddToQueue={onAddToQueue ? (item) => onAddToQueue([toQueueItem(item)]) : undefined}
