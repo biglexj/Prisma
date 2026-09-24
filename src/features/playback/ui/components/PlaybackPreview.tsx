@@ -174,10 +174,10 @@ export function PlaybackPreview({
         onSeek(Math.max(0, position - 5));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        onVolume(Math.min(100, (snapshot.volume ?? 70) + 5));
+        onVolume(Math.min(100, (snapshot.volume ?? 100) + 5));
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        onVolume(Math.max(0, (snapshot.volume ?? 70) - 5));
+        onVolume(Math.max(0, (snapshot.volume ?? 100) - 5));
       } else if (key === "l") {
         e.preventDefault();
         setViewMode((prev) => (prev === "lyrics" ? "cover" : "lyrics"));
@@ -186,8 +186,8 @@ export function PlaybackPreview({
         setViewMode((prev) => (prev === "queue" ? "cover" : "queue"));
       } else if (key === "m") {
         e.preventDefault();
-        const currentVol = snapshot.volume ?? 70;
-        onVolume(currentVol > 0 ? 0 : 70);
+        const currentVol = snapshot.volume ?? 100;
+        onVolume(currentVol > 0 ? 0 : 100);
       }
     };
 
@@ -467,7 +467,7 @@ export function PlaybackPreview({
           positionSeconds={position}
           durationSeconds={duration}
           isPlaying={!snapshot.paused && hasMedia}
-          volume={snapshot.volume ?? 70}
+          volume={snapshot.volume ?? 100}
           artwork={artwork}
           palette={palette}
           queueCount={queueCount}

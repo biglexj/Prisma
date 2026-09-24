@@ -44,7 +44,7 @@ export function FullscreenLyrics({
   positionSeconds,
   durationSeconds,
   isPlaying = false,
-  volume = 70,
+  volume = 100,
   artwork,
   palette,
   queueCount = 0,
@@ -325,7 +325,7 @@ export function FullscreenLyrics({
             <div className="fullscreen-volume-control">
               <button
                 className="fullscreen-aux-btn"
-                onClick={() => onVolume?.(volume > 0 ? 0 : 70)}
+                onClick={() => onVolume?.(volume > 0 ? 0 : 100)}
                 title={volume > 0 ? "Silenciar" : "Restaurar volumen"}
                 aria-label="Volumen"
               >

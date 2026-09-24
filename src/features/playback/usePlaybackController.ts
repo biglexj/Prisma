@@ -5,12 +5,27 @@ import type { MusicQueueItem } from "./model/queue";
 import { playbackClient } from "./tauri/client";
 import { usePlaybackQueue } from "./usePlaybackQueue";
 
+const STORAGE_KEY_PLAYBACK_VOLUME = "prisma_playback_volume";
+
+function getInitialVolume(): number {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_PLAYBACK_VOLUME);
+    if (saved !== null) {
+      const parsed = Number(saved);
+      if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+        return parsed;
+      }
+    }
+  } catch {}
+  return 100;
+}
+
 const EMPTY_SNAPSHOT: PlaybackSnapshot = {
   path: null,
   paused: true,
   positionSeconds: null,
   durationSeconds: null,
-  volume: 70,
+  volume: getInitialVolume(),
   speed: 1.0,
   session: null,
   eofReached: false,
@@ -42,7 +57,13 @@ export function usePlaybackController() {
   useEffect(() => {
     playbackClient
       .capabilities()
-      .then(setCapabilities)
+      .then((caps) => {
+        setCapabilities(caps);
+        if (caps.available) {
+          const initialVol = getInitialVolume();
+          void playbackClient.setVolume(initialVol).then(setSnapshot).catch(() => {});
+        }
+      })
       .catch((reason) => {
         setError(String(reason));
       });
@@ -235,7 +256,13 @@ export function usePlaybackController() {
     resume: () => run(playbackClient.resume),
     next,
     seek: (seconds: number) => run(() => playbackClient.seek(seconds)),
-    setVolume: (volume: number) => run(() => playbackClient.setVolume(volume)),
+    setVolume: (volume: number) => {
+      const clamped = Math.max(0, Math.min(100, Math.round(volume)));
+      try {
+        localStorage.setItem(STORAGE_KEY_PLAYBACK_VOLUME, String(clamped));
+      } catch {}
+      return run(() => playbackClient.setVolume(clamped));
+    },
     setSpeed: (speed: number) => run(() => playbackClient.setSpeed(speed)),
   };
 }

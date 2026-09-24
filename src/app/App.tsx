@@ -528,7 +528,7 @@ function AppContent() {
           if (activeView === "video_player") {
             window.dispatchEvent(new CustomEvent("prisma-video-volume", { detail: { delta: 5 } }));
           } else {
-            const currentVol = playback.snapshot.volume ?? 70;
+            const currentVol = playback.snapshot.volume ?? 100;
             void playback.setVolume(Math.min(100, currentVol + 5));
           }
           break;
@@ -537,7 +537,7 @@ function AppContent() {
           if (activeView === "video_player") {
             window.dispatchEvent(new CustomEvent("prisma-video-volume", { detail: { delta: -5 } }));
           } else {
-            const currentVol = playback.snapshot.volume ?? 70;
+            const currentVol = playback.snapshot.volume ?? 100;
             void playback.setVolume(Math.max(0, currentVol - 5));
           }
           break;
@@ -546,11 +546,11 @@ function AppContent() {
           if (activeView === "video_player") {
             window.dispatchEvent(new CustomEvent("prisma-video-mute"));
           } else {
-            const currentVol = playback.snapshot.volume ?? 70;
+            const currentVol = playback.snapshot.volume ?? 100;
             if (currentVol > 0) {
               void playback.setVolume(0);
             } else {
-              void playback.setVolume(70);
+              void playback.setVolume(100);
             }
           }
           break;

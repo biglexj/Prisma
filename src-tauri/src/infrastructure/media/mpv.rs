@@ -21,7 +21,7 @@ impl MpvBackend {
         })
         .map_err(debug_error)?;
 
-        mpv.set_property("volume", 70.0).map_err(debug_error)?;
+        mpv.set_property("volume", 100.0).map_err(debug_error)?;
 
         Ok(Self {
             mpv,
@@ -83,7 +83,7 @@ impl MpvBackend {
             paused: self.mpv.get_property("pause").unwrap_or(true),
             position_seconds: self.mpv.get_property("time-pos").ok(),
             duration_seconds: self.mpv.get_property("duration").ok(),
-            volume: self.mpv.get_property("volume").unwrap_or(70.0),
+            volume: self.mpv.get_property("volume").unwrap_or(100.0),
             speed: self.mpv.get_property("speed").unwrap_or(1.0),
             session: None,
             eof_reached: self.mpv.get_property::<bool>("eof-reached").ok(),
