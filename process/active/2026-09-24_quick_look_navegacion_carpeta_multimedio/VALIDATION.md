@@ -15,6 +15,7 @@
 - [ ] V09 — Tester — Abrir un archivo `.mkv` con la barra espaciadora en Quick Look. Esperado: apertura limpia, fluida e instantánea sin destellos ni parpadeo doble de ventanas de consola.
 - [x] V10 — Agente — Comprobación de compilación tras la solución de fijado (pinning), `always_on_top` y sincronización de hooks. Esperado: `cargo check` y `bun run build` exitosos con 0 errores. (Validado: cargo check en 3.55s, cargo test 34/34 ok en 1.46s, bun run build en 3.34s).
 - [ ] V11 — Tester — Fijar ventana de Quick Look con el botón pin (`📌`). Abrir otra aplicación, teclear o cambiar foco. Esperado: la ventana permanece visible siempre encima (`always_on_top`), no se cierra ni se minimiza; al regresar a Explorer y pulsar Espacio sobre otro archivo, la ventana fijada se actualiza fluidamente sin cerrarse ni bloquearse el sistema.
+- [ ] V12 — Tester — Seleccionar "Reiniciar Prisma" en el menú contextual del icono de la bandeja del sistema. Esperado: Prisma se cierra limpiamente y vuelve a abrirse de manera automática e inmediata, restaurando la ventana principal y la bandeja sin quedar cerrado ni colgado.
 
 ## Registro de fallos
 

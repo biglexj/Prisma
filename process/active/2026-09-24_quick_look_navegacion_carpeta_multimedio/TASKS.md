@@ -23,5 +23,7 @@
 - [x] T18 — Corregir arquitectura de fijado (pinning) en Quick Look: sincronizar `IS_PINNED` en `keyboard_hook.rs`, activar `set_always_on_top`, evitar cierre por pulsaciones externas o cambio de foco, permitir actualización con Espacio desde Explorer y asegurar reseteo de `is_pinned` al ocultar (`hide()`).
 - [x] T19 — Prevenir cierre accidental por barra espaciadora en `QuickLookWindow.tsx` cuando `isPinned` está activo y sincronizar estado en React ante eventos `quicklook://hide` y `quicklook://preview`.
 - [x] T20 — Validar compilación Rust y Frontend (`cargo check` y `bun run build`).
+- [x] T21 — Corregir reinicio de la aplicación desde la bandeja del sistema ("Reiniciar Prisma"): liberar mutex de instancia única (`tauri_plugin_single_instance::destroy`) y ejecutar un supervisor desacoplado (`Wait-Process` + `Start-Process`) para evitar la condición de carrera donde la nueva instancia es terminada por el bloqueo de instancia única de la instancia previa.
+- [x] T22 — Validar compilación Rust y Frontend (`cargo check` y `bun run build`).
 
 Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.

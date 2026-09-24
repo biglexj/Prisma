@@ -81,6 +81,60 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{Emitter, Manager, WindowEvent};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
+fn restart_application(app: &tauri::AppHandle) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        const DETACHED_PROCESS: u32 = 0x00000008;
+
+        // Liberar el bloqueo de instancia única para no colisionar con la nueva instancia
+        tauri_plugin_single_instance::destroy(app);
+
+        if let Ok(exe_path) = std::env::current_exe() {
+            let pid = std::process::id();
+            let exe_str = exe_path.to_string_lossy().replace('\'', "''");
+            let args: Vec<String> = std::env::args().skip(1).collect();
+
+            let ps_command = if args.is_empty() {
+                format!(
+                    "Wait-Process -Id {} -ErrorAction SilentlyContinue; Start-Process -FilePath '{}'",
+                    pid, exe_str
+                )
+            } else {
+                let args_joined = args
+                    .iter()
+                    .map(|a| format!("'{}'", a.replace('\'', "''")))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                format!(
+                    "Wait-Process -Id {} -ErrorAction SilentlyContinue; Start-Process -FilePath '{}' -ArgumentList @({})",
+                    pid, exe_str, args_joined
+                )
+            };
+
+            let _ = std::process::Command::new("powershell")
+                .args(&[
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-WindowStyle",
+                    "Hidden",
+                    "-Command",
+                    &ps_command,
+                ])
+                .creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS)
+                .spawn();
+        }
+
+        app.exit(0);
+    }
+
+    #[cfg(not(windows))]
+    {
+        app.restart();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let raw_initial_arg = std::env::args().nth(1).filter(|path| !path.starts_with('-'));
@@ -335,7 +389,7 @@ pub fn run() {
                             }
                         }
                         "restart" => {
-                            app.restart();
+                            restart_application(app);
                         }
                         "quit" => {
                             app.exit(0);
