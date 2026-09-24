@@ -10,8 +10,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 - [ ] **Refinamiento de Instancia Múltiple Flotante / Ventanas Fijadas (Pin Always-on-Top en Quick Look)**:
   - **Aislamiento Multi-instancia Real**: Garantizar que abrir un nuevo archivo o navegar desde el explorador no cierre ni altere las ventanas ya fijadas, permitiendo abrir y mantener múltiples instancias de referencia abiertas simultáneamente sin colisión de estado.
-  - **Fluidez de Arrastre y Movimiento de Ventana**: Optimizar el arrastre nativo (`start_dragging` / render loop) de la ventana secundaria para eliminar saltos (*judder*) o retrasos visuales durante el desplazamiento sobre la pantalla.
-  - **Optimización de Rendimiento Gráfico**: Acelerar el renderizado y decodificación de medios en ventanas secundarias desacopladas para mantener suavidad absoluta a altos fotogramas.
+  - [x] **Fluidez de Arrastre y Movimiento de Ventana**: Arrastre nativo por hardware (`startDragging` / DWM / 144Hz+) en cabecera sin retrasos de software ni contención IPC.
+  - [x] **Optimización de Rendimiento Gráfico**: Eliminación de parpadeo (*flickering*), recentrado involuntario y sobrecarga de repintado Win32 en ventanas fijadas y desacopladas.
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
 - [ ] **Refactorización y Modularización de Galería Visual (`VisualLibrary.tsx`)**: Extracción de sub-componentes de la vista principal (1,230 líneas: filtros, barra de acciones y modales de soporte) para reingresar al umbral preferido (< 900 líneas) estipulado en la arquitectura del proyecto.
 
