@@ -1,15 +1,17 @@
-# 🚀 Prisma v1.1.6 — Calibración DSP en Tiempo Real y Ergonomía de Presets
+# 🚀 Prisma v1.1.6 — Navegación Multiformato, Modo Fijado y Fidelidad DSP
 
-Llega **Prisma v1.1.6**, una actualización dedicada a perfeccionar la fidelidad acústica y la ergonomía del procesador de audio de la suite. El visualizador de espectro DSP ahora sincroniza armónicamente y en tiempo real tanto con la reproducción interna de música y vídeo de Prisma como con fuentes globales de audio en Windows. Además, el selector de ecualización se estiliza: se eliminan etiquetas innecesarias y se calibra la geometría del menú para que los 7 presets de fábrica encajen con holgura y sin barra de scroll vertical, incorporando acentos tonales adaptativos de Material 3 Expressive.
+Llega **Prisma v1.1.6**, una actualización repleta de novedades que elevan la ergonomía, la fluidez multitarea y la precisión acústica de la suite. Ahora puedes navegar de forma continua entre todos los archivos de una carpeta directamente en Quick Look con las flechas del teclado o botones laterales, y al abrir canciones externas, Prisma organiza automáticamente una cola de reproducción inteligente con la carpeta de origen. Además, el modo fijado (*Pin Always-on-Top*) se vuelve totalmente inmune a pérdidas de foco, se elimina el parpadeo en archivos de vídeo MKV, se añade un reinicio desacoplado desde la bandeja del sistema y se calibra la visualización del espectro dinámico DSP.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- 🎵 **Sincronización Total del Espectro DSP**: Animación reactiva e instantánea durante la reproducción en Prisma de pistas musicales y archivos de vídeo sin pausas ni falsos estados inactivos.
-- 🎚️ **Ergonomía de Presets Acústicos**: Eliminación de distintivos redundantes y ajuste dimensional preciso para exhibir los 7 presets base con cero scroll.
-- 🎨 **Estilo Tonal Material 3**: Armonización del preset activo con la paleta de color dinámica del sistema.
-- 🔄 **Scroll Inteligente**: Desplazamiento vertical fluido únicamente cuando se agregan presets adicionales creados por el usuario.
+- 📁 **Navegación Secuencial Multiformato**: Explora imágenes, vídeos, música y documentos de una carpeta en Quick Look usando `←` / `→` o botones flotantes laterales sin salir de la vista previa.
+- 🎵 **Encolado Inteligente de Música Externa**: Abre cualquier canción desde el Explorador de Windows y Prisma generará una cola con las pistas de la carpeta, situando el tema abierto como #1 en ciclo continuo.
+- 📌 **Modo Fijado (*Pin Always-on-Top*) Robusto**: Fija la ventana al frente con `P` o el botón pin; permanece visible mientras interactúas con otras apps y se actualiza al presionar Espacio sobre otro archivo en el Explorador.
+- 🎬 **Blindaje Visual sin Parpadeos en MKV**: Apertura instantánea y suave de contenidos de vídeo en contenedores MKV sin parpadeos ni recentrados bruscos.
+- 🔄 **Reinicio Seguro desde la Bandeja del Sistema**: Acción «Reiniciar Prisma» en el System Tray renovada con proceso desacoplado para un relanzamiento limpio y sin bloqueos de instancia.
+- 🎚️ **Fidelidad y Calibración DSP**: Animación en tiempo real del espectro acústico tanto para medios locales como para audio global de Windows, junto a un selector de presets estilizado sin barras de scroll innecesarias.
 
 ---
 

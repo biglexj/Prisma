@@ -1,6 +1,6 @@
 # 2026-09-24_quick_look_navegacion_carpeta_multimedio — Tareas
 
-- Estado: `PENDING`
+- Estado: `COMPLETED`
 
 ## Ejecución
 

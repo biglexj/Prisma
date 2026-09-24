@@ -8,14 +8,6 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [ ] **Navegación Secuencial Multiformato en Quick Look y Encolado Inteligente de Música Externa**:
-  - Carga y ordenación natural de todos los archivos compatibles de la carpeta (imágenes, vídeos, pistas de audio, texto/código, markdown, pdf, etc.) al abrir un elemento o expandir/maximizar la ventana de Quick Look.
-  - Navegación bidireccional fluida con atajos de teclado (`ArrowLeft` / `ArrowRight`) y controles de interfaz sin pérdida de foco ni desvinculación.
-  - Encolado automático de audio al abrir pistas externas (o «Abrir en Prisma»): escaneo de pistas de música en la carpeta inmediata (descartando imágenes, vídeos y subcarpetas), nombrando la cola con la carpeta y disponiendo la canción abierta como la #1 con el resto en secuencia natural circular.
-- [ ] **Refinamiento de Instancia Múltiple Flotante / Ventanas Fijadas (Pin Always-on-Top en Quick Look)**:
-  - **Aislamiento Multi-instancia Real**: Garantizar que abrir un nuevo archivo o navegar desde el explorador no cierre ni altere las ventanas ya fijadas, permitiendo abrir y mantener múltiples instancias de referencia abiertas simultáneamente sin colisión de estado.
-  - [x] **Fluidez de Arrastre y Movimiento de Ventana**: Arrastre nativo por hardware (`startDragging` / DWM / 144Hz+) en cabecera sin retrasos de software ni contención IPC.
-  - [x] **Optimización de Rendimiento Gráfico**: Eliminación de parpadeo (*flickering*), recentrado involuntario y sobrecarga de repintado Win32 en ventanas fijadas y desacopladas.
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
 - [ ] **Refactorización y Modularización de Galería Visual (`VisualLibrary.tsx`)**: Extracción de sub-componentes de la vista principal (1,230 líneas: filtros, barra de acciones y modales de soporte) para reingresar al umbral preferido (< 900 líneas) estipulado en la arquitectura del proyecto.
 
@@ -38,6 +30,17 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 ## 🟢 Completado
 
 - [x] **v1.1.6**
+  - **Navegación Secuencial Multiformato en Quick Look y Encolado Inteligente de Música Externa**:
+    - Exploración secuencial continua de imágenes, vídeos, pistas de audio y documentos dentro de la misma carpeta mediante atajos de teclado (`ArrowLeft` / `ArrowRight`, `PageUp` / `PageDown`) y botones flotantes laterales en la ventana sin salir de la vista previa.
+    - Invalidación reactiva de caché al sustituir o editar archivos en caliente (`modifiedMillis`).
+    - Encolado inteligente al abrir pistas de audio externas: escaneo de canciones en la carpeta inmediata con orden natural, asignación del nombre de la carpeta contenedora a la cola y reproducción circular continua comenzando por la canción elegida como #1.
+  - **Refinamiento de Modo Fijado (*Pin Always-on-Top*) y Blindaje en Vídeo**:
+    - Fijación nativa de Quick Look en primer plano (`set_always_on_top`) inmune a desenfoques, cambio de ventanas o pulsaciones en otras aplicaciones del sistema operativo.
+    - Actualización reactiva de la vista previa al pulsar `Espacio` sobre otro archivo en el Explorador de Windows manteniendo la ventana fijada abierta.
+    - Reseteo atómico de estado fijado al ocultar la ventana (`hide()`), erradicando estados zombis o bloqueos en futuras invocaciones de Quick Look.
+    - Eliminación absoluta de parpadeos y recentrados al reproducir clips MKV ejecutando `ffprobe` de forma invisible (`CREATE_NO_WINDOW`) y reutilizando dimensiones en el payload.
+  - **Reinicio Desacoplado y Seguro desde la Bandeja del Sistema (*System Tray*)**:
+    - Liberación explícita del mutex de instancia única (`tauri_plugin_single_instance::destroy`) y ejecución de supervisor desacoplado para relanzar la aplicación de manera limpia e instantánea sin colisiones de proceso.
   - **Calibración del Espectro DSP y Ergonomía de Presets Acústicos**:
     - **Sincronización Total del Espectro Acústico**: Eliminación de la bifurcación excluyente en `DspEqualizerView` para que las barras dinámicas del visualizador oscilen fluidamente tanto con la reproducción interna de Prisma (Música y Vídeos) como con fuentes globales de audio del sistema (WASAPI Loopback).
     - **Optimización Geométrica de Presets**: Retiro definitivo del badge «Stock» en los perfiles de fábrica y cálculo matemático exacto de altura (7 presets a 36px con 298px max-height) para garantizar que los 7 presets base queden completamente visibles con holgura y sin barra de scroll vertical.

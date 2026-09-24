@@ -15,21 +15,39 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
-## [1.1.6] - 2026-09-23
+## [1.1.6] - 2026-09-24
 
 ### Resumen
-**Prisma v1.1.6** perfecciona la experiencia acústica y visual de la suite integrando calibración en tiempo real para el motor de ecualización y visualización DSP. El espectro acústico animado ahora responde con total fidelidad tanto a la reproducción interna de música y vídeo de Prisma como a fuentes globales de audio del sistema operativo Windows, garantizando que las frecuencias oscilen armónicamente sin congelamientos ni estados inactivos imprevistos. Asimismo, se optimiza la ergonomía del selector de presets acústicos eliminando distintivos redundantes y ajustando con precisión geométrica la lista de ecualización para que todos los perfiles de fábrica queden visibles con holgura y sin provocar barras de desplazamiento innecesarias, combinando además un estilo tonal coherente con Material 3 Expressive.
+**Prisma v1.1.6** expande sustancialmente la ergonomía y versatilidad de la suite con la llegada de la **navegación secuencial multiformato** en Quick Look y el **encolado inteligente de música externa**. Ahora es posible explorar de forma continua todas las imágenes, vídeos, pistas de audio y documentos de una misma carpeta usando atajos de teclado o botones flotantes laterales, manteniendo la vista previa activa y sin pérdida de contexto. Al abrir una canción desde el Explorador de Windows o mediante «Abrir en Prisma», la aplicación reconoce el entorno de la pista, escanea de manera silenciosa las canciones vecinas y organiza una cola de reproducción nombrada según la carpeta contenedora, situando el tema elegido en primer lugar para una escucha continuada y circular.
+
+La experiencia multitarea se fortalece mediante el **perfeccionamiento integral del modo fijado (*Pin Always-on-Top*)** en Quick Look. La vista previa puede fijarse al frente con el botón dedicado o el atajo `P`, permaneciendo visible por encima de cualquier otra aplicación sin cerrarse inesperadamente al escribir, cambiar de foco o interactuar con el sistema operativo. Además, la ventana fijada se actualiza dinámicamente al pulsar la barra espaciadora sobre otro archivo en el Explorador de archivos sin necesidad de reabrirla, y se elimina todo tipo de parpadeo visual o recentrado involuntario al previsualizar clips de vídeo de alta definición en contenedores MKV.
+
+Se optimiza además la estabilidad y continuidad de la suite con una renovación del comando **«Reiniciar Prisma»** en el menú contextual de la bandeja del sistema (*System Tray*). Gracias a un proceso de reinicio desacoplado, la aplicación libera limpiamente la sesión previa y arranca de inmediato la nueva instancia en segundo plano, evitando colisiones de instancia única y garantizando una recuperación inmediata ante cualquier eventualidad sin requerir la intervención manual del usuario.
+
+Por último, se perfecciona la experiencia acústica y visual integrando **calibración en tiempo real para el motor de ecualización y visualización DSP**. El espectro acústico animado responde con total fidelidad tanto a la reproducción multimedia interna de Prisma como a fuentes globales de audio de Windows (WASAPI Loopback), garantizando un movimiento armónico constante. Complementariamente, se afina la ergonomía del selector de presets acústicos eliminando etiquetas innecesarias y calibrando su dimensión vertical para que los perfiles de fábrica queden visibles con holgura y sin barras de desplazamiento vertical redundantes.
 
 ### Detalles
-- **Sincronización Dinámica del Espectro DSP**:
-  - Activación fluida e ininterrumpida de las barras del visualizador durante la reproducción de pistas de música y contenidos de vídeo en Prisma.
-  - Concurrencia armónica entre la señal de audio interna y el puente global de Windows (WASAPI Loopback).
-  - Detección reactiva en segundo plano para elementos multimedia en pantalla.
-- **Refinamiento Ergonómico de Presets Acústicos**:
-  - Eliminación de etiquetas residuales en los perfiles de fábrica para una lectura limpia e instantánea.
-  - Calibración dimensional exacta para albergar los 7 presets base sin barras de desplazamiento vertical.
-  - Activación automática de scroll suave únicamente al incorporar presets personalizados adicionales.
-  - Adaptación tonal del selector activo al tema dinámico de la aplicación.
+- **Navegación Secuencial Multiformato en Quick Look**:
+  - Exploración continua de todos los medios compatibles de la carpeta (imágenes, vídeos, pistas de audio, texto plano, Markdown y PDF) sin cerrar la ventana.
+  - Navegación bidireccional fluida con atajos de teclado (`Flecha Izquierda` / `Flecha Derecha`, `Re Pág` / `Av Pág`).
+  - Botones flotantes laterales discretos en pantalla con respuesta suave al pasar el cursor para navegación táctil o con ratón.
+  - Invalidación dinámica de caché para reflejar modificaciones en archivos al instante sin mostrar miniaturas desactualizadas.
+- **Encolado Inteligente de Música de Carpeta Externa**:
+  - Detección automática de pistas de música al reproducir un archivo de audio externo desde el sistema operativo.
+  - Generación instantánea de una cola de reproducción con el nombre de la carpeta contenedora, descartando archivos no musicales y subcarpetas.
+  - Inicio inmediato del tema seleccionado como pista #1, manteniendo el resto de canciones en orden natural y con ciclo de reproducción continuo.
+- **Modo Fijado (*Pin Always-on-Top*) Robusto y Blindaje en Vídeo**:
+  - Fijación permanente de la ventana de Quick Look en primer plano sin cerrarse al cambiar de ventana o teclear en otras aplicaciones.
+  - Actualización reactiva de la vista previa al seleccionar otro elemento y presionar la barra espaciadora en el Explorador de Windows.
+  - Prevención de estados inactivos o bloqueos de ventana al ocultar la vista previa fijada.
+  - Eliminación absoluta de parpadeos y recentrados de ventana al abrir vídeos en contenedores MKV mediante análisis de dimensiones en segundo plano.
+- **Reinicio Seguro desde la Bandeja del Sistema (*System Tray*)**:
+  - Acción «Reiniciar Prisma» en el menú de la bandeja con ciclo de reinicio desacoplado.
+  - Liberación garantizada de bloqueos de instancia para asegurar un relanzamiento limpio e instantáneo.
+- **Sincronización Dinámica del Espectro DSP y Presets Acústicos**:
+  - Animación fluida de las barras del visualizador durante la reproducción interna de música y vídeo en Prisma, con concurrencia armónica con el audio global de Windows.
+  - Calibración dimensional del menú de ecualización para albergar los presets base sin barras de desplazamiento vertical innecesarias.
+  - Integración de colores tonales de Material 3 Expressive en el selector de perfiles de audio.
 
 ## [1.1.5] - 2026-09-20
 
