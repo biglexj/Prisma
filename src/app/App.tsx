@@ -21,6 +21,7 @@ import { AppSettings } from "./ui/AppSettings";
 import { AppSidebar, type AppView } from "./ui/AppSidebar";
 import { LibrarySources } from "./ui/LibrarySources";
 import { parseTrackInfo, resolveLibraryTrackInfo } from "../features/music_library/model/trackInfo";
+import { resolveMusicQueueForPath } from "../features/playback/services/folderQueueResolver";
 import { FavoritesView } from "../features/collections/ui/FavoritesView";
 import { HistoryView } from "../features/collections/ui/HistoryView";
 import { PlaylistsView } from "../features/collections/ui/PlaylistsView";
@@ -141,84 +142,34 @@ function AppContent() {
     );
   }, [library.items, playback.queue.syncItemMetadata]);
 
-  const playMusicItem = useCallback((path: string, navigate = false, initialTime?: number) => {
-    addToHistory(path, "music");
+  const playMusicItem = useCallback(
+    async (path: string, navigate = false, initialTime?: number) => {
+      addToHistory(path, "music");
 
-    // Detener y limpiar cualquier vídeo previo activo para evitar audio simultáneo
-    if (document.pictureInPictureElement) {
-      void document.exitPictureInPicture().catch(() => { });
-    }
-    setActiveVideoPath(null);
-    setActiveVideoSessionItems([]);
-    setIsPip(false);
+      // Detener y limpiar cualquier vídeo previo activo para evitar audio simultáneo
+      if (document.pictureInPictureElement) {
+        void document.exitPictureInPicture().catch(() => { });
+      }
+      setActiveVideoPath(null);
+      setActiveVideoSessionItems([]);
+      setIsPip(false);
 
-    if (navigate) {
-      setActiveView("player");
-    }
+      if (navigate) {
+        setActiveView("player");
+      }
 
-    const foundItem = library.items.find((it) => it.path === path);
-    if (foundItem) {
-      // Filtrar únicamente las canciones que pertenecen a la misma carpeta
-      const siblingItems = library.items.filter((it) => {
-        if (foundItem.sourcePath && it.sourcePath) {
-          return it.sourcePath === foundItem.sourcePath && it.relativeFolder === foundItem.relativeFolder;
-        }
-        return it.relativeFolder === foundItem.relativeFolder;
-      });
-
-      const itemsToQueue = siblingItems.length > 0 ? siblingItems : [foundItem];
-      const folderStartIndex = itemsToQueue.findIndex((it) => it.path === path);
-      const safeIndex = folderStartIndex >= 0 ? folderStartIndex : 0;
-
-      // Obtener el nombre limpio de la carpeta
-      const cleanFolderName =
-        foundItem.relativeFolder
-          ?.replace(/^Álbum:\s*/i, "")
-          .split(/[/\\]/)
-          .filter(Boolean)
-          .pop() ||
-        path.replace(/\\/g, "/").split("/").slice(-2, -1)[0] ||
-        "Música";
-
-      const queueItems = itemsToQueue.map((it) => {
-        const { title, artist } = resolveLibraryTrackInfo(it);
-        return {
-          id: it.path,
-          path: it.path,
-          title,
-          artist: artist || null,
-          folder: it.relativeFolder,
-          sizeBytes: it.sizeBytes,
-        };
-      });
-
-      playback.playFolder(cleanFolderName, queueItems, safeIndex);
-    } else {
-      // Archivo externo (ej. abierto desde Quick Look en una carpeta no indexada)
-      const normalizedPath = path.replace(/\\/g, "/");
-      const parts = normalizedPath.split("/").filter(Boolean);
-      const fileName = parts.pop() || "Audio";
-      const folderName = parts.pop() || "Música";
-      const parsed = parseTrackInfo(fileName);
-
-      const singleQueueItem = {
-        id: path,
-        path,
-        title: parsed.title || fileName,
-        artist: parsed.artist || null,
-        folder: folderName,
-      };
-
-      playback.playFolder(folderName, [singleQueueItem], 0);
+      const { folderName, queueItems } = await resolveMusicQueueForPath(path, library.items);
+      playback.playFolder(folderName, queueItems, 0);
       void playback.loadPath(path);
-    }
 
-    if (initialTime && initialTime > 0) {
-      setTimeout(() => {
-        void playback.seek(initialTime);
-      }, 350);
-    }
-  }, [library.items, playback]);
+      if (initialTime && initialTime > 0) {
+        setTimeout(() => {
+          void playback.seek(initialTime);
+        }, 350);
+      }
+    },
+    [library.items, playback],
+  );
 
   const playVideoItem = useCallback((path: string, sessionItems?: VisualLibraryItem[], initialTime?: number) => {
     addToHistory(path, "video");

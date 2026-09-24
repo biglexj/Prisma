@@ -9,6 +9,8 @@
 - [ ] V03 — Tester — Abrir un archivo en Quick Look desde una carpeta con imágenes, vídeos, música y texto. Esperado: el paginador indica el conteo total de elementos compatibles y permite avanzar/retroceder.
 - [ ] V04 — Tester — Maximizar/expandir Quick Look a pantalla completa y presionar flechas del teclado (`ArrowLeft` / `ArrowRight`) o hacer clic en los botones laterales. Esperado: transiciona suavemente entre los diferentes archivos de la carpeta sin desvincularse.
 - [ ] V05 — Tester — Editar y sobrescribir una imagen en un editor externo (ej. Affinity) con el mismo nombre y abrirla en Quick Look. Esperado: Quick Look muestra inmediatamente la versión nueva y no la imagen previa en caché.
+- [x] V06 — Agente — Comprobación de compilación tras la integración del comando `music_library_scan_folder_tracks` y servicio `folderQueueResolver`. Esperado: `cargo check` y `bun run build` exitosos con 0 errores. (Validado: compilado exitosamente).
+- [ ] V07 — Tester — Abrir una canción externa (ej. canción 5 de una carpeta con 31 canciones desde Quick Look «Abrir en Prisma» o explorador de Windows). Esperado: Prisma crea la cola con el nombre de la carpeta (ej. `Music`), la canción 5 es la #1 en la cola y comienza a reproducirse de inmediato, y todas las demás canciones de la carpeta le siguen en orden correlativo circular, ignorando imágenes, vídeos y subcarpetas.
 
 ## Registro de fallos
 

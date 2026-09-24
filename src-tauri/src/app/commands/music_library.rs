@@ -1,11 +1,11 @@
-use std::{collections::HashSet, path::Path};
+use std::{collections::HashSet, fs, path::Path};
 
 use tauri::State;
 
 use crate::{
     app::state::MusicLibraryState,
     features::{
-        folder_session::{MediaFamily, classify_path, compare_naturally},
+        folder_session::{classify_path, clean_path, clean_path_str, compare_naturally, MediaFamily},
         music_library::{MusicFolderScan, MusicFolderSource, MusicLibraryItem, scan_music_folder},
     },
     infrastructure::artwork::load_music_artwork_data_url,
@@ -184,4 +184,163 @@ async fn scan_in_background(
         .await
         .map_err(|error| format!("No se pudo completar el escaneo de música: {error}"))?
 }
+
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderAudioTrackItem {
+    pub path: String,
+    pub title: String,
+    pub artist: Option<String>,
+    pub size_bytes: u64,
+}
+
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderAudioTracksResult {
+    pub folder_name: String,
+    pub target_index: usize,
+    pub tracks: Vec<FolderAudioTrackItem>,
+}
+
+#[tauri::command]
+pub async fn music_library_scan_folder_tracks(
+    file_path: String,
+) -> Result<FolderAudioTracksResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean_target = clean_path_str(&file_path);
+        let path = Path::new(&clean_target);
+        let canonical_file = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let parent = match canonical_file.parent() {
+            Some(p) if p.is_dir() => p,
+            _ => {
+                let stem = canonical_file
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("Pista")
+                    .to_string();
+                return Ok(FolderAudioTracksResult {
+                    folder_name: "Música".to_string(),
+                    target_index: 0,
+                    tracks: vec![FolderAudioTrackItem {
+                        path: clean_target,
+                        title: stem,
+                        artist: None,
+                        size_bytes: 0,
+                    }],
+                });
+            }
+        };
+
+        let folder_name = parent
+            .file_name()
+            .and_then(|n| n.to_str())
+            .filter(|n| !n.is_empty())
+            .unwrap_or("Música")
+            .to_string();
+
+        let entries = match fs::read_dir(parent) {
+            Ok(e) => e,
+            Err(_) => {
+                let stem = canonical_file
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("Pista")
+                    .to_string();
+                return Ok(FolderAudioTracksResult {
+                    folder_name,
+                    target_index: 0,
+                    tracks: vec![FolderAudioTrackItem {
+                        path: clean_target,
+                        title: stem,
+                        artist: None,
+                        size_bytes: 0,
+                    }],
+                });
+            }
+        };
+
+        let mut audio_paths = Vec::new();
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_file() && classify_path(&p) == Some(MediaFamily::Audio) {
+                audio_paths.push(p);
+            }
+        }
+
+        audio_paths.sort_by(|a, b| {
+            let a_name = a.file_name().map(|n| n.to_string_lossy()).unwrap_or_default();
+            let b_name = b.file_name().map(|n| n.to_string_lossy()).unwrap_or_default();
+            compare_naturally(&a_name, &b_name)
+        });
+
+        if audio_paths.is_empty() {
+            audio_paths.push(canonical_file.clone());
+        }
+
+        let target_lower = canonical_file
+            .file_name()
+            .map(|n| n.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+
+        let target_index = audio_paths
+            .iter()
+            .position(|p| {
+                p == &canonical_file
+                    || p.file_name().map(|n| n.to_string_lossy().to_lowercase()) == Some(target_lower.clone())
+                    || p.canonicalize().ok() == Some(canonical_file.clone())
+            })
+            .unwrap_or(0);
+
+        let mut tracks = Vec::with_capacity(audio_paths.len());
+        for p in audio_paths {
+            let clean_p = clean_path(&p);
+            let mut title = p
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("Pista sin nombre")
+                .to_string();
+            let mut artist = None;
+
+            if let Ok(probe) = lofty::probe::Probe::open(&p) {
+                if let Ok(tagged_file) = probe
+                    .options(lofty::config::ParseOptions::new().read_properties(false))
+                    .read()
+                {
+                    use lofty::file::TaggedFileExt;
+                    use lofty::tag::Accessor;
+                    if let Some(tag) = tagged_file.primary_tag().or_else(|| tagged_file.first_tag()) {
+                        if let Some(t) = tag.title().as_deref() {
+                            if !t.trim().is_empty() {
+                                title = t.trim().to_string();
+                            }
+                        }
+                        if let Some(a) = tag.artist().as_deref() {
+                            if !a.trim().is_empty() {
+                                artist = Some(a.trim().to_string());
+                            }
+                        }
+                    }
+                }
+            }
+
+            let size_bytes = p.metadata().map(|m| m.len()).unwrap_or(0);
+
+            tracks.push(FolderAudioTrackItem {
+                path: clean_p,
+                title,
+                artist,
+                size_bytes,
+            });
+        }
+
+        Ok(FolderAudioTracksResult {
+            folder_name,
+            target_index,
+            tracks,
+        })
+    })
+    .await
+    .map_err(|e| format!("Error al escanear pistas de la carpeta de audio: {e}"))?
+}
+
 
