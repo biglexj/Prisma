@@ -299,10 +299,12 @@ pub fn quick_look_set_comparing(
 
 #[tauri::command]
 pub fn quick_look_set_pinned(
+    window: tauri::WebviewWindow,
     state: State<'_, QuickLookState>,
     pinned: bool,
 ) -> Result<(), String> {
     state.set_pinned(pinned);
+    let _ = window.set_always_on_top(pinned);
     Ok(())
 }
 

@@ -66,7 +66,11 @@ impl QuickLookState {
 
     pub fn set_pinned(&self, pinned: bool) {
         self.is_pinned.store(pinned, Ordering::SeqCst);
+        super::keyboard_hook::set_pinned_state(pinned);
         ql_log!("Modo fijado/bloqueado: {}", pinned);
+        if let Some(window) = self.app_handle.get_webview_window("quicklook") {
+            let _ = window.set_always_on_top(pinned);
+        }
     }
 
     pub fn is_pinned(&self) -> bool {
@@ -97,15 +101,21 @@ impl QuickLookState {
     }
 
     pub fn toggle(&self) {
-        if self.is_comparing.load(Ordering::SeqCst) || self.is_pinned.load(Ordering::SeqCst) {
-            ql_log!("Toggle ignorado: ventana fijada o en comparativa activa");
+        if self.is_comparing.load(Ordering::SeqCst) {
+            ql_log!("Toggle ignorado: comparativa activa");
             return;
         }
 
         if is_preview_open() {
-            ql_log!("Toggle: la vista previa ya estaba abierta, cerrando...");
-            self.hide();
-            return;
+            if self.is_pinned.load(Ordering::SeqCst) {
+                ql_log!("Toggle en ventana fijada: actualizando a selección de Explorer...");
+                self.show_current_selection();
+                return;
+            } else {
+                ql_log!("Toggle: la vista previa ya estaba abierta, cerrando...");
+                self.hide();
+                return;
+            }
         }
 
         ql_log!("Toggle: abriendo selección actual...");
@@ -165,6 +175,7 @@ impl QuickLookState {
                     let _ = window.center();
                 }
             }
+            let _ = window.set_always_on_top(is_pinned);
             let _ = window.emit("quicklook://preview", &payload);
 
             if !already_open {
@@ -458,6 +469,7 @@ impl QuickLookState {
     }
 
     pub fn hide(&self) {
+        self.set_pinned(false);
         self.is_comparing.store(false, Ordering::SeqCst);
         self.preview_revision.fetch_add(1, Ordering::SeqCst);
         set_preview_open(false);
@@ -480,6 +492,7 @@ impl QuickLookState {
 
         if let Some(window) = self.app_handle.get_webview_window("quicklook") {
             let _ = window.emit("quicklook://hide", ());
+            let _ = window.set_always_on_top(false);
             #[cfg(windows)]
             {
                 if let Ok(hwnd) = window.hwnd() {

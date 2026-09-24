@@ -29,6 +29,7 @@ pub mod windows_hook {
     };
 
     static IS_PREVIEW_OPEN: AtomicBool = AtomicBool::new(false);
+    static IS_PINNED: AtomicBool = AtomicBool::new(false);
     static HOOK_THREAD_ID: AtomicU32 = AtomicU32::new(0);
 
     // 0 = Space, 1 = CtrlSpace, 2 = AltSpace, 3 = ShiftSpace, 4 = Disabled
@@ -71,6 +72,14 @@ pub mod windows_hook {
 
     pub fn is_preview_open() -> bool {
         IS_PREVIEW_OPEN.load(Ordering::SeqCst)
+    }
+
+    pub fn set_pinned_state(pinned: bool) {
+        IS_PINNED.store(pinned, Ordering::SeqCst);
+    }
+
+    pub fn is_pinned_state() -> bool {
+        IS_PINNED.load(Ordering::SeqCst)
     }
 
     static LAST_SCREENSHOT_INSTANT: Mutex<Option<std::time::Instant>> = Mutex::new(None);
@@ -211,12 +220,24 @@ pub mod windows_hook {
 
         let preview_active = IS_PREVIEW_OPEN.load(Ordering::SeqCst);
 
+        // Comprobar la ventana en primer plano
+        let fg = unsafe { GetForegroundWindow() };
+        let mut pid = 0u32;
+        if !fg.0.is_null() {
+            unsafe { GetWindowThreadProcessId(fg, Some(&mut pid)) };
+        }
+        let my_pid = unsafe { windows::Win32::System::Threading::GetCurrentProcessId() };
+        let is_quicklook_window = pid != 0 && pid == my_pid;
+
         // Si la previsualización está activa y se pulsa Esc, cerrar
+        // Si está fijada, SOLO cerrar si la propia ventana de QuickLook tiene el foco
         if preview_active && vk_code == VK_ESCAPE.0 {
-            if let Ok(guard) = GLOBAL_CALLBACK.lock() {
-                if let Some(ref cb) = *guard {
-                    cb(TriggerEvent::Close);
-                    return LRESULT(1);
+            if !is_pinned_state() || is_quicklook_window {
+                if let Ok(guard) = GLOBAL_CALLBACK.lock() {
+                    if let Some(ref cb) = *guard {
+                        cb(TriggerEvent::Close);
+                        return LRESULT(1);
+                    }
                 }
             }
         }
@@ -241,15 +262,6 @@ pub mod windows_hook {
             }
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
-
-        // Comprobar la ventana en primer plano
-        let fg = unsafe { GetForegroundWindow() };
-        let mut pid = 0u32;
-        if !fg.0.is_null() {
-            unsafe { GetWindowThreadProcessId(fg, Some(&mut pid)) };
-        }
-        let my_pid = unsafe { windows::Win32::System::Threading::GetCurrentProcessId() };
-        let is_quicklook_window = pid != 0 && pid == my_pid;
 
         // Evaluar modificadores activos
         let win_down = (unsafe { GetAsyncKeyState(0x5B) } as u16 & 0x8000) != 0
@@ -291,6 +303,7 @@ pub mod windows_hook {
         let is_media_key = vk_code >= 0xAD && vk_code <= 0xB3;
 
         if preview_active
+            && !is_pinned_state()
             && !is_quicklook_window
             && !is_modifier
             && !is_f_key
@@ -371,12 +384,24 @@ pub mod windows_hook {
             }
         }
 
-        // Es atajo válido: activar/cerrar Quick Look
-        ql_log!("Firing Space action: preview_active={}", preview_active);
+        // Es atajo válido: activar/cerrar o actualizar Quick Look
+        ql_log!("Firing Space action: preview_active={}, is_pinned={}", preview_active, is_pinned_state());
+        if preview_active && is_pinned_state() && is_quicklook_window {
+            // Permitir que la propia ventana webview de QuickLook gestione la tecla Espacio (ej. play/pause)
+            return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
+        }
+
         if let Ok(guard) = GLOBAL_CALLBACK.lock() {
             if let Some(ref cb) = *guard {
                 if preview_active {
-                    cb(TriggerEvent::Close);
+                    if is_pinned_state() {
+                        if explorer_focused {
+                            // Si está fijada y se pulsa Espacio en Explorer, actualizar la vista previa a la nueva selección sin cerrar
+                            cb(TriggerEvent::Toggle);
+                        }
+                    } else {
+                        cb(TriggerEvent::Close);
+                    }
                 } else {
                     cb(TriggerEvent::Toggle);
                 }
@@ -534,6 +559,8 @@ pub mod windows_hook {
     pub fn is_preview_open() -> bool {
         false
     }
+    pub fn set_pinned_state(_pinned: bool) {}
+    pub fn is_pinned_state() -> bool { false }
     pub fn start_hook(_callback: TriggerCallback) {}
     #[allow(dead_code)]
     pub fn stop_hook() {}

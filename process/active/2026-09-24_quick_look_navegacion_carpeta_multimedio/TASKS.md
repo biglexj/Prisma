@@ -20,6 +20,8 @@
 - [x] T14 — Optimizar `resolve_media_size` en `service.rs` para reutilizar dimensiones ya calculadas por el payload en lugar de invocar `ffprobe` redundantemente.
 - [x] T15 — Persistir `current_payload` en `QuickLookState` para evitar ejecuciones adicionales de `ffprobe` y mantener la información de selección sincronizada en `get_current_payload`.
 - [x] T16 — Prevenir re-renderizados innecesarios en `QuickLookVideo.tsx` evitando llamadas redundantes a `onDimensionsLoad` cuando las dimensiones ya coinciden.
-- [x] T17 — Validar compilación Rust y Frontend (`cargo check` y `bun run build`).
+- [x] T18 — Corregir arquitectura de fijado (pinning) en Quick Look: sincronizar `IS_PINNED` en `keyboard_hook.rs`, activar `set_always_on_top`, evitar cierre por pulsaciones externas o cambio de foco, permitir actualización con Espacio desde Explorer y asegurar reseteo de `is_pinned` al ocultar (`hide()`).
+- [x] T19 — Prevenir cierre accidental por barra espaciadora en `QuickLookWindow.tsx` cuando `isPinned` está activo y sincronizar estado en React ante eventos `quicklook://hide` y `quicklook://preview`.
+- [x] T20 — Validar compilación Rust y Frontend (`cargo check` y `bun run build`).
 
 Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.

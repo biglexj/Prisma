@@ -118,6 +118,7 @@ export function QuickLookWindow() {
         requestVersionRef.current++;
         if (disposed) return;
         handleStopComparing();
+        setIsPinned(false);
         window.setTimeout(() => {
           setPayload(null);
           setImageDimensions(null);
@@ -152,6 +153,7 @@ export function QuickLookWindow() {
             return next;
           });
           handleStopComparing();
+          void quickLookClient.isPinned().then(setIsPinned).catch(() => {});
         }
       }
     );
@@ -188,6 +190,10 @@ export function QuickLookWindow() {
       const isCloseKey =
         e.key === "Escape" || (!isDetached && (e.code === "Space" || e.key === " "));
       if (isCloseKey) {
+        if (isPinned && (e.code === "Space" || e.key === " ")) {
+          // Si la ventana está fijada, la barra espaciadora no debe cerrarla
+          return;
+        }
         e.preventDefault();
         e.stopPropagation();
         handleClose();
@@ -245,7 +251,7 @@ export function QuickLookWindow() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isDetached, isComparing, payload, refreshCurrent]);
+  }, [isDetached, isComparing, isPinned, payload, refreshCurrent]);
 
   // Seguimiento en tiempo real del estado de maximizado / tamaño de ventana
   useEffect(() => {
