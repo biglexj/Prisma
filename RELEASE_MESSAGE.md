@@ -1,22 +1,21 @@
-# 🚀 Prisma v1.1.5 — Delegación Fluida de Edición y Aurora Synapse no Invasivo
+# 🚀 Prisma v1.1.6 — Calibración DSP en Tiempo Real y Ergonomía de Presets
 
-Llega **Prisma v1.1.5**, una actualización enfocada en la fluidez de trabajo y el respeto a la atención del usuario. Quick Look ahora delega la edición de documentos Markdown y texto plano directamente al editor integrado de Prisma con foco reactivo para comenzar a escribir o pegar contenido al instante. Asimismo, la experiencia con **Aurora Synapse** se renueva por completo: al transferir archivos desde tu teléfono o dispositivos del ecosistema, Prisma ya no interrumpe tu sesión desminimizándose o reproduciendo de golpe; en su lugar, procesa silenciosamente en segundo plano y emite notificaciones nativas de escritorio en Windows con apertura bajo demanda, agregando además la opción «Enviar con Aurora Synapse» en el menú contextual del Explorador de Windows.
+Llega **Prisma v1.1.6**, una actualización dedicada a perfeccionar la fidelidad acústica y la ergonomía del procesador de audio de la suite. El visualizador de espectro DSP ahora sincroniza armónicamente y en tiempo real tanto con la reproducción interna de música y vídeo de Prisma como con fuentes globales de audio en Windows. Además, el selector de ecualización se estiliza: se eliminan etiquetas innecesarias y se calibra la geometría del menú para que los 7 presets de fábrica encajen con holgura y sin barra de scroll vertical, incorporando acentos tonales adaptativos de Material 3 Expressive.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- 📝 **Delegación Inteligente Quick Look → Editor Integrado**: Pulsa editar en Quick Look para transferir el archivo sin fricción al editor con split-screen, foco reactivo y guardado ágil con `Ctrl + S`.
-- 🔕 **Recepción no Invasiva vía LAN**: Olvídate de aperturas bruscas o desminimizados intempestivos al transferir archivos desde el móvil; tu flujo de trabajo permanece intacto.
-- 🔔 **Notificaciones Nativas de Windows**: Alerta visual limpia del sistema operativo informando el nombre, tamaño y ubicación de los archivos recibidos en `Downloads/Prisma`.
-- 📲 **Apertura Bajo Demanda**: Cápsula flotante en pantalla con botón «Abrir» para visualizar o reproducir el contenido cuando tú lo decidas.
-- 📤 **Menú Contextual de Windows («Enviar con Aurora Synapse»)**: Comparte cualquier archivo de tu PC a tu teléfono o Super Galería directamente desde el Explorador de archivos con un solo clic.
+- 🎵 **Sincronización Total del Espectro DSP**: Animación reactiva e instantánea durante la reproducción en Prisma de pistas musicales y archivos de vídeo sin pausas ni falsos estados inactivos.
+- 🎚️ **Ergonomía de Presets Acústicos**: Eliminación de distintivos redundantes y ajuste dimensional preciso para exhibir los 7 presets base con cero scroll.
+- 🎨 **Estilo Tonal Material 3**: Armonización del preset activo con la paleta de color dinámica del sistema.
+- 🔄 **Scroll Inteligente**: Desplazamiento vertical fluido únicamente cuando se agregan presets adicionales creados por el usuario.
 
 ---
 
 ### 📦 Descargas oficiales
 
-- 💾 [Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.5/Prisma_1.1.5_x64-setup.exe)
+- 💾 [Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.6/Prisma_1.1.6_x64-setup.exe)
 
 ---
 

@@ -15,6 +15,22 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.1.6] - 2026-09-23
+
+### Resumen
+**Prisma v1.1.6** perfecciona la experiencia acústica y visual de la suite integrando calibración en tiempo real para el motor de ecualización y visualización DSP. El espectro acústico animado ahora responde con total fidelidad tanto a la reproducción interna de música y vídeo de Prisma como a fuentes globales de audio del sistema operativo Windows, garantizando que las frecuencias oscilen armónicamente sin congelamientos ni estados inactivos imprevistos. Asimismo, se optimiza la ergonomía del selector de presets acústicos eliminando distintivos redundantes y ajustando con precisión geométrica la lista de ecualización para que todos los perfiles de fábrica queden visibles con holgura y sin provocar barras de desplazamiento innecesarias, combinando además un estilo tonal coherente con Material 3 Expressive.
+
+### Detalles
+- **Sincronización Dinámica del Espectro DSP**:
+  - Activación fluida e ininterrumpida de las barras del visualizador durante la reproducción de pistas de música y contenidos de vídeo en Prisma.
+  - Concurrencia armónica entre la señal de audio interna y el puente global de Windows (WASAPI Loopback).
+  - Detección reactiva en segundo plano para elementos multimedia en pantalla.
+- **Refinamiento Ergonómico de Presets Acústicos**:
+  - Eliminación de etiquetas residuales en los perfiles de fábrica para una lectura limpia e instantánea.
+  - Calibración dimensional exacta para albergar los 7 presets base sin barras de desplazamiento vertical.
+  - Activación automática de scroll suave únicamente al incorporar presets personalizados adicionales.
+  - Adaptación tonal del selector activo al tema dinámico de la aplicación.
+
 ## [1.1.5] - 2026-09-20
 
 ### Resumen

@@ -33,6 +33,12 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟢 Completado
 
+- [x] **v1.1.6**
+  - **Calibración del Espectro DSP y Ergonomía de Presets Acústicos**:
+    - **Sincronización Total del Espectro Acústico**: Eliminación de la bifurcación excluyente en `DspEqualizerView` para que las barras dinámicas del visualizador oscilen fluidamente tanto con la reproducción interna de Prisma (Música y Vídeos) como con fuentes globales de audio del sistema (WASAPI Loopback).
+    - **Optimización Geométrica de Presets**: Retiro definitivo del badge «Stock» en los perfiles de fábrica y cálculo matemático exacto de altura (7 presets a 36px con 298px max-height) para garantizar que los 7 presets base queden completamente visibles con holgura y sin barra de scroll vertical.
+    - **Estilo Tonal Material 3**: Integración de acentos tonales dinámicos con `--primary` para el selector de preset activo.
+
 - [x] **v1.1.5**
   - **Delegación de Edición Quick Look → Editor Integrado Prisma**:
     - Conexión del flujo de edición entre Quick Look y la suite principal: al pulsar el botón de edición (`[✏️]`) en documentos Markdown o de texto plano, la acción delega instantáneamente a `DocumentViewer` en la ventana principal de Prisma.
