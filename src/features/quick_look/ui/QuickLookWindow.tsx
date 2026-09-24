@@ -141,6 +141,8 @@ export function QuickLookWindow() {
             if (
               prev &&
               prev.path === next.path &&
+              prev.modifiedMillis === next.modifiedMillis &&
+              prev.fileSizeBytes === next.fileSizeBytes &&
               prev.selectionIndex === next.selectionIndex &&
               prev.selectionTotal === next.selectionTotal
             ) {
@@ -202,18 +204,40 @@ export function QuickLookWindow() {
         e.preventDefault();
         setIsComparing(true);
       } else if (
-        [
-          "ArrowUp",
-          "ArrowDown",
-          "ArrowLeft",
-          "ArrowRight",
-          "PageUp",
-          "PageDown",
-          "Home",
-          "End",
-        ].includes(e.key)
+        e.key === "ArrowRight" ||
+        e.key === "ArrowDown" ||
+        e.key === "PageDown"
       ) {
+        // En vistas de texto con scroll (código, markdown, txt), permitir flechas arriba/abajo para scroll normal
+        const isTextView = [
+          "text",
+          "markdown",
+          "html",
+          "lyrics",
+        ].includes(payload?.mediaType || "");
+        if (isTextView && (e.key === "ArrowDown" || e.key === "PageDown")) {
+          return;
+        }
         e.preventDefault();
+        e.stopPropagation();
+        void quickLookClient.stepSelection(true);
+      } else if (
+        e.key === "ArrowLeft" ||
+        e.key === "ArrowUp" ||
+        e.key === "PageUp"
+      ) {
+        const isTextView = [
+          "text",
+          "markdown",
+          "html",
+          "lyrics",
+        ].includes(payload?.mediaType || "");
+        if (isTextView && (e.key === "ArrowUp" || e.key === "PageUp")) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        void quickLookClient.stepSelection(false);
       }
     };
 
@@ -365,15 +389,45 @@ export function QuickLookWindow() {
             )}
 
             <div className="quicklook-body">
+              {/* Botones flotantes de navegación lateral */}
+              {payload.selectionTotal && payload.selectionTotal > 1 && (
+                <>
+                  <button
+                    type="button"
+                    className="quicklook-floating-nav-btn quicklook-floating-nav-prev"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void quickLookClient.stepSelection(false);
+                    }}
+                    title="Elemento anterior (Flecha izquierda)"
+                    aria-label="Elemento anterior"
+                  >
+                    <Icon name="chevron-left" />
+                  </button>
+                  <button
+                    type="button"
+                    className="quicklook-floating-nav-btn quicklook-floating-nav-next"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void quickLookClient.stepSelection(true);
+                    }}
+                    title="Elemento siguiente (Flecha derecha)"
+                    aria-label="Elemento siguiente"
+                  >
+                    <Icon name="chevron-right" />
+                  </button>
+                </>
+              )}
+
               <QuickLookErrorBoundary
                 fileName={payload.fileName}
                 onOpenInMain={handleOpenInMain}
                 onRetry={() => void refreshCurrent()}
-                resetKey={payload.path}
+                resetKey={`${payload.path}-${payload.modifiedMillis || payload.fileSizeBytes || ""}`}
               >
                 {payload.mediaType === "audio" ? (
                   <QuickLookMusic
-                    key={payload.path}
+                    key={`${payload.path}-${payload.modifiedMillis || payload.fileSizeBytes || ""}`}
                     onPaletteChange={setPaletteStyle}
                     onTimeUpdate={(t) => {
                       playbackTimeRef.current = t;
@@ -382,13 +436,13 @@ export function QuickLookWindow() {
                   />
                 ) : payload.mediaType === "image" ? (
                   <QuickLookImage
-                    key={payload.path}
+                    key={`${payload.path}-${payload.modifiedMillis || payload.fileSizeBytes || ""}`}
                     onDimensionsLoad={setImageDimensions}
                     payload={payload}
                   />
                 ) : payload.mediaType === "video" ? (
                   <QuickLookVideo
-                    key={`${payload.path}-${payload.fileSizeBytes}-${payload.modifiedDate || ""}`}
+                    key={`${payload.path}-${payload.modifiedMillis || payload.fileSizeBytes || ""}`}
                     onDimensionsLoad={setImageDimensions}
                     onOpenInMain={handleOpenInMain}
                     onTimeUpdate={(t) => {

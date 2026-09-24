@@ -103,6 +103,7 @@ pub struct QuickLookPayload {
     pub selection_total: Option<usize>,
     pub extension: String,
     pub modified_date: Option<String>,
+    pub modified_millis: Option<u64>,
     pub video_poster_url: Option<String>,
 }
 
@@ -134,6 +135,12 @@ impl QuickLookPayload {
         let metadata = std::fs::metadata(path).ok();
         let file_size_bytes = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
         let formatted_size = format_file_size(file_size_bytes);
+
+        let modified_millis = metadata
+            .as_ref()
+            .and_then(|m| m.modified().ok())
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64);
 
         let modified_date = metadata
             .and_then(|m| m.modified().ok())
@@ -292,6 +299,7 @@ impl QuickLookPayload {
             selection_total,
             extension: ext,
             modified_date,
+            modified_millis,
             video_poster_url,
         }
     }

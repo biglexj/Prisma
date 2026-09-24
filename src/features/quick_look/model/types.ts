@@ -54,5 +54,6 @@ export interface QuickLookPayload {
   selectionTotal?: number | null;
   extension: string;
   modifiedDate?: string | null;
+  modifiedMillis?: number | null;
   videoPosterUrl?: string | null;
 }

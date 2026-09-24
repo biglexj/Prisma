@@ -20,7 +20,12 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   const baseSrc = toSafeAssetUrl(payload.path);
-  const imgSrc = retryKey > 0 ? `${baseSrc}?r=${retryKey}` : baseSrc;
+  const cacheKey = payload.modifiedMillis
+    ? `v=${payload.modifiedMillis}`
+    : payload.fileSizeBytes
+    ? `v=${payload.fileSizeBytes}`
+    : `t=${Date.now()}`;
+  const imgSrc = retryKey > 0 ? `${baseSrc}?${cacheKey}&r=${retryKey}` : `${baseSrc}?${cacheKey}`;
 
   useEffect(() => {
     setHasError(false);
@@ -31,7 +36,7 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
     if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
       onDimensionsLoad?.({ width: imgRef.current.naturalWidth, height: imgRef.current.naturalHeight });
     }
-  }, [payload.path, onDimensionsLoad]);
+  }, [payload.path, payload.modifiedMillis, payload.fileSizeBytes, onDimensionsLoad]);
 
   const handleImageLoad = async (e: React.SyntheticEvent<HTMLImageElement>) => {
     setHasError(false);

@@ -207,8 +207,20 @@ impl QuickLookState {
     }
 
     pub fn show_file_path(&self, path: &Path) -> bool {
-        *self.current_selection.lock().unwrap() = None;
-        self.show_file_path_with_selection(path, None, None)
+        if let Some(folder_info) = resolve_folder_selection(path) {
+            let primary = folder_info.primary_path.clone();
+            let idx = folder_info.index;
+            let total = folder_info.total;
+            *self.current_selection.lock().unwrap() = Some(folder_info);
+            if total > 1 {
+                self.show_file_path_with_selection(&primary, Some(idx), Some(total))
+            } else {
+                self.show_file_path_with_selection(&primary, None, None)
+            }
+        } else {
+            *self.current_selection.lock().unwrap() = None;
+            self.show_file_path_with_selection(path, None, None)
+        }
     }
 
     fn start_selection_watcher(&self) {
@@ -284,7 +296,35 @@ impl QuickLookState {
         let expected_path = self.current_path.lock().unwrap().clone();
         if expected_path.as_deref() == Some(path_str.as_str()) { return; }
         let media_type = QuickLookMediaType::from_path(&path).unwrap_or(QuickLookMediaType::Generic);
-        let (index, total) = if info.total > 1 { (Some(info.index), Some(info.total)) } else { (None, None) };
+        
+        let final_info = if info.total > 1 {
+            info
+        } else {
+            let existing_opt = self.current_selection.lock().unwrap().clone();
+            if let Some(mut existing) = existing_opt {
+                if existing.total > 1 {
+                    if let Some(pos) = existing.all_paths.iter().position(|p| p == &path) {
+                        existing.index = pos + 1;
+                        existing.primary_path = path.clone();
+                        existing
+                    } else if let Some(folder_info) = resolve_folder_selection(&path) {
+                        folder_info
+                    } else {
+                        info
+                    }
+                } else if let Some(folder_info) = resolve_folder_selection(&path) {
+                    folder_info
+                } else {
+                    info
+                }
+            } else if let Some(folder_info) = resolve_folder_selection(&path) {
+                folder_info
+            } else {
+                info
+            }
+        };
+
+        let (index, total) = if final_info.total > 1 { (Some(final_info.index), Some(final_info.total)) } else { (None, None) };
         // Leer metadatos puede tardar (por ejemplo, archivos MTP). Validar de nuevo al publicar.
         let payload = QuickLookPayload::with_selection(path_str.clone(), media_type, index, total);
         let (width, height) = resolve_media_size(&self.app_handle, media_type, &path);
@@ -292,7 +332,7 @@ impl QuickLookState {
         if !selection_update_is_current(is_preview_open(), revision, self.preview_revision.load(Ordering::SeqCst), source, foreground_selection_source())
             || *current != expected_path { return; }
         *current = Some(path_str);
-        *self.current_selection.lock().unwrap() = Some(info);
+        *self.current_selection.lock().unwrap() = Some(final_info);
         drop(current);
         if matches!(media_type, QuickLookMediaType::Audio | QuickLookMediaType::Video) {
             if let Some(playback) = self.app_handle.try_state::<crate::app::state::PlaybackProbeState>() { let _ = playback.pause(); }
@@ -316,16 +356,25 @@ impl QuickLookState {
     pub fn show_current_selection(&self) {
         if let Some(info) = get_active_selection_info() {
             let primary = info.primary_path.clone();
-            let idx = info.index;
-            let total = info.total;
+            let final_info = if info.total > 1 {
+                info
+            } else if let Some(folder_info) = resolve_folder_selection(&primary) {
+                folder_info
+            } else {
+                info
+            };
+
+            let primary = final_info.primary_path.clone();
+            let idx = final_info.index;
+            let total = final_info.total;
             {
                 let mut sel = self.current_selection.lock().unwrap();
-                *sel = Some(info);
+                *sel = Some(final_info);
             }
             if total > 1 {
                 self.show_file_path_with_selection(&primary, Some(idx), Some(total));
             } else {
-                self.show_file_path(&primary);
+                self.show_file_path_with_selection(&primary, None, None);
             }
         }
     }
@@ -333,6 +382,15 @@ impl QuickLookState {
     pub fn step_selection(&self, forward: bool) -> bool {
         let (next_path, next_idx, total) = {
             let mut guard = self.current_selection.lock().unwrap();
+            if guard.as_ref().map(|s| s.total <= 1).unwrap_or(true) {
+                if let Some(cur_str) = self.current_path.lock().unwrap().clone() {
+                    let cur_p = Path::new(&cur_str);
+                    if let Some(folder_info) = resolve_folder_selection(cur_p) {
+                        *guard = Some(folder_info);
+                    }
+                }
+            }
+
             let sel = match guard.as_mut() {
                 Some(s) if s.total > 1 => s,
                 _ => return false,
@@ -347,6 +405,7 @@ impl QuickLookState {
 
             sel.index = new_idx;
             let path = sel.all_paths[new_idx - 1].clone();
+            sel.primary_path = path.clone();
             (path, new_idx, total)
         };
 
@@ -556,6 +615,89 @@ pub struct OpenMediaPayload {
     pub path: String,
     pub current_time: Option<f64>,
     pub edit_mode: Option<bool>,
+}
+
+pub fn resolve_folder_selection(path: &Path) -> Option<SelectionInfo> {
+    let parent = path.parent()?;
+    if !parent.exists() || !parent.is_dir() {
+        return None;
+    }
+
+    let entries = std::fs::read_dir(parent).ok()?;
+    let mut supported_paths = Vec::new();
+
+    for entry in entries.flatten() {
+        let entry_path = entry.path();
+        if !entry_path.is_file() {
+            continue;
+        }
+
+        let file_name = match entry_path.file_name().and_then(|n| n.to_str()) {
+            Some(name) => name,
+            None => continue,
+        };
+
+        // Ignorar archivos temporales o del sistema
+        if file_name.starts_with('.') || file_name.starts_with('~') || file_name.starts_with('$') {
+            continue;
+        }
+
+        let media_type = QuickLookMediaType::from_path(&entry_path);
+        match media_type {
+            Some(mt) if mt != QuickLookMediaType::Folder && mt != QuickLookMediaType::Generic => {
+                supported_paths.push(entry_path);
+            }
+            _ => continue,
+        }
+    }
+
+    if supported_paths.is_empty() {
+        return None;
+    }
+
+    // Ordenar naturalmente (alfanumérico natural del Explorador de Windows)
+    supported_paths.sort_by(|a, b| {
+        let name_a = a.file_name().map(|n| n.to_string_lossy()).unwrap_or_default();
+        let name_b = b.file_name().map(|n| n.to_string_lossy()).unwrap_or_default();
+        crate::features::folder_session::compare_naturally(&name_a, &name_b)
+    });
+
+    let target_name_lower = path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+
+    let target_canonical = path.canonicalize().ok();
+
+    let pos = supported_paths.iter().position(|p| {
+        p == path
+            || p.file_name().map(|n| n.to_string_lossy().to_lowercase()) == Some(target_name_lower.clone())
+            || (target_canonical.is_some() && p.canonicalize().ok() == target_canonical)
+    });
+
+    let (index, all_paths) = match pos {
+        Some(idx) => (idx + 1, supported_paths),
+        None => {
+            // Si el archivo no estaba en la lista (ej. extensión no típica), lo insertamos ordenado
+            let mut list = supported_paths;
+            list.push(path.to_path_buf());
+            list.sort_by(|a, b| {
+                let name_a = a.file_name().map(|n| n.to_string_lossy()).unwrap_or_default();
+                let name_b = b.file_name().map(|n| n.to_string_lossy()).unwrap_or_default();
+                crate::features::folder_session::compare_naturally(&name_a, &name_b)
+            });
+            let new_pos = list.iter().position(|p| p == path).unwrap_or(0);
+            (new_pos + 1, list)
+        }
+    };
+
+    let total = all_paths.len();
+    Some(SelectionInfo {
+        primary_path: path.to_path_buf(),
+        index,
+        total,
+        all_paths,
+    })
 }
 
 fn get_screen_bounds(app_handle: &tauri::AppHandle) -> (f64, f64) {

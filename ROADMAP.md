@@ -8,6 +8,9 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [ ] **Navegación Secuencial Multiformato en Quick Look (Carpeta Completa)**:
+  - Carga y ordenación natural de todos los archivos compatibles de la carpeta (imágenes, vídeos, pistas de audio, texto/código, markdown, pdf, etc.) al abrir un elemento o expandir/maximizar la ventana.
+  - Navegación bidireccional fluida con atajos de teclado (`ArrowLeft` / `ArrowRight`) y controles de interfaz sin pérdida de foco ni desvinculación.
 - [ ] **Refinamiento de Instancia Múltiple Flotante / Ventanas Fijadas (Pin Always-on-Top en Quick Look)**:
   - **Aislamiento Multi-instancia Real**: Garantizar que abrir un nuevo archivo o navegar desde el explorador no cierre ni altere las ventanas ya fijadas, permitiendo abrir y mantener múltiples instancias de referencia abiertas simultáneamente sin colisión de estado.
   - [x] **Fluidez de Arrastre y Movimiento de Ventana**: Arrastre nativo por hardware (`startDragging` / DWM / 144Hz+) en cabecera sin retrasos de software ni contención IPC.

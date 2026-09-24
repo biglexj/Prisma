@@ -57,7 +57,9 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
     setIsReady(false);
 
     const fileSrc = toSafeAssetUrl(payload.path);
-    const cacheKey = payload.fileSizeBytes
+    const cacheKey = payload.modifiedMillis
+      ? `?v=${payload.modifiedMillis}`
+      : payload.fileSizeBytes
       ? `?v=${payload.fileSizeBytes}_${encodeURIComponent(payload.modifiedDate || "")}`
       : `?t=${Date.now()}`;
     video.src = `${fileSrc}${cacheKey}`;
@@ -87,7 +89,7 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
       video.load();
       unlistenHide.then((u) => u());
     };
-  }, [payload.path, payload.fileSizeBytes, payload.modifiedDate]);
+  }, [payload.path, payload.fileSizeBytes, payload.modifiedDate, payload.modifiedMillis]);
 
   const togglePlay = () => {
     const video = videoRef.current;

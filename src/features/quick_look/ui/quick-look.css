@@ -1920,4 +1920,61 @@ input[type="range"].quicklook-seek-bar::-webkit-slider-thumb {
   transform: translateY(-1px);
 }
 
+/* =========================================================================
+   BOTONES FLOTANTES DE NAVEGACIÓN SECUENCIAL (EXPANDIDO / HOVER)
+   ========================================================================= */
+.quicklook-floating-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--surface-container-high, rgba(28, 27, 31, 0.65));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.15));
+  color: var(--on-surface, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.quicklook-body:hover .quicklook-floating-nav-btn,
+.is-maximized .quicklook-body:hover .quicklook-floating-nav-btn,
+.quicklook-floating-nav-btn:focus-visible {
+  opacity: 0.85;
+  pointer-events: auto;
+}
+
+.quicklook-floating-nav-btn:hover {
+  opacity: 1 !important;
+  background: var(--surface-container-highest, rgba(40, 39, 43, 0.85));
+  transform: translateY(-50%) scale(1.08);
+  border-color: var(--primary, rgba(255, 255, 255, 0.3));
+}
+
+.quicklook-floating-nav-btn:active {
+  transform: translateY(-50%) scale(0.96);
+}
+
+.quicklook-floating-nav-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.quicklook-floating-nav-prev {
+  left: 16px;
+}
+
+.quicklook-floating-nav-next {
+  right: 16px;
+}
+
 
