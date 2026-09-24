@@ -356,20 +356,26 @@ fn extract_audio_metadata(path: &Path) -> (Option<String>, Option<String>, Optio
 
 pub fn get_video_dimensions_ffprobe(path: &Path) -> Option<(u32, u32)> {
     let ffprobe = crate::infrastructure::converter::find_ffprobe_binary()?;
-    let output = std::process::Command::new(ffprobe)
-        .args([
-            "-v",
-            "error",
-            "-select_streams",
-            "v:0",
-            "-show_entries",
-            "stream=width,height",
-            "-of",
-            "csv=s=x:p=0",
-        ])
-        .arg(path)
-        .output()
-        .ok()?;
+    let mut cmd = std::process::Command::new(ffprobe);
+    cmd.args([
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=width,height",
+        "-of",
+        "csv=s=x:p=0",
+    ])
+    .arg(path);
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+
+    let output = cmd.output().ok()?;
 
     if !output.status.success() {
         return None;

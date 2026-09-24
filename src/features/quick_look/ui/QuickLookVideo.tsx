@@ -161,7 +161,9 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
     const vw = video.videoWidth;
     const vh = video.videoHeight;
     if (vw > 0 && vh > 0) {
-      onDimensionsLoad?.({ width: vw, height: vh });
+      if (payload.width !== vw || payload.height !== vh) {
+        onDimensionsLoad?.({ width: vw, height: vh });
+      }
 
       // Si el backend nativo ya calculó las dimensiones, omitir resize redundante
       if (payload.width && payload.height) return;

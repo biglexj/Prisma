@@ -11,6 +11,8 @@
 - [ ] V05 — Tester — Editar y sobrescribir una imagen en un editor externo (ej. Affinity) con el mismo nombre y abrirla en Quick Look. Esperado: Quick Look muestra inmediatamente la versión nueva y no la imagen previa en caché.
 - [x] V06 — Agente — Comprobación de compilación tras la integración del comando `music_library_scan_folder_tracks` y servicio `folderQueueResolver`. Esperado: `cargo check` y `bun run build` exitosos con 0 errores. (Validado: compilado exitosamente).
 - [ ] V07 — Tester — Abrir una canción externa (ej. canción 5 de una carpeta con 31 canciones desde Quick Look «Abrir en Prisma» o explorador de Windows). Esperado: Prisma crea la cola con el nombre de la carpeta (ej. `Music`), la canción 5 es la #1 en la cola y comienza a reproducirse de inmediato, y todas las demás canciones de la carpeta le siguen en orden correlativo circular, ignorando imágenes, vídeos y subcarpetas.
+- [x] V08 — Agente — Comprobación de eliminación de parpadeo de consola y llamadas redundantes a `ffprobe` al abrir vídeos MKV (`CREATE_NO_WINDOW (0x08000000)` en `get_video_dimensions_ffprobe`, caché de `current_payload` y propagación de `known_dims` a `resolve_media_size`). Esperado: `cargo check` y 34/34 tests unitarios pasando limpiamente. (Validado: 34 tests pasados en 2.77s).
+- [ ] V09 — Tester — Abrir un archivo `.mkv` con la barra espaciadora en Quick Look. Esperado: apertura limpia, fluida e instantánea sin destellos ni parpadeo doble de ventanas de consola.
 
 ## Registro de fallos
 

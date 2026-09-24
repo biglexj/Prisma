@@ -16,5 +16,10 @@
 - [x] T10 — Crear servicio `folderQueueResolver.ts` en `src/features/playback/services/` para estructurar la cola con la canción seleccionada como la #1 en la cola y las demás siguiéndole en secuencia natural con ciclo completo.
 - [x] T11 — Refactorizar `playMusicItem` en `src/app/App.tsx` para usar `resolveMusicQueueForPath`, optimizando y reduciendo la deuda técnica de líneas de `App.tsx`.
 - [x] T12 — Validar compilación con `cargo check` y `bun run build`.
+- [x] T13 — Eliminar parpadeo doble al abrir MKVs en Quick Look configurando `CREATE_NO_WINDOW (0x08000000)` en `get_video_dimensions_ffprobe` (`src-tauri/src/features/quick_look/model.rs`).
+- [x] T14 — Optimizar `resolve_media_size` en `service.rs` para reutilizar dimensiones ya calculadas por el payload en lugar de invocar `ffprobe` redundantemente.
+- [x] T15 — Persistir `current_payload` en `QuickLookState` para evitar ejecuciones adicionales de `ffprobe` y mantener la información de selección sincronizada en `get_current_payload`.
+- [x] T16 — Prevenir re-renderizados innecesarios en `QuickLookVideo.tsx` evitando llamadas redundantes a `onDimensionsLoad` cuando las dimensiones ya coinciden.
+- [x] T17 — Validar compilación Rust y Frontend (`cargo check` y `bun run build`).
 
 Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.

@@ -33,6 +33,7 @@ pub struct QuickLookState {
     detached_payloads: Arc<Mutex<HashMap<String, QuickLookPayload>>>,
     detached_counter: Arc<AtomicU32>,
     current_selection: Arc<Mutex<Option<SelectionInfo>>>,
+    current_payload: Arc<Mutex<Option<QuickLookPayload>>>,
     is_comparing: Arc<AtomicBool>,
     is_pinned: Arc<AtomicBool>,
 }
@@ -47,6 +48,7 @@ impl QuickLookState {
             detached_payloads: Arc::new(Mutex::new(HashMap::new())),
             detached_counter: Arc::new(AtomicU32::new(0)),
             current_selection: Arc::new(Mutex::new(None)),
+            current_payload: Arc::new(Mutex::new(None)),
             is_comparing: Arc::new(AtomicBool::new(false)),
             is_pinned: Arc::new(AtomicBool::new(false)),
         }
@@ -141,7 +143,9 @@ impl QuickLookState {
         }
 
         let payload = QuickLookPayload::with_selection(path_str, media_type, selection_index, selection_total);
-        let (target_w, target_h) = resolve_media_size(&self.app_handle, media_type, path);
+        let known_dims = payload.width.zip(payload.height);
+        let (target_w, target_h) = resolve_media_size(&self.app_handle, media_type, path, known_dims);
+        *self.current_payload.lock().unwrap() = Some(payload.clone());
 
         if matches!(media_type, QuickLookMediaType::Audio | QuickLookMediaType::Video) {
             if let Some(playback_state) = self.app_handle.try_state::<crate::app::state::PlaybackProbeState>() {
@@ -327,12 +331,14 @@ impl QuickLookState {
         let (index, total) = if final_info.total > 1 { (Some(final_info.index), Some(final_info.total)) } else { (None, None) };
         // Leer metadatos puede tardar (por ejemplo, archivos MTP). Validar de nuevo al publicar.
         let payload = QuickLookPayload::with_selection(path_str.clone(), media_type, index, total);
-        let (width, height) = resolve_media_size(&self.app_handle, media_type, &path);
+        let known_dims = payload.width.zip(payload.height);
+        let (width, height) = resolve_media_size(&self.app_handle, media_type, &path, known_dims);
         let mut current = self.current_path.lock().unwrap();
         if !selection_update_is_current(is_preview_open(), revision, self.preview_revision.load(Ordering::SeqCst), source, foreground_selection_source())
             || *current != expected_path { return; }
         *current = Some(path_str);
         *self.current_selection.lock().unwrap() = Some(final_info);
+        *self.current_payload.lock().unwrap() = Some(payload.clone());
         drop(current);
         if matches!(media_type, QuickLookMediaType::Audio | QuickLookMediaType::Video) {
             if let Some(playback) = self.app_handle.try_state::<crate::app::state::PlaybackProbeState>() { let _ = playback.pause(); }
@@ -465,6 +471,10 @@ impl QuickLookState {
             let mut shown = self.last_shown.lock().unwrap();
             *shown = None;
         }
+        {
+            let mut pl = self.current_payload.lock().unwrap();
+            *pl = None;
+        }
 
         let _ = self.app_handle.emit("quicklook://hide", ());
 
@@ -498,11 +508,7 @@ impl QuickLookState {
     }
 
     pub fn get_current_payload(&self) -> Option<QuickLookPayload> {
-        let cur = self.current_path.lock().unwrap();
-        let path_str = cur.as_ref()?.clone();
-        let path = std::path::Path::new(&path_str);
-        let media_type = QuickLookMediaType::from_path(path)?;
-        Some(QuickLookPayload::new(path_str, media_type))
+        self.current_payload.lock().unwrap().clone()
     }
 
     pub fn open_detached(&self, path: &str) -> Result<String, String> {
@@ -530,7 +536,8 @@ impl QuickLookState {
             return Err("Solo se pueden desacoplar imágenes y vídeos".into());
         }
         let payload = QuickLookPayload::new(path.to_string(), media_type);
-        let (target_w, target_h) = resolve_media_size(&self.app_handle, media_type, p);
+        let known_dims = payload.width.zip(payload.height);
+        let (target_w, target_h) = resolve_media_size(&self.app_handle, media_type, p, known_dims);
 
         let label = loop {
             let next_id = self.detached_counter.fetch_add(1, Ordering::SeqCst) + 1;
@@ -720,7 +727,12 @@ fn get_screen_bounds(app_handle: &tauri::AppHandle) -> (f64, f64) {
     (1920.0, 1080.0)
 }
 
-fn resolve_media_size(app_handle: &tauri::AppHandle, media_type: QuickLookMediaType, path: &Path) -> (f64, f64) {
+fn resolve_media_size(
+    app_handle: &tauri::AppHandle,
+    media_type: QuickLookMediaType,
+    path: &Path,
+    known_dims: Option<(u32, u32)>,
+) -> (f64, f64) {
     let (screen_w, screen_h) = get_screen_bounds(app_handle);
     // Base ergonómica para documentos por porcentaje de pantalla: 60% ancho, 80% alto
     let doc_w = (screen_w * 0.60).round().max(680.0);
@@ -729,7 +741,8 @@ fn resolve_media_size(app_handle: &tauri::AppHandle, media_type: QuickLookMediaT
     match media_type {
         QuickLookMediaType::Audio => (640.0, 390.0),
         QuickLookMediaType::Image => {
-            if let Ok((nw, nh)) = image::image_dimensions(path) {
+            let dims = known_dims.or_else(|| image::image_dimensions(path).ok());
+            if let Some((nw, nh)) = dims {
                 let max_w = (screen_w * 0.85).min(1280.0);
                 let max_h = (screen_h * 0.85).min(820.0);
                 let header_h = 48.0;
@@ -745,7 +758,8 @@ fn resolve_media_size(app_handle: &tauri::AppHandle, media_type: QuickLookMediaT
             }
         }
         QuickLookMediaType::Video => {
-            if let Some((nw, nh)) = super::model::get_video_dimensions(path) {
+            let dims = known_dims.or_else(|| super::model::get_video_dimensions(path));
+            if let Some((nw, nh)) = dims {
                 let max_w = (screen_w * 0.85).min(1280.0);
                 let max_h = (screen_h * 0.85).min(820.0);
                 let header_h = 48.0;
