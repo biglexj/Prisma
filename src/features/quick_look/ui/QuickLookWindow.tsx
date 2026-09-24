@@ -69,8 +69,18 @@ export function QuickLookWindow() {
       : quickLookClient.getCurrent();
     return request.then((res) => {
       if (version === requestVersionRef.current && res) {
-        setPayload(res);
-        setImageDimensions(null);
+        setPayload((prev) => {
+          if (
+            prev &&
+            prev.path === res.path &&
+            prev.selectionIndex === res.selectionIndex &&
+            prev.selectionTotal === res.selectionTotal
+          ) {
+            return prev;
+          }
+          setImageDimensions(null);
+          return res;
+        });
         return res;
       }
       return null;
@@ -78,43 +88,32 @@ export function QuickLookWindow() {
   }, []);
 
   useEffect(() => {
-    let resolved = false;
     let disposed = false;
 
     refreshCurrent().then((res) => {
-      if (res) resolved = true;
+      if (res && startupIntervalId) {
+        window.clearInterval(startupIntervalId);
+      }
     });
 
-    // La ventana principal ya está cargada (oculta) y solo necesita un refresco
-    // breve. Las instancias desacopladas se crean en frío, así que consultan su
-    // payload hasta recibirlo (máx. 10 s) por si el montaje tarda más que el emit.
+    // En instancias desacopladas o apertura en frío, consultar periódicamente
+    // hasta recibir el primer payload y detener el intervalo inmediatamente.
     const startupIntervalId = window.setInterval(() => {
-      if (isDetached && resolved) {
-        window.clearInterval(startupIntervalId);
-        return;
-      }
       refreshCurrent().then((res) => {
-        if (res) resolved = true;
+        if (res) {
+          window.clearInterval(startupIntervalId);
+        }
       });
-    }, 200);
+    }, 150);
+
     const startupTimeoutId = window.setTimeout(() => {
       window.clearInterval(startupIntervalId);
-    }, isDetached ? 10000 : 1200);
+    }, isDetached ? 8000 : 800);
 
     const cleanupFns: (() => void)[] = [];
 
-    // Las instancias desacopladas no reaccionan a los eventos globales del
-    // Quick Look principal: conservan su propio archivo para poder comparar.
+    // Ocultación en ventana principal
     if (!isDetached) {
-      const unlistenGlobalPreviewPromise = listen<QuickLookPayload>("quicklook://preview", (event) => {
-        if (!disposed && event.payload) {
-          requestVersionRef.current++;
-          setPayload(event.payload);
-          setImageDimensions(null);
-          handleStopComparing();
-        }
-      });
-
       const unlistenGlobalHidePromise = listen("quicklook://hide", () => {
         requestVersionRef.current++;
         if (disposed) return;
@@ -127,18 +126,29 @@ export function QuickLookWindow() {
       });
 
       cleanupFns.push(() => {
-        unlistenGlobalPreviewPromise.then((unlisten) => unlisten());
         unlistenGlobalHidePromise.then((unlisten) => unlisten());
       });
     }
 
+    // Único listener oficial a nivel de ventana para eventos de previsualización
     const unlistenWindowPreviewPromise = getCurrentWebviewWindow().listen<QuickLookPayload>(
       "quicklook://preview",
       (event) => {
         if (!disposed && event.payload) {
           requestVersionRef.current++;
-          setPayload(event.payload);
-          setImageDimensions(null);
+          const next = event.payload;
+          setPayload((prev) => {
+            if (
+              prev &&
+              prev.path === next.path &&
+              prev.selectionIndex === next.selectionIndex &&
+              prev.selectionTotal === next.selectionTotal
+            ) {
+              return prev;
+            }
+            setImageDimensions(null);
+            return next;
+          });
           handleStopComparing();
         }
       }
@@ -166,7 +176,7 @@ export function QuickLookWindow() {
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [isDetached, refreshCurrent]);
+  }, [isDetached, refreshCurrent, handleStopComparing]);
 
   // Atajos locales de teclado (Esc cierra siempre; Espacio solo la vista previa principal)
   useEffect(() => {

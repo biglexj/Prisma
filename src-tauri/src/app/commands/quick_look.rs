@@ -237,9 +237,6 @@ pub fn quick_look_set_size(window: tauri::WebviewWindow, width: f64, height: f64
     let is_max = quick_look_is_maximized(window.clone());
     if !is_max {
         let _ = window.set_size(tauri::LogicalSize::new(width, height));
-        if window.label() == "quicklook" {
-            let _ = window.center();
-        }
     }
     Ok(())
 }

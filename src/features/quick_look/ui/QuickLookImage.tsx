@@ -41,10 +41,12 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
     if (nw && nh) {
       onDimensionsLoad?.({ width: nw, height: nh });
 
+      // Solo si el backend nativo no pudo pre-calcular las dimensiones se ajusta el tamaño
+      if (payload.width && payload.height) return;
+
       try {
         const isMax = await invoke<boolean>("quick_look_is_maximized");
         if (isMax) return;
-        if (payload.width === nw && payload.height === nh) return;
 
         const screenW = window.screen.availWidth || 1920;
         const screenH = window.screen.availHeight || 1080;
@@ -73,8 +75,8 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
         const targetW = fittedW;
         const targetH = fittedH + headerH;
 
-        void invoke("quick_look_set_size", { width: targetW, height: targetH }).catch(() => { });
-      } catch { }
+        void invoke("quick_look_set_size", { width: targetW, height: targetH }).catch(() => {});
+      } catch {}
     }
   };
 
@@ -205,14 +207,14 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
           ref={imgRef}
           alt={payload.fileName}
           className="quicklook-image-preview"
-          decoding="auto"
+          decoding="async"
           draggable={false}
           onError={handleImageError}
           onLoad={handleImageLoad}
           src={imgSrc}
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transition: isDragging ? "none" : "transform 0.12s ease-out",
+            transition: isDragging || zoom === 1 ? "none" : "transform 0.12s ease-out",
           }}
         />
       </div>

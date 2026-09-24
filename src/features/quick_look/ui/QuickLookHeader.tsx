@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Icon } from "../../../shared/ui/Icon";
 import type { QuickLookPayload } from "../model/types";
 import "./quick-look-exif.css";
@@ -34,96 +35,21 @@ export function QuickLookHeader({
   const [showExif, setShowExif] = useState(false);
   const [copiedPath, setCopiedPath] = useState(false);
 
-  // Arrastre universal continuo compatible con lápiz de tableta gráfica (Huion/Wacom/XP-Pen), ratón y touch
-  const isDraggingWindowRef = useRef(false);
-  const dragStartPointerRef = useRef({ x: 0, y: 0 });
-  const dragStartWinPosRef = useRef({ x: 0, y: 0 });
-  const targetWinPosRef = useRef({ x: 0, y: 0 });
-  const rafIdRef = useRef<number | null>(null);
-
-  const handlePointerDown = async (e: React.PointerEvent) => {
+  // Arrastre nativo acelerado por hardware a máxima tasa de refresco (144Hz+)
+  const handlePointerDown = (e: React.PointerEvent) => {
     if ((e.button !== 0 && e.buttons !== 1) || isMaximized) return;
-    if ((e.target as HTMLElement).closest("button, a, input, .quicklook-exif-popover, .quicklook-header-actions")) {
+    if (
+      (e.target as HTMLElement).closest(
+        "button, a, input, .quicklook-exif-popover, .quicklook-header-actions, .quicklook-selection-pager",
+      )
+    ) {
       return;
     }
 
-    e.preventDefault();
-
-    try {
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {}
-
-    try {
-      const [curX, curY] = await invoke<[number, number]>("quick_look_get_position");
-      dragStartPointerRef.current = { x: e.screenX, y: e.screenY };
-      dragStartWinPosRef.current = { x: curX, y: curY };
-      targetWinPosRef.current = { x: curX, y: curY };
-      isDraggingWindowRef.current = true;
-    } catch {
+    void getCurrentWebviewWindow().startDragging().catch(() => {
       void invoke("quick_look_start_dragging").catch(() => {});
-    }
+    });
   };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingWindowRef.current || isMaximized) return;
-
-    const dx = e.screenX - dragStartPointerRef.current.x;
-    const dy = e.screenY - dragStartPointerRef.current.y;
-    targetWinPosRef.current = {
-      x: Math.round(dragStartWinPosRef.current.x + dx),
-      y: Math.round(dragStartWinPosRef.current.y + dy),
-    };
-
-    if (rafIdRef.current === null) {
-      rafIdRef.current = requestAnimationFrame(() => {
-        rafIdRef.current = null;
-        if (isDraggingWindowRef.current) {
-          void invoke("quick_look_set_position", {
-            x: targetWinPosRef.current.x,
-            y: targetWinPosRef.current.y,
-          }).catch(() => {});
-        }
-      });
-    }
-  };
-
-  const handlePointerUp = (e: React.PointerEvent) => {
-    if (isDraggingWindowRef.current) {
-      isDraggingWindowRef.current = false;
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
-      }
-      void invoke("quick_look_set_position", {
-        x: targetWinPosRef.current.x,
-        y: targetWinPosRef.current.y,
-      }).catch(() => {});
-      try {
-        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-      } catch {}
-    }
-  };
-
-  useEffect(() => {
-    const handleGlobalEnd = () => {
-      if (isDraggingWindowRef.current) {
-        isDraggingWindowRef.current = false;
-        if (rafIdRef.current !== null) {
-          cancelAnimationFrame(rafIdRef.current);
-          rafIdRef.current = null;
-        }
-      }
-    };
-    window.addEventListener("pointerup", handleGlobalEnd);
-    window.addEventListener("pointercancel", handleGlobalEnd);
-    return () => {
-      window.removeEventListener("pointerup", handleGlobalEnd);
-      window.removeEventListener("pointercancel", handleGlobalEnd);
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current);
-      }
-    };
-  }, []);
 
   const getMediaIcon = (type: string) => {
     switch (type) {
@@ -185,10 +111,8 @@ export function QuickLookHeader({
   return (
     <header
       className="quicklook-header"
+      data-tauri-drag-region
       onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
       onDoubleClick={onToggleMaximize}
     >
       <div className="quicklook-header-drag">

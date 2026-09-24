@@ -161,6 +161,9 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
     if (vw > 0 && vh > 0) {
       onDimensionsLoad?.({ width: vw, height: vh });
 
+      // Si el backend nativo ya calculó las dimensiones, omitir resize redundante
+      if (payload.width && payload.height) return;
+
       try {
         const isMax = await invoke<boolean>("quick_look_is_maximized");
         if (isMax) return;

@@ -149,47 +149,52 @@ impl QuickLookState {
             }
         }
 
-        let _ = self.app_handle.emit("quicklook://preview", &payload);
+        let already_open = is_preview_open();
+        let is_pinned = self.is_pinned.load(Ordering::SeqCst);
 
         if let Some(window) = self.app_handle.get_webview_window("quicklook") {
             ql_log!("Abriendo ventana quicklook con tamaño: {}x{}", target_w, target_h);
             let is_max = crate::app::commands::quick_look::quick_look_is_maximized(window.clone());
             if !is_max {
                 let _ = window.set_size(tauri::LogicalSize::new(target_w, target_h));
-                let _ = window.center();
+                if !already_open && !is_pinned {
+                    let _ = window.center();
+                }
             }
             let _ = window.emit("quicklook://preview", &payload);
 
-            #[cfg(windows)]
-            {
-                if let Ok(hwnd) = window.hwnd() {
-                    use windows::Win32::Foundation::HWND;
-                    use windows::Win32::UI::WindowsAndMessaging::{
-                        ShowWindow, SW_SHOWNOACTIVATE, SetWindowPos, HWND_TOP,
-                        SWP_NOMOVE, SWP_NOSIZE, SWP_NOACTIVATE, SWP_SHOWWINDOW,
-                    };
-                    unsafe {
-                        let win_hwnd = HWND(hwnd.0);
-                        let _ = ShowWindow(win_hwnd, SW_SHOWNOACTIVATE);
-                        let _ = SetWindowPos(
-                            win_hwnd,
-                            HWND_TOP,
-                            0,
-                            0,
-                            0,
-                            0,
-                            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
-                        );
+            if !already_open {
+                #[cfg(windows)]
+                {
+                    if let Ok(hwnd) = window.hwnd() {
+                        use windows::Win32::Foundation::HWND;
+                        use windows::Win32::UI::WindowsAndMessaging::{
+                            ShowWindow, SW_SHOWNOACTIVATE, SetWindowPos, HWND_TOP,
+                            SWP_NOMOVE, SWP_NOSIZE, SWP_NOACTIVATE, SWP_SHOWWINDOW,
+                        };
+                        unsafe {
+                            let win_hwnd = HWND(hwnd.0);
+                            let _ = ShowWindow(win_hwnd, SW_SHOWNOACTIVATE);
+                            let _ = SetWindowPos(
+                                win_hwnd,
+                                HWND_TOP,
+                                0,
+                                0,
+                                0,
+                                0,
+                                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+                            );
+                        }
+                    } else {
+                        let _ = window.show();
+                        let _ = window.unminimize();
                     }
-                } else {
+                }
+                #[cfg(not(windows))]
+                {
                     let _ = window.show();
                     let _ = window.unminimize();
                 }
-            }
-            #[cfg(not(windows))]
-            {
-                let _ = window.show();
-                let _ = window.unminimize();
             }
 
             set_preview_open(true);
@@ -295,30 +300,6 @@ impl QuickLookState {
         if let Some(window) = self.app_handle.get_webview_window("quicklook") {
             if !crate::app::commands::quick_look::quick_look_is_maximized(window.clone()) {
                 let _ = window.set_size(tauri::LogicalSize::new(width, height));
-                let _ = window.center();
-            }
-            #[cfg(windows)]
-            {
-                if let Ok(hwnd) = window.hwnd() {
-                    use windows::Win32::Foundation::HWND;
-                    use windows::Win32::UI::WindowsAndMessaging::{
-                        ShowWindow, SW_SHOWNOACTIVATE, SetWindowPos, HWND_TOP,
-                        SWP_NOMOVE, SWP_NOSIZE, SWP_NOACTIVATE, SWP_SHOWWINDOW,
-                    };
-                    unsafe {
-                        let win_hwnd = HWND(hwnd.0);
-                        let _ = ShowWindow(win_hwnd, SW_SHOWNOACTIVATE);
-                        let _ = SetWindowPos(
-                            win_hwnd,
-                            HWND_TOP,
-                            0,
-                            0,
-                            0,
-                            0,
-                            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
-                        );
-                    }
-                }
             }
             let _ = window.emit("quicklook://preview", &payload);
         }

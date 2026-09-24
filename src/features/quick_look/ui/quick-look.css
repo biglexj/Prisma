@@ -51,7 +51,10 @@
   flex-direction: column;
   overflow: hidden;
   position: relative;
-  transition: background 0.3s ease, border-color 0.3s ease;
+  contain: paint;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transition: background 0.2s ease, border-color 0.2s ease;
   color: var(--on-surface, #22191b);
 }
 
@@ -100,12 +103,7 @@
   z-index: 10;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: none;
-  cursor: grab;
-}
-
-.quicklook-header:active {
-  cursor: grabbing;
+  -webkit-app-region: drag;
 }
 
 .dark .quicklook-header,
@@ -123,14 +121,9 @@
   height: 100%;
   min-width: 0;
   margin-right: 6px;
-  cursor: grab;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: none;
-}
-
-.quicklook-header-drag:active {
-  cursor: grabbing;
+  -webkit-app-region: drag;
 }
 
 .quicklook-file-icon {
