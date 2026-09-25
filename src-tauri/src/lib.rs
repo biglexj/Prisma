@@ -287,7 +287,7 @@ pub fn run() {
         }));
     }
 
-    builder
+    builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(
@@ -650,9 +650,16 @@ pub fn run() {
             renamer_scan_folder,
             renamer_execute_batch,
             renamer_undo_batch,
-        ])
-        .build(tauri::generate_context!())
-        .expect("Prisma no pudo iniciar el runtime de Tauri")
+        ]);
+
+        let mut context = tauri::generate_context!();
+        if is_dev_mode {
+            context.config_mut().identifier = "com.biglexj.prisma.dev".to_string();
+        }
+
+        builder
+            .build(context)
+            .expect("Prisma no pudo iniciar el runtime de Tauri")
         .run(|app, event| {
             if matches!(event, tauri::RunEvent::Exit) {
                 let service = app.state::<std::sync::Arc<infrastructure::media::passthru::PassthruService>>();
