@@ -42,9 +42,17 @@ export function ViewerToolsMenu({
   const toggleMenu = () => setIsOpen((prev) => !prev);
   const closeMenu = () => setIsOpen(false);
 
+  const isFirstRenderRef = useRef(true);
+  const onOpenChangeRef = useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
+
   useEffect(() => {
-    onOpenChange?.(isOpen);
-  }, [isOpen, onOpenChange]);
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
+    onOpenChangeRef.current?.(isOpen);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;

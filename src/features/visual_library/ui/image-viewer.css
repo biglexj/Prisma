@@ -289,7 +289,7 @@
   align-items: center;
   gap: 16px;
   z-index: 35;
-  pointer-events: auto;
+  pointer-events: none;
   transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -298,6 +298,7 @@
   align-items: center;
   gap: 10px;
   justify-self: start;
+  pointer-events: auto;
 }
 
 .image-viewer-top-center {
@@ -312,7 +313,7 @@
 
 .image-viewer-title {
   margin: 0;
-  padding: 1px 3px;
+  padding: 2px 3px;
   box-sizing: border-box;
   font-size: 0.88rem;
   font-weight: 600;
@@ -327,6 +328,7 @@
   white-space: nowrap;
   max-width: 100%;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  pointer-events: auto;
 }
 
 .image-viewer-subtitle {
@@ -345,6 +347,7 @@
   align-items: center;
   gap: 10px;
   justify-self: end;
+  pointer-events: auto;
 }
 
 /* Base uniforme para todos los controles y botones de la barra superior */

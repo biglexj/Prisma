@@ -183,6 +183,45 @@ export function VideoPlayer({
   const controlsSuppressUntilRef = useRef<number>(Date.now() + 600);
   const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
   const openedAtRef = useRef<number>(Date.now());
+  const [videoPillarboxOffset, setVideoPillarboxOffset] = useState<number>(0);
+
+  const updateVideoBounds = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth || !video.videoHeight) {
+      setVideoPillarboxOffset(0);
+      return;
+    }
+    const containerW = window.innerWidth;
+    const containerH = window.innerHeight;
+    const videoRatio = video.videoWidth / video.videoHeight;
+    const containerRatio = containerW / containerH;
+
+    if (videoRatio < containerRatio) {
+      // Vídeo más estrecho que la pantalla (ej. vertical 9:16 o 4:3 en monitor 16:9)
+      const renderedWidth = containerH * videoRatio;
+      const offset = Math.max(0, Math.round((containerW - renderedWidth) / 2));
+      setVideoPillarboxOffset(offset);
+    } else {
+      setVideoPillarboxOffset(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("resize", updateVideoBounds);
+    return () => window.removeEventListener("resize", updateVideoBounds);
+  }, [updateVideoBounds]);
+
+  useEffect(() => {
+    window.focus();
+    const container = document.getElementById("video-cinema-container");
+    container?.focus();
+    if (
+      document.activeElement instanceof HTMLElement &&
+      (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA")
+    ) {
+      document.activeElement.blur();
+    }
+  }, [path]);
 
   const hasMedia = Boolean(path);
   const title = path ? mediaTitle(path) : "Sin vídeo seleccionado";
@@ -1145,7 +1184,7 @@ export function VideoPlayer({
           break;
         case "arrowleft":
           e.preventDefault();
-          if (e.shiftKey || e.ctrlKey) {
+          if (e.shiftKey) {
             if (videoRef.current) {
               const nextPos = Math.max(0, videoRef.current.currentTime - 10);
               videoRef.current.currentTime = nextPos;
@@ -1167,7 +1206,7 @@ export function VideoPlayer({
           break;
         case "arrowright":
           e.preventDefault();
-          if (e.shiftKey || e.ctrlKey) {
+          if (e.shiftKey) {
             if (videoRef.current) {
               const nextPos = Math.min(duration, videoRef.current.currentTime + 10);
               videoRef.current.currentTime = nextPos;
@@ -1394,6 +1433,8 @@ export function VideoPlayer({
         isFullscreen ? "is-fullscreen-mode" : ""
       }`}
       id="video-cinema-container"
+      tabIndex={-1}
+      style={{ "--video-pillarbox-offset": `${videoPillarboxOffset}px` } as React.CSSProperties}
       onContextMenu={handleContextMenu}
       onMouseLeave={handleMouseLeave}
       onWheel={handleWheel}
@@ -1639,6 +1680,7 @@ export function VideoPlayer({
                     video.muted = false;
                     setDuration(video.duration || 0);
                     setPaused(false);
+                    updateVideoBounds();
                     if (initialTime && initialTime > 0) {
                       video.currentTime = initialTime;
                       setPosition(initialTime);

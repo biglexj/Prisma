@@ -235,6 +235,7 @@ export function ImageViewer({
     if (!hasActiveOverlay()) {
       controlsTimeoutRef.current = window.setTimeout(() => {
         if (!hasActiveOverlay()) {
+          isHoveringControlsRef.current = false;
           setShowControls(false);
           controlsSuppressUntilRef.current = Date.now() + 450;
         }
@@ -275,6 +276,15 @@ export function ImageViewer({
         lastMousePosRef.current = { x: currentX, y: currentY };
       }
 
+      const target = e && "target" in e ? (e.target as HTMLElement | null) : null;
+      if (target && typeof target.closest === "function") {
+        isHoveringControlsRef.current = Boolean(
+          target.closest(
+            ".image-viewer-top-left, .image-viewer-top-right, .image-viewer-zoom-controls, .image-viewer-nav-btn, .viewer-tools-dropdown-container"
+          )
+        );
+      }
+
       setShowControls(true);
       resetControlsTimeout();
     },
@@ -288,6 +298,7 @@ export function ImageViewer({
     if (!hasActiveOverlay()) {
       controlsTimeoutRef.current = window.setTimeout(() => {
         if (!hasActiveOverlay()) {
+          isHoveringControlsRef.current = false;
           setShowControls(false);
           controlsSuppressUntilRef.current = Date.now() + 450;
         }
@@ -326,7 +337,7 @@ export function ImageViewer({
 
   const closeViewer = () => {
     if (document.fullscreenElement) {
-      void document.exitFullscreen().catch(() => {});
+      void document.exitFullscreen().catch(() => { });
       setIsFullscreen(false);
     }
     resetImageTransform();
@@ -338,10 +349,10 @@ export function ImageViewer({
     if (!viewerElement) return;
 
     if (!document.fullscreenElement) {
-      void viewerElement.requestFullscreen().catch(() => {});
+      void viewerElement.requestFullscreen().catch(() => { });
       setIsFullscreen(true);
     } else {
-      void document.exitFullscreen().catch(() => {});
+      void document.exitFullscreen().catch(() => { });
       setIsFullscreen(false);
     }
     // Al expandir o minimizar con atajo, no mostrar los controles: solo el cambio de pantalla.
@@ -492,7 +503,7 @@ export function ImageViewer({
 
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {}
+    } catch { }
 
     setIsDragging(true);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
@@ -553,7 +564,6 @@ export function ImageViewer({
     window.addEventListener("mousemove", onActivity, { passive: true });
     window.addEventListener("pointermove", onActivity, { passive: true });
     return () => {
-      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
       window.removeEventListener("mousemove", onActivity);
       window.removeEventListener("pointermove", onActivity);
     };
@@ -595,7 +605,7 @@ export function ImageViewer({
         label: "Mejorar con Prisma Upscaler (IA)",
         icon: "sparkles" as const,
         onSelect: () => {
-          void invoke("launch_prisma_upscaler", { filePath: target.item.path }).catch(() => {});
+          void invoke("launch_prisma_upscaler", { filePath: target.item.path }).catch(() => { });
         },
       },
       {
@@ -603,7 +613,7 @@ export function ImageViewer({
         label: "Abrir en otra instancia a la par",
         icon: "external-link" as const,
         onSelect: () => {
-          void quickLookClient.openDetached(target.item.path).catch(() => {});
+          void quickLookClient.openDetached(target.item.path).catch(() => { });
         },
       },
       {
@@ -653,7 +663,7 @@ export function ImageViewer({
         label: "Mostrar en carpeta",
         icon: "folder-open" as const,
         onSelect: () => {
-          void invoke("show_in_file_manager", { path: target.item.path }).catch(() => {});
+          void invoke("show_in_file_manager", { path: target.item.path }).catch(() => { });
         },
       },
       {
@@ -692,14 +702,14 @@ export function ImageViewer({
         try {
           const win = getCurrentWebviewWindow();
           void win.hide();
-        } catch {}
+        } catch { }
         return;
       } else if (event.ctrlKey && event.key.toLowerCase() === "w") {
         event.preventDefault();
         try {
           const win = getCurrentWebviewWindow();
           void win.close();
-        } catch {}
+        } catch { }
         return;
       } else if (event.key.toLowerCase() === "i" && !event.ctrlKey && !event.metaKey && !event.altKey) {
         event.preventDefault();
@@ -935,7 +945,7 @@ export function ImageViewer({
             onEdit={() => setIsEditing(true)}
             onCompare={() => setIsComparing(true)}
             onUpscale={() => {
-              void invoke("launch_prisma_upscaler", { filePath: currentItem.path }).catch(() => {});
+              void invoke("launch_prisma_upscaler", { filePath: currentItem.path }).catch(() => { });
             }}
             onConvert={() => {
               window.dispatchEvent(
