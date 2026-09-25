@@ -23,6 +23,7 @@ import { ImageEditor } from "./editor/ImageEditor";
 import { ExifDetailsModal } from "./components/ExifDetailsModal";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
 import { resolveVisualSessionForPath } from "../services/visualSessionResolver";
+import { copyImageToClipboard } from "../services/imageClipboard";
 import "./visual-library.css";
 
 const VISIBLE_ITEM_LIMIT = 400;
@@ -105,6 +106,14 @@ export function VisualLibrary({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [activatingPath, setActivatingPath] = useState<string | null>(null);
+  const [toastText, setToastText] = useState<string | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  const showToast = (text: string) => {
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    setToastText(text);
+    toastTimerRef.current = window.setTimeout(() => setToastText(null), 2000);
+  };
 
   const triggerActivation = (path: string) => {
     setActivatingPath(path);
@@ -413,6 +422,20 @@ export function VisualLibrary({
               sizeBytes: 0,
             };
             setEditingImageItem(found);
+          },
+        },
+        {
+          id: "copy",
+          label: "Copiar imagen",
+          icon: "copy" as const,
+          onSelect: () => {
+            void copyImageToClipboard(target.item.path).then((ok) => {
+              if (ok) {
+                showToast("📋 Imagen copiada al portapapeles");
+              } else {
+                showToast("❌ No se pudo copiar la imagen");
+              }
+            });
           },
         },
         {
@@ -983,6 +1006,12 @@ export function VisualLibrary({
           isOpen={Boolean(exifViewingPath)}
           onClose={() => setExifViewingPath(null)}
         />
+      )}
+
+      {toastText && (
+        <div className="visual-library-toast" key={toastText}>
+          <span>{toastText}</span>
+        </div>
       )}
 
     </section>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../../../shared/ui/Icon";
 
 export interface ViewerToolsMenuProps {
+  onCopyImage?: () => void;
   onEdit: () => void;
   onCompare: () => void;
   onUpscale?: () => void;
@@ -17,6 +18,7 @@ export interface ViewerToolsMenuProps {
 }
 
 export function ViewerToolsMenu({
+  onCopyImage,
   onEdit,
   onCompare,
   onUpscale,
@@ -147,6 +149,21 @@ export function ViewerToolsMenu({
           {/* Sección de Gestión */}
           <div className="viewer-tools-section">
             <div className="viewer-tools-section-title">Gestión y Archivo</div>
+            {onCopyImage && (
+              <button
+                className="viewer-tools-item"
+                onClick={() => handleAction(onCopyImage)}
+                role="menuitem"
+              >
+                <Icon name="copy" />
+                <div className="viewer-tools-item-content">
+                  <span className="viewer-tools-item-title">Copiar imagen</span>
+                  <span className="viewer-tools-item-desc">Copiar al portapapeles para pegar</span>
+                </div>
+                <kbd className="viewer-tools-shortcut">Ctrl+C</kbd>
+              </button>
+            )}
+
             <button
               className="viewer-tools-item"
               onClick={() => handleAction(onShowInfo)}
@@ -178,7 +195,7 @@ export function ViewerToolsMenu({
               onClick={() => handleAction(onDetach)}
               role="menuitem"
             >
-              <Icon name="copy" />
+              <Icon name="external-link" />
               <div className="viewer-tools-item-content">
                 <span className="viewer-tools-item-title">Abrir en otra instancia</span>
                 <span className="viewer-tools-item-desc">Ver en ventana independiente a la par</span>

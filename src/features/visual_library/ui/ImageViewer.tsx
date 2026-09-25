@@ -16,6 +16,7 @@ import { ImageComparisonModal } from "../../comparison";
 import { quickLookClient } from "../../quick_look/tauri/client";
 import { ViewerToolsMenu } from "./components/ViewerToolsMenu";
 import { ImageInfoDrawer } from "./components/ImageInfoDrawer";
+import { copyImageToClipboard } from "../services/imageClipboard";
 import "./visual-library.css";
 import "./image-viewer.css";
 
@@ -55,14 +56,30 @@ export function ImageViewer({
   const isAutoFitRef = useRef(false); // Ref para evitar stale closure en onLoad
   const [zoomToast, setZoomToast] = useState<string | null>(null);
   const zoomToastTimerRef = useRef<number | null>(null);
-  const [favToastText, setFavToastText] = useState<string | null>(null);
-  const favToastTimerRef = useRef<number | null>(null);
+  const [viewerToastText, setViewerToastText] = useState<string | null>(null);
+  const viewerToastTimerRef = useRef<number | null>(null);
 
-  const showFavToast = useCallback((text: string) => {
-    if (favToastTimerRef.current) window.clearTimeout(favToastTimerRef.current);
-    setFavToastText(text);
-    favToastTimerRef.current = window.setTimeout(() => setFavToastText(null), 1800);
+  const showViewerToast = useCallback((text: string) => {
+    if (viewerToastTimerRef.current) window.clearTimeout(viewerToastTimerRef.current);
+    setViewerToastText(text);
+    viewerToastTimerRef.current = window.setTimeout(() => setViewerToastText(null), 1800);
   }, []);
+  const showFavToast = showViewerToast;
+
+  const [isCopied, setIsCopied] = useState(false);
+  const copiedTimerRef = useRef<number | null>(null);
+
+  const handleCopyCurrentImage = useCallback(async () => {
+    const success = await copyImageToClipboard(currentItem.path, imgRef.current);
+    if (success) {
+      setIsCopied(true);
+      if (copiedTimerRef.current) window.clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = window.setTimeout(() => setIsCopied(false), 1200);
+      showViewerToast("📋 Imagen copiada al portapapeles");
+    } else {
+      showViewerToast("❌ No se pudo copiar la imagen");
+    }
+  }, [currentItem.path, showViewerToast]);
   const [isEntering, setIsEntering] = useState(false);
   const [previousLayer, setPreviousLayer] = useState<{
     item: VisualLibraryItem;
@@ -509,6 +526,12 @@ export function ImageViewer({
     const isFav = favorites.isFavorite(target.item.path);
     return [
       {
+        id: "copy",
+        label: "Copiar imagen",
+        icon: "copy" as const,
+        onSelect: () => void handleCopyCurrentImage(),
+      },
+      {
         id: "edit",
         label: "Editar imagen",
         icon: "crop" as const,
@@ -531,7 +554,7 @@ export function ImageViewer({
       {
         id: "detach",
         label: "Abrir en otra instancia a la par",
-        icon: "copy" as const,
+        icon: "external-link" as const,
         onSelect: () => {
           void quickLookClient.openDetached(target.item.path).catch(() => {});
         },
@@ -637,6 +660,10 @@ export function ImageViewer({
       } else if (event.key.toLowerCase() === "e") {
         event.preventDefault();
         setIsEditing(true);
+      } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c") {
+        event.preventDefault();
+        event.stopPropagation();
+        void handleCopyCurrentImage();
       } else if (event.key.toLowerCase() === "c" && !event.ctrlKey && !event.metaKey && !event.altKey) {
         event.preventDefault();
         setIsComparing(true);
@@ -711,6 +738,7 @@ export function ImageViewer({
       showInfoDrawer,
       favorites,
       showFavToast,
+      handleCopyCurrentImage,
     ]
   );
 
@@ -831,6 +859,14 @@ export function ImageViewer({
             <Icon name="heart" />
           </button>
           <button
+            aria-label="Copiar imagen al portapapeles (Ctrl+C)"
+            className={`image-viewer-top-btn is-icon-only image-viewer-copy-btn ${isCopied ? "is-copied" : ""}`}
+            onClick={() => void handleCopyCurrentImage()}
+            title="Copiar imagen al portapapeles (Ctrl+C)"
+          >
+            <Icon name="copy" />
+          </button>
+          <button
             aria-label="Mover a la papelera (Supr)"
             className="image-viewer-top-btn is-icon-only image-viewer-delete-btn"
             onClick={() =>
@@ -844,15 +880,8 @@ export function ImageViewer({
           >
             <Icon name="trash" />
           </button>
-          <button
-            aria-label={isFullscreen ? "Salir de pantalla completa (F)" : "Pantalla completa (F)"}
-            className={`image-viewer-top-btn is-icon-only ${isFullscreen ? "is-active" : ""}`}
-            onClick={toggleFullscreen}
-            title={isFullscreen ? "Salir de pantalla completa (F)" : "Pantalla completa (F)"}
-          >
-            <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen"} />
-          </button>
           <ViewerToolsMenu
+            onCopyImage={() => void handleCopyCurrentImage()}
             onEdit={() => setIsEditing(true)}
             onCompare={() => setIsComparing(true)}
             onUpscale={() => {
@@ -1026,10 +1055,10 @@ export function ImageViewer({
         </div>
       )}
 
-      {/* Toast flotante de Favoritos */}
-      {favToastText ? (
-        <div className="image-viewer-fav-toast" key={favToastText}>
-          <span>{favToastText}</span>
+      {/* Toast flotante de Notificaciones del Visor */}
+      {viewerToastText ? (
+        <div className="image-viewer-fav-toast" key={viewerToastText}>
+          <span>{viewerToastText}</span>
         </div>
       ) : null}
 
