@@ -5,7 +5,7 @@
   "identifier": "com.biglexj.prisma",
   "build": {
     "beforeDevCommand": "bun run dev",
-    "devUrl": "http://localhost:1421",
+    "devUrl": "http://127.0.0.1:1421",
     "beforeBuildCommand": "bun run build",
     "frontendDist": "../dist"
   },
