@@ -933,8 +933,8 @@ export function VideoPlayer({
         }
       }
 
-      // Pantalla completa (F11 / Alt + Enter)
-      if (e.key === "F11" || (e.altKey && e.key === "Enter")) {
+      // Pantalla completa (F / F11 / Alt + Enter)
+      if (e.key.toLowerCase() === "f" || e.key === "F11" || (e.altKey && e.key === "Enter")) {
         e.preventDefault();
         toggleFullscreen();
         return;
@@ -948,18 +948,7 @@ export function VideoPlayer({
       }
 
       // Navegación fotograma a fotograma:
-      // F (avanzar) y Shift + F (retroceder) ("F de Fotograma", solicitado expresamente)
-      // Soporte complementario VLC (E / Shift + E) y universal (, / .)
-      if (e.key.toLowerCase() === "f") {
-        e.preventDefault();
-        if (e.shiftKey) {
-          stepFrameBackward();
-        } else {
-          stepFrameForward();
-        }
-        return;
-      }
-
+      // Tecla E (avanzar) / Shift + E (retroceder) (estilo VLC) y universal (, / .)
       if (e.key.toLowerCase() === "e") {
         e.preventDefault();
         if (e.shiftKey) {
@@ -1765,7 +1754,7 @@ export function VideoPlayer({
               className="video-icon-btn video-step-btn"
               disabled={!hasMedia}
               onClick={stepFrameBackward}
-              title="Retroceder 1 fotograma (Shift+F / Shift+E / ,)"
+              title="Retroceder 1 fotograma (Shift+E / ,)"
             >
               <span className="btn-label-icon">-1f</span>
             </button>
@@ -1784,7 +1773,7 @@ export function VideoPlayer({
               className="video-icon-btn video-step-btn"
               disabled={!hasMedia}
               onClick={stepFrameForward}
-              title="Avanzar 1 fotograma (F / E / .)"
+              title="Avanzar 1 fotograma (E / .)"
             >
               <span className="btn-label-icon">+1f</span>
             </button>
@@ -1886,7 +1875,7 @@ export function VideoPlayer({
               aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               className="video-icon-btn"
               onClick={toggleFullscreen}
-              title={isFullscreen ? "Salir de pantalla completa (F11 / Esc)" : "Pantalla completa (F11 / Alt+Enter)"}
+              title={isFullscreen ? "Salir de pantalla completa (F / F11 / Esc)" : "Pantalla completa (F / F11 / Alt+Enter)"}
             >
               <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen"} />
             </button>

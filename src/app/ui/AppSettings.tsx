@@ -739,7 +739,6 @@ export function AppSettings({
                     <div className="shortcut-row">
                       <span className="shortcut-row-label">Avanzar 1 fotograma (Frame forward)</span>
                       <div className="shortcut-row-keys">
-                        <kbd className="shortcut-kbd-pill">F</kbd>
                         <kbd className="shortcut-kbd-pill">E</kbd>
                         <kbd className="shortcut-kbd-pill">.</kbd>
                       </div>
@@ -747,7 +746,6 @@ export function AppSettings({
                     <div className="shortcut-row">
                       <span className="shortcut-row-label">Retroceder 1 fotograma (Frame backward)</span>
                       <div className="shortcut-row-keys">
-                        <kbd className="shortcut-kbd-pill">Shift + F</kbd>
                         <kbd className="shortcut-kbd-pill">Shift + E</kbd>
                         <kbd className="shortcut-kbd-pill">,</kbd>
                       </div>
@@ -755,6 +753,7 @@ export function AppSettings({
                     <div className="shortcut-row">
                       <span className="shortcut-row-label">Pantalla completa</span>
                       <div className="shortcut-row-keys">
+                        <kbd className="shortcut-kbd-pill">F</kbd>
                         <kbd className="shortcut-kbd-pill">F11</kbd>
                         <kbd className="shortcut-kbd-pill">Alt + Enter</kbd>
                       </div>
@@ -880,6 +879,7 @@ export function AppSettings({
                       <span className="shortcut-row-label">Pantalla completa</span>
                       <div className="shortcut-row-keys">
                         <kbd className="shortcut-kbd-pill">F</kbd>
+                        <kbd className="shortcut-kbd-pill">F11</kbd>
                       </div>
                     </div>
                     <div className="shortcut-row">

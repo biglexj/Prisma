@@ -52,17 +52,26 @@
        - Los botones de Anterior y Siguiente permanecen activos mientras existan 2 o más vídeos (`disabled={localVideoItems.length <= 1}`).
    - **Resultado**: ✅ Navegación circular continua y fluida en vídeos, homologando la experiencia de imágenes.
 
-6. **Configuración de Atajos: Fotogramas vs. Pantalla Completa**:
-   - **Esquema canónico de navegación por fotogramas ("F de Fotograma")**:
-     - `F`: Avanzar 1 fotograma (`stepFrameForward()`).
-     - `Shift + F`: Retroceder 1 fotograma (`stepFrameBackward()`).
-     - Soporte complementario: `E` / `Shift + E` (estilo VLC) y `.` / `,` (universal).
-   - **Esquema canónico de Pantalla Completa**:
-     - `F11`: Alternar pantalla completa (`toggleFullscreen()`).
+6. **Configuración de Atajos: Pantalla Completa vs. Fotogramas y Sincronización UI**:
+   - **Esquema de Pantalla Completa (Fullscreen)**:
+     - `F`: Alternar pantalla completa (`toggleFullscreen()`).
+     - `F11`: Alternar pantalla completa.
      - `Alt + Enter`: Alternar pantalla completa.
-     - Doble clic: Alternar pantalla completa sobre el vídeo.
+     - Doble clic: Alternar pantalla completa sobre la superficie del vídeo.
      - `Esc`: Salir de pantalla completa.
-   - **Resultado**: ✅ `F` y `Shift + F` avanzan y retroceden fotogramas con precisión quirúrgica, sin colisiones ni pérdidas de atajos.
+   - **Esquema de Navegación por Fotogramas**:
+     - `E`: Avanzar 1 fotograma (`stepFrameForward()`, estilo VLC).
+     - `.` (punto): Avanzar 1 fotograma (estilo universal).
+     - `Shift + E`: Retroceder 1 fotograma (`stepFrameBackward()`, estilo VLC).
+     - `,` (coma): Retroceder 1 fotograma (estilo universal).
+   - **Sincronización en la UI de Referencia (`AppSettings.tsx`)**:
+     - Categoría *Vídeo y Reproducción*:
+       - *Avanzar 1 fotograma*: `E`, `.`
+       - *Retroceder 1 fotograma*: `Shift + E`, `,`
+       - *Pantalla completa*: `F`, `F11`, `Alt + Enter`
+     - Categoría *Subtítulos y Pantalla*:
+       - *Pantalla completa*: `F`, `F11`
+   - **Resultado**: ✅ Comportamiento impecable en el reproductor de vídeo y visualización de atajos 100% coherente en los ajustes del sistema.
 
 7. **Compilación Limpia**:
    - `cargo check`: Terminado con código 0 en 3.21s sin errores.
