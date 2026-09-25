@@ -858,16 +858,21 @@ export function VideoPlayer({
         if (!isToolsMenuOpen && !isHoveringHeaderRef.current) {
           setShowControls(false);
         }
-      }, 3500);
+      }, 3000);
     }
   };
 
   const handleMouseLeave = () => {
-    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist && !isToolsMenuOpen && !isHoveringHeaderRef.current) {
+    isHoveringHeaderRef.current = false;
+    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist && !isToolsMenuOpen) {
       if (controlsTimeoutRef.current) {
         window.clearTimeout(controlsTimeoutRef.current);
       }
-      setShowControls(false);
+      controlsTimeoutRef.current = window.setTimeout(() => {
+        if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist && !isToolsMenuOpen && !isHoveringHeaderRef.current) {
+          setShowControls(false);
+        }
+      }, 3000);
     }
   };
 
@@ -886,6 +891,19 @@ export function VideoPlayer({
     }
   };
 
+  // Temporizador inicial al montar el reproductor para el primer vídeo: esperar 3 segundos
+  useEffect(() => {
+    if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = window.setTimeout(() => {
+      if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist && !isToolsMenuOpen && !isHoveringHeaderRef.current) {
+        setShowControls(false);
+      }
+    }, 3000);
+    return () => {
+      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+    };
+  }, []);
+
   useEffect(() => {
     if (showAudioMenu || showSubMenu || showPlaylist || paused || isToolsMenuOpen) {
       setShowControls(true);
@@ -894,7 +912,7 @@ export function VideoPlayer({
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
       controlsTimeoutRef.current = window.setTimeout(() => {
         setShowControls(false);
-      }, 3500);
+      }, 3000);
     }
   }, [showAudioMenu, showSubMenu, showPlaylist, paused, isToolsMenuOpen]);
 

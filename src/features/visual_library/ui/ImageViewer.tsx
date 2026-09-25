@@ -168,28 +168,104 @@ export function ImageViewer({
     addToHistory(item.path, "image");
   }, [item]);
 
-  // Historial del primer elemento al abrir el visor y garantizar foco activo
+  // Historial del primer elemento al abrir el visor, foco activo y temporizador inicial de 3 segundos
   useEffect(() => {
     addToHistory(item.path, "image");
     window.focus();
     containerRef.current?.focus();
-    // Solo al montar
+
+    if (controlsTimeoutRef.current) {
+      window.clearTimeout(controlsTimeoutRef.current);
+    }
+    controlsTimeoutRef.current = window.setTimeout(() => {
+      if (
+        !isToolsMenuOpenRef.current &&
+        !isHoveringControlsRef.current &&
+        !showInfoDrawer &&
+        !isEditing &&
+        !isComparing &&
+        !mediaDelete.menu
+      ) {
+        setShowControls(false);
+      }
+    }, 3000);
+
+    return () => {
+      if (controlsTimeoutRef.current) {
+        window.clearTimeout(controlsTimeoutRef.current);
+      }
+    };
   }, []);
 
-  const handleUserActivity = () => {
+  const handleUserActivity = useCallback(() => {
     if (Date.now() < controlsSuppressUntilRef.current) return;
     setShowControls(true);
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
     }
-    if (!isToolsMenuOpenRef.current && !isHoveringControlsRef.current) {
+    if (
+      !isToolsMenuOpenRef.current &&
+      !isHoveringControlsRef.current &&
+      !showInfoDrawer &&
+      !isEditing &&
+      !isComparing &&
+      !mediaDelete.menu
+    ) {
+      controlsTimeoutRef.current = window.setTimeout(() => {
+        if (
+          !isToolsMenuOpenRef.current &&
+          !isHoveringControlsRef.current &&
+          !showInfoDrawer &&
+          !isEditing &&
+          !isComparing &&
+          !mediaDelete.menu
+        ) {
+          setShowControls(false);
+        }
+      }, 3000);
+    }
+  }, [showInfoDrawer, isEditing, isComparing, mediaDelete.menu]);
+
+  const handleMouseLeave = useCallback(() => {
+    isHoveringControlsRef.current = false;
+    if (
+      !isToolsMenuOpenRef.current &&
+      !showInfoDrawer &&
+      !isEditing &&
+      !isComparing &&
+      !mediaDelete.menu
+    ) {
+      if (controlsTimeoutRef.current) {
+        window.clearTimeout(controlsTimeoutRef.current);
+      }
+      controlsTimeoutRef.current = window.setTimeout(() => {
+        if (
+          !isToolsMenuOpenRef.current &&
+          !isHoveringControlsRef.current &&
+          !showInfoDrawer &&
+          !isEditing &&
+          !isComparing &&
+          !mediaDelete.menu
+        ) {
+          setShowControls(false);
+        }
+      }, 3000);
+    }
+  }, [showInfoDrawer, isEditing, isComparing, mediaDelete.menu]);
+
+  useEffect(() => {
+    if (showInfoDrawer || isEditing || isComparing || mediaDelete.menu) {
+      setShowControls(true);
+      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+    } else {
+      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
       controlsTimeoutRef.current = window.setTimeout(() => {
         if (!isToolsMenuOpenRef.current && !isHoveringControlsRef.current) {
           setShowControls(false);
         }
       }, 3000);
     }
-  };
+  }, [showInfoDrawer, isEditing, isComparing, mediaDelete.menu]);
 
   const closeViewer = () => {
     if (document.fullscreenElement) {
@@ -706,6 +782,7 @@ export function ImageViewer({
       className={`image-viewer ${isFullscreen ? "is-fullscreen-mode" : ""} ${!showControls ? "controls-hidden" : ""}`}
       onContextMenu={handleContextMenu}
       onMouseMove={handleUserActivity}
+      onMouseLeave={handleMouseLeave}
     >
       <div
         className="image-viewer-top-bar"
@@ -837,6 +914,15 @@ export function ImageViewer({
               e.stopPropagation();
               handlePreviousImage();
             }}
+            onMouseEnter={() => {
+              isHoveringControlsRef.current = true;
+              setShowControls(true);
+              if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+            }}
+            onMouseLeave={() => {
+              isHoveringControlsRef.current = false;
+              handleUserActivity();
+            }}
             title="Imagen anterior (←)"
           >
             <Icon name="chevron-left" />
@@ -846,6 +932,15 @@ export function ImageViewer({
             onClick={(e) => {
               e.stopPropagation();
               handleNextImage();
+            }}
+            onMouseEnter={() => {
+              isHoveringControlsRef.current = true;
+              setShowControls(true);
+              if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+            }}
+            onMouseLeave={() => {
+              isHoveringControlsRef.current = false;
+              handleUserActivity();
             }}
             title="Imagen siguiente (→)"
           >

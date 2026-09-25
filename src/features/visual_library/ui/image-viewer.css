@@ -129,9 +129,15 @@
   transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Ocultamiento fluido de controles tras 3 segundos de inactividad en pantalla completa */
-.image-viewer.controls-hidden {
+/* Ocultamiento fluido de controles tras 3 segundos de inactividad */
+.image-viewer.controls-hidden,
+.image-viewer.controls-hidden * {
   cursor: none !important;
+}
+
+.image-viewer.controls-hidden:has(.viewer-tools-dropdown-panel),
+.image-viewer.controls-hidden:has(.image-info-drawer) {
+  cursor: default !important;
 }
 
 .image-viewer.controls-hidden .image-viewer-top-bar {
