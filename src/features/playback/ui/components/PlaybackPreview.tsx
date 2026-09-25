@@ -168,10 +168,22 @@ export function PlaybackPreview({
         onToggle();
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        onSeek(Math.min(duration, position + 5));
+        const delta = e.shiftKey ? 10 : 5;
+        onSeek(Math.min(duration, position + delta));
+        window.dispatchEvent(
+          new CustomEvent("prisma-global-seek-osd", {
+            detail: { direction: "forward", seconds: delta },
+          })
+        );
       } else if (e.key === "ArrowLeft") {
         e.preventDefault();
-        onSeek(Math.max(0, position - 5));
+        const delta = e.shiftKey ? 10 : 5;
+        onSeek(Math.max(0, position - delta));
+        window.dispatchEvent(
+          new CustomEvent("prisma-global-seek-osd", {
+            detail: { direction: "backward", seconds: delta },
+          })
+        );
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         onVolume(Math.min(100, (snapshot.volume ?? 100) + 5));

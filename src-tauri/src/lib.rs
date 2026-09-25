@@ -183,6 +183,19 @@ pub fn run() {
         || std::env::var("PRISMA_DEV").is_ok()
         || std::env::var("PRISMA_MULTI_INSTANCE").is_ok();
 
+    #[cfg(target_os = "windows")]
+    if is_dev_mode {
+        if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+            let dev_udf = std::path::PathBuf::from(local_app_data)
+                .join("com.biglexj.prisma.dev")
+                .join("EBWebView");
+            let _ = std::fs::create_dir_all(&dev_udf);
+            unsafe {
+                std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", dev_udf);
+            }
+        }
+    }
+
     let mut builder = tauri::Builder::default();
 
     if !is_dev_mode {

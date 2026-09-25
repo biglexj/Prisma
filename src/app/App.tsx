@@ -49,6 +49,7 @@ import { DspProvider } from "../features/dsp/DspContext";
 import { useGlobalFileDrop } from "./hooks/useGlobalFileDrop";
 import { Icon, type IconName } from "../shared/ui/Icon";
 import { VolumeOsd, useVolumeOsd } from "../shared/ui/VolumeOsd";
+import { SeekOsd, useSeekOsd } from "../shared/ui/SeekOsd";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
 import "../features/visual_library/ui/video-player.css";
@@ -99,6 +100,7 @@ function AppContent() {
   const { confirmDeletion, sidebarDensity, auroraOnlineServicesEnabled } = useSystemSettings();
   const playback = usePlaybackController();
   const { osdState: globalVolumeOsd, triggerOsd: showGlobalVolumeOsd } = useVolumeOsd(playback.snapshot.volume ?? 100, false);
+  const { osdState: globalSeekOsd, triggerSeekOsd: triggerGlobalSeekOsd } = useSeekOsd();
   const library = useMusicLibrary();
   const imageLibrary = useVisualLibrary("image");
   const videoLibrary = useVisualLibrary("video");
@@ -469,6 +471,7 @@ function AppContent() {
           } else {
             const current = playback.snapshot.positionSeconds ?? 0;
             void playback.seek(Math.max(0, current - 10));
+            triggerGlobalSeekOsd("backward", 10);
           }
           break;
         }
@@ -478,6 +481,7 @@ function AppContent() {
           } else {
             const current = playback.snapshot.positionSeconds ?? 0;
             void playback.seek(current + 10);
+            triggerGlobalSeekOsd("forward", 10);
           }
           break;
         }
@@ -767,15 +771,50 @@ function AppContent() {
           }
           return;
         }
+
+        // Avance y retroceso de 10s en música con Shift + Flechas o J / L
+        const isSeekFwd =
+          (e.shiftKey && e.key === "ArrowRight") ||
+          (e.key.toLowerCase() === "l" && !e.ctrlKey && !e.altKey && !e.metaKey);
+        const isSeekBack =
+          (e.shiftKey && e.key === "ArrowLeft") ||
+          (e.key.toLowerCase() === "j" && !e.ctrlKey && !e.altKey && !e.metaKey);
+
+        if (isSeekFwd) {
+          e.preventDefault();
+          const current = playback.snapshot.positionSeconds ?? 0;
+          const duration = playback.snapshot.durationSeconds ?? 0;
+          const next = duration > 0 ? Math.min(duration, current + 10) : current + 10;
+          void playback.seek(next);
+          triggerGlobalSeekOsd("forward", 10);
+          return;
+        }
+        if (isSeekBack) {
+          e.preventDefault();
+          const current = playback.snapshot.positionSeconds ?? 0;
+          const next = Math.max(0, current - 10);
+          void playback.seek(next);
+          triggerGlobalSeekOsd("backward", 10);
+          return;
+        }
+      }
+    };
+
+    const handleCustomSeekOsd = (ev: Event) => {
+      const customEv = ev as CustomEvent<{ direction: "forward" | "backward"; seconds?: number }>;
+      if (customEv.detail) {
+        triggerGlobalSeekOsd(customEv.detail.direction, customEv.detail.seconds ?? 10);
       }
     };
 
     window.addEventListener("keydown", handleGlobalKeyDown);
+    window.addEventListener("prisma-global-seek-osd", handleCustomSeekOsd);
     window.addEventListener("prisma-send-to-supergallery", handleSendToSuperGallery);
     window.addEventListener("contextmenu", handleGlobalContextMenu);
 
     return () => {
       window.removeEventListener("keydown", handleGlobalKeyDown);
+      window.removeEventListener("prisma-global-seek-osd", handleCustomSeekOsd);
       window.removeEventListener("prisma-open-converter", handleOpenConverter);
       window.removeEventListener("prisma-open-renamer", handleOpenRenamer);
       window.removeEventListener("prisma-open-duplicates", handleOpenDuplicates);
@@ -1312,6 +1351,14 @@ function AppContent() {
         style={{ position: "fixed", top: "24px", right: "28px" }}
         visible={globalVolumeOsd.visible && activeView !== "video_player"}
         volume={globalVolumeOsd.volume}
+      />
+
+      <SeekOsd
+        direction={globalSeekOsd.direction}
+        revision={globalSeekOsd.revision}
+        seconds={globalSeekOsd.seconds}
+        style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
+        visible={globalSeekOsd.visible && activeView !== "video_player"}
       />
     </div>
   );

@@ -86,7 +86,7 @@ export function ShortcutsSettingsPanel({ quickLookShortcut }: ShortcutsSettingsP
         badgeText: "Audio",
         items: [
           { id: "m_play_pause", label: "Reproducir / Pausar", keys: ["Espacio"] },
-          { id: "m_seek", label: "Retroceder / Avanzar 5 seg.", keys: ["←", "→"] },
+          { id: "m_seek", label: "Retroceder / Avanzar 10 seg.", keys: ["Shift + ←", "Shift + →"] },
           { id: "m_prev_next", label: "Pista anterior / siguiente", keys: ["P", "N"] },
           { id: "m_lyrics", label: "Alternar panel de Letras", keys: ["L"] },
           { id: "m_queue", label: "Cola de reproducción", keys: ["Q"] },

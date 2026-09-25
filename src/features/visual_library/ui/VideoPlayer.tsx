@@ -17,6 +17,7 @@ import { useVideoSnapshot } from "../hooks/useVideoSnapshot";
 import { useSystemSettings } from "../../../app/useSystemSettings";
 import { ImageComparisonModal } from "../../comparison";
 import { VolumeOsd, useVolumeOsd } from "../../../shared/ui/VolumeOsd";
+import { SeekOsd, useSeekOsd } from "../../../shared/ui/SeekOsd";
 import "./video-player.css";
 
 interface VideoPlayerProps {
@@ -86,6 +87,7 @@ export function VideoPlayer({
   const [volume, setVolume] = useState(100);
   const [prevVolume, setPrevVolume] = useState(80);
   const { osdState: volumeOsd, triggerOsd: showVolumeOsd } = useVolumeOsd(volume, false);
+  const { osdState: seekOsd, triggerSeekOsd } = useSeekOsd();
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [playlistSearch, setPlaylistSearch] = useState("");
   const [repeatMode, setRepeatMode] = useState<"off" | "all" | "one">(() => {
@@ -1017,6 +1019,7 @@ export function VideoPlayer({
               const nextPos = Math.max(0, videoRef.current.currentTime - 10);
               videoRef.current.currentTime = nextPos;
               setPosition(nextPos);
+              triggerSeekOsd("backward", 10);
             }
           } else {
             handlePrevious(true);
@@ -1028,6 +1031,7 @@ export function VideoPlayer({
             const nextPos = Math.max(0, videoRef.current.currentTime - 10);
             videoRef.current.currentTime = nextPos;
             setPosition(nextPos);
+            triggerSeekOsd("backward", 10);
           }
           break;
         case "arrowright":
@@ -1037,6 +1041,7 @@ export function VideoPlayer({
               const nextPos = Math.min(duration, videoRef.current.currentTime + 10);
               videoRef.current.currentTime = nextPos;
               setPosition(nextPos);
+              triggerSeekOsd("forward", 10);
             }
           } else {
             handleNext();
@@ -1048,6 +1053,7 @@ export function VideoPlayer({
             const nextPos = Math.min(duration, videoRef.current.currentTime + 10);
             videoRef.current.currentTime = nextPos;
             setPosition(nextPos);
+            triggerSeekOsd("forward", 10);
           }
           break;
         case "arrowup":
@@ -1145,6 +1151,9 @@ export function VideoPlayer({
         const nextPos = Math.max(0, Math.min(duration, videoRef.current.currentTime + delta));
         videoRef.current.currentTime = nextPos;
         setPosition(nextPos);
+        if (delta !== 0) {
+          triggerSeekOsd(delta > 0 ? "forward" : "backward", Math.abs(delta));
+        }
       }
     };
     const onRemoteVolume = (ev: Event) => {
@@ -2058,6 +2067,14 @@ export function VideoPlayer({
         isMuted={volumeOsd.isMuted}
         visible={volumeOsd.visible && !showControls}
         volume={volumeOsd.volume}
+      />
+
+      {/* Indicador flotante OSD de avance / retroceso: micro-rebote direccional con 40% de opacidad */}
+      <SeekOsd
+        direction={seekOsd.direction}
+        revision={seekOsd.revision}
+        seconds={seekOsd.seconds}
+        visible={seekOsd.visible && !showControls}
       />
     </section>
   );
