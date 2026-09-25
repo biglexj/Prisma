@@ -55,7 +55,7 @@ export function freePorts(ports: (number | string)[]): void {
 
 if (import.meta.main) {
     const args = process.argv.slice(2);
-    const targetPorts = args.length > 0 ? args : [1421, 49290];
+    const targetPorts = args.length > 0 ? args : [1421];
     for (const port of targetPorts) {
         freePort(port);
     }
