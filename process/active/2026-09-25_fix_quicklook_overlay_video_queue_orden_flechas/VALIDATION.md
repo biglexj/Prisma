@@ -52,13 +52,17 @@
        - Los botones de Anterior y Siguiente permanecen activos mientras existan 2 o más vídeos (`disabled={localVideoItems.length <= 1}`).
    - **Resultado**: ✅ Navegación circular continua y fluida en vídeos, homologando la experiencia de imágenes.
 
-6. **Unificación de la Tecla `F` para Pantalla Completa (Fullscreen)**:
-   - **Causa raíz identificada**: La tecla `F` estaba asignada a `stepFrameForward()` (avance de un solo fotograma y pausa), generando descontrol y rompiendo el estándar universal de reproductores de vídeo donde `F` activa/desactiva la pantalla completa (igual que en `ImageViewer.tsx`).
-   - **Solución implementada**:
-     - En `VideoPlayer.tsx`: la tecla `F` / `f` ahora invoca directamente `toggleFullscreen()`.
-     - El avance/retroceso por fotogramas conserva las combinaciones de acceso rápido `E` / `Shift+E` (estilo VLC) y `,` / `.` (universal).
-     - Actualizados tooltips de interfaz y atajos de teclado informativos.
-   - **Resultado**: ✅ Presionar `F` alterna pantalla completa al 10,000% sin pausas imprevistas ni desubicación de controles.
+6. **Configuración de Atajos: Fotogramas vs. Pantalla Completa**:
+   - **Esquema canónico de navegación por fotogramas ("F de Fotograma")**:
+     - `F`: Avanzar 1 fotograma (`stepFrameForward()`).
+     - `Shift + F`: Retroceder 1 fotograma (`stepFrameBackward()`).
+     - Soporte complementario: `E` / `Shift + E` (estilo VLC) y `.` / `,` (universal).
+   - **Esquema canónico de Pantalla Completa**:
+     - `F11`: Alternar pantalla completa (`toggleFullscreen()`).
+     - `Alt + Enter`: Alternar pantalla completa.
+     - Doble clic: Alternar pantalla completa sobre el vídeo.
+     - `Esc`: Salir de pantalla completa.
+   - **Resultado**: ✅ `F` y `Shift + F` avanzan y retroceden fotogramas con precisión quirúrgica, sin colisiones ni pérdidas de atajos.
 
 7. **Compilación Limpia**:
    - `cargo check`: Terminado con código 0 en 3.21s sin errores.

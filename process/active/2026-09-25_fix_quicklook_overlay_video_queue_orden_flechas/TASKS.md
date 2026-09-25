@@ -9,6 +9,6 @@
 - [x] 7. Frontend Visual: Encolar elementos relativos en `VisualLibrary.tsx` (línea de tiempo, vista de carpetas y selección externa).
 - [x] 8. Frontend Visual: Adaptar controles de teclado en `VideoPlayer.tsx` para navegación con flechas (`ArrowLeft` / `ArrowRight` para vídeo anterior/siguiente) y saltos temporales de 10s con `Shift`/`Ctrl` o teclas `J`/`L`.
 - [x] 9. Frontend Visual: Implementar navegación circular continua (wrap-around) en `VideoPlayer.tsx` (del último al primero y viceversa).
-- [x] 10. Frontend Visual: Unificar la tecla `F` en `VideoPlayer.tsx` para alternar Pantalla Completa (Fullscreen) al igual que en `ImageViewer.tsx`, reubicando el paso de fotograma a `E`/`Shift+E` y `,`/`.`.
+- [x] 10. Frontend Visual: Preservar `F` y `Shift + F` para avance y retroceso de fotograma ("F de Fotograma") junto a `E`/`Shift+E` y `,`/`.`, manteniendo `F11`, `Alt + Enter` y doble clic para pantalla completa.
 - [x] 11. Verificación de compilación (`cargo check` y `bun run build`).
 - [x] 12. Validación integral y registro de resultados en `VALIDATION.md`.
