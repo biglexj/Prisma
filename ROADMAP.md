@@ -34,6 +34,13 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
     - Exploración secuencial continua de imágenes, vídeos, pistas de audio y documentos dentro de la misma carpeta mediante atajos de teclado (`ArrowLeft` / `ArrowRight`, `PageUp` / `PageDown`) y botones flotantes laterales en la ventana sin salir de la vista previa.
     - Invalidación reactiva de caché al sustituir o editar archivos en caliente (`modifiedMillis`).
     - Encolado inteligente al abrir pistas de audio externas: escaneo de canciones en la carpeta inmediata con orden natural, asignación del nombre de la carpeta contenedora a la cola y reproducción circular continua comenzando por la canción elegida como #1.
+  - **Copia al Portapapeles y Ergonomía en Visor de Imágenes y Galería**:
+    - Copia directa de imágenes al portapapeles (`Ctrl + C`, botón central en cabecera y menú de herramientas) lista para pegar en mensajería o editores externos.
+    - Acción «Copiar imagen» en el menú contextual de la cuadrícula de la galería.
+    - Ocultamiento automático de barras de herramientas tras 3 segundos de inactividad garantizado en imágenes panorámicas 16:9 y verticales, con desvanecimiento inmediato al pulsar en área libre.
+  - **Proyección de Vídeo con OSDs Universales y Atajos Canónicos**:
+    - Atajos de navegación `←` / `→` para saltar de vídeo (como `P` / `N`) y `Mayús + ←` / `Mayús + →` para saltos temporales de 10s con animación direccional Seek OSD.
+    - Desacoplamiento total de indicadores OSD respecto al aspect ratio del vídeo: Seek OSD anclado a los laterales de pantalla y Volume OSD en la esquina superior derecha, respondiendo con posicionamiento fijo sin invadir fotogramas verticales ni cuadrados.
   - **Refinamiento de Modo Fijado (*Pin Always-on-Top*) y Blindaje en Vídeo**:
     - Fijación nativa de Quick Look en primer plano (`set_always_on_top`) inmune a desenfoques, cambio de ventanas o pulsaciones en otras aplicaciones del sistema operativo.
     - Actualización reactiva de la vista previa al pulsar `Espacio` sobre otro archivo en el Explorador de Windows manteniendo la ventana fijada abierta.

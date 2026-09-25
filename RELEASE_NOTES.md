@@ -15,12 +15,14 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
-## [1.1.6] - 2026-09-24
+## [1.1.6] - 2026-09-25
 
 ### Resumen
 **Prisma v1.1.6** expande sustancialmente la ergonomía y versatilidad de la suite con la llegada de la **navegación secuencial multiformato** en Quick Look y el **encolado inteligente de música externa**. Ahora es posible explorar de forma continua todas las imágenes, vídeos, pistas de audio y documentos de una misma carpeta usando atajos de teclado o botones flotantes laterales, manteniendo la vista previa activa y sin pérdida de contexto. Al abrir una canción desde el Explorador de Windows o mediante «Abrir en Prisma», la aplicación reconoce el entorno de la pista, escanea de manera silenciosa las canciones vecinas y organiza una cola de reproducción nombrada según la carpeta contenedora, situando el tema elegido en primer lugar para una escucha continuada y circular.
 
 La experiencia multitarea se fortalece mediante el **perfeccionamiento integral del modo fijado (*Pin Always-on-Top*)** en Quick Look. La vista previa puede fijarse al frente con el botón dedicado o el atajo `P`, permaneciendo visible por encima de cualquier otra aplicación sin cerrarse inesperadamente al escribir, cambiar de foco o interactuar con el sistema operativo. Además, la ventana fijada se actualiza dinámicamente al pulsar la barra espaciadora sobre otro archivo en el Explorador de archivos sin necesidad de reabrirla, y se elimina todo tipo de parpadeo visual o recentrado involuntario al previsualizar clips de vídeo de alta definición en contenedores MKV.
+
+La suite visual y de proyección cinemática recibe un salto en ergonomía con la incorporación de **copia directa al portapapeles** (`Ctrl + C` o menú de opciones) tanto en el visor de imágenes como en la galería, facilitando compartir capturas y fotografías de inmediato en aplicaciones externas. Asimismo, se perfecciona la inmersión del usuario: los visores de imágenes y vídeo cuentan ahora con un auto-ocultamiento limpio de controles tras 3 segundos de inactividad del cursor (garantizado en cualquier relación de aspecto e imágenes panorámicas 16:9), desvanecimiento instantáneo al hacer clic sobre áreas libres y atajos canónicos unificados con flechas solas para navegar de archivo y `Mayús + Flechas` para saltos de 10 segundos, respaldados por indicadores flotantes OSD universales fijados al marco de la ventana.
 
 Se optimiza además la estabilidad y continuidad de la suite con una renovación del comando **«Reiniciar Prisma»** en el menú contextual de la bandeja del sistema (*System Tray*). Gracias a un proceso de reinicio desacoplado, la aplicación libera limpiamente la sesión previa y arranca de inmediato la nueva instancia en segundo plano, evitando colisiones de instancia única y garantizando una recuperación inmediata ante cualquier eventualidad sin requerir la intervención manual del usuario.
 
@@ -36,6 +38,15 @@ Por último, se perfecciona la experiencia acústica y visual integrando **calib
   - Detección automática de pistas de música al reproducir un archivo de audio externo desde el sistema operativo.
   - Generación instantánea de una cola de reproducción con el nombre de la carpeta contenedora, descartando archivos no musicales y subcarpetas.
   - Inicio inmediato del tema seleccionado como pista #1, manteniendo el resto de canciones en orden natural y con ciclo de reproducción continuo.
+- **Copia Directa al Portapapeles y Ergonomía en Visores**:
+  - Copia instantánea de la imagen actual al portapapeles mediante botón central en cabecera, opción en menú de herramientas o atajo `Ctrl + C`.
+  - Acción «Copiar imagen» disponible en el menú contextual de tarjetas en la galería visual.
+  - Ocultamiento automático de barras y controles tras 3 segundos de inactividad, con soporte universal para formatos anchos 16:9 y verticales.
+  - Desvanecimiento reactivo inmediato de herramientas al hacer un clic en el lienzo libre sin arrastre.
+- **Proyección de Vídeo con OSDs Universales y Atajos Canónicos**:
+  - Atajos de navegación rápidos: `←` / `→` para saltar de vídeo (como `P` / `N`) y `Mayús + ←` / `Mayús + →` para salto temporal de 10s.
+  - Indicador flotante Seek OSD (-10s / +10s) con rebote direccional y transparencia sutil, anclado a los laterales de la ventana sin invadir el fotograma del vídeo en formatos verticales o cuadrados.
+  - Indicador flotante Volume OSD fijado en la esquina superior derecha de la ventana, visible reactivamente en atajos de volumen y rueda de ratón.
 - **Modo Fijado (*Pin Always-on-Top*) Robusto y Blindaje en Vídeo**:
   - Fijación permanente de la ventana de Quick Look en primer plano sin cerrarse al cambiar de ventana o teclear en otras aplicaciones.
   - Actualización reactiva de la vista previa al seleccionar otro elemento y presionar la barra espaciadora en el Explorador de Windows.

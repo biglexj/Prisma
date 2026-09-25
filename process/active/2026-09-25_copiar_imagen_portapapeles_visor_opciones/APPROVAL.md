@@ -1,6 +1,6 @@
 # Aprobación: Función Copiar Imagen al Portapapeles
 
-- Estado: En progreso
+- Estado: Aprobado
 - Criterios de aceptación:
   - Función de copiar imagen funcional en visor y menú contextual.
   - Botón fullscreen retirado del visor de imágenes.
