@@ -4,7 +4,7 @@
   "version": "1.1.6",
   "type": "module",
   "scripts": {
-    "predev": "bun run scripts/free-port.ts 1421",
+    "predev": "bun run scripts/free-port.ts 1421 49290",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "build:web": "tsc --noEmit && vite build",
