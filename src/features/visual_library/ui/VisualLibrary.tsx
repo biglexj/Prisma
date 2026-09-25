@@ -22,9 +22,15 @@ import { ImageViewer } from "./ImageViewer";
 import { ImageEditor } from "./editor/ImageEditor";
 import { ExifDetailsModal } from "./components/ExifDetailsModal";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
+import { resolveVisualSessionForPath } from "../services/visualSessionResolver";
 import "./visual-library.css";
 
 const VISIBLE_ITEM_LIMIT = 400;
+
+const naturalCollator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: "base",
+});
 
 type ViewMode = "timeline" | "folders" | "tree";
 export type VisualSortField = "date" | "name" | "size" | "random";
@@ -216,9 +222,22 @@ export function VisualLibrary({
       : (viewMode === "timeline" ? sortedNonExcludedItems : sortItemList(nonExcludedItems))
   );
 
+  const getFolderSiblings = (item: VisualLibraryItem): VisualLibraryItem[] => {
+    const siblings = nonExcludedItems.filter((it) => {
+      if (item.sourcePath && it.sourcePath) {
+        return it.sourcePath === item.sourcePath && it.relativeFolder === item.relativeFolder;
+      }
+      return it.relativeFolder === item.relativeFolder;
+    });
+    const itemsToSort = siblings.length > 0 ? siblings : [item];
+    return [...itemsToSort].sort((a, b) =>
+      naturalCollator.compare(a.title || a.path, b.title || b.path),
+    );
+  };
+
   const handleSelectImage = (item: VisualLibraryItem, queueList?: VisualLibraryItem[]) => {
     setSelectedImage(item);
-    setActiveImageSessionList(queueList ?? null);
+    setActiveImageSessionList(queueList ?? getFolderSiblings(item));
   };
 
   const closeImageViewer = () => {
@@ -233,7 +252,10 @@ export function VisualLibrary({
 
   const handlePlayFolderVideos = (folderItems: VisualLibraryItem[]) => {
     if (folderItems.length === 0) return;
-    onOpenVideo(folderItems[0].path, folderItems);
+    const sortedFolderItems = [...folderItems].sort((a, b) =>
+      naturalCollator.compare(a.title || a.path, b.title || b.path),
+    );
+    onOpenVideo(sortedFolderItems[0].path, sortedFolderItems);
   };
 
   const handleCardContextMenu = (event: React.MouseEvent, item: VisualLibraryItem) => {
@@ -490,19 +512,16 @@ export function VisualLibrary({
   // Abrir imagen seleccionada externamente (por ejemplo, desde Inicio o sistema)
   useEffect(() => {
     if (initialSelectedImagePath) {
-      const found = nonExcludedItems.find((it) => it.path === initialSelectedImagePath) || {
-        path: initialSelectedImagePath,
-        title: initialSelectedImagePath.replace(/\\/g, "/").split("/").pop() || "Imagen",
-        sourcePath: "",
-        relativeFolder: "",
-        kind: "image" as const,
-        modifiedAtMillis: Date.now(),
-        sizeBytes: 0,
-      };
-      handleSelectImage(found, nonExcludedItems);
-      onClearInitialSelectedImage?.();
+      void resolveVisualSessionForPath(initialSelectedImagePath, "image", items).then((session) => {
+        const found =
+          session.items.find((it) => it.path === initialSelectedImagePath) || session.items[0];
+        if (found) {
+          handleSelectImage(found, session.items);
+        }
+        onClearInitialSelectedImage?.();
+      });
     }
-  }, [initialSelectedImagePath, nonExcludedItems]);
+  }, [initialSelectedImagePath, items]);
 
   // Preservar y restaurar la posición exacta del scroll al navegar o volver
   useScrollRestoration(`view:${kind}:${viewMode}:${currentFolderPath}`, !loading);
@@ -758,10 +777,11 @@ export function VisualLibrary({
                       if (!isImage) {
                         triggerActivation(item.path);
                       }
+                      const folderSiblings = getFolderSiblings(item);
                       if (isImage) {
-                        handleSelectImage(item, sortedNonExcludedItems);
+                        handleSelectImage(item, folderSiblings);
                       } else {
-                        onOpenVideo(item.path, sortedNonExcludedItems);
+                        onOpenVideo(item.path, folderSiblings);
                       }
                     }}
                     onContextMenu={(event) => handleCardContextMenu(event, item)}

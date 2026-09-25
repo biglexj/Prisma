@@ -19,6 +19,12 @@ export interface VisualLibraryItem {
   isExcluded?: boolean;
 }
 
+export interface FolderVisualItemsResult {
+  folderName: string;
+  targetIndex: number;
+  items: VisualLibraryItem[];
+}
+
 export interface ImageExifData {
   path: string;
   fileName: string;

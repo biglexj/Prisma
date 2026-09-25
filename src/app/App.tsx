@@ -22,6 +22,7 @@ import { AppSidebar, type AppView } from "./ui/AppSidebar";
 import { LibrarySources } from "./ui/LibrarySources";
 import { parseTrackInfo, resolveLibraryTrackInfo } from "../features/music_library/model/trackInfo";
 import { resolveMusicQueueForPath } from "../features/playback/services/folderQueueResolver";
+import { resolveVisualSessionForPath } from "../features/visual_library/services/visualSessionResolver";
 import { FavoritesView } from "../features/collections/ui/FavoritesView";
 import { HistoryView } from "../features/collections/ui/HistoryView";
 import { PlaylistsView } from "../features/collections/ui/PlaylistsView";
@@ -171,50 +172,71 @@ function AppContent() {
     [library.items, playback],
   );
 
-  const playVideoItem = useCallback((path: string, sessionItems?: VisualLibraryItem[], initialTime?: number) => {
-    addToHistory(path, "video");
-    if (!playback.snapshot.paused) {
-      void playback.toggle();
-    }
-    setActiveVideoInitialTime(initialTime);
-    if (activeView !== "video_player") {
-      setVideoReturnView(activeView);
-    }
-    setActiveVideoPath(path);
-    const itemsToUse = sessionItems && sessionItems.length > 0 ? sessionItems : videoLibrary.items;
-    const hasPath = itemsToUse.some((it) => it.path === path);
-    if (!hasPath) {
-      const fileName = path.replace(/\\/g, "/").split("/").pop() || "Vídeo";
-      setActiveVideoSessionItems([
-        {
-          path,
-          title: fileName,
-          sourcePath: "",
-          relativeFolder: "",
-          kind: "video" as const,
-          modifiedAtMillis: Date.now(),
-          sizeBytes: 0,
-        },
-        ...itemsToUse,
-      ]);
-    } else {
-      setActiveVideoSessionItems(itemsToUse);
-    }
+  const playVideoItem = useCallback(
+    async (path: string, sessionItems?: VisualLibraryItem[], initialTime?: number) => {
+      addToHistory(path, "video");
 
-    // Si ya estamos en PiP, mantenerse en la vista actual (ej. galería) y reemplazar el vídeo en la ventana flotante.
-    // Si no estamos en PiP, navegar a la pantalla completa del reproductor.
-    if (!isPip) {
-      setActiveView("video_player");
-    }
-
-    if (activeVideoPath === path) {
-      const videoEl = document.querySelector<HTMLVideoElement>("video.video-stage-surface, video.video-player-media, video");
-      if (videoEl) {
-        videoEl.currentTime = initialTime ?? 0;
-        void videoEl.play().catch(() => {});
+      if (resumeTimeoutRef.current) {
+        window.clearTimeout(resumeTimeoutRef.current);
+        resumeTimeoutRef.current = null;
       }
-    }
-  }, [activeView, activeVideoPath, isPip, playback, videoLibrary.items]);
+      wasPlayingBeforeQuickLookRef.current = false;
+      wasVideoPlayingBeforeQuickLookRef.current = false;
+
+      // Pausar música estrictamente sin toggle para no reanudar accidentalmente
+      void playback.pause();
+
+      setActiveVideoInitialTime(initialTime);
+      if (activeView !== "video_player") {
+        setVideoReturnView(activeView);
+      }
+      setActiveVideoPath(path);
+
+      let itemsToUse: VisualLibraryItem[];
+      if (sessionItems && sessionItems.length > 0) {
+        itemsToUse = sessionItems;
+      } else {
+        const res = await resolveVisualSessionForPath(path, "video", videoLibrary.items);
+        itemsToUse = res.items;
+      }
+
+      const hasPath = itemsToUse.some((it) => it.path === path);
+      if (!hasPath) {
+        const fileName = path.replace(/\\/g, "/").split("/").pop() || "Vídeo";
+        setActiveVideoSessionItems([
+          {
+            path,
+            title: fileName,
+            sourcePath: "",
+            relativeFolder: "",
+            kind: "video" as const,
+            modifiedAtMillis: Date.now(),
+            sizeBytes: 0,
+          },
+          ...itemsToUse,
+        ]);
+      } else {
+        setActiveVideoSessionItems(itemsToUse);
+      }
+
+      // Si ya estamos en PiP, mantenerse en la vista actual (ej. galería) y reemplazar el vídeo en la ventana flotante.
+      // Si no estamos en PiP, navegar a la pantalla completa del reproductor.
+      if (!isPip) {
+        setActiveView("video_player");
+      }
+
+      if (activeVideoPath === path) {
+        const videoEl = document.querySelector<HTMLVideoElement>(
+          "video.video-stage-surface, video.video-player-media, video",
+        );
+        if (videoEl) {
+          videoEl.currentTime = initialTime ?? 0;
+          void videoEl.play().catch(() => {});
+        }
+      }
+    },
+    [activeView, activeVideoPath, isPip, playback, videoLibrary.items],
+  );
 
   const handleOpenFile = useCallback((filePath: string, initialTime?: number, editMode?: boolean) => {
     const lower = filePath.toLowerCase();
@@ -267,11 +289,9 @@ function AppContent() {
       setActiveInitialImagePath(null);
       playMusicItem(filePath, true, initialTime);
     } else if (isVideo) {
-      if (!playback.snapshot.paused) {
-        void playback.toggle();
-      }
+      void playback.pause();
       setActiveInitialImagePath(null);
-      playVideoItem(filePath, undefined, initialTime);
+      void playVideoItem(filePath, undefined, initialTime);
     } else if (isImage) {
       if (document.pictureInPictureElement) {
         void document.exitPictureInPicture().catch(() => { });
@@ -719,6 +739,16 @@ function AppContent() {
     playbackRef.current = playback;
   }, [playback]);
 
+  const activeViewRef = useRef(activeView);
+  useEffect(() => {
+    activeViewRef.current = activeView;
+  }, [activeView]);
+
+  const activeVideoPathRef = useRef(activeVideoPath);
+  useEffect(() => {
+    activeVideoPathRef.current = activeVideoPath;
+  }, [activeVideoPath]);
+
   useEffect(() => {
     const unlistenPreviewPromise = listen<QuickLookPayload>("quicklook://preview", (event) => {
       if (resumeTimeoutRef.current) {
@@ -756,12 +786,18 @@ function AppContent() {
         resumeTimeoutRef.current = null;
 
         // Al cerrar QuickLook (descartar), si la música de Prisma estaba sonando antes, reanudarla
-        if (wasPlayingBeforeQuickLookRef.current) {
+        // SOLO si no estamos actualmente en el reproductor de vídeo ni hay un vídeo activo
+        const isVideoActive =
+          activeViewRef.current === "video_player" || Boolean(activeVideoPathRef.current);
+
+        if (wasPlayingBeforeQuickLookRef.current && !isVideoActive) {
           wasPlayingBeforeQuickLookRef.current = false;
           const currentSnap = playbackRef.current.snapshot;
           if (currentSnap.paused && currentSnap.path) {
             void playbackRef.current.resume();
           }
+        } else {
+          wasPlayingBeforeQuickLookRef.current = false;
         }
 
         // Al cerrar QuickLook, si el vídeo de Prisma estaba sonando antes, reanudarlo

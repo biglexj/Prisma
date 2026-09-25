@@ -68,7 +68,7 @@ use app::commands::visual_library::{
     visual_library_image_preview, visual_library_list_excluded_folders,
     visual_library_list_folders, visual_library_list_items,
     visual_library_move_duplicates, visual_library_remove_excluded_folder, visual_library_remove_folder,
-    visual_library_replace_duplicate, visual_library_rescan_folder, visual_library_scan_duplicates, visual_library_sync_pip_icon,
+    visual_library_replace_duplicate, visual_library_rescan_folder, visual_library_scan_duplicates, visual_library_scan_folder_items, visual_library_sync_pip_icon,
 };
 use app::commands::wallpapers::{wallpaper_save_and_apply, wallpaper_set_desktop};
 use app::state::{
@@ -281,6 +281,8 @@ pub fn run() {
             tauri_plugin_window_state::Builder::default()
                 .with_filename(if is_dev_mode { ".window-state-dev.json" } else { ".window-state-v2.json" })
                 .skip_initial_state("main")
+                .skip_initial_state("quicklook")
+                .with_denylist(&["quicklook"])
                 .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
                 .build(),
         )
@@ -504,6 +506,7 @@ pub fn run() {
             visual_library_image_preview,
             visual_library_sync_pip_icon,
             visual_library_scan_duplicates,
+            visual_library_scan_folder_items,
             visual_library_replace_duplicate,
             visual_library_move_duplicates,
             media_delete_items,

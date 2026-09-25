@@ -69,7 +69,7 @@ impl QuickLookState {
         super::keyboard_hook::set_pinned_state(pinned);
         ql_log!("Modo fijado/bloqueado: {}", pinned);
         if let Some(window) = self.app_handle.get_webview_window("quicklook") {
-            let _ = window.set_always_on_top(pinned);
+            let _ = window.set_always_on_top(true);
         }
     }
 
@@ -171,45 +171,45 @@ impl QuickLookState {
             let is_max = crate::app::commands::quick_look::quick_look_is_maximized(window.clone());
             if !is_max {
                 let _ = window.set_size(tauri::LogicalSize::new(target_w, target_h));
-                if !already_open && !is_pinned {
+                if !is_pinned {
                     let _ = window.center();
                 }
             }
-            let _ = window.set_always_on_top(is_pinned);
+            let _ = window.set_always_on_top(true);
             let _ = window.emit("quicklook://preview", &payload);
 
-            if !already_open {
-                #[cfg(windows)]
-                {
-                    if let Ok(hwnd) = window.hwnd() {
-                        use windows::Win32::Foundation::HWND;
-                        use windows::Win32::UI::WindowsAndMessaging::{
-                            ShowWindow, SW_SHOWNOACTIVATE, SetWindowPos, HWND_TOP,
-                            SWP_NOMOVE, SWP_NOSIZE, SWP_NOACTIVATE, SWP_SHOWWINDOW,
-                        };
-                        unsafe {
-                            let win_hwnd = HWND(hwnd.0);
+            #[cfg(windows)]
+            {
+                if let Ok(hwnd) = window.hwnd() {
+                    use windows::Win32::Foundation::HWND;
+                    use windows::Win32::UI::WindowsAndMessaging::{
+                        ShowWindow, SW_SHOWNOACTIVATE, SetWindowPos, HWND_TOPMOST,
+                        SWP_NOMOVE, SWP_NOSIZE, SWP_NOACTIVATE, SWP_SHOWWINDOW,
+                    };
+                    unsafe {
+                        let win_hwnd = HWND(hwnd.0);
+                        if !already_open {
                             let _ = ShowWindow(win_hwnd, SW_SHOWNOACTIVATE);
-                            let _ = SetWindowPos(
-                                win_hwnd,
-                                HWND_TOP,
-                                0,
-                                0,
-                                0,
-                                0,
-                                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
-                            );
                         }
-                    } else {
-                        let _ = window.show();
-                        let _ = window.unminimize();
+                        let _ = SetWindowPos(
+                            win_hwnd,
+                            HWND_TOPMOST,
+                            0,
+                            0,
+                            0,
+                            0,
+                            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+                        );
                     }
-                }
-                #[cfg(not(windows))]
-                {
+                } else if !already_open {
                     let _ = window.show();
                     let _ = window.unminimize();
                 }
+            }
+            #[cfg(not(windows))]
+            if !already_open {
+                let _ = window.show();
+                let _ = window.unminimize();
             }
 
             set_preview_open(true);
@@ -452,14 +452,31 @@ impl QuickLookState {
 
     #[cfg(windows)]
     pub fn is_foreground_quicklook(&self) -> bool {
-        use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+        use windows::Win32::UI::WindowsAndMessaging::{GetAncestor, GetForegroundWindow, GA_ROOT};
         unsafe {
             let fg = GetForegroundWindow();
             if fg.0.is_null() { return false; }
-            let mut pid = 0u32;
-            GetWindowThreadProcessId(fg, Some(&mut pid));
-            let my_pid = windows::Win32::System::Threading::GetCurrentProcessId();
-            pid != 0 && pid == my_pid
+            let root = GetAncestor(fg, GA_ROOT);
+            let effective_fg = if !root.0.is_null() { root } else { fg };
+
+            if let Some(w) = self.app_handle.get_webview_window("quicklook") {
+                if let Ok(hwnd) = w.hwnd() {
+                    if effective_fg.0 == hwnd.0 || fg.0 == hwnd.0 {
+                        return true;
+                    }
+                }
+            }
+            let detached = self.detached_payloads.lock().unwrap();
+            for label in detached.keys() {
+                if let Some(w) = self.app_handle.get_webview_window(label) {
+                    if let Ok(hwnd) = w.hwnd() {
+                        if effective_fg.0 == hwnd.0 || fg.0 == hwnd.0 {
+                            return true;
+                        }
+                    }
+                }
+            }
+            false
         }
     }
 
@@ -492,7 +509,6 @@ impl QuickLookState {
 
         if let Some(window) = self.app_handle.get_webview_window("quicklook") {
             let _ = window.emit("quicklook://hide", ());
-            let _ = window.set_always_on_top(false);
             #[cfg(windows)]
             {
                 if let Ok(hwnd) = window.hwnd() {

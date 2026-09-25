@@ -233,10 +233,18 @@ pub fn quick_look_set_position(window: tauri::WebviewWindow, x: f64, y: f64) -> 
 }
 
 #[tauri::command]
-pub fn quick_look_set_size(window: tauri::WebviewWindow, width: f64, height: f64) -> Result<(), String> {
+pub fn quick_look_set_size(
+    window: tauri::WebviewWindow,
+    state: State<'_, QuickLookState>,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
     let is_max = quick_look_is_maximized(window.clone());
     if !is_max {
         let _ = window.set_size(tauri::LogicalSize::new(width, height));
+        if !state.is_pinned() {
+            let _ = window.center();
+        }
     }
     Ok(())
 }

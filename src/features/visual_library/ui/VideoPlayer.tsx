@@ -730,14 +730,14 @@ export function VideoPlayer({
     }
   };
 
-  const handlePrevious = () => {
+  const handlePrevious = (forceTrackChange = false) => {
     setShowControls(true);
     if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
     controlsTimeoutRef.current = window.setTimeout(() => {
       setShowControls(false);
     }, 3500);
 
-    if (position > 3 && videoRef.current) {
+    if (!forceTrackChange && position > 3 && videoRef.current) {
       videoRef.current.currentTime = 0;
       return;
     }
@@ -991,6 +991,17 @@ export function VideoPlayer({
           togglePlay();
           break;
         case "arrowleft":
+          e.preventDefault();
+          if (e.shiftKey || e.ctrlKey) {
+            if (videoRef.current) {
+              const nextPos = Math.max(0, videoRef.current.currentTime - 10);
+              videoRef.current.currentTime = nextPos;
+              setPosition(nextPos);
+            }
+          } else {
+            handlePrevious(true);
+          }
+          break;
         case "j":
           e.preventDefault();
           if (videoRef.current) {
@@ -1000,6 +1011,17 @@ export function VideoPlayer({
           }
           break;
         case "arrowright":
+          e.preventDefault();
+          if (e.shiftKey || e.ctrlKey) {
+            if (videoRef.current) {
+              const nextPos = Math.min(duration, videoRef.current.currentTime + 10);
+              videoRef.current.currentTime = nextPos;
+              setPosition(nextPos);
+            }
+          } else {
+            handleNext();
+          }
+          break;
         case "l":
           e.preventDefault();
           if (videoRef.current) {
@@ -1719,8 +1741,8 @@ export function VideoPlayer({
               aria-label="Anterior"
               className="video-icon-btn"
               disabled={!hasPrevious && repeatMode !== "all"}
-              onClick={handlePrevious}
-              title="Vídeo anterior (P)"
+              onClick={() => handlePrevious(true)}
+              title="Vídeo anterior (← / P)"
             >
               <Icon name="chevron-left" />
             </button>
@@ -1735,7 +1757,7 @@ export function VideoPlayer({
                   setPosition(nextPos);
                 }
               }}
-              title="Retroceder 10 segundos (← / J)"
+              title="Retroceder 10 segundos (Shift+← / J)"
             >
               <span className="btn-label-icon">-10s</span>
             </button>
@@ -1779,7 +1801,7 @@ export function VideoPlayer({
                   setPosition(nextPos);
                 }
               }}
-              title="Avanzar 10 segundos (→ / L)"
+              title="Avanzar 10 segundos (Shift+→ / L)"
             >
               <span className="btn-label-icon">+10s</span>
             </button>
@@ -1789,7 +1811,7 @@ export function VideoPlayer({
               className="video-icon-btn"
               disabled={!hasNext && repeatMode !== "all"}
               onClick={handleNext}
-              title="Vídeo siguiente (N)"
+              title="Vídeo siguiente (→ / N)"
             >
               <Icon name="chevron-right" />
             </button>

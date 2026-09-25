@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   DuplicateGroup,
   DuplicateScanOptions,
+  FolderVisualItemsResult,
   VisualFolderSource,
   VisualLibraryItem,
   VisualMediaKind,
@@ -24,6 +25,8 @@ export const visualLibraryClient = {
     invoke<VisualFolderSource[]>("visual_library_remove_excluded_folder", { path, kind }),
   listItems: (kind: VisualMediaKind) =>
     invoke<VisualLibraryItem[]>("visual_library_list_items", { kind }),
+  scanFolderItems: (filePath: string, kind: VisualMediaKind) =>
+    invoke<FolderVisualItemsResult>("visual_library_scan_folder_items", { filePath, kind }),
   imagePreview: (path: string) =>
     invoke<string | null>("visual_library_image_preview", { path }),
   scanDuplicates: (kind: VisualMediaKind, options: DuplicateScanOptions) =>

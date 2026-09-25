@@ -837,4 +837,155 @@ pub async fn video_get_playback_source(
     .map_err(|e| format!("Fallo en hilo de resolución de vídeo: {e}"))?
 }
 
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FolderVisualItemsResult {
+    pub folder_name: String,
+    pub target_index: usize,
+    pub items: Vec<VisualLibraryItem>,
+}
+
+#[tauri::command]
+pub async fn visual_library_scan_folder_items(
+    file_path: String,
+    kind: VisualMediaKind,
+) -> Result<FolderVisualItemsResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean_target = crate::features::folder_session::clean_path_str(&file_path);
+        let path = Path::new(&clean_target);
+        let canonical_file = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+        let parent = match canonical_file.parent() {
+            Some(p) if p.is_dir() => p,
+            _ => {
+                let stem = canonical_file
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("Elemento")
+                    .to_string();
+                return Ok(FolderVisualItemsResult {
+                    folder_name: kind.label().to_string(),
+                    target_index: 0,
+                    items: vec![VisualLibraryItem {
+                        title: stem,
+                        path: clean_target,
+                        source_path: String::new(),
+                        relative_folder: kind.label().to_string(),
+                        kind,
+                        modified_at_millis: 0,
+                        size_bytes: 0,
+                        is_excluded: false,
+                    }],
+                });
+            }
+        };
+
+        let folder_name = parent
+            .file_name()
+            .and_then(|n| n.to_str())
+            .filter(|n| !n.is_empty())
+            .unwrap_or(kind.label())
+            .to_string();
+
+        let entries = match std::fs::read_dir(parent) {
+            Ok(e) => e,
+            Err(_) => {
+                let stem = canonical_file
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("Elemento")
+                    .to_string();
+                return Ok(FolderVisualItemsResult {
+                    folder_name: folder_name.clone(),
+                    target_index: 0,
+                    items: vec![VisualLibraryItem {
+                        title: stem,
+                        path: clean_target,
+                        source_path: String::new(),
+                        relative_folder: folder_name,
+                        kind,
+                        modified_at_millis: 0,
+                        size_bytes: 0,
+                        is_excluded: false,
+                    }],
+                });
+            }
+        };
+
+        let mut collected: Vec<(std::path::PathBuf, String, u128, u64)> = Vec::new();
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if !p.is_file() {
+                continue;
+            }
+            if crate::features::folder_session::classify_path(&p) != Some(kind.family()) {
+                continue;
+            }
+            let file_name = match p.file_name().and_then(|n| n.to_str()) {
+                Some(n) => n,
+                None => continue,
+            };
+            if file_name.starts_with('.') || file_name.starts_with('~') || file_name.starts_with('$') {
+                continue;
+            }
+            let stem = p
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or(file_name)
+                .to_string();
+            let meta = entry.metadata().ok();
+            let mod_time = meta
+                .as_ref()
+                .and_then(|m| m.modified().ok())
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|d| d.as_millis())
+                .unwrap_or(0);
+            let size = meta.as_ref().map(|m| m.len()).unwrap_or(0);
+            collected.push((p, stem, mod_time, size));
+        }
+
+        // Orden natural canónico correlativo
+        collected.sort_by(|a, b| {
+            let name_a = a.0.file_name().map(|n| n.to_string_lossy()).unwrap_or_default();
+            let name_b = b.0.file_name().map(|n| n.to_string_lossy()).unwrap_or_default();
+            crate::features::folder_session::compare_naturally(&name_a, &name_b)
+        });
+
+        let target_name_lower = canonical_file
+            .file_name()
+            .map(|n| n.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+
+        let pos = collected.iter().position(|(p, _, _, _)| {
+            p == &canonical_file
+                || p.file_name().map(|n| n.to_string_lossy().to_lowercase()) == Some(target_name_lower.clone())
+                || p.canonicalize().ok() == Some(canonical_file.clone())
+        });
+
+        let target_index = pos.unwrap_or(0);
+
+        let parent_str = crate::features::folder_session::clean_path(parent);
+        let items: Vec<VisualLibraryItem> = collected
+            .into_iter()
+            .map(|(p, stem, mod_time, size)| VisualLibraryItem {
+                path: crate::features::folder_session::clean_path(&p),
+                title: stem,
+                source_path: parent_str.clone(),
+                relative_folder: folder_name.clone(),
+                kind,
+                modified_at_millis: mod_time,
+                size_bytes: size,
+                is_excluded: false,
+            })
+            .collect();
+
+        Ok(FolderVisualItemsResult {
+            folder_name,
+            target_index,
+            items,
+        })
+    })
+    .await
+    .map_err(|e| format!("Fallo en escaneo de elementos de carpeta visual: {e}"))?
+}
+
 
