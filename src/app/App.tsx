@@ -1352,7 +1352,7 @@ function AppContent() {
         direction={globalSeekOsd.direction}
         revision={globalSeekOsd.revision}
         seconds={globalSeekOsd.seconds}
-        style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
+        style={{ position: "fixed" }}
         visible={globalSeekOsd.visible && activeView !== "video_player"}
       />
     </div>

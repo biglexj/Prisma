@@ -7,8 +7,6 @@
 .prisma-seek-osd {
   position: absolute;
   top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   z-index: 95;
   display: flex;
   align-items: center;
@@ -16,25 +14,57 @@
   pointer-events: none;
   user-select: none;
   box-sizing: border-box;
-  animation: prismaSeekOsdFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes prismaSeekOsdFade {
+.prisma-seek-osd.is-forward {
+  right: clamp(28px, 6vw, 68px);
+  left: auto;
+  transform: translateY(-50%);
+  animation: prismaSeekOsdFadeRight 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.prisma-seek-osd.is-backward {
+  left: clamp(28px, 6vw, 68px);
+  right: auto;
+  transform: translateY(-50%);
+  animation: prismaSeekOsdFadeLeft 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes prismaSeekOsdFadeRight {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.92);
+    transform: translateY(-50%) translateX(-14px) scale(0.92);
   }
   20% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateY(-50%) translateX(0) scale(1);
   }
   70% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+    transform: translateY(-50%) translateX(0) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.96);
+    transform: translateY(-50%) translateX(10px) scale(0.96);
+  }
+}
+
+@keyframes prismaSeekOsdFadeLeft {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(14px) scale(0.92);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-10px) scale(0.96);
   }
 }
 
