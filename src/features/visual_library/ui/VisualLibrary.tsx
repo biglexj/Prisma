@@ -777,11 +777,10 @@ export function VisualLibrary({
                       if (!isImage) {
                         triggerActivation(item.path);
                       }
-                      const folderSiblings = getFolderSiblings(item);
                       if (isImage) {
-                        handleSelectImage(item, folderSiblings);
+                        handleSelectImage(item, sortedNonExcludedItems);
                       } else {
-                        onOpenVideo(item.path, folderSiblings);
+                        onOpenVideo(item.path, sortedNonExcludedItems);
                       }
                     }}
                     onContextMenu={(event) => handleCardContextMenu(event, item)}
