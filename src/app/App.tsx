@@ -721,7 +721,25 @@ function AppContent() {
 
       // Subir / Bajar volumen global con flechas arriba/abajo o +/- si no estamos en video_player
       if (activeView !== "video_player") {
-        if (e.key === "ArrowUp" || e.key === "+" || e.key === "=") {
+        const isVolUp =
+          e.key === "ArrowUp" ||
+          e.key === "+" ||
+          e.key === "=" ||
+          e.code === "NumpadAdd" ||
+          e.key === "AudioVolumeUp";
+
+        const isVolDown =
+          e.key === "ArrowDown" ||
+          e.key === "-" ||
+          e.key === "_" ||
+          e.code === "NumpadSubtract" ||
+          e.key === "AudioVolumeDown";
+
+        const isMute =
+          (e.key.toLowerCase() === "m" && !e.ctrlKey && !e.altKey && !e.metaKey) ||
+          e.key === "AudioVolumeMute";
+
+        if (isVolUp) {
           e.preventDefault();
           const currentVol = playback.snapshot.volume ?? 100;
           const nextVol = Math.min(100, currentVol + 5);
@@ -729,7 +747,7 @@ function AppContent() {
           showGlobalVolumeOsd(nextVol, false);
           return;
         }
-        if (e.key === "ArrowDown" || e.key === "-" || e.key === "_") {
+        if (isVolDown) {
           e.preventDefault();
           const currentVol = playback.snapshot.volume ?? 100;
           const nextVol = Math.max(0, currentVol - 5);
@@ -737,7 +755,7 @@ function AppContent() {
           showGlobalVolumeOsd(nextVol, nextVol === 0);
           return;
         }
-        if (e.key.toLowerCase() === "m" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (isMute) {
           e.preventDefault();
           const currentVol = playback.snapshot.volume ?? 100;
           if (currentVol > 0) {

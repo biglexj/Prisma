@@ -788,6 +788,9 @@ export function VideoPlayer({
     const clamped = Math.max(0, Math.min(100, Math.round(newVolume)));
     if (clamped > 0) {
       setPrevVolume(clamped);
+      if (videoRef.current && videoRef.current.muted) {
+        videoRef.current.muted = false;
+      }
     }
     setVolume(clamped);
     if (videoRef.current) {
@@ -806,15 +809,9 @@ export function VideoPlayer({
     if (volume > 0) {
       setPrevVolume(volume);
       handleVolumeChange(0, isHotkey);
-      if (isHotkey) {
-        showVolumeOsd(0, true);
-      }
     } else {
       const restored = prevVolume > 0 ? prevVolume : 80;
       handleVolumeChange(restored, isHotkey);
-      if (isHotkey) {
-        showVolumeOsd(restored, false);
-      }
     }
   };
 
@@ -1056,16 +1053,21 @@ export function VideoPlayer({
         case "arrowup":
         case "+":
         case "=":
+        case "add":
+        case "audiovolumeup":
           e.preventDefault();
           handleVolumeChange(Math.min(100, volume + 5), true);
           break;
         case "arrowdown":
         case "-":
         case "_":
+        case "subtract":
+        case "audiovolumedown":
           e.preventDefault();
           handleVolumeChange(Math.max(0, volume - 5), true);
           break;
         case "m":
+        case "audiovolumemute":
           e.preventDefault();
           toggleMute(true);
           break;
@@ -1362,11 +1364,6 @@ export function VideoPlayer({
 
       {/* Escenario de Vídeo */}
       <div className="video-stage-wrapper">
-        <VolumeOsd
-          isMuted={volumeOsd.isMuted}
-          visible={volumeOsd.visible}
-          volume={volumeOsd.volume}
-        />
         <div
           className="video-stage"
           onContextMenu={handleContextMenu}
@@ -2055,6 +2052,13 @@ export function VideoPlayer({
           onClose={() => setIsComparing(false)}
         />
       ) : null}
+
+      {/* Indicador flotante OSD de volumen: solo visible cuando los controles y herramientas están ocultos */}
+      <VolumeOsd
+        isMuted={volumeOsd.isMuted}
+        visible={volumeOsd.visible && !showControls}
+        volume={volumeOsd.volume}
+      />
     </section>
   );
 }

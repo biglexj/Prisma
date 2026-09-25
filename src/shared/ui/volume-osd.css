@@ -7,28 +7,30 @@
   position: absolute;
   top: 24px;
   right: 28px;
-  z-index: 90;
+  z-index: 100;
   display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 16px 8px 12px;
-  border-radius: 9999px;
-  background: rgba(18, 18, 24, 0.84);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  gap: 10px;
+  height: 38px;
+  padding: 0 14px 0 10px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14);
   color: #ffffff;
   pointer-events: none;
   user-select: none;
-  animation: prismaVolumePopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-sizing: border-box;
+  animation: prismaVolumePopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
 @keyframes prismaVolumePopIn {
   from {
     opacity: 0;
-    transform: translateY(-8px) scale(0.92);
+    transform: translateY(-6px) scale(0.95);
   }
   to {
     opacity: 1;
@@ -37,29 +39,29 @@
 }
 
 .prisma-volume-osd.is-muted {
-  border-color: rgba(239, 68, 68, 0.35);
-  box-shadow: 0 10px 32px rgba(239, 68, 68, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .prisma-volume-osd-icon-box {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
 }
 
 .prisma-volume-osd-svg {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   color: #ffffff;
   overflow: visible;
 }
 
 .prisma-volume-osd-mute-icon {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   color: #ef4444;
   animation: prismaMuteShake 0.25s ease-in-out;
 }
@@ -107,8 +109,8 @@
 .prisma-volume-osd-body {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  min-width: 72px;
+  gap: 2px;
+  min-width: 66px;
 }
 
 .prisma-volume-osd-value-row {
@@ -118,30 +120,31 @@
 }
 
 .prisma-volume-osd-value {
-  font-size: 13.5px;
+  font-size: 12.5px;
   font-weight: 700;
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
   color: #ffffff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  line-height: 1.1;
 }
 
 .prisma-volume-osd.is-muted .prisma-volume-osd-value {
   color: #fca5a5;
-  font-size: 12.5px;
+  font-size: 11.5px;
 }
 
 .prisma-volume-osd-progress-track {
   width: 100%;
-  height: 4.5px;
+  height: 4px;
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
+  border-radius: 4px;
   overflow: hidden;
 }
 
 .prisma-volume-osd-progress-fill {
   height: 100%;
-  border-radius: 999px;
+  border-radius: 4px;
   background: linear-gradient(
     90deg,
     var(--md-sys-color-primary, #6750a4),
