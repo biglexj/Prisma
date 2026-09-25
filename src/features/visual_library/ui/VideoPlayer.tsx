@@ -216,15 +216,6 @@ export function VideoPlayer({
     setPosition(0);
     setVideoError(false);
     setPaused(false);
-
-    // Mantener cursor y controles visibles de forma fluida al cambiar de vídeo/pista
-    setShowControls(true);
-    if (controlsTimeoutRef.current) {
-      window.clearTimeout(controlsTimeoutRef.current);
-    }
-    controlsTimeoutRef.current = window.setTimeout(() => {
-      setShowControls(false);
-    }, 3500);
   }, [path]);
 
   // Auto-detect current index in video list
@@ -717,12 +708,6 @@ export function VideoPlayer({
   }, [showAudioMenu, showSubMenu]);
 
   const handleNext = () => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
-    controlsTimeoutRef.current = window.setTimeout(() => {
-      setShowControls(false);
-    }, 3500);
-
     if (repeatMode === "one" && videoRef.current) {
       videoRef.current.currentTime = 0;
       void videoRef.current.play().catch(() => {});
@@ -735,12 +720,6 @@ export function VideoPlayer({
   };
 
   const handlePrevious = (forceTrackChange = false) => {
-    setShowControls(true);
-    if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
-    controlsTimeoutRef.current = window.setTimeout(() => {
-      setShowControls(false);
-    }, 3500);
-
     if (!forceTrackChange && position > 3 && videoRef.current) {
       videoRef.current.currentTime = 0;
       return;
