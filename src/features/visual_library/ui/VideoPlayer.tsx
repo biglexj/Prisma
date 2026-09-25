@@ -210,6 +210,7 @@ export function VideoPlayer({
     setSelectedTrackIdx(0);
     setPosition(0);
     setVideoError(false);
+    setPaused(false);
 
     // Mantener cursor y controles visibles de forma fluida al cambiar de vídeo/pista
     setShowControls(true);
@@ -1420,9 +1421,7 @@ export function VideoPlayer({
                       video.currentTime = initialTime;
                       setPosition(initialTime);
                     }
-                    if (video.paused && !paused) {
-                      void video.play().catch(() => {});
-                    }
+                    void video.play().catch(() => {});
 
                     // Si PiP estaba activo (ej. reemplazo de vídeo desde la galería), solicitar PiP de inmediato
                     if (isPipActiveRef.current && document.pictureInPictureEnabled) {

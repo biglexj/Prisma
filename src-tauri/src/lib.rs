@@ -169,11 +169,9 @@ pub fn run() {
     };
 
     let initial_file_clone = initial_file.clone();
-    let is_media_initial_file = initial_file_clone.as_ref().is_some_and(|f| {
-        features::quick_look::QuickLookMediaType::from_path(std::path::Path::new(f)).is_some()
-    });
+    let is_explicit_quicklook = all_args.iter().any(|a| a == "--quicklook" || a == "-ql");
 
-    let initial_file_for_main = if is_media_initial_file {
+    let initial_file_for_main = if is_explicit_quicklook {
         None
     } else {
         initial_file.clone()
@@ -217,6 +215,7 @@ pub fn run() {
                 return;
             }
 
+            let is_explicit_quicklook = incoming_args.iter().any(|a| a == "--quicklook" || a == "-ql");
             let maybe_arg = incoming_args.into_iter().skip(1).find(|arg| !arg.starts_with('-'));
 
             if let Some(arg_str) = maybe_arg {
@@ -242,10 +241,19 @@ pub fn run() {
                 if std::path::Path::new(&arg_str).is_file() {
                     let file_path = arg_str;
                     let path = std::path::Path::new(&file_path);
-                    if let Some(quick_look) = app.try_state::<QuickLookState>() {
-                        if quick_look.show_file_path(path) {
-                            return;
+
+                    if is_explicit_quicklook {
+                        if let Some(quick_look) = app.try_state::<QuickLookState>() {
+                            if quick_look.show_file_path(path) {
+                                return;
+                            }
                         }
+                    }
+
+                    // Doble clic o apertura estándar: abrir directamente en Prisma
+                    // Si QuickLook estaba visible, ocultarlo para evitar colisiones
+                    if let Some(quick_look) = app.try_state::<QuickLookState>() {
+                        quick_look.hide();
                     }
 
                     if let Some(w) = app.get_webview_window("main") {
@@ -318,7 +326,7 @@ pub fn run() {
             quick_look_state.init();
 
             if let Some(ref file_path) = initial_file_clone {
-                if is_media_initial_file {
+                if is_explicit_quicklook {
                     quick_look_state.show_file_path(std::path::Path::new(file_path));
                 }
             }
@@ -329,7 +337,7 @@ pub fn run() {
                 if is_dev_mode {
                     let _ = main_window.set_title("Prisma (Dev) · Tu espacio de multimedia");
                 }
-                if is_autostart || is_media_initial_file {
+                if is_autostart || is_explicit_quicklook {
                     let _ = main_window.hide();
                 } else {
                     let _ = main_window.show();

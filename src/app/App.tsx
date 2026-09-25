@@ -206,7 +206,15 @@ function AppContent() {
     if (!isPip) {
       setActiveView("video_player");
     }
-  }, [activeView, isPip, playback, videoLibrary.items]);
+
+    if (activeVideoPath === path) {
+      const videoEl = document.querySelector<HTMLVideoElement>("video.video-stage-surface, video.video-player-media, video");
+      if (videoEl) {
+        videoEl.currentTime = initialTime ?? 0;
+        void videoEl.play().catch(() => {});
+      }
+    }
+  }, [activeView, activeVideoPath, isPip, playback, videoLibrary.items]);
 
   const handleOpenFile = useCallback((filePath: string, initialTime?: number, editMode?: boolean) => {
     const lower = filePath.toLowerCase();
@@ -730,7 +738,7 @@ function AppContent() {
         }
 
         // Si el reproductor de vídeo de Prisma está activo y reproduciéndose, pausarlo
-        const videoEl = document.querySelector<HTMLVideoElement>("video.video-player-media, video");
+        const videoEl = document.querySelector<HTMLVideoElement>("video.video-stage-surface, video.video-player-media, video");
         if (videoEl && !videoEl.paused) {
           wasVideoPlayingBeforeQuickLookRef.current = true;
           videoEl.pause();
@@ -759,7 +767,7 @@ function AppContent() {
         // Al cerrar QuickLook, si el vídeo de Prisma estaba sonando antes, reanudarlo
         if (wasVideoPlayingBeforeQuickLookRef.current) {
           wasVideoPlayingBeforeQuickLookRef.current = false;
-          const videoEl = document.querySelector<HTMLVideoElement>("video.video-player-media, video");
+          const videoEl = document.querySelector<HTMLVideoElement>("video.video-stage-surface, video.video-player-media, video");
           if (videoEl && videoEl.paused) {
             void videoEl.play().catch(() => { });
           }
