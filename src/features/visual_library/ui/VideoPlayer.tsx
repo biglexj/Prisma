@@ -723,10 +723,9 @@ export function VideoPlayer({
       void videoRef.current.play().catch(() => {});
       return;
     }
-    if (hasNext && onSelectVideo) {
-      onSelectVideo(localVideoItems[currentIndex + 1].path);
-    } else if (repeatMode === "all" && localVideoItems.length > 0 && onSelectVideo) {
-      onSelectVideo(localVideoItems[0].path);
+    if (localVideoItems.length > 0 && onSelectVideo) {
+      const nextIndex = (currentIndex + 1) % localVideoItems.length;
+      onSelectVideo(localVideoItems[nextIndex].path);
     }
   };
 
@@ -741,10 +740,9 @@ export function VideoPlayer({
       videoRef.current.currentTime = 0;
       return;
     }
-    if (hasPrevious && onSelectVideo) {
-      onSelectVideo(localVideoItems[currentIndex - 1].path);
-    } else if (repeatMode === "all" && localVideoItems.length > 0 && onSelectVideo) {
-      onSelectVideo(localVideoItems[localVideoItems.length - 1].path);
+    if (localVideoItems.length > 0 && onSelectVideo) {
+      const prevIndex = (currentIndex - 1 + localVideoItems.length) % localVideoItems.length;
+      onSelectVideo(localVideoItems[prevIndex].path);
     }
   };
 
@@ -935,8 +933,8 @@ export function VideoPlayer({
         }
       }
 
-      // Pantalla completa (F11 / Alt + Enter)
-      if (e.key === "F11" || (e.altKey && e.key === "Enter")) {
+      // Pantalla completa (F / F11 / Alt + Enter)
+      if (e.key.toLowerCase() === "f" || e.key === "F11" || (e.altKey && e.key === "Enter")) {
         e.preventDefault();
         toggleFullscreen();
         return;
@@ -950,18 +948,7 @@ export function VideoPlayer({
       }
 
       // Navegación fotograma a fotograma:
-      // F (avanzar) y Shift + F (retroceder) ("F de Fotograma", solicitado expresamente)
-      // Soporte complementario VLC (E / Shift + E) y universal (, / .)
-      if (e.key.toLowerCase() === "f") {
-        e.preventDefault();
-        if (e.shiftKey) {
-          stepFrameBackward();
-        } else {
-          stepFrameForward();
-        }
-        return;
-      }
-
+      // Tecla E / Shift + E (estilo VLC) y universal (, / .)
       if (e.key.toLowerCase() === "e") {
         e.preventDefault();
         if (e.shiftKey) {
@@ -1740,7 +1727,7 @@ export function VideoPlayer({
             <button
               aria-label="Anterior"
               className="video-icon-btn"
-              disabled={!hasPrevious && repeatMode !== "all"}
+              disabled={localVideoItems.length <= 1}
               onClick={() => handlePrevious(true)}
               title="Vídeo anterior (← / P)"
             >
@@ -1767,7 +1754,7 @@ export function VideoPlayer({
               className="video-icon-btn video-step-btn"
               disabled={!hasMedia}
               onClick={stepFrameBackward}
-              title="Retroceder 1 fotograma (Shift+F / Shift+E / ,)"
+              title="Retroceder 1 fotograma (Shift+E / ,)"
             >
               <span className="btn-label-icon">-1f</span>
             </button>
@@ -1786,7 +1773,7 @@ export function VideoPlayer({
               className="video-icon-btn video-step-btn"
               disabled={!hasMedia}
               onClick={stepFrameForward}
-              title="Avanzar 1 fotograma (F / E / .)"
+              title="Avanzar 1 fotograma (E / .)"
             >
               <span className="btn-label-icon">+1f</span>
             </button>
@@ -1809,7 +1796,7 @@ export function VideoPlayer({
             <button
               aria-label="Siguiente"
               className="video-icon-btn"
-              disabled={!hasNext && repeatMode !== "all"}
+              disabled={localVideoItems.length <= 1}
               onClick={handleNext}
               title="Vídeo siguiente (→ / N)"
             >
@@ -1888,7 +1875,7 @@ export function VideoPlayer({
               aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
               className="video-icon-btn"
               onClick={toggleFullscreen}
-              title={isFullscreen ? "Salir de pantalla completa (F11 / Esc)" : "Pantalla completa (F11 / Alt+Enter)"}
+              title={isFullscreen ? "Salir de pantalla completa (F / Esc)" : "Pantalla completa (F / F11 / Alt+Enter)"}
             >
               <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen"} />
             </button>

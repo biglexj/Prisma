@@ -357,6 +357,9 @@ impl QuickLookState {
         if let Some(window) = self.app_handle.get_webview_window("quicklook") {
             if !crate::app::commands::quick_look::quick_look_is_maximized(window.clone()) {
                 let _ = window.set_size(tauri::LogicalSize::new(width, height));
+                if !self.is_pinned.load(Ordering::SeqCst) {
+                    let _ = window.center();
+                }
             }
             let _ = window.emit("quicklook://preview", &payload);
         }
