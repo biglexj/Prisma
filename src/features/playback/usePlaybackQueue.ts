@@ -91,6 +91,7 @@ export interface PlaybackQueueState {
   setShuffleMode: (enabled: boolean) => void;
   setJumpToNextQueue: (enabled: boolean) => void;
   setLoopQueues: (enabled: boolean) => void;
+  updateQueueItems: (queueId: string, items: MusicQueueItem[]) => void;
   pauseOnSongEnd: boolean;
   stopOnSongEnd: boolean;
   setPauseOnSongEnd: (enabled: boolean) => void;
@@ -633,6 +634,25 @@ export function usePlaybackQueue(): PlaybackQueueState {
     });
   }, []);
 
+  const updateQueueItems = useCallback((targetQueueId: string, newItems: MusicQueueItem[]) => {
+    setQueues((prevQueues) => {
+      return prevQueues.map((q) => {
+        if (q.id === targetQueueId || (targetQueueId === "queue_favorites" && q.name === "Favoritos")) {
+          const currentItem = q.items[q.currentIndex];
+          const newIdx = currentItem
+            ? newItems.findIndex((it) => it.path === currentItem.path)
+            : 0;
+          return {
+            ...q,
+            items: newItems,
+            currentIndex: newIdx >= 0 ? newIdx : 0,
+          };
+        }
+        return q;
+      });
+    });
+  }, []);
+
   const toggleShuffle = useCallback(() => {
     setSettings((prev) => {
       const nextShuffle = !prev.shuffleMode;
@@ -753,6 +773,7 @@ export function usePlaybackQueue(): PlaybackQueueState {
     clearQueue,
     clearAllQueues,
     syncItemMetadata,
+    updateQueueItems,
     toggleShuffle,
     toggleRepeat,
     toggleJumpToNextQueue,

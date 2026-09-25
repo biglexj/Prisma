@@ -13,9 +13,9 @@ interface FavoriteFullViewProps {
   mediaType: FavoriteMediaType;
   items: Array<MusicLibraryItem | VisualLibraryItem>;
   onBack: () => void;
-  onPlayMusic?: (path: string) => void;
-  onOpenImage?: (path: string) => void;
-  onPlayVideo?: (path: string) => void;
+  onPlayMusic?: (path: string, sessionItems?: MusicLibraryItem[], queueName?: string) => void;
+  onOpenImage?: (path: string, sessionItems?: VisualLibraryItem[]) => void;
+  onPlayVideo?: (path: string, sessionItems?: VisualLibraryItem[]) => void;
   onToggleFavorite: (mediaType: FavoriteMediaType, path: string) => void;
 }
 
@@ -114,7 +114,14 @@ export function FavoriteFullView({
                 <div className="favorite-full-card is-music" key={musicItem.path}>
                   <div
                     className="favorite-card-media"
-                    onClick={() => onPlayMusic && onPlayMusic(musicItem.path)}
+                    onClick={() =>
+                      onPlayMusic &&
+                      onPlayMusic(
+                        musicItem.path,
+                        filteredItems as MusicLibraryItem[],
+                        "Favoritos",
+                      )
+                    }
                   >
                     <MusicArtwork path={musicItem.path} alt={songTitle} />
                     <span className="favorite-play-overlay">
@@ -145,7 +152,10 @@ export function FavoriteFullView({
                 <div className="favorite-full-card is-image" key={visualItem.path}>
                   <div
                     className="favorite-card-media"
-                    onClick={() => onOpenImage && onOpenImage(visualItem.path)}
+                    onClick={() =>
+                      onOpenImage &&
+                      onOpenImage(visualItem.path, filteredItems as VisualLibraryItem[])
+                    }
                   >
                     <VisualThumbnail path={visualItem.path} alt={visualItem.title} />
                   </div>
@@ -175,7 +185,10 @@ export function FavoriteFullView({
               <div className="favorite-full-card is-video" key={visualItem.path}>
                 <div
                   className="favorite-card-media is-video-media"
-                  onClick={() => onPlayVideo && onPlayVideo(visualItem.path)}
+                  onClick={() =>
+                    onPlayVideo &&
+                    onPlayVideo(visualItem.path, filteredItems as VisualLibraryItem[])
+                  }
                 >
                   <VideoThumbnail eager path={visualItem.path} title={visualItem.title} />
                   <span className="favorite-play-overlay">

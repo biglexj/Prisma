@@ -16,6 +16,8 @@ import { VisualLibrary } from "../features/visual_library/ui/VisualLibrary";
 import { VideoPlayer } from "../features/visual_library/ui/VideoPlayer";
 import { useVisualLibrary } from "../features/visual_library/useVisualLibrary";
 import type { VisualLibraryItem } from "../features/visual_library/model/types";
+import type { MusicLibraryItem } from "../features/music_library/model/types";
+import type { MusicQueueItem } from "../features/playback/model/queue";
 import type { QuickLookPayload } from "../features/quick_look/model/types";
 import { AppSettings } from "./ui/AppSettings";
 import { AppSidebar, type AppView } from "./ui/AppSidebar";
@@ -86,8 +88,22 @@ function AppContent() {
   const [activeVideoInitialTime, setActiveVideoInitialTime] = useState<number | undefined>(undefined);
   const [activeVideoSessionItems, setActiveVideoSessionItems] = useState<VisualLibraryItem[]>([]);
   const [videoReturnView, setVideoReturnView] = useState<AppView>("videos");
+  const [imageReturnView, setImageReturnView] = useState<AppView | null>(null);
   const [activeInitialImagePath, setActiveInitialImagePath] = useState<string | null>(null);
+  const [activeImageSessionItems, setActiveImageSessionItems] = useState<VisualLibraryItem[] | null>(null);
   const [activeDocumentItem, setActiveDocumentItem] = useState<CustomLibraryItem | null>(null);
+  const handleOpenImage = useCallback(
+    (path: string, sessionItems?: VisualLibraryItem[], returnView?: AppView) => {
+      const fromView = returnView ?? (activeView !== "images" ? activeView : null);
+      if (fromView) {
+        setImageReturnView(fromView);
+      }
+      setActiveInitialImagePath(path);
+      setActiveImageSessionItems(sessionItems && sessionItems.length > 0 ? sessionItems : null);
+      setActiveView("images");
+    },
+    [activeView],
+  );
   const [activeDocumentInitialMode, setActiveDocumentInitialMode] = useState<"preview" | "split" | "code" | undefined>(undefined);
   const [isPip, setIsPip] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -158,7 +174,13 @@ function AppContent() {
   }, [library.items, playback.queue.syncItemMetadata]);
 
   const playMusicItem = useCallback(
-    async (path: string, navigate = false, initialTime?: number) => {
+    async (
+      path: string,
+      navigate = false,
+      initialTime?: number,
+      sessionItems?: MusicLibraryItem[],
+      queueName?: string,
+    ) => {
       addToHistory(path, "music");
 
       // Detener y limpiar cualquier vídeo previo activo para evitar audio simultáneo
@@ -173,8 +195,29 @@ function AppContent() {
         setActiveView("player");
       }
 
-      const { folderName, queueItems } = await resolveMusicQueueForPath(path, library.items);
-      playback.playFolder(folderName, queueItems, 0);
+      if (sessionItems && sessionItems.length > 0) {
+        const folderName = queueName || "Favoritos";
+        const queueItems = sessionItems.map((it) => {
+          const { title, artist } = resolveLibraryTrackInfo(it);
+          return {
+            id: it.path,
+            path: it.path,
+            title,
+            artist: artist || null,
+          };
+        });
+        const targetQueueId =
+          queueName === "Favoritos"
+            ? "queue_favorites"
+            : queueName === "Inicio"
+            ? "queue_home"
+            : undefined;
+        const startIdx = Math.max(0, queueItems.findIndex((q) => q.path === path));
+        playback.playQueue(queueItems, startIdx, folderName, targetQueueId);
+      } else {
+        const { folderName, queueItems } = await resolveMusicQueueForPath(path, library.items);
+        playback.playFolder(folderName, queueItems, 0);
+      }
       void playback.loadPath(path);
 
       if (initialTime && initialTime > 0) {
@@ -185,6 +228,36 @@ function AppContent() {
     },
     [library.items, playback],
   );
+
+  // Sincronización reactiva de la cola "Favoritos" si cambian los favoritos de música
+  useEffect(() => {
+    const favQueue = playback.queue.queues.find(
+      (q) => q.id === "queue_favorites" || q.name === "Favoritos",
+    );
+    if (!favQueue) return;
+
+    const musicMap = new Map(
+      library.items.map((it) => [it.path.replace(/\\/g, "/").toLowerCase(), it]),
+    );
+    const updatedFavQueueItems = favorites.store.music.map((p: string) => {
+      const it = musicMap.get(p.replace(/\\/g, "/").toLowerCase());
+      const { title, artist } = it
+        ? resolveLibraryTrackInfo(it)
+        : { title: p.replace(/\\/g, "/").split("/").pop() || p, artist: null };
+      return {
+        id: p,
+        path: p,
+        title,
+        artist: artist || null,
+      };
+    });
+
+    const currentPaths = favQueue.items.map((i: MusicQueueItem) => i.path).join("|");
+    const newPaths = updatedFavQueueItems.map((i: MusicQueueItem) => i.path).join("|");
+    if (currentPaths !== newPaths) {
+      playback.queue.updateQueueItems(favQueue.id, updatedFavQueueItems);
+    }
+  }, [favorites.store.music, library.items, playback.queue]);
 
   const playVideoItem = useCallback(
     async (path: string, sessionItems?: VisualLibraryItem[], initialTime?: number) => {
@@ -313,8 +386,7 @@ function AppContent() {
       setActiveVideoPath(null);
       setActiveVideoSessionItems([]);
       setIsPip(false);
-      setActiveInitialImagePath(filePath);
-      setActiveView("images");
+      handleOpenImage(filePath);
     } else if (isDocumentOrProject) {
       if (document.pictureInPictureElement) {
         void document.exitPictureInPicture().catch(() => { });
@@ -344,10 +416,9 @@ function AppContent() {
       setActiveVideoPath(null);
       setActiveVideoSessionItems([]);
       setIsPip(false);
-      setActiveInitialImagePath(filePath);
-      setActiveView("images");
+      handleOpenImage(filePath);
     }
-  }, [playback, playMusicItem, playVideoItem]);
+  }, [handleOpenImage, playback, playMusicItem, playVideoItem]);
 
   /**
    * Gestiona el ciclo de vida de Picture-in-Picture desde App:
@@ -1077,7 +1148,10 @@ function AppContent() {
               onOpenImages={() => setActiveView("images")}
               onOpenVideos={() => setActiveView("videos")}
               onOpenPlaylists={() => setActiveView("playlists")}
-              onPlayMusic={(path) => playMusicItem(path, false)}
+              onOpenImage={handleOpenImage}
+              onPlayMusic={(path, sessionItems, queueName) =>
+                playMusicItem(path, false, undefined, sessionItems, queueName)
+              }
               onPlayVideo={playVideoItem}
               onPlayPlaylist={(path) => {
                 addToHistory(path, "playlist");
@@ -1127,12 +1201,23 @@ function AppContent() {
             <VisualLibrary
               error={imageLibrary.error}
               folders={imageLibrary.folders}
+              initialImageSessionList={activeImageSessionItems}
               initialSelectedImagePath={activeInitialImagePath}
               items={imageLibrary.items}
               kind="image"
               loading={imageLibrary.loading}
               onAdd={imageLibrary.addFolder}
-              onClearInitialSelectedImage={() => setActiveInitialImagePath(null)}
+              onClearInitialSelectedImage={() => {
+                setActiveInitialImagePath(null);
+              }}
+              onCloseViewer={() => {
+                setActiveImageSessionItems(null);
+                if (imageReturnView && imageReturnView !== "images") {
+                  const target = imageReturnView;
+                  setImageReturnView(null);
+                  setActiveView(target);
+                }
+              }}
               onOpenFolders={() => setActiveView("folders")}
               onOpenVideo={playVideoItem}
               confirmDeletion={confirmDeletion}
@@ -1278,8 +1363,10 @@ function AppContent() {
             <FavoritesView
               images={imageLibrary.items}
               musicItems={library.items}
-              onOpenImage={(path) => { setActiveInitialImagePath(path); setActiveView("images"); }}
-              onPlayMusic={playMusicItem}
+              onOpenImage={handleOpenImage}
+              onPlayMusic={(path, sessionItems, queueName) =>
+                playMusicItem(path, false, undefined, sessionItems, queueName)
+              }
               onPlayVideo={playVideoItem}
               videos={videoLibrary.items}
             />
@@ -1289,15 +1376,17 @@ function AppContent() {
             <HistoryView
               images={imageLibrary.items}
               musicItems={library.items}
-              onOpenImage={(path) => { setActiveInitialImagePath(path); setActiveView("images"); }}
-              onPlayMusic={playMusicItem}
+              onOpenImage={handleOpenImage}
+              onPlayMusic={(path, sessionItems, queueName) =>
+                playMusicItem(path, false, undefined, sessionItems, queueName)
+              }
               onPlayVideo={playVideoItem}
               videos={videoLibrary.items}
             />
           ) : null}
           {activeView === "playlists" ? (
             <PlaylistsView
-              onPlayMusic={playMusicItem}
+              onPlayMusic={(path) => playMusicItem(path)}
               onPlayQueue={(items, idx, name) => playback.playQueue(items, idx, name)}
               onPlayVideo={playVideoItem}
             />

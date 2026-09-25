@@ -31,8 +31,8 @@ interface HomeDashboardProps {
   onOpenImages: () => void;
   onOpenVideos: () => void;
   onOpenPlaylists?: () => void;
-  onOpenImage?: (path: string) => void;
-  onPlayMusic: (path: string) => void;
+  onOpenImage?: (path: string, sessionItems?: VisualLibraryItem[]) => void;
+  onPlayMusic: (path: string, sessionItems?: MusicLibraryItem[], queueName?: string) => void;
   onPlayVideo: (path: string, sessionItems?: VisualLibraryItem[]) => void;
   onPlayPlaylist?: (playlistPath: string) => void;
   confirmDeletion: boolean;
@@ -77,9 +77,13 @@ export function HomeDashboard({
     }, 600);
   };
 
-  const handlePlayMusicWithFeedback = (path: string) => {
+  const handlePlayMusicWithFeedback = (
+    path: string,
+    sessionItems?: MusicLibraryItem[],
+    queueName?: string,
+  ) => {
     triggerActivation(path);
-    onPlayMusic(path);
+    onPlayMusic(path, sessionItems, queueName);
   };
 
   const handlePlayVideoWithFeedback = (path: string, sessionItems?: VisualLibraryItem[]) => {
@@ -274,7 +278,7 @@ export function HomeDashboard({
               key="shelf-music"
               title="Música para ti"
               kicker="MÚSICA"
-              onOpen={() => (homeMusicItems[0] ? onPlayMusic(homeMusicItems[0].path) : onOpenFolders())}
+              onOpen={() => (homeMusicItems[0] ? onPlayMusic(homeMusicItems[0].path, homeMusicItems, "Inicio") : onOpenFolders())}
             >
               <div className="home-media-row">
                 {homeMusicItems.length > 0 ? (
@@ -284,7 +288,7 @@ export function HomeDashboard({
                       <button
                         className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
                         key={item.path}
-                        onClick={() => handlePlayMusicWithFeedback(item.path)}
+                        onClick={() => handlePlayMusicWithFeedback(item.path, homeMusicItems, "Inicio")}
                         title={artist ? `${artist} — ${title}` : title}
                       >
                         <span className="home-media-frame">
@@ -325,7 +329,7 @@ export function HomeDashboard({
                     <button
                       className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
                       key={item.path}
-                      onClick={() => handlePlayVideoWithFeedback(item.path, nonExcludedVideos)}
+                      onClick={() => handlePlayVideoWithFeedback(item.path, homeVideoItems)}
                       title={item.title}
                     >
                       <span className="home-media-frame">
@@ -366,7 +370,7 @@ export function HomeDashboard({
                       key={item.path}
                       onClick={() => {
                         if (onOpenImage) {
-                          onOpenImage(item.path);
+                          onOpenImage(item.path, homeImageItems);
                         } else {
                           setSelectedImage(item);
                         }
@@ -438,7 +442,7 @@ export function HomeDashboard({
         <ImageViewer
           confirmDeletion={confirmDeletion}
           item={selectedImage}
-          itemsList={nonExcludedImages}
+          itemsList={homeImageItems}
           onClose={() => setSelectedImage(null)}
           onRefresh={onRefreshImages}
           onSelectImage={setSelectedImage}

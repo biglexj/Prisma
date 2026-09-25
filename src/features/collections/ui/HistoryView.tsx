@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import type { MusicLibraryItem } from "../../music_library/model/types";
 import { MusicArtwork } from "../../music_library/ui/MusicArtwork";
@@ -19,8 +19,8 @@ interface HistoryViewProps {
   musicItems: MusicLibraryItem[];
   images: VisualLibraryItem[];
   videos: VisualLibraryItem[];
-  onPlayMusic: (path: string) => void;
-  onOpenImage?: (path: string) => void;
+  onPlayMusic: (path: string, sessionItems?: MusicLibraryItem[], queueName?: string) => void;
+  onOpenImage?: (path: string, sessionItems?: VisualLibraryItem[]) => void;
   onPlayVideo: (path: string, sessionItems?: VisualLibraryItem[]) => void;
 }
 
@@ -66,6 +66,8 @@ function synthesizeMusicItem(path: string): MusicLibraryItem {
   };
 }
 
+let sessionHistoryFullViewType: FavoriteMediaType | null = null;
+
 export function HistoryView({
   musicItems,
   images,
@@ -75,7 +77,11 @@ export function HistoryView({
   onPlayVideo,
 }: HistoryViewProps) {
   const { store, clearHistory } = useHistory();
-  const [fullViewType, setFullViewType] = useState<FavoriteMediaType | null>(null);
+  const [fullViewType, setFullViewTypeState] = useState<FavoriteMediaType | null>(() => sessionHistoryFullViewType);
+  const setFullViewType = useCallback((type: FavoriteMediaType | null) => {
+    sessionHistoryFullViewType = type;
+    setFullViewTypeState(type);
+  }, []);
 
   useScrollRestoration(`view:history:${fullViewType ?? "summary"}`);
 
@@ -127,8 +133,8 @@ export function HistoryView({
         items={items}
         mediaType={fullViewType}
         onBack={() => setFullViewType(null)}
-        onOpenImage={onOpenImage}
-        onPlayMusic={onPlayMusic}
+        onOpenImage={(p) => onOpenImage?.(p, historyImageItems)}
+        onPlayMusic={(p) => onPlayMusic(p, historyMusicItems, "Historial")}
         onPlayVideo={(path) => onPlayVideo(path, historyVideoItems)}
         onToggleFavorite={() => {}}
       />
@@ -267,7 +273,7 @@ export function HistoryView({
                 <button
                   className="home-media-card"
                   key={item.path}
-                  onClick={() => onPlayMusic(item.path)}
+                  onClick={() => onPlayMusic(item.path, historyMusicItems, "Historial")}
                   title={artist ? `${artist} — ${title}` : title}
                 >
                   <span className="home-media-frame">
@@ -309,7 +315,7 @@ export function HistoryView({
               <button
                 className="home-media-card"
                 key={item.path}
-                onClick={() => (onOpenImage ? onOpenImage(item.path) : undefined)}
+                onClick={() => (onOpenImage ? onOpenImage(item.path, historyImageItems) : undefined)}
                 title={item.title}
               >
                 <span className="home-media-frame">

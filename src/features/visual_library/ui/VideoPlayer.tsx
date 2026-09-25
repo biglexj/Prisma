@@ -1007,14 +1007,14 @@ export function VideoPlayer({
         case "arrowleft":
           e.preventDefault();
           if (e.shiftKey || e.ctrlKey) {
+            handlePrevious(true);
+          } else {
             if (videoRef.current) {
               const nextPos = Math.max(0, videoRef.current.currentTime - 10);
               videoRef.current.currentTime = nextPos;
               setPosition(nextPos);
               triggerSeekOsd("backward", 10);
             }
-          } else {
-            handlePrevious(true);
           }
           break;
         case "j":
@@ -1029,14 +1029,14 @@ export function VideoPlayer({
         case "arrowright":
           e.preventDefault();
           if (e.shiftKey || e.ctrlKey) {
+            handleNext();
+          } else {
             if (videoRef.current) {
               const nextPos = Math.min(duration, videoRef.current.currentTime + 10);
               videoRef.current.currentTime = nextPos;
               setPosition(nextPos);
               triggerSeekOsd("forward", 10);
             }
-          } else {
-            handleNext();
           }
           break;
         case "l":
@@ -1788,7 +1788,7 @@ export function VideoPlayer({
               className="video-icon-btn"
               disabled={localVideoItems.length <= 1}
               onClick={() => handlePrevious(true)}
-              title="Vídeo anterior (← / P)"
+              title="Vídeo anterior (Shift+← / P)"
             >
               <Icon name="chevron-left" />
             </button>
@@ -1804,7 +1804,7 @@ export function VideoPlayer({
                   triggerSeekOsd("backward", 10);
                 }
               }}
-              title="Retroceder 10 segundos (Shift+← / J)"
+              title="Retroceder 10 segundos (← / J)"
             >
               <span className="btn-label-icon">-10s</span>
             </button>
@@ -1849,7 +1849,7 @@ export function VideoPlayer({
                   triggerSeekOsd("forward", 10);
                 }
               }}
-              title="Avanzar 10 segundos (Shift+→ / L)"
+              title="Avanzar 10 segundos (→ / L)"
             >
               <span className="btn-label-icon">+10s</span>
             </button>
@@ -1859,7 +1859,7 @@ export function VideoPlayer({
               className="video-icon-btn"
               disabled={localVideoItems.length <= 1}
               onClick={handleNext}
-              title="Vídeo siguiente (→ / N)"
+              title="Vídeo siguiente (Shift+→ / N)"
             >
               <Icon name="chevron-right" />
             </button>
@@ -1889,6 +1889,8 @@ export function VideoPlayer({
                 max={100}
                 min={0}
                 onChange={(e) => handleVolumeChange(Number(e.target.value), true)}
+                onMouseUp={(e) => e.currentTarget.blur()}
+                onPointerUp={(e) => e.currentTarget.blur()}
                 type="range"
                 value={volume}
               />

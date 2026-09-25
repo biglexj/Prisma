@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import type { MusicLibraryItem } from "../../music_library/model/types";
 import { MusicArtwork } from "../../music_library/ui/MusicArtwork";
@@ -19,8 +19,8 @@ interface FavoritesViewProps {
   musicItems: MusicLibraryItem[];
   images: VisualLibraryItem[];
   videos: VisualLibraryItem[];
-  onPlayMusic: (path: string) => void;
-  onOpenImage?: (path: string) => void;
+  onPlayMusic: (path: string, sessionItems?: MusicLibraryItem[], queueName?: string) => void;
+  onOpenImage?: (path: string, sessionItems?: VisualLibraryItem[]) => void;
   onPlayVideo: (path: string, sessionItems?: VisualLibraryItem[]) => void;
 }
 
@@ -66,6 +66,8 @@ function synthesizeMusicItem(path: string): MusicLibraryItem {
   };
 }
 
+let sessionFavoritesFullViewType: FavoriteMediaType | null = null;
+
 export function FavoritesView({
   musicItems,
   images,
@@ -75,7 +77,11 @@ export function FavoritesView({
   onPlayVideo,
 }: FavoritesViewProps) {
   const { store, toggle } = useFavorites();
-  const [fullViewType, setFullViewType] = useState<FavoriteMediaType | null>(null);
+  const [fullViewType, setFullViewTypeState] = useState<FavoriteMediaType | null>(() => sessionFavoritesFullViewType);
+  const setFullViewType = useCallback((type: FavoriteMediaType | null) => {
+    sessionFavoritesFullViewType = type;
+    setFullViewTypeState(type);
+  }, []);
 
   useScrollRestoration(`view:favorites:${fullViewType ?? "summary"}`);
 
@@ -126,8 +132,8 @@ export function FavoritesView({
         items={items}
         mediaType={fullViewType}
         onBack={() => setFullViewType(null)}
-        onOpenImage={onOpenImage}
-        onPlayMusic={onPlayMusic}
+        onOpenImage={(path) => onOpenImage?.(path, favoriteImageItems)}
+        onPlayMusic={(path) => onPlayMusic(path, favoriteMusicItems, "Favoritos")}
         onPlayVideo={(path) => onPlayVideo(path, favoriteVideoItems)}
         onToggleFavorite={toggle}
       />
@@ -214,7 +220,7 @@ export function FavoritesView({
                 <button
                   className="home-media-card"
                   key={item.path}
-                  onClick={() => onPlayMusic(item.path)}
+                  onClick={() => onPlayMusic(item.path, favoriteMusicItems, "Favoritos")}
                   title={artist ? `${artist} — ${title}` : title}
                 >
                   <span className="home-media-frame">
@@ -254,7 +260,7 @@ export function FavoritesView({
               <button
                 className="home-media-card"
                 key={item.path}
-                onClick={() => (onOpenImage ? onOpenImage(item.path) : undefined)}
+                onClick={() => (onOpenImage ? onOpenImage(item.path, favoriteImageItems) : undefined)}
                 title={item.title}
               >
                 <span className="home-media-frame">

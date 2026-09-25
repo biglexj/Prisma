@@ -62,7 +62,9 @@ interface VisualLibraryProps {
   loading: boolean;
   error: string | null;
   initialSelectedImagePath?: string | null;
+  initialImageSessionList?: VisualLibraryItem[] | null;
   onClearInitialSelectedImage?: () => void;
+  onCloseViewer?: () => void;
   onAdd: (path: string) => Promise<void>;
   onOpenVideo: (path: string, sessionItems?: VisualLibraryItem[]) => void;
   onOpenFolders: () => void;
@@ -78,7 +80,9 @@ export function VisualLibrary({
   loading,
   error,
   initialSelectedImagePath,
+  initialImageSessionList,
   onClearInitialSelectedImage,
+  onCloseViewer,
   onAdd,
   onOpenVideo,
   onOpenFolders,
@@ -243,6 +247,7 @@ export function VisualLibrary({
   const closeImageViewer = () => {
     setSelectedImage(null);
     setActiveImageSessionList(null);
+    onCloseViewer?.();
   };
 
   const handlePlayAllVideos = () => {
@@ -512,16 +517,26 @@ export function VisualLibrary({
   // Abrir imagen seleccionada externamente (por ejemplo, desde Inicio o sistema)
   useEffect(() => {
     if (initialSelectedImagePath) {
-      void resolveVisualSessionForPath(initialSelectedImagePath, "image", items).then((session) => {
+      if (initialImageSessionList && initialImageSessionList.length > 0) {
         const found =
-          session.items.find((it) => it.path === initialSelectedImagePath) || session.items[0];
+          initialImageSessionList.find((it) => it.path === initialSelectedImagePath) ||
+          initialImageSessionList[0];
         if (found) {
-          handleSelectImage(found, session.items);
+          handleSelectImage(found, initialImageSessionList);
         }
         onClearInitialSelectedImage?.();
-      });
+      } else {
+        void resolveVisualSessionForPath(initialSelectedImagePath, "image", items).then((session) => {
+          const found =
+            session.items.find((it) => it.path === initialSelectedImagePath) || session.items[0];
+          if (found) {
+            handleSelectImage(found, session.items);
+          }
+          onClearInitialSelectedImage?.();
+        });
+      }
     }
-  }, [initialSelectedImagePath, items]);
+  }, [initialSelectedImagePath, initialImageSessionList, items]);
 
   // Preservar y restaurar la posición exacta del scroll al navegar o volver
   useScrollRestoration(`view:${kind}:${viewMode}:${currentFolderPath}`, !loading);
