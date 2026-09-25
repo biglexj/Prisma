@@ -447,6 +447,7 @@ pub fn run() {
                     }
                 }
                 if let WindowEvent::CloseRequested { api, .. } = event {
+                    let _ = window.emit("prisma://window-close-requested", ());
                     if is_minimize_to_tray_enabled() {
                         api.prevent_close();
                         let _ = window.app_handle().save_window_state(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED);

@@ -827,48 +827,242 @@
 }
 
 /* ── Tabla de Atajos de Teclado ── */
-.shortcuts-reference-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+/* ── Barra de Filtros y Búsqueda de Atajos ── */
+.shortcuts-panel-card {
+  display: flex;
+  flex-direction: column;
 }
 
-@media (max-width: 1380px) {
-  .shortcuts-reference-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+.shortcuts-header-row {
+  margin-bottom: 16px;
 }
 
-@media (max-width: 1024px) {
-  .shortcuts-reference-grid {
-    grid-template-columns: repeat(2, 1fr);
+.shortcuts-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.shortcuts-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shortcuts-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  border: 1px solid var(--outline-variant);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.shortcuts-chip-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.shortcuts-chip-btn:hover {
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+  border-color: var(--outline);
+}
+
+.shortcuts-chip-btn.is-active {
+  background: var(--primary);
+  color: var(--on-primary);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+.shortcuts-chip-count {
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.shortcuts-search-wrap {
+  position: relative;
+  min-width: 250px;
+  max-width: 340px;
+  flex: 1;
+}
+
+.shortcuts-search-input {
+  width: 100%;
+  padding: 8px 34px 8px 36px;
+  border-radius: 12px;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+  font-size: 0.82rem;
+  font-family: inherit;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.shortcuts-search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--surface-container-highest);
+}
+
+.shortcuts-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--on-surface-variant);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.shortcuts-search-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.shortcuts-search-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.shortcuts-search-clear:hover {
+  color: var(--on-surface);
+}
+
+/* ── Masonry Fluido sin Huecos Vacíos ── */
+.shortcuts-reference-masonry {
+  columns: 3 340px;
+  column-gap: 16px;
+}
+
+@media (max-width: 1100px) {
+  .shortcuts-reference-masonry {
+    columns: 2 300px;
   }
 }
 
 @media (max-width: 680px) {
-  .shortcuts-reference-grid {
-    grid-template-columns: 1fr;
+  .shortcuts-reference-masonry {
+    columns: 1;
   }
 }
 
+.shortcuts-single-container {
+  display: flex;
+  flex-direction: column;
+}
+
 .shortcuts-category-card {
+  break-inside: avoid;
+  margin-bottom: 16px;
   background: var(--surface-container);
   border: 1px solid var(--outline-variant);
   border-radius: 18px;
   padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
-.shortcuts-category-card h4 {
+.shortcuts-category-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--outline-variant));
+}
+
+.shortcuts-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px dashed var(--outline-variant);
+}
+
+.shortcuts-category-header h4 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 800;
   color: var(--on-surface);
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.shortcuts-category-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface-container-highest);
+  color: var(--on-surface-variant);
+  border: 1px solid var(--outline-variant);
+}
+
+.shortcuts-category-card.is-single-view .shortcuts-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 28px;
+}
+
+@media (max-width: 768px) {
+  .shortcuts-category-card.is-single-view .shortcuts-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.shortcuts-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  gap: 14px;
+  background: var(--surface-container);
+  border: 1px dashed var(--outline-variant);
+  border-radius: 20px;
+  color: var(--on-surface-variant);
+}
+
+.shortcuts-empty-state svg {
+  width: 36px;
+  height: 36px;
+  opacity: 0.6;
+}
+
+.shortcuts-empty-state p {
+  margin: 0;
+  font-size: 0.95rem;
 }
 
 .shortcuts-list {

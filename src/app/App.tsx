@@ -48,6 +48,7 @@ import { DspEqualizerModal } from "../features/dsp/ui/DspEqualizerModal";
 import { DspProvider } from "../features/dsp/DspContext";
 import { useGlobalFileDrop } from "./hooks/useGlobalFileDrop";
 import { Icon, type IconName } from "../shared/ui/Icon";
+import { VolumeOsd, useVolumeOsd } from "../shared/ui/VolumeOsd";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
 import "../features/visual_library/ui/video-player.css";
@@ -97,6 +98,7 @@ function AppContent() {
   } = useTheme();
   const { confirmDeletion, sidebarDensity, auroraOnlineServicesEnabled } = useSystemSettings();
   const playback = usePlaybackController();
+  const { osdState: globalVolumeOsd, triggerOsd: showGlobalVolumeOsd } = useVolumeOsd(playback.snapshot.volume ?? 100, false);
   const library = useMusicLibrary();
   const imageLibrary = useVisualLibrary("image");
   const videoLibrary = useVisualLibrary("video");
@@ -508,7 +510,9 @@ function AppContent() {
             window.dispatchEvent(new CustomEvent("prisma-video-volume", { detail: { delta: 5 } }));
           } else {
             const currentVol = playback.snapshot.volume ?? 100;
-            void playback.setVolume(Math.min(100, currentVol + 5));
+            const nextVol = Math.min(100, currentVol + 5);
+            void playback.setVolume(nextVol);
+            showGlobalVolumeOsd(nextVol, false);
           }
           break;
         }
@@ -517,7 +521,9 @@ function AppContent() {
             window.dispatchEvent(new CustomEvent("prisma-video-volume", { detail: { delta: -5 } }));
           } else {
             const currentVol = playback.snapshot.volume ?? 100;
-            void playback.setVolume(Math.max(0, currentVol - 5));
+            const nextVol = Math.max(0, currentVol - 5);
+            void playback.setVolume(nextVol);
+            showGlobalVolumeOsd(nextVol, nextVol === 0);
           }
           break;
         }
@@ -528,8 +534,10 @@ function AppContent() {
             const currentVol = playback.snapshot.volume ?? 100;
             if (currentVol > 0) {
               void playback.setVolume(0);
+              showGlobalVolumeOsd(0, true);
             } else {
               void playback.setVolume(100);
+              showGlobalVolumeOsd(100, false);
             }
           }
           break;
@@ -668,16 +676,95 @@ function AppContent() {
         });
       }
     };
+
+    const unlistenCloseRequestedPromise = listen("prisma://window-close-requested", () => {
+      // Al pulsar X o atajo de cierre, pausar inmediatamente cualquier vídeo activo antes de ocultar
+      window.dispatchEvent(new CustomEvent("prisma-video-pause"));
+      document.querySelectorAll<HTMLVideoElement>("video").forEach((v) => {
+        if (!v.paused) v.pause();
+      });
+      setIsVideoPlaying(false);
+    });
+
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+
+      // Atajo dedicado para enviar Prisma a segundo plano ("escuchar de fondo") sin pausar vídeo ni música:
+      // Shift + B o tecla H (sin modificadores)
+      if (
+        (e.shiftKey && e.key.toLowerCase() === "b") ||
+        (e.key.toLowerCase() === "h" && !e.ctrlKey && !e.altKey && !e.metaKey)
+      ) {
+        e.preventDefault();
+        try {
+          const win = getCurrentWebviewWindow();
+          void win.hide();
+        } catch {}
+        return;
+      }
+
+      // Atajo para cerrar / minimizar ventana (Ctrl + W)
+      if (e.ctrlKey && e.key.toLowerCase() === "w") {
+        e.preventDefault();
+        try {
+          const win = getCurrentWebviewWindow();
+          void win.close();
+        } catch {}
+        return;
+      }
+
+      // Subir / Bajar volumen global con flechas arriba/abajo o +/- si no estamos en video_player
+      if (activeView !== "video_player") {
+        if (e.key === "ArrowUp" || e.key === "+" || e.key === "=") {
+          e.preventDefault();
+          const currentVol = playback.snapshot.volume ?? 100;
+          const nextVol = Math.min(100, currentVol + 5);
+          void playback.setVolume(nextVol);
+          showGlobalVolumeOsd(nextVol, false);
+          return;
+        }
+        if (e.key === "ArrowDown" || e.key === "-" || e.key === "_") {
+          e.preventDefault();
+          const currentVol = playback.snapshot.volume ?? 100;
+          const nextVol = Math.max(0, currentVol - 5);
+          void playback.setVolume(nextVol);
+          showGlobalVolumeOsd(nextVol, nextVol === 0);
+          return;
+        }
+        if (e.key.toLowerCase() === "m" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+          e.preventDefault();
+          const currentVol = playback.snapshot.volume ?? 100;
+          if (currentVol > 0) {
+            void playback.setVolume(0);
+            showGlobalVolumeOsd(0, true);
+          } else {
+            void playback.setVolume(100);
+            showGlobalVolumeOsd(100, false);
+          }
+          return;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
     window.addEventListener("prisma-send-to-supergallery", handleSendToSuperGallery);
     window.addEventListener("contextmenu", handleGlobalContextMenu);
 
     return () => {
+      window.removeEventListener("keydown", handleGlobalKeyDown);
       window.removeEventListener("prisma-open-converter", handleOpenConverter);
       window.removeEventListener("prisma-open-renamer", handleOpenRenamer);
       window.removeEventListener("prisma-open-duplicates", handleOpenDuplicates);
       window.removeEventListener("prisma-open-comparator", handleOpenComparator);
       window.removeEventListener("prisma-send-to-supergallery", handleSendToSuperGallery);
       window.removeEventListener("contextmenu", handleGlobalContextMenu);
+      unlistenCloseRequestedPromise.then((unlisten) => unlisten());
       unlistenPromise.then((unlisten) => unlisten());
       unlistenFileReceivedPromise.then((unlisten) => unlisten());
       unlistenSynapseSendPromise.then((unlisten) => unlisten());
@@ -1200,6 +1287,13 @@ function AppContent() {
         isOpen={isEqualizerModalOpen}
         isPlaying={isPrismaPlaying}
         onClose={() => setIsEqualizerModalOpen(false)}
+      />
+
+      <VolumeOsd
+        isMuted={globalVolumeOsd.isMuted}
+        style={{ position: "fixed", top: "24px", right: "28px" }}
+        visible={globalVolumeOsd.visible && activeView !== "video_player"}
+        volume={globalVolumeOsd.volume}
       />
     </div>
   );

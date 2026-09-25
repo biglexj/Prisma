@@ -1,0 +1,157 @@
+/* ==========================================================================
+   Prisma Volume OSD / HUD — Material 3 Expressive
+   Indicador flotante no intrusivo para atajos de volumen y mandos LAN
+   ========================================================================== */
+
+.prisma-volume-osd {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  z-index: 90;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px 8px 12px;
+  border-radius: 9999px;
+  background: rgba(18, 18, 24, 0.84);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  pointer-events: none;
+  user-select: none;
+  animation: prismaVolumePopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+@keyframes prismaVolumePopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.prisma-volume-osd.is-muted {
+  border-color: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 10px 32px rgba(239, 68, 68, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.prisma-volume-osd-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.prisma-volume-osd-svg {
+  width: 24px;
+  height: 24px;
+  color: #ffffff;
+  overflow: visible;
+}
+
+.prisma-volume-osd-mute-icon {
+  width: 22px;
+  height: 22px;
+  color: #ef4444;
+  animation: prismaMuteShake 0.25s ease-in-out;
+}
+
+@keyframes prismaMuteShake {
+  0%, 100% { transform: scale(1); }
+  35% { transform: scale(1.15) rotate(-6deg); }
+  70% { transform: scale(1.05) rotate(4deg); }
+}
+
+/* Ondas concéntricas de sonido */
+.volume-wave-arc {
+  opacity: 0.15;
+  stroke: rgba(255, 255, 255, 0.25);
+  transform-origin: 11px 12px;
+  transition: opacity 0.18s cubic-bezier(0.2, 0, 0, 1),
+              stroke 0.18s cubic-bezier(0.2, 0, 0, 1),
+              transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.volume-wave-arc.is-active {
+  opacity: 1;
+  stroke: var(--md-sys-color-primary, #a8c7fa);
+  animation: prismaWavePulse 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.volume-wave-arc.arc-1.is-active {
+  stroke-width: 2.1;
+}
+
+.volume-wave-arc.arc-2.is-active {
+  stroke-width: 2.2;
+}
+
+.volume-wave-arc.arc-3.is-active {
+  stroke-width: 2.3;
+}
+
+@keyframes prismaWavePulse {
+  0% { transform: scale(0.92); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.prisma-volume-osd-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 72px;
+}
+
+.prisma-volume-osd-value-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prisma-volume-osd-value {
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.prisma-volume-osd.is-muted .prisma-volume-osd-value {
+  color: #fca5a5;
+  font-size: 12.5px;
+}
+
+.prisma-volume-osd-progress-track {
+  width: 100%;
+  height: 4.5px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.prisma-volume-osd-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--md-sys-color-primary, #6750a4),
+    var(--md-sys-color-tertiary, #a8c7fa)
+  );
+  box-shadow: 0 0 8px rgba(168, 199, 250, 0.5);
+  transition: width 0.12s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.prisma-volume-osd.is-muted .prisma-volume-osd-progress-fill {
+  background: #ef4444;
+  box-shadow: none;
+}

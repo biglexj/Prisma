@@ -74,5 +74,25 @@
    - **Resultado**: ✅ Comportamiento impecable en el reproductor de vídeo y visualización de atajos 100% coherente en los ajustes del sistema.
 
 7. **Compilación Limpia**:
-   - `cargo check`: Terminado con código 0 en 3.21s sin errores.
-   - `bun run build`: Terminado con código 0 en 2.88s (transformó 242 módulos sin errores TypeScript).
+   - `cargo check`: Terminado con código 0 en 1.16s sin advertencias ni errores.
+   - `bun run build`: Terminado con código 0 en 3.00s (245 módulos transformados sin errores TypeScript).
+
+8. **Optimización y Rediseño del Panel de Atajos (`ShortcutsSettingsPanel.tsx`)**:
+   - Sustituida la cuadrícula rígida de CSS Grid por un layout Masonry fluido en columnas (`columns: 3 340px; break-inside: avoid`), eliminando el espacio en blanco inferior que generaba la tarjeta de vídeo.
+   - Añadidos chips de filtro interactivo por categoría con contador reactivo ("Todos", "Globales y Audio", "Vídeo", "Música", "Imágenes", "Edición") y barra de búsqueda en tiempo real por acción o tecla.
+   - `AppSettings.tsx` reducido de 1287 líneas a 945 líneas, cumpliendo con la regla de crecimiento de archivos del proyecto.
+
+9. **Comportamiento de Cierre de Ventana "X", Pausa de Vídeo y Modo Segundo Plano**:
+   - **Causa raíz identificada**: Al tener activado *Minimizar a la bandeja del sistema*, el evento `WindowEvent::CloseRequested` ocultaba la ventana (`window.hide()`), pero el elemento `<video>` continuaba reproduciéndose en segundo plano en el WebView.
+   - **Solución implementada**:
+     - En `lib.rs`: `WindowEvent::CloseRequested` emite el evento `"prisma://window-close-requested"` antes de ocultar la ventana.
+     - En `App.tsx`: se escucha `"prisma://window-close-requested"` y se despacha `"prisma-video-pause"` pausando defensivamente todo elemento `<video>` activo. La música continúa reproduciéndose en segundo plano tal como se espera de un reproductor de audio.
+     - **Atajo para Segundo Plano**: Se implementó `Shift + B` (Background) y la tecla `H` (Hide) tanto en `VideoPlayer.tsx` como en `App.tsx` e `ImageViewer.tsx` para permitir que el usuario envíe deliberadamente Prisma a segundo plano sin pausar el vídeo, continuando con la escucha del audio en segundo plano.
+     - **Atajo para Cerrar**: Se integró `Ctrl + W` para cerrar/minimizar la ventana pausando el vídeo, y la tecla `Q` en `ImageViewer.tsx` para cerrar el visor rápidamente.
+
+10. **HUD / OSD Flotante de Volumen Animado (`VolumeOsd.tsx`)**:
+   - Se implementó el componente reutilizable `VolumeOsd.tsx` y sus estilos `volume-osd.css` posicionado en la esquina superior derecha (`top: 24px; right: 28px`), con desenfoque translúcido *frosted glass* (Material 3 Expressive).
+   - **Ondas dinámicas de sonido**: Tres arcos concéntricos de audio (`)))`) que se encienden, crecen y pulsan de forma proporcional al nivel de volumen (Onda 1: 1-33%, Onda 2: 34-66%, Onda 3: 67-100%), icono de altavoz silenciado con vibración sutil (`prismaMuteShake`), porcentaje numérico con cifras tabulares y micro-barra de progreso con gradiente tonal.
+   - **Visibilidad no intrusiva**: El OSD se activa mediante teclas `↑`/`↓`, `+`/`-`, `M` o mandos a distancia LAN, sin provocar la aparición de la barra de controles inferior ni de la cabecera. Si los controles están ocultos, permanecen ocultos; el HUD flota limpiamente durante 1.4s y se desvanece de forma suave.
+   - Se integró tanto en `VideoPlayer.tsx` como a nivel global en `App.tsx` para música.
+

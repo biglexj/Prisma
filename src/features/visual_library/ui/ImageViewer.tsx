@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Icon } from "../../../shared/ui/Icon";
 import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
 import { ContextMenu } from "../../../shared/ui/ContextMenu";
@@ -525,6 +526,27 @@ export function ImageViewer({
         } else {
           closeViewer();
         }
+      } else if (event.key.toLowerCase() === "q" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeViewer();
+      } else if (
+        (event.shiftKey && event.key.toLowerCase() === "b") ||
+        (event.key.toLowerCase() === "h" && !event.ctrlKey && !event.altKey && !event.metaKey)
+      ) {
+        event.preventDefault();
+        try {
+          const win = getCurrentWebviewWindow();
+          void win.hide();
+        } catch {}
+        return;
+      } else if (event.ctrlKey && event.key.toLowerCase() === "w") {
+        event.preventDefault();
+        try {
+          const win = getCurrentWebviewWindow();
+          void win.close();
+        } catch {}
+        return;
       } else if (event.key.toLowerCase() === "i" && !event.ctrlKey && !event.metaKey && !event.altKey) {
         event.preventDefault();
         setShowInfoDrawer((prev) => !prev);

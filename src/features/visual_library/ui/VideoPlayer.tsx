@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { formatTime, mediaTitle } from "../../playback/ui/formatters";
 import { Icon } from "../../../shared/ui/Icon";
 import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
@@ -15,6 +16,7 @@ import { useVideoAudioDsp } from "./useVideoAudioDsp";
 import { useVideoSnapshot } from "../hooks/useVideoSnapshot";
 import { useSystemSettings } from "../../../app/useSystemSettings";
 import { ImageComparisonModal } from "../../comparison";
+import { VolumeOsd, useVolumeOsd } from "../../../shared/ui/VolumeOsd";
 import "./video-player.css";
 
 interface VideoPlayerProps {
@@ -83,6 +85,7 @@ export function VideoPlayer({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(100);
   const [prevVolume, setPrevVolume] = useState(80);
+  const { osdState: volumeOsd, triggerOsd: showVolumeOsd } = useVolumeOsd(volume, false);
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [playlistSearch, setPlaylistSearch] = useState("");
   const [repeatMode, setRepeatMode] = useState<"off" | "all" | "one">(() => {
@@ -781,25 +784,37 @@ export function VideoPlayer({
     }
   };
 
-  const handleVolumeChange = (newVolume: number) => {
-    if (newVolume > 0) {
-      setPrevVolume(newVolume);
+  const handleVolumeChange = (newVolume: number, fromHotkey = false) => {
+    const clamped = Math.max(0, Math.min(100, Math.round(newVolume)));
+    if (clamped > 0) {
+      setPrevVolume(clamped);
     }
-    setVolume(newVolume);
+    setVolume(clamped);
     if (videoRef.current) {
-      videoRef.current.volume = newVolume / 100;
+      videoRef.current.volume = clamped / 100;
     }
     if (secondaryAudioRef.current) {
-      secondaryAudioRef.current.volume = newVolume / 100;
+      secondaryAudioRef.current.volume = clamped / 100;
+    }
+    if (fromHotkey) {
+      showVolumeOsd(clamped, clamped === 0);
     }
   };
 
-  const toggleMute = () => {
+  const toggleMute = (fromHotkey: boolean | React.MouseEvent = false) => {
+    const isHotkey = typeof fromHotkey === "boolean" ? fromHotkey : false;
     if (volume > 0) {
       setPrevVolume(volume);
-      handleVolumeChange(0);
+      handleVolumeChange(0, isHotkey);
+      if (isHotkey) {
+        showVolumeOsd(0, true);
+      }
     } else {
-      handleVolumeChange(prevVolume > 0 ? prevVolume : 80);
+      const restored = prevVolume > 0 ? prevVolume : 80;
+      handleVolumeChange(restored, isHotkey);
+      if (isHotkey) {
+        showVolumeOsd(restored, false);
+      }
     }
   };
 
@@ -971,6 +986,27 @@ export function VideoPlayer({
         return;
       }
 
+      // Atajo dedicado para enviar a segundo plano ("escuchar de fondo") sin pausar el vídeo:
+      // Shift + B o tecla H (sin modificadores)
+      if ((e.shiftKey && e.key.toLowerCase() === "b") || (e.key.toLowerCase() === "h" && !e.ctrlKey && !e.altKey && !e.metaKey)) {
+        e.preventDefault();
+        try {
+          const win = getCurrentWebviewWindow();
+          void win.hide();
+        } catch {}
+        return;
+      }
+
+      // Atajo para cerrar / minimizar ventana (Ctrl + W)
+      if (e.ctrlKey && e.key.toLowerCase() === "w") {
+        e.preventDefault();
+        try {
+          const win = getCurrentWebviewWindow();
+          void win.close();
+        } catch {}
+        return;
+      }
+
       switch (e.key.toLowerCase()) {
         case " ":
         case "k":
@@ -1018,16 +1054,20 @@ export function VideoPlayer({
           }
           break;
         case "arrowup":
+        case "+":
+        case "=":
           e.preventDefault();
-          handleVolumeChange(Math.min(100, volume + 5));
+          handleVolumeChange(Math.min(100, volume + 5), true);
           break;
         case "arrowdown":
+        case "-":
+        case "_":
           e.preventDefault();
-          handleVolumeChange(Math.max(0, volume - 5));
+          handleVolumeChange(Math.max(0, volume - 5), true);
           break;
         case "m":
           e.preventDefault();
-          toggleMute();
+          toggleMute(true);
           break;
         case "b":
           e.preventDefault();
@@ -1119,6 +1159,7 @@ export function VideoPlayer({
         if (secondaryAudioRef.current) {
           secondaryAudioRef.current.volume = next / 100;
         }
+        showVolumeOsd(next, next === 0);
         return next;
       });
     };
@@ -1128,11 +1169,13 @@ export function VideoPlayer({
           setPrevVolume(currVol);
           if (videoRef.current) videoRef.current.volume = 0;
           if (secondaryAudioRef.current) secondaryAudioRef.current.volume = 0;
+          showVolumeOsd(0, true);
           return 0;
         } else {
           const restored = prevVolume > 0 ? prevVolume : 80;
           if (videoRef.current) videoRef.current.volume = restored / 100;
           if (secondaryAudioRef.current) secondaryAudioRef.current.volume = restored / 100;
+          showVolumeOsd(restored, false);
           return restored;
         }
       });
@@ -1141,6 +1184,12 @@ export function VideoPlayer({
     const onRemoteAudioTrack = () => cycleAudioTrack();
     const onRemoteShuffle = () => handleOneShotShuffle();
     const onRemoteFullscreen = () => toggleFullscreen();
+    const onGlobalVideoPause = () => {
+      if (videoRef.current && !videoRef.current.paused) {
+        videoRef.current.pause();
+      }
+      setPaused(true);
+    };
 
     window.addEventListener("prisma-video-toggle-play", onRemoteTogglePlay);
     window.addEventListener("prisma-video-next", onRemoteNext);
@@ -1152,6 +1201,7 @@ export function VideoPlayer({
     window.addEventListener("prisma-video-toggle-audio-track", onRemoteAudioTrack);
     window.addEventListener("prisma-video-shuffle", onRemoteShuffle);
     window.addEventListener("prisma-video-fullscreen", onRemoteFullscreen);
+    window.addEventListener("prisma-video-pause", onGlobalVideoPause);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
@@ -1165,6 +1215,7 @@ export function VideoPlayer({
       window.removeEventListener("prisma-video-toggle-audio-track", onRemoteAudioTrack);
       window.removeEventListener("prisma-video-shuffle", onRemoteShuffle);
       window.removeEventListener("prisma-video-fullscreen", onRemoteFullscreen);
+      window.removeEventListener("prisma-video-pause", onGlobalVideoPause);
     };
   }, [
     hasMedia,
@@ -1311,6 +1362,11 @@ export function VideoPlayer({
 
       {/* Escenario de Vídeo */}
       <div className="video-stage-wrapper">
+        <VolumeOsd
+          isMuted={volumeOsd.isMuted}
+          visible={volumeOsd.visible}
+          volume={volumeOsd.volume}
+        />
         <div
           className="video-stage"
           onContextMenu={handleContextMenu}
@@ -1810,7 +1866,7 @@ export function VideoPlayer({
               <button
                 aria-label={volume === 0 ? "Activar sonido" : "Silenciar"}
                 className="video-icon-btn"
-                onClick={toggleMute}
+                onClick={() => toggleMute()}
                 title={volume === 0 ? "Activar sonido (M)" : "Silenciar (M)"}
               >
                 <Icon
