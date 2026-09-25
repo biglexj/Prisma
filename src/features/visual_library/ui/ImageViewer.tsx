@@ -55,6 +55,14 @@ export function ImageViewer({
   const isAutoFitRef = useRef(false); // Ref para evitar stale closure en onLoad
   const [zoomToast, setZoomToast] = useState<string | null>(null);
   const zoomToastTimerRef = useRef<number | null>(null);
+  const [favToastText, setFavToastText] = useState<string | null>(null);
+  const favToastTimerRef = useRef<number | null>(null);
+
+  const showFavToast = useCallback((text: string) => {
+    if (favToastTimerRef.current) window.clearTimeout(favToastTimerRef.current);
+    setFavToastText(text);
+    favToastTimerRef.current = window.setTimeout(() => setFavToastText(null), 1800);
+  }, []);
   const [isEntering, setIsEntering] = useState(false);
   const [previousLayer, setPreviousLayer] = useState<{
     item: VisualLibraryItem;
@@ -608,6 +616,11 @@ export function ImageViewer({
         event.preventDefault();
         event.stopPropagation();
         setIsSlideshowActive((prev) => !prev);
+      } else if (event.key.toLowerCase() === "d" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        const nextFav = favorites.toggleFavorite(currentItem.path, "image");
+        showFavToast(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
       }
     },
     [
@@ -620,6 +633,8 @@ export function ImageViewer({
       activeList,
       currentIndex,
       showInfoDrawer,
+      favorites,
+      showFavToast,
     ]
   );
 
@@ -728,10 +743,13 @@ export function ImageViewer({
 
         <div className="image-viewer-top-right">
           <button
-            aria-label={favorites.isFavorite(currentItem.path) ? "Quitar de favoritos" : "Añadir a favoritos"}
+            aria-label={favorites.isFavorite(currentItem.path) ? "Quitar de favoritos (D)" : "Añadir a favoritos (D)"}
             className={`image-viewer-top-btn is-icon-only image-viewer-fav-btn ${favorites.isFavorite(currentItem.path) ? "is-favorite" : ""}`}
-            onClick={() => favorites.toggleFavorite(currentItem.path, "image")}
-            title={favorites.isFavorite(currentItem.path) ? "Quitar de favoritos" : "Añadir a favoritos"}
+            onClick={() => {
+              const nextFav = favorites.toggleFavorite(currentItem.path, "image");
+              showFavToast(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
+            }}
+            title={favorites.isFavorite(currentItem.path) ? "Quitar de favoritos (D)" : "Añadir a favoritos (D)"}
           >
             <Icon name="heart" />
           </button>
@@ -912,6 +930,13 @@ export function ImageViewer({
           {zoomToast}
         </div>
       )}
+
+      {/* Toast flotante de Favoritos */}
+      {favToastText ? (
+        <div className="image-viewer-fav-toast" key={favToastText}>
+          <span>{favToastText}</span>
+        </div>
+      ) : null}
 
       {/* Barra de control de Zoom y Escala Automática */}
       <div

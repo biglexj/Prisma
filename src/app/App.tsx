@@ -24,6 +24,7 @@ import { parseTrackInfo, resolveLibraryTrackInfo } from "../features/music_libra
 import { resolveMusicQueueForPath } from "../features/playback/services/folderQueueResolver";
 import { resolveVisualSessionForPath } from "../features/visual_library/services/visualSessionResolver";
 import { FavoritesView } from "../features/collections/ui/FavoritesView";
+import { useFavorites } from "../shared/useFavorites";
 import { HistoryView } from "../features/collections/ui/HistoryView";
 import { PlaylistsView } from "../features/collections/ui/PlaylistsView";
 import { playlistsRead } from "../features/collections/tauri/client";
@@ -105,6 +106,15 @@ function AppContent() {
   const imageLibrary = useVisualLibrary("image");
   const videoLibrary = useVisualLibrary("video");
   const { libraries: customLibrariesList } = useCustomLibraries();
+  const favorites = useFavorites();
+  const [globalFavToast, setGlobalFavToast] = useState<string | null>(null);
+  const globalFavToastTimerRef = useRef<number | null>(null);
+
+  const showGlobalFavToast = useCallback((text: string) => {
+    if (globalFavToastTimerRef.current) window.clearTimeout(globalFavToastTimerRef.current);
+    setGlobalFavToast(text);
+    globalFavToastTimerRef.current = window.setTimeout(() => setGlobalFavToast(null), 1800);
+  }, []);
 
   useGlobalFileDrop({
     activeView, onAddMusicFolder: library.addFolder, onAddImageFolder: imageLibrary.addFolder, onAddVideoFolder: videoLibrary.addFolder,
@@ -792,6 +802,20 @@ function AppContent() {
           triggerGlobalSeekOsd("backward", 10);
           return;
         }
+
+        // Alternar favorito de la pista musical activa con la tecla D
+        const isFavMusicKey =
+          e.key.toLowerCase() === "d" && !e.ctrlKey && !e.altKey && !e.metaKey;
+
+        if (isFavMusicKey) {
+          const effectiveAudio = playback.snapshot.path || playback.queue.currentItem?.path;
+          if (effectiveAudio) {
+            e.preventDefault();
+            const nextFav = favorites.toggleFavorite(effectiveAudio, "music");
+            showGlobalFavToast(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
+            return;
+          }
+        }
       }
     };
 
@@ -1355,6 +1379,35 @@ function AppContent() {
         style={{ position: "fixed" }}
         visible={globalSeekOsd.visible && activeView !== "video_player"}
       />
+
+      {globalFavToast ? (
+        <div
+          className="global-fav-toast"
+          style={{
+            position: "fixed",
+            top: "24px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 99999,
+            padding: "8px 22px",
+            borderRadius: "9999px",
+            background: "rgba(20, 20, 26, 0.92)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            color: "#fff",
+            fontSize: "0.84rem",
+            fontWeight: 750,
+            boxShadow: "0 8px 30px rgba(0, 0, 0, 0.5)",
+            pointerEvents: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <span>{globalFavToast}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

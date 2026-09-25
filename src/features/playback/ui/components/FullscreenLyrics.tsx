@@ -4,6 +4,7 @@ import { Icon } from "../../../../shared/ui/Icon";
 import { useTrackLyrics } from "../../useTrackLyrics";
 import { LyricsEditorModal } from "./LyricsEditorModal";
 import { MediaProgressBar } from "../../../../shared/ui/MediaProgressBar";
+import { useFavorites } from "../../../../shared/useFavorites";
 import "./fullscreen-lyrics.css";
 
 interface FullscreenLyricsProps {
@@ -63,6 +64,15 @@ export function FullscreenLyrics({
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const activeLineRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const favorites = useFavorites();
+  const [favToastText, setFavToastText] = useState<string | null>(null);
+  const favToastTimerRef = useRef<number | null>(null);
+
+  const showFavToast = (text: string) => {
+    if (favToastTimerRef.current) window.clearTimeout(favToastTimerRef.current);
+    setFavToastText(text);
+    favToastTimerRef.current = window.setTimeout(() => setFavToastText(null), 1800);
+  };
 
   const { lyrics, loading, updateLyrics, refetch } = useTrackLyrics(path);
 
@@ -118,6 +128,12 @@ export function FullscreenLyrics({
       } else if (e.key.toLowerCase() === "p") {
         e.preventDefault();
         onPrevious?.();
+      } else if (e.key.toLowerCase() === "d" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        e.preventDefault();
+        if (path) {
+          const nextFav = favorites.toggleFavorite(path, "music");
+          showFavToast(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
+        }
       }
     };
 
@@ -125,7 +141,7 @@ export function FullscreenLyrics({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [durationSeconds, isEditorOpen, onClose, onNext, onPrevious, onSeek, onTogglePlay, onVolume, positionSeconds, volume]);
+  }, [durationSeconds, isEditorOpen, onClose, onNext, onPrevious, onSeek, onTogglePlay, onVolume, positionSeconds, volume, path, favorites, showFavToast]);
 
   const hasLyrics = lyrics && lyrics.lines.length > 0;
 
@@ -151,6 +167,13 @@ export function FullscreenLyrics({
       </div>
 
       {/* Cabecera superior flotante */}
+      {/* Toast de Favoritos en Pantalla Completa */}
+      {favToastText ? (
+        <div className="playback-toast-indicator" key={favToastText}>
+          <span>{favToastText}</span>
+        </div>
+      ) : null}
+
       <header className="fullscreen-lyrics-topbar">
         <div className="fullscreen-lyrics-track-info">
           <div className="fullscreen-lyrics-badge">
@@ -169,15 +192,30 @@ export function FullscreenLyrics({
 
         <div className="fullscreen-lyrics-actions">
           {path ? (
-            <button
-              className="fullscreen-lyrics-action-btn"
-              onClick={() => setIsEditorOpen(true)}
-              title="Buscar online o editar letras (.lrc)"
-              type="button"
-            >
-              <Icon name="edit" />
-              <span>Editar letras</span>
-            </button>
+            <>
+              <button
+                className={`fullscreen-lyrics-action-btn ${favorites.isFavorite(path) ? "is-favorite" : ""}`}
+                onClick={() => {
+                  const nextFav = favorites.toggleFavorite(path, "music");
+                  showFavToast(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
+                }}
+                title={favorites.isFavorite(path) ? "Quitar de favoritos (D)" : "Añadir a favoritos (D)"}
+                type="button"
+              >
+                <Icon name="heart" />
+                <span>{favorites.isFavorite(path) ? "Favorito" : "Favorito"}</span>
+              </button>
+
+              <button
+                className="fullscreen-lyrics-action-btn"
+                onClick={() => setIsEditorOpen(true)}
+                title="Buscar online o editar letras (.lrc)"
+                type="button"
+              >
+                <Icon name="edit" />
+                <span>Editar letras</span>
+              </button>
+            </>
           ) : null}
 
           <button

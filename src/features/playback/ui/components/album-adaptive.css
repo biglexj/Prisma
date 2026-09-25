@@ -141,3 +141,34 @@
     animation: none;
   }
 }
+
+/* ── Toast Flotante de Favoritos en Vista de Música ── */
+.playback-toast-indicator {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 8px 20px;
+  border-radius: 9999px;
+  background: rgba(20, 20, 26, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.84rem;
+  font-weight: 750;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: playbackFavToastFade 1.8s ease forwards;
+}
+
+@keyframes playbackFavToastFade {
+  0% { opacity: 0; transform: translate(-50%, -10px) scale(0.95); }
+  15% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  80% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -10px) scale(0.95); }
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { PlaybackCapabilities, PlaybackSnapshot } from "../../model/types";
 import type { PlaybackQueueState } from "../../usePlaybackQueue";
 import { invoke } from "@tauri-apps/api/core";
@@ -87,6 +87,15 @@ export function PlaybackPreview({
     "--album-accent-deep": palette.accentDeep,
     "--album-on-accent": palette.onAccent,
   } as CSSProperties) : undefined;
+
+  const [favToastText, setFavToastText] = useState<string | null>(null);
+  const favToastTimerRef = useRef<number | null>(null);
+
+  const showFavToast = (text: string) => {
+    if (favToastTimerRef.current) window.clearTimeout(favToastTimerRef.current);
+    setFavToastText(text);
+    favToastTimerRef.current = window.setTimeout(() => setFavToastText(null), 1800);
+  };
 
   const queueCount = queueState?.queue.items.length ?? 0;
 
@@ -200,6 +209,13 @@ export function PlaybackPreview({
         e.preventDefault();
         const currentVol = snapshot.volume ?? 100;
         onVolume(currentVol > 0 ? 0 : 100);
+      } else if (key === "d" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        if (effectivePath) {
+          const mediaType = isVideo ? "video" : isImage ? "image" : "music";
+          const nextFav = favorites.toggleFavorite(effectivePath, mediaType);
+          showFavToast(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
+        }
       }
     };
 
@@ -207,10 +223,15 @@ export function PlaybackPreview({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [duration, onNext, onPrevious, onSeek, onToggle, onVolume, position, snapshot.volume]);
+  }, [duration, onNext, onPrevious, onSeek, onToggle, onVolume, position, snapshot.volume, effectivePath, favorites, isImage, isVideo, showFavToast]);
 
   return (
     <section className={`preview-screen ${palette ? "has-album-palette" : ""}`} id="studio-home" style={adaptiveStyle}>
+      {favToastText ? (
+        <div className="playback-toast-indicator" key={favToastText}>
+          <span>{favToastText}</span>
+        </div>
+      ) : null}
       <header className="preview-heading">
         <div>
           <span className="preview-kicker">REPRODUCTOR LOCAL</span>
@@ -301,18 +322,19 @@ export function PlaybackPreview({
             </div>
             <div className="preview-title-actions">
               <button
-                aria-label={isFav ? "Quitar de favoritos" : "Marcar como favorito"}
+                aria-label={isFav ? "Quitar de favoritos (D)" : "Añadir a favoritos (D)"}
                 className={`preview-fav-btn ${isFav ? "is-favorite" : ""}`}
                 disabled={!hasEffectiveMedia}
                 onClick={() => {
                   if (effectivePath) {
-                    favorites.toggleFavorite(
+                    const nextFav = favorites.toggleFavorite(
                       effectivePath,
                       isVideo ? "video" : isImage ? "image" : "music"
                     );
+                    showFavToast(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
                   }
                 }}
-                title={isFav ? "Quitar de favoritos" : "Añadir a favoritos"}
+                title={isFav ? "Quitar de favoritos (D)" : "Añadir a favoritos (D)"}
               >
                 <Icon name="heart" />
               </button>

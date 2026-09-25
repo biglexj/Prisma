@@ -93,6 +93,7 @@ export function ShortcutsSettingsPanel({ quickLookShortcut }: ShortcutsSettingsP
           { id: "m_lyrics", label: "Alternar panel de Letras", keys: ["L"] },
           { id: "m_queue", label: "Cola de reproducción", keys: ["Q"] },
           { id: "m_mute", label: "Silenciar / Restaurar", keys: ["M"] },
+          { id: "m_fav", label: "Añadir / Quitar de favoritos", keys: ["D"] },
         ],
       },
       {
@@ -110,6 +111,7 @@ export function ShortcutsSettingsPanel({ quickLookShortcut }: ShortcutsSettingsP
           { id: "i_editor", label: "Editor de Imagen", keys: ["E"] },
           { id: "i_comparator", label: "Comparador de Fotos", keys: ["C"] },
           { id: "i_rename", label: "Renombrar archivo", keys: ["F2"] },
+          { id: "i_fav", label: "Añadir / Quitar de favoritos", keys: ["D"] },
           { id: "i_trash", label: "Mover a la papelera", keys: ["Supr"] },
           { id: "i_close", label: "Cerrar visor", keys: ["Esc", "Q"] },
         ],
