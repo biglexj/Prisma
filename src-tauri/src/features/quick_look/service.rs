@@ -107,8 +107,12 @@ impl QuickLookState {
     pub fn restore_prisma(&self) {
         if let Some(main_win) = self.app_handle.get_webview_window("main") {
             ql_log!("restore_prisma: Restaurando ventana principal");
+            let was_max = crate::app::commands::quick_look::is_main_window_was_maximized();
             let _ = main_win.unminimize();
             let _ = main_win.show();
+            if was_max {
+                let _ = main_win.maximize();
+            }
             let _ = main_win.set_focus();
 
             #[cfg(windows)]
@@ -117,11 +121,12 @@ impl QuickLookState {
                     use windows::Win32::Foundation::HWND;
                     use windows::Win32::UI::WindowsAndMessaging::{
                         BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId,
-                        SetForegroundWindow, ShowWindow, SW_RESTORE,
+                        SetForegroundWindow, ShowWindow, SW_MAXIMIZE, SW_RESTORE,
                     };
                     use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 
                     let win_hwnd = HWND(hwnd.0);
+                    let show_cmd = if was_max { SW_MAXIMIZE } else { SW_RESTORE };
                     unsafe {
                         let fg_hwnd = GetForegroundWindow();
                         let fg_thread = GetWindowThreadProcessId(fg_hwnd, None);
@@ -129,12 +134,12 @@ impl QuickLookState {
 
                         if fg_thread != current_thread && fg_thread != 0 {
                             let _ = AttachThreadInput(fg_thread, current_thread, true);
-                            let _ = ShowWindow(win_hwnd, SW_RESTORE);
+                            let _ = ShowWindow(win_hwnd, show_cmd);
                             let _ = SetForegroundWindow(win_hwnd);
                             let _ = BringWindowToTop(win_hwnd);
                             let _ = AttachThreadInput(fg_thread, current_thread, false);
                         } else {
-                            let _ = ShowWindow(win_hwnd, SW_RESTORE);
+                            let _ = ShowWindow(win_hwnd, show_cmd);
                             let _ = SetForegroundWindow(win_hwnd);
                             let _ = BringWindowToTop(win_hwnd);
                         }

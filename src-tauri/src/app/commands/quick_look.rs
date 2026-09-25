@@ -7,9 +7,18 @@ use crate::features::quick_look::{QuickLookPayload, QuickLookState};
 use crate::infrastructure::autostart::{is_autostart_enabled, set_autostart};
 
 static MINIMIZE_TO_TRAY: AtomicBool = AtomicBool::new(true);
+static MAIN_WINDOW_WAS_MAXIMIZED: AtomicBool = AtomicBool::new(true);
 static PREV_BOUNDS: Mutex<Option<HashMap<String, (f64, f64, f64, f64)>>> = Mutex::new(None);
 static PREV_COMPARISON_BOUNDS: Mutex<Option<(f64, f64, f64, f64)>> = Mutex::new(None);
 static WINDOWS_MAXIMIZED: Mutex<Option<HashMap<String, bool>>> = Mutex::new(None);
+
+pub fn is_main_window_was_maximized() -> bool {
+    MAIN_WINDOW_WAS_MAXIMIZED.load(Ordering::SeqCst)
+}
+
+pub fn record_main_window_maximized(maximized: bool) {
+    MAIN_WINDOW_WAS_MAXIMIZED.store(maximized, Ordering::SeqCst);
+}
 
 pub fn reset_maximize_state() {
     if let Ok(mut map) = WINDOWS_MAXIMIZED.lock() {
@@ -411,6 +420,13 @@ pub fn window_hide_to_background(app: tauri::AppHandle, pause_video: bool) -> Re
     use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
     if let Some(main_window) = app.get_webview_window("main") {
+        if let Ok(is_min) = main_window.is_minimized() {
+            if !is_min {
+                if let Ok(max) = main_window.is_maximized() {
+                    record_main_window_maximized(max);
+                }
+            }
+        }
         if pause_video {
             let _ = main_window.emit("prisma://window-close-requested", ());
         }
@@ -425,8 +441,12 @@ pub fn window_restore_from_background(app: tauri::AppHandle) -> Result<(), Strin
     use tauri::Manager;
 
     if let Some(main_window) = app.get_webview_window("main") {
+        let was_max = is_main_window_was_maximized();
         let _ = main_window.unminimize();
         let _ = main_window.show();
+        if was_max {
+            let _ = main_window.maximize();
+        }
         let _ = main_window.set_focus();
 
         #[cfg(windows)]
@@ -435,11 +455,12 @@ pub fn window_restore_from_background(app: tauri::AppHandle) -> Result<(), Strin
                 use windows::Win32::Foundation::HWND;
                 use windows::Win32::UI::WindowsAndMessaging::{
                     BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId,
-                    SetForegroundWindow, ShowWindow, SW_RESTORE,
+                    SetForegroundWindow, ShowWindow, SW_MAXIMIZE, SW_RESTORE,
                 };
                 use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 
                 let win_hwnd = HWND(hwnd.0);
+                let show_cmd = if was_max { SW_MAXIMIZE } else { SW_RESTORE };
                 unsafe {
                     let fg_hwnd = GetForegroundWindow();
                     let fg_thread = GetWindowThreadProcessId(fg_hwnd, None);
@@ -447,12 +468,12 @@ pub fn window_restore_from_background(app: tauri::AppHandle) -> Result<(), Strin
 
                     if fg_thread != current_thread && fg_thread != 0 {
                         let _ = AttachThreadInput(fg_thread, current_thread, true);
-                        let _ = ShowWindow(win_hwnd, SW_RESTORE);
+                        let _ = ShowWindow(win_hwnd, show_cmd);
                         let _ = SetForegroundWindow(win_hwnd);
                         let _ = BringWindowToTop(win_hwnd);
                         let _ = AttachThreadInput(fg_thread, current_thread, false);
                     } else {
-                        let _ = ShowWindow(win_hwnd, SW_RESTORE);
+                        let _ = ShowWindow(win_hwnd, show_cmd);
                         let _ = SetForegroundWindow(win_hwnd);
                         let _ = BringWindowToTop(win_hwnd);
                     }

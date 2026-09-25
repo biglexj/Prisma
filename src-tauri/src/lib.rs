@@ -457,6 +457,15 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if window.label() == "main" {
+                if let WindowEvent::Resized(_) = event {
+                    if let Ok(is_min) = window.is_minimized() {
+                        if !is_min {
+                            if let Ok(max) = window.is_maximized() {
+                                app::commands::quick_look::record_main_window_maximized(max);
+                            }
+                        }
+                    }
+                }
                 if matches!(event, WindowEvent::Focused(true)) {
                     if let Some(main_window) = window.app_handle().get_webview_window("main") {
                         if let Err(error) =
@@ -470,6 +479,13 @@ pub fn run() {
                 }
                 if let WindowEvent::CloseRequested { api, .. } = event {
                     let _ = window.emit("prisma://window-close-requested", ());
+                    if let Ok(is_min) = window.is_minimized() {
+                        if !is_min {
+                            if let Ok(max) = window.is_maximized() {
+                                app::commands::quick_look::record_main_window_maximized(max);
+                            }
+                        }
+                    }
                     if is_minimize_to_tray_enabled() {
                         api.prevent_close();
                         let _ = window.app_handle().save_window_state(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED);
