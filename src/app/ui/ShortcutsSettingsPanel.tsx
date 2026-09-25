@@ -63,9 +63,9 @@ export function ShortcutsSettingsPanel({ quickLookShortcut }: ShortcutsSettingsP
         badgeText: "Cine",
         items: [
           { id: "play_pause", label: "Reproducir / Pausar", keys: ["Espacio", "K"] },
-          { id: "seek_back", label: "Retroceder 10 segundos", keys: ["←", "J"] },
-          { id: "seek_forward", label: "Avanzar 10 segundos", keys: ["→", "L"] },
-          { id: "prev_next", label: "Vídeo anterior / siguiente", keys: ["P", "N"] },
+          { id: "seek_back", label: "Retroceder 10 segundos", keys: ["Shift + ←", "J"] },
+          { id: "seek_forward", label: "Avanzar 10 segundos", keys: ["Shift + →", "L"] },
+          { id: "prev_next", label: "Vídeo anterior / siguiente", keys: ["←", "→", "P", "N"] },
           { id: "queue", label: "Cola de proyección (Abrir / Cerrar)", keys: ["Q"] },
           { id: "snapshot", label: "Tomar captura de fotograma (Snapshot)", keys: ["Shift + S"] },
           { id: "frame_forward", label: "Avanzar 1 fotograma (Frame forward)", keys: ["E", "."] },

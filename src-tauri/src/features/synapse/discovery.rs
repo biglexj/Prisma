@@ -40,16 +40,28 @@ impl SynapseDiscoveryService {
         std::thread::Builder::new()
             .name("synapse-discovery-thread".into())
             .spawn(move || {
-                let port = 49289;
+                let ports_to_try = [49289, 49288, 49287];
+                let mut socket_opt = None;
+                let mut active_port = 49289;
+                for p in ports_to_try {
+                    match UdpSocket::bind(format!("0.0.0.0:{p}")) {
+                        Ok(s) => {
+                            let _ = s.set_read_timeout(Some(Duration::from_millis(1500)));
+                            socket_opt = Some(s);
+                            active_port = p;
+                            break;
+                        }
+                        Err(_) => continue,
+                    }
+                }
 
-                // Crear socket UDP para recibir beacons de broadcast de la red local
-                let socket = match UdpSocket::bind(format!("0.0.0.0:{port}")) {
-                    Ok(s) => {
-                        let _ = s.set_read_timeout(Some(Duration::from_millis(1500)));
+                let socket = match socket_opt {
+                    Some(s) => {
+                        println!("[Synapse Discovery] Escuchando en puerto UDP {active_port}");
                         s
                     }
-                    Err(e) => {
-                        eprintln!("[Synapse Discovery] No se pudo vincular al puerto UDP {port}: {e}");
+                    None => {
+                        eprintln!("[Synapse Discovery] No se pudo vincular a ningún puerto UDP disponible");
                         return;
                     }
                 };

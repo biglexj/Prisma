@@ -27,14 +27,28 @@ impl SynapseServer {
         std::thread::Builder::new()
             .name("synapse-server-thread".into())
             .spawn(move || {
-                let port = 49290;
-                let listener = match TcpListener::bind(format!("0.0.0.0:{port}")) {
-                    Ok(l) => {
-                        let _ = l.set_nonblocking(true);
+                let ports_to_try = [49290, 49292, 49293];
+                let mut listener_opt = None;
+                let mut active_port = 49290;
+                for p in ports_to_try {
+                    match TcpListener::bind(format!("0.0.0.0:{p}")) {
+                        Ok(l) => {
+                            let _ = l.set_nonblocking(true);
+                            listener_opt = Some(l);
+                            active_port = p;
+                            break;
+                        }
+                        Err(_) => continue,
+                    }
+                }
+
+                let listener = match listener_opt {
+                    Some(l) => {
+                        println!("[Synapse Server] Escuchando en puerto TCP {active_port}");
                         l
                     }
-                    Err(e) => {
-                        eprintln!("[Synapse Server] No se pudo vincular al puerto {port}: {e}");
+                    None => {
+                        eprintln!("[Synapse Server] No se pudo vincular a ningún puerto TCP disponible");
                         return;
                     }
                 };

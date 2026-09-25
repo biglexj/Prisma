@@ -5,10 +5,20 @@ import { App } from "./app/App";
 import { QuickLookWindow } from "./features/quick_look/ui/QuickLookWindow";
 import "./app/styles.css";
 
-const isQuickLook =
-  window.location.hash === "#quicklook" ||
-  window.location.search.includes("quicklook=true") ||
-  getCurrentWebviewWindow().label.startsWith("quicklook");
+function isQuickLookWindow(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.location.hash === "#quicklook" || window.location.search.includes("quicklook=true")) {
+    return true;
+  }
+  try {
+    const win = getCurrentWebviewWindow();
+    return Boolean(win && typeof win.label === "string" && win.label.startsWith("quicklook"));
+  } catch {
+    return false;
+  }
+}
+
+const isQuickLook = isQuickLookWindow();
 
 if (isQuickLook) {
   document.documentElement.classList.add("is-quicklook");

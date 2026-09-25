@@ -338,6 +338,11 @@ pub fn run() {
             if let Some(main_window) = app.get_webview_window("main") {
                 if is_dev_mode {
                     let _ = main_window.set_title("Prisma (Dev) · Tu espacio de multimedia");
+                    let _ = main_window.set_size(tauri::Size::Logical(tauri::LogicalSize {
+                        width: 1200.0,
+                        height: 800.0,
+                    }));
+                    let _ = main_window.center();
                 }
                 if is_autostart || is_explicit_quicklook {
                     let _ = main_window.hide();
@@ -348,9 +353,12 @@ pub fn run() {
                     let _ = main_window.set_focus();
                 }
 
-                if let Err(error) = infrastructure::windows_file_drop::register_or_refresh(&main_window) {
-                    eprintln!("Prisma no pudo registrar el receptor nativo de carpetas: {error}");
-                }
+                let win_clone = main_window.clone();
+                let _ = infrastructure::windows_file_drop::register_or_refresh(&main_window);
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    let _ = infrastructure::windows_file_drop::register_or_refresh(&win_clone);
+                });
             }
 
             // ── Menú de la bandeja del sistema (System Tray) ──
