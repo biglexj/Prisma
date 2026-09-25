@@ -72,6 +72,7 @@ export function ShortcutsSettingsPanel({ quickLookShortcut }: ShortcutsSettingsP
           { id: "frame_forward", label: "Avanzar 1 fotograma (Frame forward)", keys: ["E", "."] },
           { id: "frame_backward", label: "Retroceder 1 fotograma (Frame backward)", keys: ["Shift + E", ","] },
           { id: "fullscreen", label: "Pantalla completa", keys: ["F", "F11", "Alt + Enter"] },
+          { id: "pip", label: "Ventana flotante (Picture-in-Picture)", keys: ["U"] },
           { id: "subtitles", label: "Activar / Alternar subtítulos", keys: ["V", "C"] },
           { id: "multi_audio", label: "Alternar pista (Multi-audio)", keys: ["B"] },
           { id: "shuffle", label: "Barajar cola (One-shot)", keys: ["S"] },

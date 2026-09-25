@@ -1058,6 +1058,10 @@ export function VideoPlayer({
           e.preventDefault();
           cycleAudioTrack();
           break;
+        case "u":
+          e.preventDefault();
+          void togglePiP();
+          break;
         case "c":
           e.preventDefault();
           handleOpenComparison();
@@ -1902,10 +1906,10 @@ export function VideoPlayer({
             </button>
 
             <button
-              aria-label="Picture-in-Picture (Ventana flotante)"
+              aria-label="Picture-in-Picture (Ventana flotante) (U)"
               className={`video-icon-btn ${isPipActive ? "is-active" : ""}`}
               onClick={togglePiP}
-              title="Picture-in-Picture (Ventana flotante)"
+              title="Picture-in-Picture (Ventana flotante) (U)"
             >
               <Icon name="pip" />
             </button>
