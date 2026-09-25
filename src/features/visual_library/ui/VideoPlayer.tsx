@@ -65,6 +65,11 @@ interface VideoPlaybackSource {
   duration_secs: number;
 }
 
+function pathsEqual(p1?: string | null, p2?: string | null): boolean {
+  if (!p1 || !p2) return p1 === p2;
+  return p1.replace(/\\/g, "/").toLowerCase() === p2.replace(/\\/g, "/").toLowerCase();
+}
+
 export function VideoPlayer({
   path,
   videoItems = [],
@@ -219,7 +224,7 @@ export function VideoPlayer({
   }, [path]);
 
   // Auto-detect current index in video list
-  const currentIndex = localVideoItems.findIndex((item) => item.path === path);
+  const currentIndex = localVideoItems.findIndex((item) => pathsEqual(item.path, path));
   const hasNext = currentIndex >= 0 && currentIndex < localVideoItems.length - 1;
   const hasPrevious = currentIndex > 0;
 
@@ -714,7 +719,8 @@ export function VideoPlayer({
       return;
     }
     if (localVideoItems.length > 0 && onSelectVideo) {
-      const nextIndex = (currentIndex + 1) % localVideoItems.length;
+      const validIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex = (validIndex + 1) % localVideoItems.length;
       onSelectVideo(localVideoItems[nextIndex].path);
     }
   };
@@ -725,7 +731,8 @@ export function VideoPlayer({
       return;
     }
     if (localVideoItems.length > 0 && onSelectVideo) {
-      const prevIndex = (currentIndex - 1 + localVideoItems.length) % localVideoItems.length;
+      const validIndex = currentIndex >= 0 ? currentIndex : 0;
+      const prevIndex = (validIndex - 1 + localVideoItems.length) % localVideoItems.length;
       onSelectVideo(localVideoItems[prevIndex].path);
     }
   };
@@ -1025,14 +1032,14 @@ export function VideoPlayer({
         case "arrowleft":
           e.preventDefault();
           if (e.shiftKey || e.ctrlKey) {
-            handlePrevious(true);
-          } else {
             if (videoRef.current) {
               const nextPos = Math.max(0, videoRef.current.currentTime - 10);
               videoRef.current.currentTime = nextPos;
               setPosition(nextPos);
               triggerSeekOsd("backward", 10);
             }
+          } else {
+            handlePrevious(true);
           }
           break;
         case "j":
@@ -1047,14 +1054,14 @@ export function VideoPlayer({
         case "arrowright":
           e.preventDefault();
           if (e.shiftKey || e.ctrlKey) {
-            handleNext();
-          } else {
             if (videoRef.current) {
               const nextPos = Math.min(duration, videoRef.current.currentTime + 10);
               videoRef.current.currentTime = nextPos;
               setPosition(nextPos);
               triggerSeekOsd("forward", 10);
             }
+          } else {
+            handleNext();
           }
           break;
         case "l":

@@ -287,7 +287,10 @@ function AppContent() {
         itemsToUse = res.items;
       }
 
-      const hasPath = itemsToUse.some((it) => it.path === path);
+      const hasPath = itemsToUse.some(
+        (it) =>
+          it.path.replace(/\\/g, "/").toLowerCase() === path.replace(/\\/g, "/").toLowerCase(),
+      );
       if (!hasPath) {
         const fileName = path.replace(/\\/g, "/").split("/").pop() || "Vídeo";
         setActiveVideoSessionItems([
