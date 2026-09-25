@@ -14,6 +14,8 @@ export interface ViewerToolsMenuProps {
   onSendToMobile: () => void;
   isSlideshowActive: boolean;
   onToggleSlideshow: () => void;
+  isMoveMode?: boolean;
+  onToggleMoveMode?: () => void;
   onOpenChange?: (isOpen: boolean) => void;
 }
 
@@ -30,6 +32,8 @@ export function ViewerToolsMenu({
   onSendToMobile,
   isSlideshowActive,
   onToggleSlideshow,
+  isMoveMode = false,
+  onToggleMoveMode,
   onOpenChange,
 }: ViewerToolsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -231,7 +235,22 @@ export function ViewerToolsMenu({
 
           {/* Sección de Proyección */}
           <div className="viewer-tools-section">
-            <div className="viewer-tools-section-title">Proyección</div>
+            {onToggleMoveMode && (
+              <button
+                className={`viewer-tools-item ${isMoveMode ? "is-active" : ""}`}
+                onClick={() => handleAction(onToggleMoveMode)}
+                role="menuitem"
+              >
+                <Icon name="hand" />
+                <div className="viewer-tools-item-content">
+                  <span className="viewer-tools-item-title">
+                    {isMoveMode ? "Desactivar modo mover" : "Activar modo mover"}
+                  </span>
+                  <span className="viewer-tools-item-desc">Desplazar y encuadrar imagen arrastrando</span>
+                </div>
+                <kbd className="viewer-tools-shortcut">M</kbd>
+              </button>
+            )}
             <button
               className={`viewer-tools-item ${isSlideshowActive ? "is-active" : ""}`}
               onClick={() => handleAction(onToggleSlideshow)}

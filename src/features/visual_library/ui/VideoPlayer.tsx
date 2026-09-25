@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { formatTime, mediaTitle } from "../../playback/ui/formatters";
@@ -104,7 +104,7 @@ export function VideoPlayer({
     }
   });
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
-  const [showControls, setShowControls] = useState(true);
+  const [showControls, setShowControls] = useState(false);
 
   // Multi-Audio y Canales (Estéreo / Mono)
   const [showAudioMenu, setShowAudioMenu] = useState(false);
@@ -148,7 +148,6 @@ export function VideoPlayer({
   const explicitAppToggleRef = useRef(false);
 
   const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
-  const isHoveringHeaderRef = useRef(false);
 
   const favorites = useFavorites();
   const isFav = path ? favorites.isFavorite(path) : false;
@@ -179,6 +178,11 @@ export function VideoPlayer({
   const fastForwardIntervalRef = useRef<number | null>(null);
   const audioMenuRef = useRef<HTMLDivElement | null>(null);
   const subMenuRef = useRef<HTMLDivElement | null>(null);
+  const isHoveringControlsRef = useRef<boolean>(false);
+  const isSwitchingVideoRef = useRef<boolean>(false);
+  const controlsSuppressUntilRef = useRef<number>(Date.now() + 600);
+  const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
+  const openedAtRef = useRef<number>(Date.now());
 
   const hasMedia = Boolean(path);
   const title = path ? mediaTitle(path) : "Sin vídeo seleccionado";
@@ -187,10 +191,16 @@ export function VideoPlayer({
 
   // Reiniciar estado de proxy al cambiar de vídeo para reproducción directa inmediata
   useEffect(() => {
+    isSwitchingVideoRef.current = true;
+    controlsSuppressUntilRef.current = Date.now() + 600;
     setPlaybackSource(null);
     setIsResolvingSource(false);
     setResolveError(null);
     setVideoError(false);
+    const timer = window.setTimeout(() => {
+      isSwitchingVideoRef.current = false;
+    }, 600);
+    return () => window.clearTimeout(timer);
   }, [path]);
 
   // Sincronizar cola local si cambian los props
@@ -713,6 +723,8 @@ export function VideoPlayer({
   }, [showAudioMenu, showSubMenu]);
 
   const handleNext = () => {
+    isSwitchingVideoRef.current = true;
+    controlsSuppressUntilRef.current = Date.now() + 1500;
     if (repeatMode === "one" && videoRef.current) {
       videoRef.current.currentTime = 0;
       void videoRef.current.play().catch(() => {});
@@ -726,6 +738,8 @@ export function VideoPlayer({
   };
 
   const handlePrevious = (forceTrackChange = false) => {
+    isSwitchingVideoRef.current = true;
+    controlsSuppressUntilRef.current = Date.now() + 1500;
     if (!forceTrackChange && position > 3 && videoRef.current) {
       videoRef.current.currentTime = 0;
       return;
@@ -850,38 +864,115 @@ export function VideoPlayer({
     videoRef.current.playbackRate = playbackSpeed;
   };
 
-  const handleUserActivity = () => {
-    if (ignoreNextActivityRef.current) {
-      ignoreNextActivityRef.current = false;
-      return;
-    }
-
-    setShowControls(true);
+  const resetControlsTimeout = useCallback(() => {
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
     }
-    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist && !isToolsMenuOpen && !isHoveringHeaderRef.current) {
+    const hasActiveOverlay =
+      isHoveringControlsRef.current ||
+      (paused && !isSwitchingVideoRef.current) ||
+      showAudioMenu ||
+      showSubMenu ||
+      showPlaylist ||
+      isToolsMenuOpen ||
+      isComparing ||
+      Boolean(mediaDelete.menu) ||
+      Boolean(mediaDelete.pendingDelete);
+
+    if (!hasActiveOverlay) {
       controlsTimeoutRef.current = window.setTimeout(() => {
-        if (!isToolsMenuOpen && !isHoveringHeaderRef.current) {
+        if (!hasActiveOverlay) {
           setShowControls(false);
+          controlsSuppressUntilRef.current = Date.now() + 450;
         }
       }, 3000);
     }
-  };
+  }, [
+    paused,
+    showAudioMenu,
+    showSubMenu,
+    showPlaylist,
+    isToolsMenuOpen,
+    isComparing,
+    mediaDelete.menu,
+    mediaDelete.pendingDelete,
+  ]);
 
-  const handleMouseLeave = () => {
-    isHoveringHeaderRef.current = false;
-    if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist && !isToolsMenuOpen) {
+  const handleUserActivity = useCallback(
+    (e?: MouseEvent | PointerEvent | React.MouseEvent) => {
+      if (ignoreNextActivityRef.current) {
+        ignoreNextActivityRef.current = false;
+        return;
+      }
+
+      if (Date.now() < controlsSuppressUntilRef.current) return;
+      if (Date.now() - openedAtRef.current < 450) {
+        if (e && "clientX" in e) {
+          lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+        }
+        return;
+      }
+
+      if (e && "clientX" in e) {
+        const currentX = e.clientX;
+        const currentY = e.clientY;
+
+        if (!lastMousePosRef.current) {
+          lastMousePosRef.current = { x: currentX, y: currentY };
+          return;
+        }
+
+        const dx = currentX - lastMousePosRef.current.x;
+        const dy = currentY - lastMousePosRef.current.y;
+        const distSq = dx * dx + dy * dy;
+
+        // Requiere al menos 3px de movimiento acumulado real (distSq >= 9)
+        if (distSq < 9) {
+          return;
+        }
+
+        lastMousePosRef.current = { x: currentX, y: currentY };
+      }
+
+      setShowControls(true);
+      resetControlsTimeout();
+    },
+    [resetControlsTimeout]
+  );
+
+  const handleMouseLeave = useCallback(() => {
+    const hasActiveOverlay =
+      isHoveringControlsRef.current ||
+      (paused && !isSwitchingVideoRef.current) ||
+      showAudioMenu ||
+      showSubMenu ||
+      showPlaylist ||
+      isToolsMenuOpen ||
+      isComparing ||
+      Boolean(mediaDelete.menu) ||
+      Boolean(mediaDelete.pendingDelete);
+
+    if (!hasActiveOverlay) {
       if (controlsTimeoutRef.current) {
         window.clearTimeout(controlsTimeoutRef.current);
       }
       controlsTimeoutRef.current = window.setTimeout(() => {
-        if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist && !isToolsMenuOpen && !isHoveringHeaderRef.current) {
+        if (!hasActiveOverlay) {
           setShowControls(false);
+          controlsSuppressUntilRef.current = Date.now() + 450;
         }
-      }, 3000);
+      }, 1000);
     }
-  };
+  }, [
+    paused,
+    showAudioMenu,
+    showSubMenu,
+    showPlaylist,
+    isToolsMenuOpen,
+    isComparing,
+    mediaDelete.menu,
+    mediaDelete.pendingDelete,
+  ]);
 
   const handleWheel = (e: React.WheelEvent) => {
     const target = e.target as HTMLElement | null;
@@ -898,30 +989,53 @@ export function VideoPlayer({
     }
   };
 
-  // Temporizador inicial al montar el reproductor para el primer vídeo: esperar 3 segundos
+  // Listener global de actividad del mouse en la ventana
   useEffect(() => {
-    if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
-    controlsTimeoutRef.current = window.setTimeout(() => {
-      if (!paused && !showAudioMenu && !showSubMenu && !showPlaylist && !isToolsMenuOpen && !isHoveringHeaderRef.current) {
-        setShowControls(false);
-      }
-    }, 3000);
+    const onActivity = (e: MouseEvent) => {
+      handleUserActivity(e);
+    };
+
+    window.addEventListener("mousemove", onActivity, { passive: true });
+    window.addEventListener("pointermove", onActivity, { passive: true });
     return () => {
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+      window.removeEventListener("mousemove", onActivity);
+      window.removeEventListener("pointermove", onActivity);
     };
-  }, []);
+  }, [handleUserActivity]);
 
+  const isInitialMountRef = useRef(true);
   useEffect(() => {
-    if (showAudioMenu || showSubMenu || showPlaylist || paused || isToolsMenuOpen) {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
+    if (
+      showAudioMenu ||
+      showSubMenu ||
+      showPlaylist ||
+      (paused && !isSwitchingVideoRef.current) ||
+      isToolsMenuOpen ||
+      isComparing ||
+      mediaDelete.menu ||
+      mediaDelete.pendingDelete
+    ) {
       setShowControls(true);
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
     } else {
-      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
-      controlsTimeoutRef.current = window.setTimeout(() => {
-        setShowControls(false);
-      }, 3000);
+      resetControlsTimeout();
     }
-  }, [showAudioMenu, showSubMenu, showPlaylist, paused, isToolsMenuOpen]);
+  }, [
+    showAudioMenu,
+    showSubMenu,
+    showPlaylist,
+    paused,
+    isToolsMenuOpen,
+    isComparing,
+    mediaDelete.menu,
+    mediaDelete.pendingDelete,
+    resetControlsTimeout,
+  ]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -1281,7 +1395,6 @@ export function VideoPlayer({
       }`}
       id="video-cinema-container"
       onContextMenu={handleContextMenu}
-      onMouseMove={handleUserActivity}
       onMouseLeave={handleMouseLeave}
       onWheel={handleWheel}
     >
@@ -1295,14 +1408,14 @@ export function VideoPlayer({
       {/* Cabecera Flotante */}
       <header
         className="video-player-header"
+        onClick={(e) => e.stopPropagation()}
         onMouseEnter={() => {
-          isHoveringHeaderRef.current = true;
-          setShowControls(true);
+          isHoveringControlsRef.current = true;
           if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
         }}
         onMouseLeave={() => {
-          isHoveringHeaderRef.current = false;
-          handleUserActivity();
+          isHoveringControlsRef.current = false;
+          resetControlsTimeout();
         }}
       >
         <div className="video-header-left">
@@ -1399,6 +1512,22 @@ export function VideoPlayer({
           className="video-stage"
           onContextMenu={handleContextMenu}
           onDoubleClick={toggleFullscreen}
+          onClick={(event) => {
+            if (isFastForwarding) return;
+            if (event.detail === 1) {
+              if (showControls) {
+                setShowControls(false);
+                if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+                controlsSuppressUntilRef.current = Date.now() + 450;
+                if ("clientX" in event) {
+                  lastMousePosRef.current = { x: event.clientX, y: event.clientY };
+                }
+              } else {
+                setShowControls(true);
+                resetControlsTimeout();
+              }
+            }
+          }}
           onMouseDown={(e) => {
             if (e.button === 0 && e.detail === 1) {
               fastForwardIntervalRef.current = window.setTimeout(startFastForward, 350);
@@ -1539,11 +1668,30 @@ export function VideoPlayer({
                       if (active >= 0) setSelectedTrackIdx(active);
                     }
                   }}
-                  onEnded={handleNext}
-                  onPause={() => setPaused(true)}
-                  onPlay={() => setPaused(false)}
+                  onEnded={() => {
+                    isSwitchingVideoRef.current = true;
+                    controlsSuppressUntilRef.current = Date.now() + 1500;
+                    handleNext();
+                  }}
+                  onPause={(e) => {
+                    const v = e.currentTarget;
+                    if (v.ended || (v.duration > 0 && v.currentTime >= v.duration - 0.35)) {
+                      isSwitchingVideoRef.current = true;
+                      controlsSuppressUntilRef.current = Date.now() + 1500;
+                      return;
+                    }
+                    setPaused(true);
+                  }}
+                  onPlay={() => {
+                    setPaused(false);
+                    isSwitchingVideoRef.current = false;
+                  }}
                   onTimeUpdate={(e) => {
-                    setPosition(e.currentTarget.currentTime || 0);
+                    const v = e.currentTarget;
+                    if (v.duration > 0 && v.currentTime >= v.duration - 0.3) {
+                      isSwitchingVideoRef.current = true;
+                    }
+                    setPosition(v.currentTime || 0);
                   }}
                   crossOrigin="anonymous"
                   playsInline
@@ -1641,7 +1789,18 @@ export function VideoPlayer({
       </div>
 
       {/* Barra de Controles Inferior */}
-      <footer className="video-player-footer">
+      <footer
+        className="video-player-footer"
+        onClick={(e) => e.stopPropagation()}
+        onMouseEnter={() => {
+          isHoveringControlsRef.current = true;
+          if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+        }}
+        onMouseLeave={() => {
+          isHoveringControlsRef.current = false;
+          resetControlsTimeout();
+        }}
+      >
         <div className="preview-progress video-seek-bar">
           <MediaProgressBar
             position={position}

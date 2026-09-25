@@ -112,7 +112,9 @@
 }
 
 @keyframes videoSpin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .video-loading-subtext {
@@ -183,8 +185,13 @@
 }
 
 @keyframes speedPulse {
-  from { transform: translateX(-50%) scale(1); }
-  to { transform: translateX(-50%) scale(1.05); }
+  from {
+    transform: translateX(-50%) scale(1);
+  }
+
+  to {
+    transform: translateX(-50%) scale(1.05);
+  }
 }
 
 /* ── Cabecera Flotante Translúcida (3 columnas simétricas) ── */
@@ -222,14 +229,21 @@
 
 .video-player-title {
   margin: 0;
-  font-size: 0.92rem;
-  font-weight: 700;
+  padding: 1px 3px;
+  box-sizing: border-box;
+  font-size: 0.88rem;
+  font-weight: 600;
   color: #ffffff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
 }
 
 .video-player-subtitle {
@@ -344,6 +358,7 @@
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -853,7 +868,8 @@
 .video-subtitles-popover {
   position: absolute;
   bottom: calc(100% + 12px);
-  left: 0; /* Alineado a la izquierda del botón para desplegarse hacia la derecha */
+  left: 0;
+  /* Alineado a la izquierda del botón para desplegarse hacia la derecha */
   min-width: 210px;
   max-width: 260px;
   background: rgba(20, 16, 22, 0.96);
@@ -871,8 +887,15 @@
 }
 
 @keyframes popoverFadeIn {
-  from { opacity: 0; transform: translateY(8px) scale(0.96); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .video-audio-popover-title {
@@ -931,8 +954,10 @@
   max-width: 15px !important;
   max-height: 15px !important;
   flex-shrink: 0;
-  margin-left: 6px !important; /* Desplaza el conjunto 6px hacia la derecha */
-  margin-right: 6px !important; /* Espaciado compacto y ceñido con el texto */
+  margin-left: 6px !important;
+  /* Desplaza el conjunto 6px hacia la derecha */
+  margin-right: 6px !important;
+  /* Espaciado compacto y ceñido con el texto */
 }
 
 .video-audio-option span {
@@ -966,10 +991,25 @@
 }
 
 @keyframes toastFade {
-  0% { opacity: 0; transform: translate(-50%, -10px) scale(0.95); }
-  15% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-  80% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -10px) scale(0.95); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.95);
+  }
+
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  80% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.95);
+  }
 }
 
 /* ── Overlay de Picture-in-Picture ── */
@@ -991,8 +1031,15 @@
 }
 
 @keyframes fadeInPip {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .video-pip-badge-icon {
@@ -1119,6 +1166,7 @@
     opacity: 0;
     transform: translateY(-6px) scale(0.97);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -1241,6 +1289,7 @@
   0% {
     opacity: 1;
   }
+
   100% {
     opacity: 0;
   }
@@ -1278,6 +1327,7 @@
     opacity: 0;
     transform: translateY(12px) scale(0.96);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -1430,6 +1480,7 @@
     opacity: 0;
     transform: translateY(-50%) translateX(14px) scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: translateY(-50%) translateX(0) scale(1);

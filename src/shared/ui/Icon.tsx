@@ -107,9 +107,18 @@ export type IconName =
   | "headphones"
   | "upload"
   | "pin"
-  | "tool";
+  | "tool"
+  | "hand";
 
 const paths: Record<IconName, ReactNode> = {
+  hand: (
+    <>
+      <path d="M18 11V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2" />
+      <path d="M14 10V4a2 2 0 0 0-2-2 2 2 0 0 0-2 2v6" />
+      <path d="M10 10.5V6a2 2 0 0 0-2-2 2 2 0 0 0-2 2v8" />
+      <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+    </>
+  ),
   pin: <><line x1="12" y1="17" x2="12" y2="22" /><path d="M5 17h14v-2l-1.8-1.8a2 2 0 0 1-.6-1.4V6a2.6 2.6 0 0 0-5.2 0v5.8a2 2 0 0 1-.6 1.4L5 15v2z" /></>,
   upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></>,
   headphones: <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />,

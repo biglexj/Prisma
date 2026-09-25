@@ -43,7 +43,7 @@ export function ImageViewer({
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showInfoDrawer, setShowInfoDrawer] = useState(false);
-  const [showControls, setShowControls] = useState(true);
+  const [showControls, setShowControls] = useState(false);
   const controlsTimeoutRef = useRef<number | null>(null);
   const initialFitScaleRef = useRef<number>(1);
 
@@ -54,6 +54,7 @@ export function ImageViewer({
   const initialPanRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isAutoFitActive, setIsAutoFitActive] = useState(false);
   const isAutoFitRef = useRef(false); // Ref para evitar stale closure en onLoad
+  const [isMoveMode, setIsMoveMode] = useState(false);
   const [zoomToast, setZoomToast] = useState<string | null>(null);
   const zoomToastTimerRef = useRef<number | null>(null);
   const [viewerToastText, setViewerToastText] = useState<string | null>(null);
@@ -65,6 +66,14 @@ export function ImageViewer({
     viewerToastTimerRef.current = window.setTimeout(() => setViewerToastText(null), 1800);
   }, []);
   const showFavToast = showViewerToast;
+
+  const toggleMoveMode = useCallback(() => {
+    setIsMoveMode((prev) => {
+      const next = !prev;
+      showViewerToast(next ? "✋ Modo mover activado (M)" : "✋ Modo mover desactivado");
+      return next;
+    });
+  }, [showViewerToast]);
 
   const [isCopied, setIsCopied] = useState(false);
   const copiedTimerRef = useRef<number | null>(null);
@@ -88,9 +97,7 @@ export function ImageViewer({
   } | null>(null);
   const clearPrevTimerRef = useRef<number | null>(null);
   const suppressTransformTransitionRef = useRef(true);
-  const controlsSuppressUntilRef = useRef(0);
   const isToolsMenuOpenRef = useRef(false);
-  const isHoveringControlsRef = useRef(false);
 
   const imgRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -180,109 +187,142 @@ export function ImageViewer({
     if (item.path === currentItem.path) return;
     setCurrentItem(item);
     resetImageTransform();
+    setIsMoveMode(false);
     setPreviousLayer(null);
     setIsEntering(false);
     addToHistory(item.path, "image");
   }, [item]);
 
-  // Historial del primer elemento al abrir el visor, foco activo y temporizador inicial de 3 segundos
+  // Historial del primer elemento al abrir el visor y foco activo
   useEffect(() => {
     addToHistory(item.path, "image");
     window.focus();
     containerRef.current?.focus();
-
-    if (controlsTimeoutRef.current) {
-      window.clearTimeout(controlsTimeoutRef.current);
-    }
-    controlsTimeoutRef.current = window.setTimeout(() => {
-      if (
-        !isToolsMenuOpenRef.current &&
-        !isHoveringControlsRef.current &&
-        !showInfoDrawer &&
-        !isEditing &&
-        !isComparing &&
-        !mediaDelete.menu
-      ) {
-        setShowControls(false);
-      }
-    }, 3000);
-
-    return () => {
-      if (controlsTimeoutRef.current) {
-        window.clearTimeout(controlsTimeoutRef.current);
-      }
-    };
   }, []);
 
-  const handleUserActivity = useCallback(() => {
-    if (Date.now() < controlsSuppressUntilRef.current) return;
-    setShowControls(true);
+  const showInfoDrawerRef = useRef(showInfoDrawer);
+  showInfoDrawerRef.current = showInfoDrawer;
+  const isEditingRef = useRef(isEditing);
+  isEditingRef.current = isEditing;
+  const isComparingRef = useRef(isComparing);
+  isComparingRef.current = isComparing;
+  const isDeleteActiveRef = useRef(Boolean(mediaDelete.menu || mediaDelete.pendingDelete));
+  isDeleteActiveRef.current = Boolean(mediaDelete.menu || mediaDelete.pendingDelete);
+  const isRenameActiveRef = useRef(Boolean(mediaRename.pendingRename));
+  isRenameActiveRef.current = Boolean(mediaRename.pendingRename);
+  const isHoveringControlsRef = useRef(false);
+  const lastMousePosRef = useRef<{ x: number; y: number } | null>(null);
+  const openedAtRef = useRef(Date.now());
+  const controlsSuppressUntilRef = useRef<number>(Date.now() + 600);
+  const hasDraggedRef = useRef<boolean>(false);
+
+  const hasActiveOverlay = useCallback(
+    () =>
+      isHoveringControlsRef.current ||
+      isToolsMenuOpenRef.current ||
+      showInfoDrawerRef.current ||
+      isEditingRef.current ||
+      isComparingRef.current ||
+      isDeleteActiveRef.current ||
+      isRenameActiveRef.current,
+    []
+  );
+
+  const resetControlsTimeout = useCallback(() => {
     if (controlsTimeoutRef.current) {
       window.clearTimeout(controlsTimeoutRef.current);
     }
-    if (
-      !isToolsMenuOpenRef.current &&
-      !isHoveringControlsRef.current &&
-      !showInfoDrawer &&
-      !isEditing &&
-      !isComparing &&
-      !mediaDelete.menu
-    ) {
+    if (!hasActiveOverlay()) {
       controlsTimeoutRef.current = window.setTimeout(() => {
-        if (
-          !isToolsMenuOpenRef.current &&
-          !isHoveringControlsRef.current &&
-          !showInfoDrawer &&
-          !isEditing &&
-          !isComparing &&
-          !mediaDelete.menu
-        ) {
+        if (!hasActiveOverlay()) {
           setShowControls(false);
+          controlsSuppressUntilRef.current = Date.now() + 450;
         }
       }, 3000);
     }
-  }, [showInfoDrawer, isEditing, isComparing, mediaDelete.menu]);
+  }, [hasActiveOverlay]);
+
+  const handleUserActivity = useCallback(
+    (e?: MouseEvent | PointerEvent | React.MouseEvent) => {
+      // Ignorar durante períodos de supresión (apertura, animación de ocultar, pantalla completa)
+      if (Date.now() < controlsSuppressUntilRef.current) return;
+      if (Date.now() - openedAtRef.current < 450) {
+        if (e && "clientX" in e) {
+          lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+        }
+        return;
+      }
+
+      if (e && "clientX" in e) {
+        const currentX = e.clientX;
+        const currentY = e.clientY;
+
+        if (!lastMousePosRef.current) {
+          lastMousePosRef.current = { x: currentX, y: currentY };
+          return;
+        }
+
+        const dx = currentX - lastMousePosRef.current.x;
+        const dy = currentY - lastMousePosRef.current.y;
+        const distSq = dx * dx + dy * dy;
+
+        // Requiere al menos 3px de movimiento acumulado real (distSq >= 9)
+        // Descarta 100% eventos sintéticos (0px), jitter de micro-sensores o clics estáticos
+        if (distSq < 9) {
+          return;
+        }
+
+        lastMousePosRef.current = { x: currentX, y: currentY };
+      }
+
+      setShowControls(true);
+      resetControlsTimeout();
+    },
+    [resetControlsTimeout]
+  );
 
   const handleMouseLeave = useCallback(() => {
-    isHoveringControlsRef.current = false;
-    if (
-      !isToolsMenuOpenRef.current &&
-      !showInfoDrawer &&
-      !isEditing &&
-      !isComparing &&
-      !mediaDelete.menu
-    ) {
-      if (controlsTimeoutRef.current) {
-        window.clearTimeout(controlsTimeoutRef.current);
-      }
-      controlsTimeoutRef.current = window.setTimeout(() => {
-        if (
-          !isToolsMenuOpenRef.current &&
-          !isHoveringControlsRef.current &&
-          !showInfoDrawer &&
-          !isEditing &&
-          !isComparing &&
-          !mediaDelete.menu
-        ) {
-          setShowControls(false);
-        }
-      }, 3000);
+    if (controlsTimeoutRef.current) {
+      window.clearTimeout(controlsTimeoutRef.current);
     }
-  }, [showInfoDrawer, isEditing, isComparing, mediaDelete.menu]);
+    if (!hasActiveOverlay()) {
+      controlsTimeoutRef.current = window.setTimeout(() => {
+        if (!hasActiveOverlay()) {
+          setShowControls(false);
+          controlsSuppressUntilRef.current = Date.now() + 450;
+        }
+      }, 1000);
+    }
+  }, [hasActiveOverlay]);
 
+  const isInitialMountRef = useRef(true);
   useEffect(() => {
-    if (showInfoDrawer || isEditing || isComparing || mediaDelete.menu) {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
+    if (
+      showInfoDrawer ||
+      isEditing ||
+      isComparing ||
+      mediaDelete.menu ||
+      mediaDelete.pendingDelete ||
+      mediaRename.pendingRename
+    ) {
       setShowControls(true);
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
     } else {
-      if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
-      controlsTimeoutRef.current = window.setTimeout(() => {
-        if (!isToolsMenuOpenRef.current && !isHoveringControlsRef.current) {
-          setShowControls(false);
-        }
-      }, 3000);
+      resetControlsTimeout();
     }
-  }, [showInfoDrawer, isEditing, isComparing, mediaDelete.menu]);
+  }, [
+    showInfoDrawer,
+    isEditing,
+    isComparing,
+    mediaDelete.menu,
+    mediaDelete.pendingDelete,
+    mediaRename.pendingRename,
+    resetControlsTimeout,
+  ]);
 
   const closeViewer = () => {
     if (document.fullscreenElement) {
@@ -445,8 +485,7 @@ export function ImageViewer({
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    const minScaleForPan = Math.min(1, (initialFitScaleRef.current || 1) * 0.98);
-    if (zoomScale <= minScaleForPan || (e.button !== 0 && e.buttons !== 1)) return;
+    if (!isMoveMode || (e.button !== 0 && e.buttons !== 1)) return;
 
     e.preventDefault();
     e.stopPropagation();
@@ -466,6 +505,9 @@ export function ImageViewer({
     const onPointerMove = (ev: PointerEvent) => {
       const dx = ev.clientX - dragStartRef.current.x;
       const dy = ev.clientY - dragStartRef.current.y;
+      if (dx * dx + dy * dy > 16) {
+        hasDraggedRef.current = true;
+      }
       setPanOffset({
         x: Math.round(initialPanRef.current.x + dx),
         y: Math.round(initialPanRef.current.y + dy),
@@ -474,6 +516,9 @@ export function ImageViewer({
 
     const onPointerUp = () => {
       setIsDragging(false);
+      window.setTimeout(() => {
+        hasDraggedRef.current = false;
+      }, 120);
     };
 
     window.addEventListener("pointermove", onPointerMove);
@@ -501,16 +546,18 @@ export function ImageViewer({
 
   // Mouse activity listener for auto-hiding controls
   useEffect(() => {
-    const onMouseMove = () => {
-      handleUserActivity();
+    const onActivity = (e: MouseEvent) => {
+      handleUserActivity(e);
     };
 
-    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mousemove", onActivity, { passive: true });
+    window.addEventListener("pointermove", onActivity, { passive: true });
     return () => {
       if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
-      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mousemove", onActivity);
+      window.removeEventListener("pointermove", onActivity);
     };
-  }, []);
+  }, [handleUserActivity]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     mediaDelete.openMenu(e, {
@@ -724,6 +771,10 @@ export function ImageViewer({
         event.stopPropagation();
         const nextFav = favorites.toggleFavorite(currentItem.path, "image");
         showFavToast(nextFav ? "❤️ Añadido a favoritos" : "🤍 Eliminado de favoritos");
+      } else if (event.key.toLowerCase() === "m" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleMoveMode();
       }
     },
     [
@@ -739,6 +790,7 @@ export function ImageViewer({
       favorites,
       showFavToast,
       handleCopyCurrentImage,
+      toggleMoveMode,
     ]
   );
 
@@ -809,7 +861,6 @@ export function ImageViewer({
       aria-modal="true"
       className={`image-viewer ${isFullscreen ? "is-fullscreen-mode" : ""} ${!showControls ? "controls-hidden" : ""}`}
       onContextMenu={handleContextMenu}
-      onMouseMove={handleUserActivity}
       onMouseLeave={handleMouseLeave}
     >
       <div
@@ -817,12 +868,11 @@ export function ImageViewer({
         onClick={(event) => event.stopPropagation()}
         onMouseEnter={() => {
           isHoveringControlsRef.current = true;
-          setShowControls(true);
           if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
         }}
         onMouseLeave={() => {
           isHoveringControlsRef.current = false;
-          handleUserActivity();
+          resetControlsTimeout();
         }}
       >
         <div className="image-viewer-top-left">
@@ -922,13 +972,15 @@ export function ImageViewer({
             }}
             isSlideshowActive={isSlideshowActive}
             onToggleSlideshow={() => setIsSlideshowActive(!isSlideshowActive)}
+            isMoveMode={isMoveMode}
+            onToggleMoveMode={toggleMoveMode}
             onOpenChange={(isOpen) => {
               isToolsMenuOpenRef.current = isOpen;
               if (isOpen) {
                 setShowControls(true);
                 if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
               } else {
-                handleUserActivity();
+                resetControlsTimeout();
               }
             }}
           />
@@ -943,15 +995,6 @@ export function ImageViewer({
               e.stopPropagation();
               handlePreviousImage();
             }}
-            onMouseEnter={() => {
-              isHoveringControlsRef.current = true;
-              setShowControls(true);
-              if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
-            }}
-            onMouseLeave={() => {
-              isHoveringControlsRef.current = false;
-              handleUserActivity();
-            }}
             title="Imagen anterior (←)"
           >
             <Icon name="chevron-left" />
@@ -962,15 +1005,6 @@ export function ImageViewer({
               e.stopPropagation();
               handleNextImage();
             }}
-            onMouseEnter={() => {
-              isHoveringControlsRef.current = true;
-              setShowControls(true);
-              if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
-            }}
-            onMouseLeave={() => {
-              isHoveringControlsRef.current = false;
-              handleUserActivity();
-            }}
             title="Imagen siguiente (→)"
           >
             <Icon name="chevron-right" />
@@ -980,12 +1014,31 @@ export function ImageViewer({
 
       <figure
         className="image-viewer-stage"
-        onClick={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (isDragging || hasDraggedRef.current) {
+            hasDraggedRef.current = false;
+            return;
+          }
+          if (event.detail === 1) {
+            if (showControls) {
+              setShowControls(false);
+              if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
+              controlsSuppressUntilRef.current = Date.now() + 450;
+              if ("clientX" in event) {
+                lastMousePosRef.current = { x: event.clientX, y: event.clientY };
+              }
+            } else {
+              setShowControls(true);
+              resetControlsTimeout();
+            }
+          }
+        }}
         onDoubleClick={handleToggleZoom}
         onPointerDown={handlePointerDown}
         onWheel={handleWheel}
         style={{
-          cursor: zoomScale > Math.min(1, (initialFitScaleRef.current || 1) * 0.98) ? (isDragging ? "grabbing" : "grab") : "default",
+          cursor: isMoveMode ? (isDragging ? "grabbing" : "grab") : "default",
         }}
       >
         <div className="image-viewer-media-container">
@@ -1065,17 +1118,27 @@ export function ImageViewer({
       {/* Barra de control de Zoom y Escala Automática */}
       <div
         className="image-viewer-zoom-controls"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          resetControlsTimeout();
+        }}
         onMouseEnter={() => {
           isHoveringControlsRef.current = true;
-          setShowControls(true);
           if (controlsTimeoutRef.current) window.clearTimeout(controlsTimeoutRef.current);
         }}
         onMouseLeave={() => {
           isHoveringControlsRef.current = false;
-          handleUserActivity();
+          resetControlsTimeout();
         }}
       >
+        <button
+          className={`image-viewer-move-btn${isMoveMode ? " is-active" : ""}`}
+          onClick={toggleMoveMode}
+          title={isMoveMode ? "Desactivar modo mover (M)" : "Activar modo mover (M)"}
+        >
+          <Icon name="hand" />
+        </button>
+        <div className="image-viewer-zoom-divider" />
         <button onClick={handleZoomOut} title="Alejar (Ctrl - / Rueda abajo)">
           <Icon name="minus" />
         </button>
