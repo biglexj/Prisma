@@ -29,6 +29,14 @@ export function FavoriteFullView({
   onToggleFavorite,
 }: FavoriteFullViewProps) {
   const [filter, setFilter] = useState("");
+  const [activatingPath, setActivatingPath] = useState<string | null>(null);
+
+  const triggerActivation = (path: string) => {
+    setActivatingPath(path);
+    window.setTimeout(() => {
+      setActivatingPath((curr) => (curr === path ? null : curr));
+    }, 600);
+  };
 
   const title =
     mediaType === "music"
@@ -111,18 +119,21 @@ export function FavoriteFullView({
               const musicItem = item as MusicLibraryItem;
               const { title: songTitle, artist } = resolveLibraryTrackInfo(musicItem);
               return (
-                <div className="favorite-full-card is-music" key={musicItem.path}>
-                  <div
-                    className="favorite-card-media"
-                    onClick={() =>
-                      onPlayMusic &&
+                <div
+                  className={`favorite-full-card is-music ${activatingPath === musicItem.path ? "is-activating" : ""}`}
+                  key={musicItem.path}
+                  onClick={() => {
+                    triggerActivation(musicItem.path);
+                    if (onPlayMusic) {
                       onPlayMusic(
                         musicItem.path,
                         filteredItems as MusicLibraryItem[],
                         "Favoritos",
-                      )
+                      );
                     }
-                  >
+                  }}
+                >
+                  <div className="favorite-card-media">
                     <MusicArtwork path={musicItem.path} alt={songTitle} />
                     <span className="favorite-play-overlay">
                       <Icon name="play" />
@@ -182,14 +193,17 @@ export function FavoriteFullView({
             // Video
             const visualItem = item as VisualLibraryItem;
             return (
-              <div className="favorite-full-card is-video" key={visualItem.path}>
-                <div
-                  className="favorite-card-media is-video-media"
-                  onClick={() =>
-                    onPlayVideo &&
-                    onPlayVideo(visualItem.path, filteredItems as VisualLibraryItem[])
+              <div
+                className={`favorite-full-card is-video ${activatingPath === visualItem.path ? "is-activating" : ""}`}
+                key={visualItem.path}
+                onClick={() => {
+                  triggerActivation(visualItem.path);
+                  if (onPlayVideo) {
+                    onPlayVideo(visualItem.path, filteredItems as VisualLibraryItem[]);
                   }
-                >
+                }}
+              >
+                <div className="favorite-card-media is-video-media">
                   <VideoThumbnail eager path={visualItem.path} title={visualItem.title} />
                   <span className="favorite-play-overlay">
                     <Icon name="play" />

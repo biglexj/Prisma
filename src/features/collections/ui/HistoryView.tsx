@@ -77,11 +77,29 @@ export function HistoryView({
   onPlayVideo,
 }: HistoryViewProps) {
   const { store, clearHistory } = useHistory();
+  const [activatingPath, setActivatingPath] = useState<string | null>(null);
   const [fullViewType, setFullViewTypeState] = useState<FavoriteMediaType | null>(() => sessionHistoryFullViewType);
   const setFullViewType = useCallback((type: FavoriteMediaType | null) => {
     sessionHistoryFullViewType = type;
     setFullViewTypeState(type);
   }, []);
+
+  const triggerActivation = (path: string) => {
+    setActivatingPath(path);
+    window.setTimeout(() => {
+      setActivatingPath((curr) => (curr === path ? null : curr));
+    }, 600);
+  };
+
+  const handlePlayMusicWithFeedback = (path: string) => {
+    triggerActivation(path);
+    onPlayMusic(path, historyMusicItems, "Historial");
+  };
+
+  const handlePlayVideoWithFeedback = (path: string) => {
+    triggerActivation(path);
+    onPlayVideo(path, historyVideoItems);
+  };
 
   useScrollRestoration(`view:history:${fullViewType ?? "summary"}`);
 
@@ -271,9 +289,9 @@ export function HistoryView({
               const { title, artist } = resolveLibraryTrackInfo(item);
               return (
                 <button
-                  className="home-media-card"
+                  className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
                   key={item.path}
-                  onClick={() => onPlayMusic(item.path, historyMusicItems, "Historial")}
+                  onClick={() => handlePlayMusicWithFeedback(item.path)}
                   title={artist ? `${artist} — ${title}` : title}
                 >
                   <span className="home-media-frame">

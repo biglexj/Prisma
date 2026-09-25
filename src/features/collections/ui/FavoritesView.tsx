@@ -77,11 +77,29 @@ export function FavoritesView({
   onPlayVideo,
 }: FavoritesViewProps) {
   const { store, toggle } = useFavorites();
+  const [activatingPath, setActivatingPath] = useState<string | null>(null);
   const [fullViewType, setFullViewTypeState] = useState<FavoriteMediaType | null>(() => sessionFavoritesFullViewType);
   const setFullViewType = useCallback((type: FavoriteMediaType | null) => {
     sessionFavoritesFullViewType = type;
     setFullViewTypeState(type);
   }, []);
+
+  const triggerActivation = (path: string) => {
+    setActivatingPath(path);
+    window.setTimeout(() => {
+      setActivatingPath((curr) => (curr === path ? null : curr));
+    }, 600);
+  };
+
+  const handlePlayMusicWithFeedback = (path: string) => {
+    triggerActivation(path);
+    onPlayMusic(path, favoriteMusicItems, "Favoritos");
+  };
+
+  const handlePlayVideoWithFeedback = (path: string) => {
+    triggerActivation(path);
+    onPlayVideo(path, favoriteVideoItems);
+  };
 
   useScrollRestoration(`view:favorites:${fullViewType ?? "summary"}`);
 
@@ -218,9 +236,9 @@ export function FavoritesView({
               const { title, artist } = resolveLibraryTrackInfo(item);
               return (
                 <button
-                  className="home-media-card"
+                  className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
                   key={item.path}
-                  onClick={() => onPlayMusic(item.path, favoriteMusicItems, "Favoritos")}
+                  onClick={() => handlePlayMusicWithFeedback(item.path)}
                   title={artist ? `${artist} — ${title}` : title}
                 >
                   <span className="home-media-frame">
@@ -293,9 +311,9 @@ export function FavoritesView({
           <div className="favorites-grid-shelf is-video-shelf">
             {favoriteVideoItems.slice(0, FAVORITE_SHELF_LIMIT).map((item) => (
               <button
-                className="home-media-card is-video-card"
+                className={`home-media-card is-video-card ${activatingPath === item.path ? "is-activating" : ""}`}
                 key={item.path}
-                onClick={() => onPlayVideo(item.path, favoriteVideoItems)}
+                onClick={() => handlePlayVideoWithFeedback(item.path)}
                 title={item.title}
               >
                 <span className="home-media-frame is-video-frame">

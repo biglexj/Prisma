@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { MusicFolderSource, MusicLibraryItem } from "../../music_library/model/types";
 import { MusicArtwork } from "../../music_library/ui/MusicArtwork";
 import { resolveLibraryTrackInfo } from "../../music_library/model/trackInfo";
@@ -70,6 +70,29 @@ export function HomeDashboard({
   const { store: historyStore } = useHistory();
   const { playlists } = usePlaylists();
 
+  // Snapshot estable del historial al montar o cuando cambian las bibliotecas,
+  // para evitar layout shifts bruscos y desfases de animación mientras el usuario interactúa
+  const [historySnapshot, setHistorySnapshot] = useState(historyStore);
+
+  const nonExcludedMusic = useMemo(() => musicItems.filter((it) => !it.isExcluded), [musicItems]);
+  const nonExcludedImages = useMemo(() => images.filter((it) => !it.isExcluded), [images]);
+  const nonExcludedVideos = useMemo(() => videos.filter((it) => !it.isExcluded), [videos]);
+  const visiblePlaylists = useMemo(() => playlists.filter((p) => !p.isHidden), [playlists]);
+
+  // Sincronizar el snapshot si cambia la cantidad de elementos en la biblioteca o si se limpia el historial
+  useEffect(() => {
+    if (!activatingPath) {
+      setHistorySnapshot(historyStore);
+    }
+  }, [
+    nonExcludedMusic.length,
+    nonExcludedVideos.length,
+    nonExcludedImages.length,
+    historyStore.music.length === 0,
+    historyStore.videos.length === 0,
+    historyStore.images.length === 0,
+  ]);
+
   const triggerActivation = (path: string) => {
     setActivatingPath(path);
     window.setTimeout(() => {
@@ -100,18 +123,13 @@ export function HomeDashboard({
     }
   };
 
-  const nonExcludedMusic = useMemo(() => musicItems.filter((it) => !it.isExcluded), [musicItems]);
-  const nonExcludedImages = useMemo(() => images.filter((it) => !it.isExcluded), [images]);
-  const nonExcludedVideos = useMemo(() => videos.filter((it) => !it.isExcluded), [videos]);
-  const visiblePlaylists = useMemo(() => playlists.filter((p) => !p.isHidden), [playlists]);
-
   // ── Algoritmo Híbrido: Combina Historial (Recientes + Más reproducidas/vistas) con Archivos Nuevos/Entrantes ──
   const homeMusicItems = useMemo(() => {
     const musicMap = new Map(nonExcludedMusic.map((it) => [normalizePath(it.path), it]));
     const seen = new Set<string>();
     const result: MusicLibraryItem[] = [];
 
-    const sortedHistory = [...historyStore.music].sort((a, b) => {
+    const sortedHistory = [...historySnapshot.music].sort((a, b) => {
       const scoreA = (a.playCount || 1) * 0.4 + (a.playedAt / 1_000_000_000) * 0.6;
       const scoreB = (b.playCount || 1) * 0.4 + (b.playedAt / 1_000_000_000) * 0.6;
       return scoreB - scoreA;
@@ -134,14 +152,14 @@ export function HomeDashboard({
     }
 
     return result.slice(0, HOME_ROW_ITEMS_LIMIT);
-  }, [nonExcludedMusic, historyStore.music]);
+  }, [nonExcludedMusic, historySnapshot.music]);
 
   const homeVideoItems = useMemo(() => {
     const vidMap = new Map(nonExcludedVideos.map((it) => [normalizePath(it.path), it]));
     const seen = new Set<string>();
     const result: VisualLibraryItem[] = [];
 
-    const sortedHistory = [...historyStore.videos].sort((a, b) => {
+    const sortedHistory = [...historySnapshot.videos].sort((a, b) => {
       const scoreA = (a.playCount || 1) * 0.4 + (a.playedAt / 1_000_000_000) * 0.6;
       const scoreB = (b.playCount || 1) * 0.4 + (b.playedAt / 1_000_000_000) * 0.6;
       return scoreB - scoreA;
@@ -164,14 +182,14 @@ export function HomeDashboard({
     }
 
     return result.slice(0, HOME_VIDEO_ROW_LIMIT);
-  }, [nonExcludedVideos, historyStore.videos]);
+  }, [nonExcludedVideos, historySnapshot.videos]);
 
   const homeImageItems = useMemo(() => {
     const imgMap = new Map(nonExcludedImages.map((it) => [normalizePath(it.path), it]));
     const seen = new Set<string>();
     const result: VisualLibraryItem[] = [];
 
-    const sortedHistory = [...historyStore.images].sort((a, b) => {
+    const sortedHistory = [...historySnapshot.images].sort((a, b) => {
       const scoreA = (a.playCount || 1) * 0.4 + (a.playedAt / 1_000_000_000) * 0.6;
       const scoreB = (b.playCount || 1) * 0.4 + (b.playedAt / 1_000_000_000) * 0.6;
       return scoreB - scoreA;
@@ -194,14 +212,14 @@ export function HomeDashboard({
     }
 
     return result.slice(0, HOME_ROW_ITEMS_LIMIT);
-  }, [nonExcludedImages, historyStore.images]);
+  }, [nonExcludedImages, historySnapshot.images]);
 
   const homePlaylists = useMemo(() => {
     const plMap = new Map(visiblePlaylists.map((p) => [normalizePath(p.path), p]));
     const seen = new Set<string>();
     const result: PlaylistMeta[] = [];
 
-    const sortedHistory = [...historyStore.playlists].sort((a, b) => (b.playedAt || 0) - (a.playedAt || 0));
+    const sortedHistory = [...historySnapshot.playlists].sort((a, b) => (b.playedAt || 0) - (a.playedAt || 0));
     for (const h of sortedHistory) {
       const p = plMap.get(normalizePath(h.path));
       if (p && !seen.has(normalizePath(p.path))) {
@@ -218,15 +236,15 @@ export function HomeDashboard({
     }
 
     return result.slice(0, HOME_ROW_ITEMS_LIMIT);
-  }, [visiblePlaylists, historyStore.playlists]);
+  }, [visiblePlaylists, historySnapshot.playlists]);
 
   // ── Determinar el orden dinámico de los estantes según lo último visto/reproducido ──
   const shelvesOrder = useMemo(() => {
     const defaultOrder: HistoryCategory[] = ["music", "video", "image", "playlist"];
-    const last = historyStore.lastPlayedKind;
+    const last = historySnapshot.lastPlayedKind;
     if (!last) return defaultOrder;
     return [last, ...defaultOrder.filter((k) => k !== last)];
-  }, [historyStore.lastPlayedKind]);
+  }, [historySnapshot.lastPlayedKind]);
 
   const totalFolders = musicFolders.length + imageFolders.length + videoFolders.length;
   const totalItems = nonExcludedMusic.length + nonExcludedImages.length + nonExcludedVideos.length;
