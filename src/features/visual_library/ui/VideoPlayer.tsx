@@ -985,24 +985,22 @@ export function VideoPlayer({
         return;
       }
 
-      // Atajo dedicado para enviar a segundo plano ("escuchar de fondo") sin pausar el vídeo:
-      // Shift + B o tecla H (sin modificadores)
-      if ((e.shiftKey && e.key.toLowerCase() === "b") || (e.key.toLowerCase() === "h" && !e.ctrlKey && !e.altKey && !e.metaKey)) {
+      // Atajo dedicado para enviar a segundo plano ("escuchar de fondo sin pausar"):
+      // H, Shift + H, Ctrl + H o Shift + B
+      if (
+        (e.shiftKey && (e.key.toLowerCase() === "b" || e.key.toLowerCase() === "h")) ||
+        (e.ctrlKey && e.key.toLowerCase() === "h") ||
+        (e.key.toLowerCase() === "h" && !e.ctrlKey && !e.altKey && !e.metaKey)
+      ) {
         e.preventDefault();
-        try {
-          const win = getCurrentWebviewWindow();
-          void win.hide();
-        } catch {}
+        void invoke("window_hide_to_background", { pauseVideo: false });
         return;
       }
 
-      // Atajo para cerrar / minimizar ventana (Ctrl + W)
+      // Atajo para cerrar / minimizar ventana pausando vídeo (Ctrl + W)
       if (e.ctrlKey && e.key.toLowerCase() === "w") {
         e.preventDefault();
-        try {
-          const win = getCurrentWebviewWindow();
-          void win.close();
-        } catch {}
+        void invoke("window_hide_to_background", { pauseVideo: true });
         return;
       }
 

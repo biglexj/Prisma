@@ -48,6 +48,7 @@ use app::commands::quick_look::{
     quick_look_set_size, quick_look_set_comparing, quick_look_set_pinned, quick_look_is_pinned, quick_look_show_file,
     quick_look_start_dragging, quick_look_get_position, quick_look_set_position, quick_look_step_selection,
     quick_look_toggle, quick_look_toggle_maximize, quick_look_is_maximized, set_minimize_to_tray,
+    window_hide_to_background, window_restore_from_background,
 };
 use app::commands::renamer::{
     renamer_execute_batch, renamer_scan_folder, renamer_undo_batch, RenamerState,
@@ -605,6 +606,8 @@ pub fn run() {
             autostart_set,
             set_minimize_to_tray,
             get_minimize_to_tray,
+            window_hide_to_background,
+            window_restore_from_background,
             synapse_get_status,
             synapse_set_downloads_dir,
             synapse_get_downloads_dir,

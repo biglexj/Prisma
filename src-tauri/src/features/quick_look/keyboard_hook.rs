@@ -42,6 +42,7 @@ pub mod windows_hook {
         Toggle,
         Close,
         Navigation,
+        RestorePrisma,
     }
 
     static GLOBAL_CALLBACK: Mutex<Option<TriggerCallback>> = Mutex::new(None);
@@ -272,6 +273,23 @@ pub mod windows_hook {
         let alt_down = (unsafe { GetAsyncKeyState(VK_MENU.0 as i32) } as u16 & 0x8000) != 0
             || (unsafe { GetAsyncKeyState(0xA4) } as u16 & 0x8000) != 0
             || (unsafe { GetAsyncKeyState(0xA5) } as u16 & 0x8000) != 0;
+        let shift_down = (unsafe { GetAsyncKeyState(VK_SHIFT.0 as i32) } as u16 & 0x8000) != 0
+            || (unsafe { GetAsyncKeyState(0xA0) } as u16 & 0x8000) != 0
+            || (unsafe { GetAsyncKeyState(0xA1) } as u16 & 0x8000) != 0;
+
+        // Atajo global reservado para restaurar / reabrir Prisma desde segundo plano o minimizado (Shift + X o Ctrl + Shift + X)
+        if vk_code == 0x58 && shift_down && !alt_down && !win_down {
+            let is_text_editing = !ctrl_down && unsafe { is_text_edit_focused() };
+            if !is_text_editing {
+                ql_log!("Atajo global detectado para restaurar Prisma (Shift+X, ctrl={})", ctrl_down);
+                if let Ok(guard) = GLOBAL_CALLBACK.lock() {
+                    if let Some(ref cb) = *guard {
+                        cb(TriggerEvent::RestorePrisma);
+                        return LRESULT(1);
+                    }
+                }
+            }
+        }
 
         // Excepción crítica: Captura de pantalla (Impr Pant / PrintScreen, Win + Shift + S)
         let is_screenshot_key = vk_code == 0x2C; // VK_SNAPSHOT
@@ -337,10 +355,6 @@ pub mod windows_hook {
         if ctrl_down {
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
-
-        let shift_down = (unsafe { GetAsyncKeyState(VK_SHIFT.0 as i32) } as u16 & 0x8000) != 0
-            || (unsafe { GetAsyncKeyState(0xA0) } as u16 & 0x8000) != 0
-            || (unsafe { GetAsyncKeyState(0xA1) } as u16 & 0x8000) != 0;
 
         let matches_shortcut = match mode {
             2 => alt_down && !shift_down,        // Alt + Espacio
@@ -552,6 +566,7 @@ pub mod windows_hook {
         Toggle,
         Close,
         Navigation,
+        RestorePrisma,
     }
     pub fn set_shortcut_mode(_mode_str: &str) {}
     pub fn get_shortcut_mode() -> String { "space".to_string() }

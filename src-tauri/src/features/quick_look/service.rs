@@ -94,10 +94,56 @@ impl QuickLookState {
                     ql_log!("Callback (async thread): Navigation");
                     state.handle_navigation();
                 }
+                TriggerEvent::RestorePrisma => {
+                    ql_log!("Callback (async thread): RestorePrisma");
+                    state.restore_prisma();
+                }
             });
         });
 
         start_hook(callback);
+    }
+
+    pub fn restore_prisma(&self) {
+        if let Some(main_win) = self.app_handle.get_webview_window("main") {
+            ql_log!("restore_prisma: Restaurando ventana principal");
+            let _ = main_win.unminimize();
+            let _ = main_win.show();
+            let _ = main_win.set_focus();
+
+            #[cfg(windows)]
+            {
+                if let Ok(hwnd) = main_win.hwnd() {
+                    use windows::Win32::Foundation::HWND;
+                    use windows::Win32::UI::WindowsAndMessaging::{
+                        BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId,
+                        SetForegroundWindow, ShowWindow, SW_RESTORE,
+                    };
+                    use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+
+                    let win_hwnd = HWND(hwnd.0);
+                    unsafe {
+                        let fg_hwnd = GetForegroundWindow();
+                        let fg_thread = GetWindowThreadProcessId(fg_hwnd, None);
+                        let current_thread = GetCurrentThreadId();
+
+                        if fg_thread != current_thread && fg_thread != 0 {
+                            let _ = AttachThreadInput(fg_thread, current_thread, true);
+                            let _ = ShowWindow(win_hwnd, SW_RESTORE);
+                            let _ = SetForegroundWindow(win_hwnd);
+                            let _ = BringWindowToTop(win_hwnd);
+                            let _ = AttachThreadInput(fg_thread, current_thread, false);
+                        } else {
+                            let _ = ShowWindow(win_hwnd, SW_RESTORE);
+                            let _ = SetForegroundWindow(win_hwnd);
+                            let _ = BringWindowToTop(win_hwnd);
+                        }
+                    }
+                }
+            }
+
+            let _ = main_win.emit("prisma://window-restored", ());
+        }
     }
 
     pub fn toggle(&self) {

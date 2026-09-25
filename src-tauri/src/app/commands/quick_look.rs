@@ -405,3 +405,62 @@ pub async fn quick_look_edit_file(path: String) -> Result<(), String> {
     .map_err(|e| format!("Error en runtime al editar archivo: {e}"))?
 }
 
+#[tauri::command]
+pub fn window_hide_to_background(app: tauri::AppHandle, pause_video: bool) -> Result<(), String> {
+    use tauri::{Emitter, Manager};
+    use tauri_plugin_window_state::{AppHandleExt, StateFlags};
+
+    if let Some(main_window) = app.get_webview_window("main") {
+        if pause_video {
+            let _ = main_window.emit("prisma://window-close-requested", ());
+        }
+        let _ = app.save_window_state(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED);
+        let _ = main_window.hide();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn window_restore_from_background(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri::Manager;
+
+    if let Some(main_window) = app.get_webview_window("main") {
+        let _ = main_window.unminimize();
+        let _ = main_window.show();
+        let _ = main_window.set_focus();
+
+        #[cfg(windows)]
+        {
+            if let Ok(hwnd) = main_window.hwnd() {
+                use windows::Win32::Foundation::HWND;
+                use windows::Win32::UI::WindowsAndMessaging::{
+                    BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId,
+                    SetForegroundWindow, ShowWindow, SW_RESTORE,
+                };
+                use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+
+                let win_hwnd = HWND(hwnd.0);
+                unsafe {
+                    let fg_hwnd = GetForegroundWindow();
+                    let fg_thread = GetWindowThreadProcessId(fg_hwnd, None);
+                    let current_thread = GetCurrentThreadId();
+
+                    if fg_thread != current_thread && fg_thread != 0 {
+                        let _ = AttachThreadInput(fg_thread, current_thread, true);
+                        let _ = ShowWindow(win_hwnd, SW_RESTORE);
+                        let _ = SetForegroundWindow(win_hwnd);
+                        let _ = BringWindowToTop(win_hwnd);
+                        let _ = AttachThreadInput(fg_thread, current_thread, false);
+                    } else {
+                        let _ = ShowWindow(win_hwnd, SW_RESTORE);
+                        let _ = SetForegroundWindow(win_hwnd);
+                        let _ = BringWindowToTop(win_hwnd);
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+
