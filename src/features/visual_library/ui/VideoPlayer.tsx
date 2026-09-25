@@ -871,6 +871,21 @@ export function VideoPlayer({
     }
   };
 
+  const handleWheel = (e: React.WheelEvent) => {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest(".video-playlist-drawer, .video-audio-menu, .video-sub-menu, .video-tools-menu")) {
+      return;
+    }
+
+    if (Math.abs(e.deltaY) > 0) {
+      e.stopPropagation();
+      const step = 5;
+      const delta = e.deltaY < 0 ? step : -step;
+      const nextVol = Math.max(0, Math.min(100, volume + delta));
+      handleVolumeChange(nextVol, true);
+    }
+  };
+
   useEffect(() => {
     if (showAudioMenu || showSubMenu || showPlaylist || paused || isToolsMenuOpen) {
       setShowControls(true);
@@ -1243,6 +1258,7 @@ export function VideoPlayer({
       onContextMenu={handleContextMenu}
       onMouseMove={handleUserActivity}
       onMouseLeave={handleMouseLeave}
+      onWheel={handleWheel}
     >
       {/* Notificación Toast */}
       {shuffleToastText ? (
@@ -1785,6 +1801,7 @@ export function VideoPlayer({
                   const nextPos = Math.max(0, videoRef.current.currentTime - 10);
                   videoRef.current.currentTime = nextPos;
                   setPosition(nextPos);
+                  triggerSeekOsd("backward", 10);
                 }
               }}
               title="Retroceder 10 segundos (Shift+← / J)"
@@ -1829,6 +1846,7 @@ export function VideoPlayer({
                   const nextPos = Math.min(duration, videoRef.current.currentTime + 10);
                   videoRef.current.currentTime = nextPos;
                   setPosition(nextPos);
+                  triggerSeekOsd("forward", 10);
                 }
               }}
               title="Avanzar 10 segundos (Shift+→ / L)"
@@ -1853,7 +1871,7 @@ export function VideoPlayer({
               <button
                 aria-label={volume === 0 ? "Activar sonido" : "Silenciar"}
                 className="video-icon-btn"
-                onClick={() => toggleMute()}
+                onClick={() => toggleMute(true)}
                 title={volume === 0 ? "Activar sonido (M)" : "Silenciar (M)"}
               >
                 <Icon
@@ -1870,7 +1888,7 @@ export function VideoPlayer({
                 className="video-volume-slider"
                 max={100}
                 min={0}
-                onChange={(e) => handleVolumeChange(Number(e.target.value))}
+                onChange={(e) => handleVolumeChange(Number(e.target.value), true)}
                 type="range"
                 value={volume}
               />
@@ -2043,19 +2061,19 @@ export function VideoPlayer({
         />
       ) : null}
 
-      {/* Indicador flotante OSD de volumen: solo visible cuando los controles y herramientas están ocultos */}
+      {/* Indicador flotante OSD de volumen: visible tanto con controles activos como ocultos */}
       <VolumeOsd
         isMuted={volumeOsd.isMuted}
-        visible={volumeOsd.visible && !showControls}
+        visible={volumeOsd.visible}
         volume={volumeOsd.volume}
       />
 
-      {/* Indicador flotante OSD de avance / retroceso: micro-rebote direccional con 40% de opacidad */}
+      {/* Indicador flotante OSD de avance / retroceso: micro-rebote direccional en costados */}
       <SeekOsd
         direction={seekOsd.direction}
         revision={seekOsd.revision}
         seconds={seekOsd.seconds}
-        visible={seekOsd.visible && !showControls}
+        visible={seekOsd.visible}
       />
     </section>
   );
