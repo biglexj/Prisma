@@ -152,24 +152,50 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
   const dsp = useDsp();
   const [mediaPlaying, setMediaPlaying] = useState(false);
 
-  // Monitorización complementaria de elementos multimedia activos en el DOM
+  // Monitorización complementaria de elementos multimedia activos en el DOM (excluyendo audios silenciosos del sistema)
   useEffect(() => {
     const checkMedia = () => {
       const mediaElements = Array.from(document.querySelectorAll<HTMLMediaElement>("audio, video"));
-      const anyPlaying = mediaElements.some((el) => !el.paused && !el.ended && el.currentTime > 0);
+      const anyPlaying = mediaElements.some((el) => {
+        if (
+          el.id === "prisma-silent-audio" ||
+          el.classList.contains("prisma-silent-audio") ||
+          el.getAttribute("data-silent") === "true" ||
+          el.getAttribute("aria-hidden") === "true" ||
+          el.style.display === "none" ||
+          el.muted ||
+          el.volume === 0 ||
+          (el.src && el.src.startsWith("data:audio"))
+        ) {
+          return false;
+        }
+        return !el.paused && !el.ended && el.currentTime > 0;
+      });
       setMediaPlaying(anyPlaying);
     };
     checkMedia();
-    const interval = setInterval(checkMedia, 400);
+    const interval = setInterval(checkMedia, 250);
     return () => clearInterval(interval);
   }, []);
 
-  // La animación del espectro se activa con reproducción interna de Prisma (Música/Vídeo) o con señal Global de Windows
-  const isVisualizerActive =
-    dsp.enabled &&
-    (Boolean(isPlaying) ||
-      mediaPlaying ||
-      Boolean(dsp.globalPassthruEnabled && dsp.globalPassthruStatus?.isRunning && dsp.globalPassthruStatus?.hasSignal));
+  // Sondeo en tiempo real de actividad de audio en el motor Global (WASAPI) para YouTube, TikTok y apps del sistema
+  useEffect(() => {
+    if (!dsp.globalPassthruEnabled) return;
+    const interval = setInterval(() => {
+      void dsp.refreshGlobalStatus();
+    }, 250);
+    return () => clearInterval(interval);
+  }, [dsp.globalPassthruEnabled, dsp.refreshGlobalStatus]);
+
+  // La animación del espectro se activa EXCLUSIVAMENTE si el DSP está encendido y hay audio verificado en reproducción
+  const isPrismaAudioActive = Boolean(isPlaying) || mediaPlaying;
+  const isGlobalAudioActive = Boolean(
+    dsp.globalPassthruEnabled &&
+    dsp.globalPassthruStatus?.isRunning &&
+    dsp.globalPassthruStatus?.hasSignal
+  );
+
+  const isVisualizerActive = dsp.enabled && (isPrismaAudioActive || isGlobalAudioActive);
   const [isDeviceMenuOpen, setIsDeviceMenuOpen] = useState(false);
   const [isPresetMenuOpen, setIsPresetMenuOpen] = useState(false);
   const [newPresetName, setNewPresetName] = useState("");
@@ -830,7 +856,7 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
           <div className="dsp-card-header">
             <div>
               <h3>Ecualizador Gráfico Paramétrico</h3>
-              <p className="dsp-card-subtitle">10 Bandas con interpolación Spline Bezier ($Q = 1.527$)</p>
+              <p className="dsp-card-subtitle">10 Bandas con interpolación Spline Bezier (Q = 1.527)</p>
             </div>
             <div className="dsp-eq-actions">
               <button

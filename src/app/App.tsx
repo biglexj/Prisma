@@ -1423,6 +1423,9 @@ function AppContent() {
           <audio
             ref={silentAudioRef}
             aria-hidden="true"
+            className="prisma-silent-audio"
+            data-silent="true"
+            id="prisma-silent-audio"
             loop
             preload="auto"
             src={SILENT_AUDIO_URI}

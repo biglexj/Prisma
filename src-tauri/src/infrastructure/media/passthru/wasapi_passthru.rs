@@ -464,13 +464,18 @@ fn run_passthru_loop(
         let mut local_interleaved: Vec<f32> = Vec::with_capacity(4096);
         let mut resampled_interleaved: Vec<f32> = Vec::with_capacity(4096);
         let mut had_signal = false;
-        let mut last_signal = std::time::Instant::now();
+        let mut last_signal = std::time::Instant::now() - Duration::from_secs(1);
 
         // 6. Bucle de procesamiento en tiempo real
         while running.load(Ordering::Relaxed) {
             if render_client.GetCurrentPadding().is_err() { break; }
-            if last_signal.elapsed() > Duration::from_millis(250) {
-                if let Ok(mut st) = status.lock() { st.has_signal = false; }
+            if last_signal.elapsed() > Duration::from_millis(350) {
+                if had_signal {
+                    had_signal = false;
+                }
+                if let Ok(mut st) = status.lock() {
+                    st.has_signal = false;
+                }
             }
             // Actualizar parámetros si hubo cambios desde el frontend
             if let Ok(guard) = params_shared.try_lock() {
@@ -529,6 +534,14 @@ fn run_passthru_loop(
             };
 
             if packet_length == 0 {
+                if last_signal.elapsed() > Duration::from_millis(350) {
+                    if had_signal {
+                        had_signal = false;
+                    }
+                    if let Ok(mut st) = status.lock() {
+                        st.has_signal = false;
+                    }
+                }
                 thread::sleep(Duration::from_millis(2));
                 continue;
             }
@@ -558,10 +571,15 @@ fn run_passthru_loop(
                         }
                     }
 
-                    if let Ok(mut st) = status.lock() {
-                        st.has_signal = !is_silent && local_interleaved.iter().any(|v| v.abs() > 0.0001);
-                    }
-                    if !is_silent {
+                    // Detección de señal de audio real (umbral audible de ~ -52 dB para descartar dither o ruido térmico)
+                    let peak_amp = if is_silent {
+                        0.0f32
+                    } else {
+                        local_interleaved.iter().fold(0.0f32, |acc, &val| acc.max(val.abs()))
+                    };
+                    let has_real_audio = !is_silent && peak_amp >= 0.0025;
+
+                    if has_real_audio {
                         last_signal = std::time::Instant::now();
                         if !had_signal {
                             had_signal = true;
@@ -569,6 +587,15 @@ fn run_passthru_loop(
                                 st.has_signal = true;
                             }
                             eprintln!("[Prisma Passthru] 🎵 ¡Recibiendo y procesando audio en vivo desde {}!", capture_name);
+                        } else if let Ok(mut st) = status.lock() {
+                            st.has_signal = true;
+                        }
+                    } else if last_signal.elapsed() > Duration::from_millis(350) {
+                        if had_signal {
+                            had_signal = false;
+                        }
+                        if let Ok(mut st) = status.lock() {
+                            st.has_signal = false;
                         }
                     }
 

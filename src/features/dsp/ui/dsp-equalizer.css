@@ -436,10 +436,10 @@
 }
 
 .dsp-visualizer-bar.inactive {
-  align-items: center;
-  background: var(--surface-container);
+  align-items: flex-end;
+  background: var(--surface-container-low, var(--surface-container));
   border-color: var(--outline-variant);
-  opacity: 0.95;
+  opacity: 0.75;
 }
 
 .dsp-viz-column {
@@ -449,7 +449,7 @@
   border-radius: 3px 3px 1px 1px;
   height: var(--min-h, 15%);
   box-shadow: 0 0 10px rgba(233, 30, 99, 0.35);
-  transition: height 0.15s ease, opacity 0.2s ease;
+  transition: height 0.22s cubic-bezier(0.2, 0, 0, 1), opacity 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
 }
 
 .dsp-visualizer-bar.active .dsp-viz-column.dspBassPulse {
@@ -469,12 +469,12 @@
 
 .dsp-visualizer-bar.inactive .dsp-viz-column {
   animation: none !important;
-  height: 9px !important;
-  max-width: 12px !important;
-  background: var(--primary) !important;
-  box-shadow: 0 0 10px rgba(233, 30, 99, 0.7) !important;
-  opacity: 0.65 !important;
-  border-radius: 4px !important;
+  height: 3px !important;
+  max-width: 16px !important;
+  background: var(--outline-variant, rgba(255, 255, 255, 0.18)) !important;
+  box-shadow: none !important;
+  opacity: 0.28 !important;
+  border-radius: 2px !important;
 }
 
 @keyframes dspBassPulse {
