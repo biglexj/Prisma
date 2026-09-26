@@ -8,7 +8,6 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [ ] **Badge Hover y Menú Contextual en Colección de Favoritos**: Desmarcado directo en hover con botón de corazón y menú contextual anticlic para gestión de canciones, fotos y vídeos, incluso en archivos inexistentes o movidos en disco.
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
 - [ ] **Refactorización y Modularización de Galería Visual (`VisualLibrary.tsx`)**: Extracción de sub-componentes de la vista principal (1,230 líneas: filtros, barra de acciones y modales de soporte) para reingresar al umbral preferido (< 900 líneas) estipulado en la arquitectura del proyecto.
 
@@ -31,6 +30,22 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 ## 🟢 Completado
 
 - [x] **v1.1.6**
+  - **Sincronización SMTC, Control de Hardware y Rendimiento de Transporte**:
+    - Sincronización continua de metadatos y controles multimedia SMTC de Windows tanto para música como para vídeo.
+    - Desacoplamiento de teclas multimedia de volumen de hardware (`VolumeUp`, `VolumeDown`, `Mute`) para operar con total exclusividad sobre el volumen maestro de Windows, previniendo atenuación accidental en Prisma.
+    - Eliminación de bloqueos y parpadeo de opacidad en botones de transporte (play/pause/anterior/siguiente) desacoplando el estado `busy`.
+    - Conmutación selectiva de Volume OSD: restringido exclusivamente a reproducción de vídeo nativo, manteniendo la reproducción musical completamente limpia y sin avisos invasivos.
+  - **Ergonomía de Reproducción, Colas y Controles de Vídeo**:
+    - Reubicación ergonómica del botón del Ecualizador en la cabecera del reproductor de vídeo (en el centro, entre Favoritos y Papelera).
+    - Selector de pistas de audio reposicionado junto a la cola en el extremo inferior derecho; botón de captura de fotogramas en el lateral inferior izquierdo.
+    - Eliminación de bordes y destellos en elementos activos de la cola de reproducción en `playback-queue.css`, implementando interacción táctil limpia de Material 3 con micro-escalado suave.
+    - Preservación ininterrumpida de reproducción en Picture-in-Picture (PiP) al cerrar o minimizar la ventana principal.
+  - **Fidelidad y Verificación Acústica en el Visualizador DSP**:
+    - Activación reactiva del visualizador de espectro gobernada por detección de amplitud real (`peak_amp >= 0.0025` ~ -52 dB en Rust WASAPI) para sincronizar únicamente ante sonido verificado (música, vídeo, YouTube, TikTok o audio del sistema).
+    - Modo inactivo completamente apagado: barras planas de reposo a 3px en la línea base sin brillo ni oscilación al pausar o detener la reproducción.
+    - Limpieza visual del indicador de factor Q en el ecualizador paramétrico eliminando etiquetas LaTeX raw `(Q = 1.527)`.
+  - **Gestión Avanzada en Colección de Favoritos**:
+    - Badge flotante en hover con botón interactivo de corazón y menú contextual anticlic para desmarcar o gestionar pistas de audio, imágenes y vídeos de forma inmediata, con soporte resiliente incluso para archivos inexistentes o movidos en disco.
   - **Navegación Secuencial Multiformato en Quick Look y Encolado Inteligente de Música Externa**:
     - Exploración secuencial continua de imágenes, vídeos, pistas de audio y documentos dentro de la misma carpeta mediante atajos de teclado (`ArrowLeft` / `ArrowRight`, `PageUp` / `PageDown`) y botones flotantes laterales en la ventana sin salir de la vista previa.
     - Invalidación reactiva de caché al sustituir o editar archivos en caliente (`modifiedMillis`).
@@ -51,7 +66,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
     - Liberación explícita del mutex de instancia única (`tauri_plugin_single_instance::destroy`) y ejecución de supervisor desacoplado para relanzar la aplicación de manera limpia e instantánea sin colisiones de proceso.
   - **Calibración del Espectro DSP y Ergonomía de Presets Acústicos**:
     - **Sincronización Total del Espectro Acústico**: Eliminación de la bifurcación excluyente en `DspEqualizerView` para que las barras dinámicas del visualizador oscilen fluidamente tanto con la reproducción interna de Prisma (Música y Vídeos) como con fuentes globales de audio del sistema (WASAPI Loopback).
-    - **Optimización Geométrica de Presets**: Retiro definitivo del badge «Stock» en los perfiles de fábrica y cálculo matemático exacto de altura (7 presets a 36px con 298px max-height) para garantizar que los 7 presets base queden completamente visibles con holgura y sin barra de scroll vertical.
+    - **Optimización Geométrica de Presets**: Retiro definitivo del badge «Stock» en los perprofiles de fábrica y cálculo matemático exacto de altura (7 presets a 36px con 298px max-height) para garantizar que los 7 presets base queden completamente visibles con holgura y sin barra de scroll vertical.
     - **Estilo Tonal Material 3**: Integración de acentos tonales dinámicos con `--primary` para el selector de preset activo.
 
 - [x] **v1.1.5**

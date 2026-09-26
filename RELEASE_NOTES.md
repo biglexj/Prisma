@@ -15,20 +15,36 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
-## [1.1.6] - 2026-09-25
+## [1.1.6] - 2026-09-26
 
 ### Resumen
 **Prisma v1.1.6** expande sustancialmente la ergonomía y versatilidad de la suite con la llegada de la **navegación secuencial multiformato** en Quick Look y el **encolado inteligente de música externa**. Ahora es posible explorar de forma continua todas las imágenes, vídeos, pistas de audio y documentos de una misma carpeta usando atajos de teclado o botones flotantes laterales, manteniendo la vista previa activa y sin pérdida de contexto. Al abrir una canción desde el Explorador de Windows o mediante «Abrir en Prisma», la aplicación reconoce el entorno de la pista, escanea de manera silenciosa las canciones vecinas y organiza una cola de reproducción nombrada según la carpeta contenedora, situando el tema elegido en primer lugar para una escucha continuada y circular.
 
 La experiencia multitarea se fortalece mediante el **perfeccionamiento integral del modo fijado (*Pin Always-on-Top*)** en Quick Look. La vista previa puede fijarse al frente con el botón dedicado o el atajo `P`, permaneciendo visible por encima de cualquier otra aplicación sin cerrarse inesperadamente al escribir, cambiar de foco o interactuar con el sistema operativo. Además, la ventana fijada se actualiza dinámicamente al pulsar la barra espaciadora sobre otro archivo en el Explorador de archivos sin necesidad de reabrirla, y se elimina todo tipo de parpadeo visual o recentrado involuntario al previsualizar clips de vídeo de alta definición en contenedores MKV.
 
-La suite visual y de proyección cinemática recibe un salto en ergonomía con la incorporación de **copia directa al portapapeles** (`Ctrl + C` o menú de opciones) tanto en el visor de imágenes como en la galería, facilitando compartir capturas y fotografías de inmediato en aplicaciones externas. Asimismo, se perfecciona la inmersión del usuario: los visores de imágenes y vídeo cuentan ahora con un auto-ocultamiento limpio de controles tras 3 segundos de inactividad del cursor (garantizado en cualquier relación de aspecto e imágenes panorámicas 16:9), desvanecimiento instantáneo al hacer clic sobre áreas libres y atajos canónicos unificados con flechas solas para navegar de archivo y `Mayús + Flechas` para saltos de 10 segundos, respaldados por indicadores flotantes OSD universales fijados al marco de la ventana.
+La suite visual y de proyección cinemática recibe un salto en ergonomía con la incorporación de **copia directa al portapapeles** (`Ctrl + C` o menú de opciones) tanto en el visor de imágenes como en la galería, facilitando compartir capturas y fotografías de inmediato en aplicaciones externas. Asimismo, se perfecciona la inmersión del usuario: los visores de imágenes y vídeo cuentan ahora con un auto-ocultamiento limpio de controles tras 3 segundos de inactividad del cursor (garantizado en cualquier relación de aspecto e imágenes panorámicas 16:9), desvanecimiento instantáneo al hacer clic sobre áreas libres y atajos canónicos unificados con flechas solas para navegar de archivo y `Mayús + Flechas` para saltos de 10 segundos, respaldados por indicadores flotantes OSD universales fijados al marco de la ventana y preservación ininterrumpida de reproducción en Picture-in-Picture al cerrar la vista principal.
 
-Se optimiza además la estabilidad y continuidad de la suite con una renovación del comando **«Reiniciar Prisma»** en el menú contextual de la bandeja del sistema (*System Tray*). Gracias a un proceso de reinicio desacoplado, la aplicación libera limpiamente la sesión previa y arranca de inmediato la nueva instancia en segundo plano, evitando colisiones de instancia única y garantizando una recuperación inmediata ante cualquier eventualidad sin requerir la intervención manual del usuario.
+Se eleva el rendimiento y control del sistema integrando **sincronización nativa con la sesión multimedia de Windows (SMTC)** para música y vídeo, junto al **desacoplamiento de teclas multimedia de volumen**. Las teclas de hardware (`VolumeUp`, `VolumeDown`, `Mute`) operan con total exclusividad sobre el volumen maestro del sistema operativo, eliminando atenuaciones dobles accidentales y reservando las teclas de flecha `↑`/`↓` para la ganancia interna de Prisma. Los botones de transporte (play/pause/anterior/siguiente) erradican por completo cualquier parpadeo de opacidad o latencia para una respuesta táctil instantánea, el indicador Volume OSD queda restringido exclusivamente a la proyección de vídeo sin invadir la escucha musical, y la colección de Favoritos incorpora un badge interactivo en hover y menú contextual de clic secundario para una gestión resiliente de medios.
 
-Por último, se perfecciona la experiencia acústica y visual integrando **calibración en tiempo real para el motor de ecualización y visualización DSP**. El espectro acústico animado responde con total fidelidad tanto a la reproducción multimedia interna de Prisma como a fuentes globales de audio de Windows (WASAPI Loopback), garantizando un movimiento armónico constante. Complementariamente, se afina la ergonomía del selector de presets acústicos eliminando etiquetas innecesarias y calibrando su dimensión vertical para que los perfiles de fábrica queden visibles con holgura y sin barras de desplazamiento vertical redundantes.
+Por último, se perfecciona la experiencia acústica con un motor de **verificación y fidelidad de señal en tiempo real para el Ecualizador y DSP de Audio**. El espectro dinámico animado se activa de forma reactiva y exclusiva ante sonido real verificado en Rust WASAPI (tanto en reproducción interna de música/vídeo como en transmisiones externas de YouTube o TikTok), entrando en reposo plano absoluto a 3px y sin brillo al pausar el audio. Los controles de vídeo se reorganizan con el botón de ecualización en el centro superior y el selector de pistas de audio junto a la cola de reproducción con estilos limpios de Material 3 Expressive, complementado por una renovación del comando **«Reiniciar Prisma»** en la bandeja del sistema (*System Tray*) mediante un ciclo desacoplado y seguro ante colisiones de instancia.
 
 ### Detalles
+- **Sincronización SMTC, Control de Hardware y Rendimiento de Transporte**:
+  - Sincronización continua de metadatos y controles multimedia SMTC de Windows tanto para música como para vídeo.
+  - Desacoplamiento de teclas multimedia de volumen de hardware (`VolumeUp`, `VolumeDown`, `Mute`) para operar con total exclusividad sobre el volumen maestro de Windows.
+  - Eliminación de bloqueos y parpadeo de opacidad en botones de transporte (play/pause/anterior/siguiente) desacoplando el estado `busy`.
+  - Conmutación selectiva de Volume OSD: restringido exclusivamente a reproducción de vídeo nativo, manteniendo la reproducción musical completamente limpia y sin avisos invasivos.
+- **Ergonomía de Reproducción, Colas y Controles de Vídeo**:
+  - Reubicación ergonómica del botón del Ecualizador en la cabecera del reproductor de vídeo (en el centro, entre Favoritos y Papelera).
+  - Selector de pistas de audio reposicionado junto a la cola en el extremo inferior derecho; botón de captura de fotogramas en el lateral inferior izquierdo.
+  - Eliminación de bordes y destellos en elementos activos de la cola de reproducción en `playback-queue.css`, implementando interacción táctil limpia de Material 3 con micro-escalado suave.
+  - Preservación ininterrumpida de reproducción en Picture-in-Picture (PiP) al cerrar o minimizar la ventana principal.
+- **Fidelidad y Verificación Acústica en el Visualizador DSP**:
+  - Activación reactiva del visualizador de espectro gobernada por detección de amplitud real (`peak_amp >= 0.0025` ~ -52 dB en Rust WASAPI) para sincronizar únicamente ante sonido verificado (música, vídeo, YouTube, TikTok o audio del sistema).
+  - Modo inactivo completamente apagado: barras planas de reposo a 3px en la línea base sin brillo ni oscilación al pausar o detener la reproducción.
+  - Limpieza visual del indicador de factor Q en el ecualizador paramétrico eliminando etiquetas de formato crudo.
+- **Gestión Avanzada en Colección de Favoritos**:
+  - Badge interactivo de corazón en hover y menú contextual anticlic para desmarcar o gestionar pistas de audio, imágenes y vídeos de forma inmediata, con soporte resiliente incluso para archivos inexistentes o movidos en disco.
 - **Navegación Secuencial Multiformato en Quick Look**:
   - Exploración continua de todos los medios compatibles de la carpeta (imágenes, vídeos, pistas de audio, texto plano, Markdown y PDF) sin cerrar la ventana.
   - Navegación bidireccional fluida con atajos de teclado (`Flecha Izquierda` / `Flecha Derecha`, `Re Pág` / `Av Pág`).
@@ -46,7 +62,6 @@ Por último, se perfecciona la experiencia acústica y visual integrando **calib
 - **Proyección de Vídeo con OSDs Universales y Atajos Canónicos**:
   - Atajos de navegación rápidos: `←` / `→` para saltar de vídeo (como `P` / `N`) y `Mayús + ←` / `Mayús + →` para salto temporal de 10s.
   - Indicador flotante Seek OSD (-10s / +10s) con rebote direccional y transparencia sutil, anclado a los laterales de la ventana sin invadir el fotograma del vídeo en formatos verticales o cuadrados.
-  - Indicador flotante Volume OSD fijado en la esquina superior derecha de la ventana, visible reactivamente en atajos de volumen y rueda de ratón.
 - **Modo Fijado (*Pin Always-on-Top*) Robusto y Blindaje en Vídeo**:
   - Fijación permanente de la ventana de Quick Look en primer plano sin cerrarse al cambiar de ventana o teclear en otras aplicaciones.
   - Actualización reactiva de la vista previa al seleccionar otro elemento y presionar la barra espaciadora en el Explorador de Windows.
@@ -55,10 +70,6 @@ Por último, se perfecciona la experiencia acústica y visual integrando **calib
 - **Reinicio Seguro desde la Bandeja del Sistema (*System Tray*)**:
   - Acción «Reiniciar Prisma» en el menú de la bandeja con ciclo de reinicio desacoplado.
   - Liberación garantizada de bloqueos de instancia para asegurar un relanzamiento limpio e instantáneo.
-- **Sincronización Dinámica del Espectro DSP y Presets Acústicos**:
-  - Animación fluida de las barras del visualizador durante la reproducción interna de música y vídeo en Prisma, con concurrencia armónica con el audio global de Windows.
-  - Calibración dimensional del menú de ecualización para albergar los presets base sin barras de desplazamiento vertical innecesarias.
-  - Integración de colores tonales de Material 3 Expressive en el selector de perfiles de audio.
 
 ## [1.1.5] - 2026-09-20
 
