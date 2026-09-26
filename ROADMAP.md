@@ -8,6 +8,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [ ] **Badge Hover y Menú Contextual en Colección de Favoritos**: Desmarcado directo en hover con botón de corazón y menú contextual anticlic para gestión de canciones, fotos y vídeos, incluso en archivos inexistentes o movidos en disco.
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
 - [ ] **Refactorización y Modularización de Galería Visual (`VisualLibrary.tsx`)**: Extracción de sub-componentes de la vista principal (1,230 líneas: filtros, barra de acciones y modales de soporte) para reingresar al umbral preferido (< 900 líneas) estipulado en la arquitectura del proyecto.
 

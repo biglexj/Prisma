@@ -1366,6 +1366,19 @@ function AppContent() {
             <FavoritesView
               images={imageLibrary.items}
               musicItems={library.items}
+              onAddToQueue={(item) => {
+                const { title, artist } = resolveLibraryTrackInfo(item);
+                playback.queue.addToQueue([
+                  {
+                    id: item.path,
+                    path: item.path,
+                    title,
+                    artist: artist || null,
+                    folder: item.relativeFolder,
+                    sizeBytes: item.sizeBytes,
+                  },
+                ]);
+              }}
               onOpenImage={handleOpenImage}
               onPlayMusic={(path, sessionItems, queueName) =>
                 playMusicItem(path, false, undefined, sessionItems, queueName)
