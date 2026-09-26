@@ -357,12 +357,12 @@ export function PlaybackPreview({
           <div className="preview-transport">
             <button
               aria-label="Anterior"
-              disabled={busy || (!snapshot.session?.canGoPrevious && !queueState?.canGoPrevious)}
+              disabled={!snapshot.session?.canGoPrevious && !queueState?.canGoPrevious}
               onClick={onPrevious}
             ><Icon name="chevron-left" /></button>
             <button
               className="preview-play"
-              disabled={!enabled || !hasEffectiveMedia || busy}
+              disabled={!enabled || !hasEffectiveMedia}
               onClick={hasMedia ? onToggle : currentQueueItem ? () => onSelectQueueIndex?.(queueState?.queue.currentIndex ?? 0) : onToggle}
             >
               <Icon name={snapshot.paused || !hasMedia ? "play" : "pause"} />
@@ -370,7 +370,7 @@ export function PlaybackPreview({
             </button>
             <button
               aria-label="Siguiente"
-              disabled={busy || (!snapshot.session?.canGoNext && !queueState?.canGoNext)}
+              disabled={!snapshot.session?.canGoNext && !queueState?.canGoNext}
               onClick={onNext}
             ><Icon name="chevron-right" /></button>
           </div>

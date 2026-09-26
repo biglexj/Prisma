@@ -243,25 +243,61 @@ export function usePlaybackController() {
     playQueueAt,
     switchQueueAndPlay,
     previous,
-    toggle: () => {
+    toggle: async () => {
       if (!snapshot.path && queue.activeQueue.items.length > 0) {
         const currentItem = queue.activeQueue.items[queue.queue.currentIndex] || queue.activeQueue.items[0];
         if (currentItem) {
           return loadPath(currentItem.path);
         }
       }
-      return run(playbackClient.togglePause);
+      setSnapshot((prev) => ({ ...prev, paused: !prev.paused }));
+      try {
+        const snap = await playbackClient.togglePause();
+        setSnapshot(snap);
+        return snap;
+      } catch (reason) {
+        setError(String(reason));
+        throw reason;
+      }
     },
-    pause: () => run(playbackClient.pause),
-    resume: () => run(playbackClient.resume),
+    pause: async () => {
+      setSnapshot((prev) => ({ ...prev, paused: true }));
+      try {
+        const snap = await playbackClient.pause();
+        setSnapshot(snap);
+        return snap;
+      } catch (reason) {
+        setError(String(reason));
+        throw reason;
+      }
+    },
+    resume: async () => {
+      setSnapshot((prev) => ({ ...prev, paused: false }));
+      try {
+        const snap = await playbackClient.resume();
+        setSnapshot(snap);
+        return snap;
+      } catch (reason) {
+        setError(String(reason));
+        throw reason;
+      }
+    },
     next,
     seek: (seconds: number) => run(() => playbackClient.seek(seconds)),
-    setVolume: (volume: number) => {
+    setVolume: async (volume: number) => {
       const clamped = Math.max(0, Math.min(100, Math.round(volume)));
       try {
         localStorage.setItem(STORAGE_KEY_PLAYBACK_VOLUME, String(clamped));
       } catch {}
-      return run(() => playbackClient.setVolume(clamped));
+      setSnapshot((prev) => ({ ...prev, volume: clamped }));
+      try {
+        const snap = await playbackClient.setVolume(clamped);
+        setSnapshot(snap);
+        return snap;
+      } catch (reason) {
+        setError(String(reason));
+        throw reason;
+      }
     },
     setSpeed: (speed: number) => run(() => playbackClient.setSpeed(speed)),
   };

@@ -517,12 +517,19 @@
   padding: 8px 10px;
   border-radius: 12px;
   cursor: pointer;
+  outline: none;
   transition: background 0.15s ease;
   background: rgba(255, 255, 255, 0.03);
 }
 
+.video-playlist-item:focus,
+.video-playlist-item:focus-visible {
+  outline: none;
+}
+
 .video-playlist-item:hover {
   background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
 }
 
 .video-playlist-item.is-active {

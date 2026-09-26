@@ -12,7 +12,10 @@
   - [x] Registrar metadatos y handlers en `navigator.mediaSession` durante reproducción activa de vídeo.
   - [x] Limpiar handlers y metadatos de MediaSession al pausar o desmontar `<VideoPlayer>`.
   - [x] Añadir atajos `F6`, `F7`, `F8` al listener de teclado interno de `VideoPlayer`.
-- [x] **Fase 4: Verificación y Validación**
-  - [x] Comprobar compilación TypeScript (`bun run build` exitoso en 2.85s).
-  - [x] Validar ausencia de errores de tipos o linting.
-  - [x] Registrar pruebas en `VALIDATION.md` y formalizar en `APPROVAL.md`.
+- [x] **Fase 5: Desacople de Volumen, Redondeo de Colas, Intercambio de Botones e Inmunidad a Parpadeos**
+  - [x] Desacoplar teclas de hardware de volumen del sistema (`AudioVolumeUp`, `AudioVolumeDown`, `AudioVolumeMute`) en `App.tsx` y `VideoPlayer.tsx` para que no afecten el volumen interno de Prisma y solo regulen Windows (elimina doble atenuación).
+  - [x] Conservar flechas Arriba/Abajo y teclas +/- para el volumen interno de Prisma.
+  - [x] Eliminar corte rectangular en hover/focus en items de la cola de música (`playback-queue.css`) y playlist de vídeo (`video-player.css`).
+  - [x] Intercambiar botón de Captura de fotograma (cámara) a controles izquierdos y Cola de reproducción a controles derechos en `VideoPlayer.tsx`.
+  - [x] Eliminar parpadeo (flicker de opacidad 0.35) en los 3 botones de transporte (`<`, `Pausar`, `>`) al cambiar volumen o pulsar play/pause desacoplando `busy` en `usePlaybackController.ts` y `PlaybackPreview.tsx`.
+

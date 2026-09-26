@@ -848,25 +848,22 @@ function AppContent() {
         return;
       }
 
-      // Subir / Bajar volumen global con flechas arriba/abajo o +/- si no estamos en video_player
+      // Subir / Bajar volumen interno de Prisma con flechas arriba/abajo o +/- si no estamos en video_player
       if (activeView !== "video_player") {
         const isVolUp =
           e.key === "ArrowUp" ||
           e.key === "+" ||
           e.key === "=" ||
-          e.code === "NumpadAdd" ||
-          e.key === "AudioVolumeUp";
+          e.code === "NumpadAdd";
 
         const isVolDown =
           e.key === "ArrowDown" ||
           e.key === "-" ||
           e.key === "_" ||
-          e.code === "NumpadSubtract" ||
-          e.key === "AudioVolumeDown";
+          e.code === "NumpadSubtract";
 
         const isMute =
-          (e.key.toLowerCase() === "m" && !e.ctrlKey && !e.altKey && !e.metaKey) ||
-          e.key === "AudioVolumeMute";
+          e.key.toLowerCase() === "m" && !e.ctrlKey && !e.altKey && !e.metaKey;
 
         if (isVolUp) {
           e.preventDefault();

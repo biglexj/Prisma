@@ -270,16 +270,28 @@
   border: 1px solid transparent;
   cursor: pointer;
   user-select: none;
+  outline: none;
   transition: all 140ms ease;
+}
+
+.queue-item-row:focus,
+.queue-item-row:focus-visible {
+  outline: none;
 }
 
 .queue-item-row:hover {
   background: var(--surface-container-high);
+  border-radius: 12px;
 }
 
 .queue-item-row.is-active {
   background: var(--primary-container);
   border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+.queue-item-row.is-active:hover {
+  background: color-mix(in srgb, var(--primary-container) 85%, var(--on-surface) 15%);
+  border-radius: 12px;
 }
 
 .queue-item-info {

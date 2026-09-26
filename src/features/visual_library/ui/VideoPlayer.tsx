@@ -1337,7 +1337,6 @@ export function VideoPlayer({
         case "+":
         case "=":
         case "add":
-        case "audiovolumeup":
           e.preventDefault();
           handleVolumeChange(Math.min(100, volume + 5), true);
           break;
@@ -1345,12 +1344,10 @@ export function VideoPlayer({
         case "-":
         case "_":
         case "subtract":
-        case "audiovolumedown":
           e.preventDefault();
           handleVolumeChange(Math.max(0, volume - 5), true);
           break;
         case "m":
-        case "audiovolumemute":
           e.preventDefault();
           toggleMute(true);
           break;
@@ -2106,15 +2103,15 @@ export function VideoPlayer({
               ) : null}
             </div>
 
-            {localVideoItems.length > 0 ? (
-              <button
-                className={`video-icon-btn ${showPlaylist ? "is-active" : ""}`}
-                onClick={() => setShowPlaylist(!showPlaylist)}
-                title="Cola de reproducción (Q)"
-              >
-                <Icon name="queue" />
-              </button>
-            ) : null}
+            <button
+              aria-label="Capturar fotograma"
+              className={`video-icon-btn video-snapshot-btn ${isCapturing ? "is-active" : ""}`}
+              disabled={!hasMedia || isCapturing}
+              onClick={() => void takeSnapshot()}
+              title="Capturar fotograma (Shift+S)"
+            >
+              <Icon name="camera" />
+            </button>
           </div>
 
           {/* Centro: Retroceder, -10s, Play/Pause, +10s, Avanzar */}
@@ -2251,15 +2248,15 @@ export function VideoPlayer({
               </button>
             )}
 
-            <button
-              aria-label="Capturar fotograma"
-              className={`video-icon-btn video-snapshot-btn ${isCapturing ? "is-active" : ""}`}
-              disabled={!hasMedia || isCapturing}
-              onClick={() => void takeSnapshot()}
-              title="Capturar fotograma (Shift+S)"
-            >
-              <Icon name="camera" />
-            </button>
+            {localVideoItems.length > 0 ? (
+              <button
+                className={`video-icon-btn ${showPlaylist ? "is-active" : ""}`}
+                onClick={() => setShowPlaylist(!showPlaylist)}
+                title="Cola de reproducción (Q)"
+              >
+                <Icon name="queue" />
+              </button>
+            ) : null}
 
             <button
               aria-label="Picture-in-Picture (Ventana flotante) (U)"
