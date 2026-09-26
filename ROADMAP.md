@@ -8,6 +8,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [ ] **Activación Estricta del Tema Dinámico Reactivo a Música**: El tema adaptativo por carátula solo debe teñir la interfaz a partir del momento en que el usuario dé *Play* (reproducción activa real). Con canciones en cola, pausadas o en estado inicial «Listo para reproducir», debe permanecer inactivo conservando la paleta predeterminada del usuario sin alteraciones agresivas.
+- [ ] **Reposo Absoluto del Espectro Visualizador DSP**: Garantizar que las barras del ecualizador permanezcan totalmente planas y apagadas en línea base (sin barras elevadas ni animaciones residuales) cuando no exista reproducción activa verificada en Prisma o audio sonando en el sistema.
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
 - [ ] **Refactorización y Modularización de Galería Visual (`VisualLibrary.tsx`)**: Extracción de sub-componentes de la vista principal (1,230 líneas: filtros, barra de acciones y modales de soporte) para reingresar al umbral preferido (< 900 líneas) estipulado en la arquitectura del proyecto.
 
