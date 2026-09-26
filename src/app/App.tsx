@@ -51,7 +51,6 @@ import { DspEqualizerModal } from "../features/dsp/ui/DspEqualizerModal";
 import { DspProvider } from "../features/dsp/DspContext";
 import { useGlobalFileDrop } from "./hooks/useGlobalFileDrop";
 import { Icon, type IconName } from "../shared/ui/Icon";
-import { VolumeOsd, useVolumeOsd } from "../shared/ui/VolumeOsd";
 import { SeekOsd, useSeekOsd } from "../shared/ui/SeekOsd";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
@@ -121,7 +120,6 @@ function AppContent() {
   } = useTheme();
   const { confirmDeletion, sidebarDensity, auroraOnlineServicesEnabled } = useSystemSettings();
   const playback = usePlaybackController();
-  const { osdState: globalVolumeOsd, triggerOsd: showGlobalVolumeOsd } = useVolumeOsd(playback.snapshot.volume ?? 100, false);
   const { osdState: globalSeekOsd, triggerSeekOsd: triggerGlobalSeekOsd } = useSeekOsd();
   const library = useMusicLibrary();
   const imageLibrary = useVisualLibrary("image");
@@ -637,7 +635,6 @@ function AppContent() {
             const currentVol = playback.snapshot.volume ?? 100;
             const nextVol = Math.min(100, currentVol + 5);
             void playback.setVolume(nextVol);
-            showGlobalVolumeOsd(nextVol, false);
           }
           break;
         }
@@ -648,7 +645,6 @@ function AppContent() {
             const currentVol = playback.snapshot.volume ?? 100;
             const nextVol = Math.max(0, currentVol - 5);
             void playback.setVolume(nextVol);
-            showGlobalVolumeOsd(nextVol, nextVol === 0);
           }
           break;
         }
@@ -659,10 +655,8 @@ function AppContent() {
             const currentVol = playback.snapshot.volume ?? 100;
             if (currentVol > 0) {
               void playback.setVolume(0);
-              showGlobalVolumeOsd(0, true);
             } else {
               void playback.setVolume(100);
-              showGlobalVolumeOsd(100, false);
             }
           }
           break;
@@ -870,7 +864,6 @@ function AppContent() {
           const currentVol = playback.snapshot.volume ?? 100;
           const nextVol = Math.min(100, currentVol + 5);
           void playback.setVolume(nextVol);
-          showGlobalVolumeOsd(nextVol, false);
           return;
         }
         if (isVolDown) {
@@ -878,7 +871,6 @@ function AppContent() {
           const currentVol = playback.snapshot.volume ?? 100;
           const nextVol = Math.max(0, currentVol - 5);
           void playback.setVolume(nextVol);
-          showGlobalVolumeOsd(nextVol, nextVol === 0);
           return;
         }
         if (isMute) {
@@ -886,10 +878,8 @@ function AppContent() {
           const currentVol = playback.snapshot.volume ?? 100;
           if (currentVol > 0) {
             void playback.setVolume(0);
-            showGlobalVolumeOsd(0, true);
           } else {
             void playback.setVolume(100);
-            showGlobalVolumeOsd(100, false);
           }
           return;
         }
@@ -1566,13 +1556,6 @@ function AppContent() {
         isOpen={isEqualizerModalOpen}
         isPlaying={isPrismaPlaying}
         onClose={() => setIsEqualizerModalOpen(false)}
-      />
-
-      <VolumeOsd
-        isMuted={globalVolumeOsd.isMuted}
-        style={{ position: "fixed", top: "24px", right: "28px" }}
-        visible={globalVolumeOsd.visible && activeView !== "video_player"}
-        volume={globalVolumeOsd.volume}
       />
 
       <SeekOsd

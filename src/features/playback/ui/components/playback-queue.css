@@ -267,31 +267,45 @@
   padding: 0.45rem 0.6rem;
   border-radius: 12px;
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   cursor: pointer;
   user-select: none;
-  outline: none;
-  transition: all 140ms ease;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none !important;
+  box-shadow: none !important;
+  transition: background-color 140ms ease, transform 100ms ease;
 }
 
 .queue-item-row:focus,
-.queue-item-row:focus-visible {
-  outline: none;
+.queue-item-row:focus-visible,
+.queue-item-row:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .queue-item-row:hover {
   background: var(--surface-container-high);
-  border-radius: 12px;
+}
+
+.queue-item-row:active {
+  transform: scale(0.995);
+  background: var(--surface-container-highest);
 }
 
 .queue-item-row.is-active {
+  color: var(--on-primary-container);
   background: var(--primary-container);
-  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+  border: none;
 }
 
 .queue-item-row.is-active:hover {
-  background: color-mix(in srgb, var(--primary-container) 85%, var(--on-surface) 15%);
-  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary-container) 88%, var(--on-surface) 12%);
+}
+
+.queue-item-row.is-active:active {
+  transform: scale(0.995);
+  background: color-mix(in srgb, var(--primary-container) 80%, var(--on-surface) 20%);
 }
 
 .queue-item-info {

@@ -1625,6 +1625,21 @@ export function VideoPlayer({
               >
                 <Icon name="trash" />
               </button>
+              {onOpenEqualizer && (
+                <button
+                  aria-label="Abrir Ecualizador & Procesador DSP de Audio"
+                  className="video-top-btn is-icon-only"
+                  onClick={() => {
+                    if (document.fullscreenElement) {
+                      void document.exitFullscreen().catch(() => {});
+                    }
+                    onOpenEqualizer();
+                  }}
+                  title="Abrir Ecualizador & Procesador DSP de Audio"
+                >
+                  <Icon name="equalizer" />
+                </button>
+              )}
               <VideoToolsMenu
                 onConvert={() => {
                   window.dispatchEvent(
@@ -1997,74 +2012,6 @@ export function VideoPlayer({
               <Icon name="shuffle" />
             </button>
 
-            {/* Ancla Popover de Audio y Canales */}
-            <div className="video-popover-anchor" ref={audioMenuRef}>
-              <button
-                className={`video-icon-btn ${showAudioMenu || selectedTrackIdx > 0 || channelMode === "mono" ? "is-active" : ""}`}
-                onClick={() => {
-                  setShowAudioMenu(!showAudioMenu);
-                  setShowSubMenu(false);
-                }}
-                title="Pistas de audio y canales (B)"
-              >
-                <Icon name="disc" />
-              </button>
-
-              {showAudioMenu ? (
-                <div className="video-audio-popover">
-                  {audioTracksList.length > 0 ? (
-                    // API soportada y hay 2+ pistas reales detectadas
-                    <>
-                      <p className="video-audio-popover-title">Pistas de audio ({audioTracksList.length})</p>
-                      {audioTracksList.map((track) => (
-                        <button
-                          className={`video-audio-option ${selectedTrackIdx === track.index ? "is-active" : ""}`}
-                          key={track.index}
-                          onClick={() => selectAudioTrack(track.index)}
-                        >
-                          <Icon name="volume" />
-                          <span>{track.label || `Pista ${track.index + 1}`}</span>
-                        </button>
-                      ))}
-                    </>
-                  ) : audioApiSupported === false || audioApiSupported === null ? (
-                    // API no soportada por el browser (WebView2): asumir que existe la pista principal
-                    <>
-                      <p className="video-audio-popover-title">Pistas de audio</p>
-                      <button
-                        className="video-audio-option is-active"
-                        onClick={() => selectAudioTrack(0)}
-                      >
-                        <Icon name="volume" />
-                        <span>Pista 1</span>
-                      </button>
-                    </>
-                  ) : (
-                    // API soportada pero 0 pistas: el vídeo no tiene audio
-                    <>
-                      <p className="video-audio-popover-title">Pistas de audio</p>
-                      <p className="video-audio-popover-empty">Sin pistas</p>
-                    </>
-                  )}
-
-                  <p className="video-audio-popover-title" style={{ marginTop: 8 }}>Canales de salida</p>
-                  <button
-                    className={`video-audio-option ${channelMode === "stereo" ? "is-active" : ""}`}
-                    onClick={() => applyChannelMode("stereo")}
-                  >
-                    <Icon name="disc" />
-                    <span>Estéreo</span>
-                  </button>
-                  <button
-                    className={`video-audio-option ${channelMode === "mono" ? "is-active" : ""}`}
-                    onClick={() => applyChannelMode("mono")}
-                  >
-                    <Icon name="volume" />
-                    <span>Mono</span>
-                  </button>
-                </div>
-              ) : null}
-            </div>
 
             {/* Ancla Popover de Subtítulos */}
             <div className="video-popover-anchor" ref={subMenuRef}>
@@ -2230,23 +2177,74 @@ export function VideoPlayer({
               <span className="video-volume-value">{volume}%</span>
             </div>
 
-            {/* Ecualizador & Procesador DSP de Audio */}
-            {onOpenEqualizer && (
+            {/* Ancla Popover de Audio y Canales */}
+            <div className="video-popover-anchor" ref={audioMenuRef}>
               <button
-                aria-label="Abrir Ecualizador & Procesador DSP de Audio"
-                className={`video-icon-btn ${isEqualizerOpen ? "is-active" : ""}`}
-                disabled={!hasMedia}
+                className={`video-icon-btn ${showAudioMenu || selectedTrackIdx > 0 || channelMode === "mono" ? "is-active" : ""}`}
                 onClick={() => {
-                  if (document.fullscreenElement) {
-                    void document.exitFullscreen().catch(() => {});
-                  }
-                  onOpenEqualizer();
+                  setShowAudioMenu(!showAudioMenu);
+                  setShowSubMenu(false);
                 }}
-                title="Abrir Ecualizador & Procesador DSP de Audio"
+                title="Pistas de audio y canales (B)"
               >
-                <Icon name="equalizer" />
+                <Icon name="disc" />
               </button>
-            )}
+
+              {showAudioMenu ? (
+                <div className="video-audio-popover">
+                  {audioTracksList.length > 0 ? (
+                    // API soportada y hay 2+ pistas reales detectadas
+                    <>
+                      <p className="video-audio-popover-title">Pistas de audio ({audioTracksList.length})</p>
+                      {audioTracksList.map((track) => (
+                        <button
+                          className={`video-audio-option ${selectedTrackIdx === track.index ? "is-active" : ""}`}
+                          key={track.index}
+                          onClick={() => selectAudioTrack(track.index)}
+                        >
+                          <Icon name="volume" />
+                          <span>{track.label || `Pista ${track.index + 1}`}</span>
+                        </button>
+                      ))}
+                    </>
+                  ) : audioApiSupported === false || audioApiSupported === null ? (
+                    // API no soportada por el browser (WebView2): asumir que existe la pista principal
+                    <>
+                      <p className="video-audio-popover-title">Pistas de audio</p>
+                      <button
+                        className="video-audio-option is-active"
+                        onClick={() => selectAudioTrack(0)}
+                      >
+                        <Icon name="volume" />
+                        <span>Pista 1</span>
+                      </button>
+                    </>
+                  ) : (
+                    // API soportada pero 0 pistas: el vídeo no tiene audio
+                    <>
+                      <p className="video-audio-popover-title">Pistas de audio</p>
+                      <p className="video-audio-popover-empty">Sin pistas</p>
+                    </>
+                  )}
+
+                  <p className="video-audio-popover-title" style={{ marginTop: 8 }}>Canales de salida</p>
+                  <button
+                    className={`video-audio-option ${channelMode === "stereo" ? "is-active" : ""}`}
+                    onClick={() => applyChannelMode("stereo")}
+                  >
+                    <Icon name="disc" />
+                    <span>Estéreo</span>
+                  </button>
+                  <button
+                    className={`video-audio-option ${channelMode === "mono" ? "is-active" : ""}`}
+                    onClick={() => applyChannelMode("mono")}
+                  >
+                    <Icon name="volume" />
+                    <span>Mono</span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
 
             {localVideoItems.length > 0 ? (
               <button
@@ -2265,15 +2263,6 @@ export function VideoPlayer({
               title="Picture-in-Picture (Ventana flotante) (U)"
             >
               <Icon name="pip" />
-            </button>
-
-            <button
-              aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
-              className="video-icon-btn"
-              onClick={toggleFullscreen}
-              title={isFullscreen ? "Salir de pantalla completa (F / F11 / Esc)" : "Pantalla completa (F / F11 / Alt+Enter)"}
-            >
-              <Icon name={isFullscreen ? "fullscreen-exit" : "fullscreen"} />
             </button>
           </div>
         </div>
