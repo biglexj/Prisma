@@ -16,6 +16,7 @@ Dotar a la vista de Favoritos (`FavoritesView` y `FavoriteFullView`) de badges d
   - Acciones contextuales: Reproducir/Abrir, Quitar de favoritos (siempre disponible aunque el archivo se haya movido), Mostrar en carpeta, Copiar ruta, Copiar imagen, Añadir a la cola y herramientas de conversión Prisma.
   - Toast de confirmación flotante Material 3 Expressive para acciones realizadas.
   - Estilos CSS en `collections.css` alineados a Material 3 Expressive.
+  - Preservación de reproducción continua en modo PiP (Picture-in-Picture) al cerrar o minimizar la ventana principal desde la "X" (pausando únicamente si el vídeo está en modo maximizado / reproductor principal normal).
 - No incluye:
   - Modificación del esquema de almacenamiento SQLite/JSON de favoritos.
 

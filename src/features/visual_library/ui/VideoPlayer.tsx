@@ -1370,6 +1370,9 @@ export function VideoPlayer({
     const onRemoteShuffle = () => handleOneShotShuffle();
     const onRemoteFullscreen = () => toggleFullscreen();
     const onGlobalVideoPause = () => {
+      if (document.pictureInPictureElement || isPipActiveRef.current) {
+        return;
+      }
       if (videoRef.current && !videoRef.current.paused) {
         videoRef.current.pause();
       }

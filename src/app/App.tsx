@@ -106,6 +106,10 @@ function AppContent() {
   );
   const [activeDocumentInitialMode, setActiveDocumentInitialMode] = useState<"preview" | "split" | "code" | undefined>(undefined);
   const [isPip, setIsPip] = useState(false);
+  const isPipRef = useRef(false);
+  useEffect(() => {
+    isPipRef.current = isPip;
+  }, [isPip]);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [synapseToastFile, setSynapseToastFile] = useState<SynapseReceivedFile | null>(null);
@@ -431,6 +435,7 @@ function AppContent() {
    */
   const handlePipChange = (active: boolean, reason?: "restore" | "close") => {
     setIsPip(active);
+    isPipRef.current = active;
     const targetReturnView = videoReturnView && videoReturnView !== "video_player" ? videoReturnView : "videos";
     if (active) {
       // Entró a PiP: llevar a la vista donde estaba el usuario (ej. galería)
@@ -766,7 +771,15 @@ function AppContent() {
     };
 
     const unlistenCloseRequestedPromise = listen("prisma://window-close-requested", () => {
-      // Al pulsar X o atajo de cierre, pausar inmediatamente cualquier vídeo activo antes de ocultar
+      // Si el vídeo se encuentra en Picture-in-Picture (PiP), NO pausar:
+      // el usuario desea continuar viendo y escuchando el vídeo en la ventana flotante mientras la ventana principal se oculta a la bandeja.
+      const isPipActive = Boolean(document.pictureInPictureElement) || isPipRef.current;
+      if (isPipActive) {
+        return;
+      }
+
+      // Al pulsar X o atajo de cierre con el vídeo maximizado / reproductor principal normal,
+      // pausar inmediatamente antes de ocultar
       window.dispatchEvent(new CustomEvent("prisma-video-pause"));
       document.querySelectorAll<HTMLVideoElement>("video").forEach((v) => {
         if (!v.paused) v.pause();
@@ -795,10 +808,11 @@ function AppContent() {
         return;
       }
 
-      // Atajo para cerrar / minimizar ventana pausando vídeo (Ctrl + W)
+      // Atajo para cerrar / minimizar ventana (Ctrl + W): no pausar si está en PiP
       if (e.ctrlKey && e.key.toLowerCase() === "w") {
         e.preventDefault();
-        void invoke("window_hide_to_background", { pauseVideo: true });
+        const isPipActive = Boolean(document.pictureInPictureElement) || isPipRef.current;
+        void invoke("window_hide_to_background", { pauseVideo: !isPipActive });
         return;
       }
 

@@ -9,5 +9,6 @@
 - [x] T03 — Actualizar `FavoriteFullView.tsx` añadiendo `onContextMenu` contextual y refinando el comportamiento de desmarcado y feedback toast.
 - [x] T04 — Conectar prop `onAddToQueue` en `App.tsx` para `FavoritesView`.
 - [x] T05 — Validar compilación de frontend y backend (`tsc` / `vite build` y `cargo check`).
+- [x] T06 — Condicionar la pausa al cerrar la ventana ('X' / `prisma://window-close-requested`): si el vídeo está en modo PiP (`document.pictureInPictureElement` o `isPip`), mantener reproducción continua sin pausar; pausar únicamente en modo reproductor principal / maximizado.
 
 Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.
