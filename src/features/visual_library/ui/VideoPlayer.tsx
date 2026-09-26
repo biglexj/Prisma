@@ -1611,20 +1611,6 @@ export function VideoPlayer({
               >
                 <Icon name="heart" />
               </button>
-              <button
-                aria-label="Mover a la papelera (Supr)"
-                className="video-top-btn is-icon-only"
-                onClick={() => {
-                  mediaDelete.requestDelete({
-                    path,
-                    title,
-                    kind: "video",
-                  });
-                }}
-                title="Mover a la papelera (Supr)"
-              >
-                <Icon name="trash" />
-              </button>
               {onOpenEqualizer && (
                 <button
                   aria-label="Abrir Ecualizador & Procesador DSP de Audio"
@@ -1640,6 +1626,20 @@ export function VideoPlayer({
                   <Icon name="equalizer" />
                 </button>
               )}
+              <button
+                aria-label="Mover a la papelera (Supr)"
+                className="video-top-btn is-icon-only"
+                onClick={() => {
+                  mediaDelete.requestDelete({
+                    path,
+                    title,
+                    kind: "video",
+                  });
+                }}
+                title="Mover a la papelera (Supr)"
+              >
+                <Icon name="trash" />
+              </button>
               <VideoToolsMenu
                 onConvert={() => {
                   window.dispatchEvent(
