@@ -693,20 +693,6 @@ export function VideoPlayer({
 
       // Sincronizar el icono de Prisma en la ventana flotante nativa de PiP en Windows
       void invoke("visual_library_sync_pip_icon").catch(() => {});
-
-      // Sincronizar MediaSession de Chromium con el icono y título de Prisma
-      if ("mediaSession" in navigator) {
-        const videoName = path ? path.split(/[/\\]/).pop() || "Prisma Video" : "Prisma Video";
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: videoName,
-          artist: "Prisma",
-          artwork: [
-            { src: "/icon/icon.png", sizes: "512x512", type: "image/png" },
-            { src: "/icon.png", sizes: "512x512", type: "image/png" },
-            { src: "/favicon.ico", sizes: "256x256", type: "image/x-icon" },
-          ],
-        });
-      }
     };
 
     const onLeave = () => {
@@ -815,6 +801,109 @@ export function VideoPlayer({
       }
     }
   };
+
+  // ── Sincronización de MediaSession para Vídeo (SMTC de Windows y teclas de hardware) ──
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+
+    if (!path) {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = "none";
+      return;
+    }
+
+    const videoName = title || path.split(/[/\\]/).pop() || "Prisma Vídeo";
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: videoName,
+      artist: "Prisma Vídeos",
+      album: "Vídeos",
+      artwork: [
+        { src: "/icon/icon.png", sizes: "512x512", type: "image/png" },
+        { src: "/icon.png", sizes: "512x512", type: "image/png" },
+        { src: "/favicon.ico", sizes: "256x256", type: "image/x-icon" },
+      ],
+    });
+
+    navigator.mediaSession.playbackState = paused ? "paused" : "playing";
+
+    const actions: Array<{ action: MediaSessionAction; handler: MediaSessionActionHandler }> = [
+      {
+        action: "play",
+        handler: () => {
+          if (videoRef.current && videoRef.current.paused) {
+            void videoRef.current.play().catch(() => {});
+          }
+        },
+      },
+      {
+        action: "pause",
+        handler: () => {
+          if (videoRef.current && !videoRef.current.paused) {
+            videoRef.current.pause();
+          }
+        },
+      },
+      {
+        action: "stop",
+        handler: () => {
+          if (videoRef.current && !videoRef.current.paused) {
+            videoRef.current.pause();
+          }
+        },
+      },
+      {
+        action: "previoustrack",
+        handler: () => {
+          handlePrevious(true);
+        },
+      },
+      {
+        action: "nexttrack",
+        handler: () => {
+          handleNext();
+        },
+      },
+      {
+        action: "seekto",
+        handler: (details) => {
+          if (details.seekTime != null && videoRef.current) {
+            videoRef.current.currentTime = details.seekTime;
+            setPosition(details.seekTime);
+          }
+        },
+      },
+    ];
+
+    for (const { action, handler } of actions) {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch {}
+    }
+
+    return () => {
+      for (const { action } of actions) {
+        try {
+          navigator.mediaSession.setActionHandler(action, null);
+        } catch {}
+      }
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = "none";
+    };
+  }, [path, title, paused, handlePrevious, handleNext]);
+
+  // Sincronización continua de posición y duración para SMTC en vídeo
+  useEffect(() => {
+    if (!("mediaSession" in navigator) || !path || duration <= 0) return;
+    if ("setPositionState" in navigator.mediaSession) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: Math.max(0, duration),
+          playbackRate: playbackSpeed || 1.0,
+          position: Math.min(duration, Math.max(0, position)),
+        });
+      } catch {}
+    }
+  }, [path, duration, position, playbackSpeed]);
 
   const handleSeek = (newTime: number) => {
     if (!videoRef.current) return;
@@ -1179,8 +1268,26 @@ export function VideoPlayer({
       switch (e.key.toLowerCase()) {
         case " ":
         case "k":
+        case "f7":
+        case "mediaplaypause":
           e.preventDefault();
           togglePlay();
+          break;
+        case "f8":
+        case "mediatracknext":
+          e.preventDefault();
+          handleNext();
+          break;
+        case "f6":
+        case "mediatrackprevious":
+          e.preventDefault();
+          handlePrevious(true);
+          break;
+        case "mediastop":
+          e.preventDefault();
+          if (videoRef.current && !videoRef.current.paused) {
+            videoRef.current.pause();
+          }
           break;
         case "arrowleft":
           e.preventDefault();

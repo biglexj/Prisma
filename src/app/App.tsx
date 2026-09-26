@@ -56,6 +56,7 @@ import { SeekOsd, useSeekOsd } from "../shared/ui/SeekOsd";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
 import "../features/visual_library/ui/video-player.css";
+import { useMediaSessionSync, SILENT_AUDIO_URI } from "../features/playback/services/useMediaSessionSync";
 
 const VIEW_TITLES: Record<AppView, string> = {
   home: "Inicio",
@@ -150,6 +151,37 @@ function AppContent() {
   useEffect(() => {
     applyMusicPalette(isAudioPlaying ? currentAlbumPalette : null);
   }, [isAudioPlaying, currentAlbumPalette, applyMusicPalette]);
+
+  const silentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isVideoActive = Boolean(activeVideoPath) && (activeView === "video_player" || isPip);
+
+  useMediaSessionSync({
+    snapshot: playback.snapshot,
+    currentItem: playback.queue.currentItem,
+    isVideoActive,
+    silentAudioRef,
+    onPlay: () => playback.resume(),
+    onPause: () => playback.pause(),
+    onPrevious: () => playback.previous(),
+    onNext: () => playback.next(),
+    onSeek: (seconds) => playback.seek(seconds),
+  });
+
+  const navigateToView = useCallback(
+    (view: AppView) => {
+      if (activeView === "video_player" && !isPip && view !== "video_player") {
+        if (document.pictureInPictureElement) {
+          void document.exitPictureInPicture().catch(() => {});
+        }
+        setActiveVideoPath(null);
+        setActiveVideoSessionItems([]);
+        setActiveVideoInitialTime(undefined);
+        setIsVideoPlaying(false);
+      }
+      setActiveView(view);
+    },
+    [activeView, isPip],
+  );
 
   // Coordinación de reproducción entre QuickLook y la aplicación principal
   const wasPlayingBeforeQuickLookRef = useRef<boolean>(false);
@@ -904,6 +936,50 @@ function AppContent() {
             return;
           }
         }
+
+        // Teclas multimedia de hardware y teclas F6 / F7 / F8
+        const isPlayPauseKey =
+          e.key === "MediaPlayPause" ||
+          e.code === "MediaPlayPause" ||
+          (!e.ctrlKey && !e.altKey && !e.metaKey && (e.key === "F7" || e.code === "F7"));
+        const isNextKey =
+          e.key === "MediaTrackNext" ||
+          e.code === "MediaTrackNext" ||
+          (!e.ctrlKey && !e.altKey && !e.metaKey && (e.key === "F8" || e.code === "F8"));
+        const isPrevKey =
+          e.key === "MediaTrackPrevious" ||
+          e.code === "MediaTrackPrevious" ||
+          (!e.ctrlKey && !e.altKey && !e.metaKey && (e.key === "F6" || e.code === "F6"));
+        const isStopKey = e.key === "MediaStop" || e.code === "MediaStop";
+
+        if (isPlayPauseKey) {
+          e.preventDefault();
+          if (isPip) {
+            const videoEl = document.querySelector<HTMLVideoElement>("video.video-stage-surface, video");
+            if (videoEl) {
+              if (videoEl.paused) void videoEl.play().catch(() => {});
+              else videoEl.pause();
+            }
+          } else {
+            void playback.toggle();
+          }
+          return;
+        }
+        if (isNextKey) {
+          e.preventDefault();
+          playback.next();
+          return;
+        }
+        if (isPrevKey) {
+          e.preventDefault();
+          playback.previous();
+          return;
+        }
+        if (isStopKey) {
+          e.preventDefault();
+          void playback.pause();
+          return;
+        }
       }
     };
 
@@ -1109,7 +1185,7 @@ function AppContent() {
           enabled={playback.enabled}
           density={sidebarDensity}
           onNavigate={(view) => {
-            setActiveView(view);
+            navigateToView(view);
           }}
         />
       ) : null}
@@ -1161,10 +1237,10 @@ function AppContent() {
               sourcesReady={library.sourcesLoaded && imageLibrary.sourcesLoaded && videoLibrary.sourcesLoaded}
               musicFolders={library.folders}
               musicItems={library.items}
-              onOpenFolders={() => setActiveView("folders")}
-              onOpenImages={() => setActiveView("images")}
-              onOpenVideos={() => setActiveView("videos")}
-              onOpenPlaylists={() => setActiveView("playlists")}
+              onOpenFolders={() => navigateToView("folders")}
+              onOpenImages={() => navigateToView("images")}
+              onOpenVideos={() => navigateToView("videos")}
+              onOpenPlaylists={() => navigateToView("playlists")}
               onOpenImage={handleOpenImage}
               onPlayMusic={(path, sessionItems, queueName) =>
                 playMusicItem(path, false, undefined, sessionItems, queueName)
@@ -1310,7 +1386,7 @@ function AppContent() {
             En modo PiP se mantiene fuera del flujo visual (con position fixed / off-screen)
             para que el elemento <video> siga vivo en el compositor de Chromium sin interrupciones.
           */}
-          {activeVideoPath ? (
+          {activeVideoPath && (activeView === "video_player" || isPip) ? (
             <div
               style={
                 activeView === "video_player"
@@ -1355,6 +1431,17 @@ function AppContent() {
               />
             </div>
           ) : null}
+
+          {/* Audio silencioso para mantener activa la sesión SMTC de Windows en WebView2 para libmpv */}
+          <audio
+            ref={silentAudioRef}
+            aria-hidden="true"
+            loop
+            preload="auto"
+            src={SILENT_AUDIO_URI}
+            style={{ display: "none" }}
+            tabIndex={-1}
+          />
 
           {activeView === "settings" ? (
             <AppSettings
@@ -1447,9 +1534,9 @@ function AppContent() {
               }}
             />
           ) : null}
-          {activeView === "luna_fetch" ? <LunaFetchView onNavigate={setActiveView} /> : null}
-          {activeView === "gallery_dl" ? <GalleryDlView onNavigate={setActiveView} /> : null}
-          {activeView === "prisma_upscaler" ? <PrismaUpscalerView onNavigate={setActiveView} /> : null}
+          {activeView === "luna_fetch" ? <LunaFetchView onNavigate={navigateToView} /> : null}
+          {activeView === "gallery_dl" ? <GalleryDlView onNavigate={navigateToView} /> : null}
+          {activeView === "prisma_upscaler" ? <PrismaUpscalerView onNavigate={navigateToView} /> : null}
           {activeView === "wallpapers" ? <WallpapersView /> : null}
         </main>
       </div>
