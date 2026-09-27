@@ -62,8 +62,8 @@
       }
     },
     "resources": {
-      "vendor/libmpv/bin/libmpv-2.dll": "./",
-      "vendor/libunwind.dll": "./",
+      "vendor/libmpv/bin/libmpv-2.dll": "libmpv-2.dll",
+      "vendor/libunwind.dll": "libunwind.dll",
       "vendor/ffmpeg/": "ffmpeg/"
     },
     "fileAssociations": [
