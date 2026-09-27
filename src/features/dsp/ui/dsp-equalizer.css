@@ -435,6 +435,20 @@
   transition: all 0.25s ease;
 }
 
+.dsp-visualizer-bar.standby {
+  align-items: flex-end;
+  background: var(--surface-container-low, var(--surface-container));
+  border-color: var(--outline-variant);
+  opacity: 0.95;
+}
+
+.dsp-visualizer-bar.off {
+  align-items: flex-end;
+  background: var(--surface-container-low, var(--surface-container));
+  border-color: var(--outline-variant);
+  opacity: 0.65;
+}
+
 .dsp-visualizer-bar.inactive {
   align-items: flex-end;
   background: var(--surface-container-low, var(--surface-container));
@@ -467,7 +481,29 @@
   animation-delay: var(--anim-delay, 0s);
 }
 
-.dsp-visualizer-bar.inactive .dsp-viz-column {
+/* En reposo con DSP encendido (POWER ON): los puntitos resaltan nítidamente sin igualar al borde */
+.dsp-visualizer-bar.standby .dsp-viz-column {
+  animation: none !important;
+  height: 3px !important;
+  max-width: 16px !important;
+  background: var(--outline-variant, rgba(255, 255, 255, 0.35)) !important;
+  box-shadow: none !important;
+  opacity: 0.60 !important;
+  border-radius: 2px !important;
+}
+
+/* Con DSP apagado (BYPASS): los puntitos permanecen tenues y apagados */
+.dsp-visualizer-bar.off .dsp-viz-column {
+  animation: none !important;
+  height: 3px !important;
+  max-width: 16px !important;
+  background: var(--outline-variant, rgba(255, 255, 255, 0.18)) !important;
+  box-shadow: none !important;
+  opacity: 0.22 !important;
+  border-radius: 2px !important;
+}
+
+.dsp-visualizer-bar.inactive:not(.standby):not(.off) .dsp-viz-column {
   animation: none !important;
   height: 3px !important;
   max-width: 16px !important;

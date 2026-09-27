@@ -196,6 +196,7 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
   );
 
   const isVisualizerActive = dsp.enabled && (isPrismaAudioActive || isGlobalAudioActive);
+  const visualizerStatus = isVisualizerActive ? "active" : dsp.enabled ? "standby" : "off";
   const [isDeviceMenuOpen, setIsDeviceMenuOpen] = useState(false);
   const [isPresetMenuOpen, setIsPresetMenuOpen] = useState(false);
   const [newPresetName, setNewPresetName] = useState("");
@@ -553,7 +554,10 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
       {dsp.globalError && <p role="status">{dsp.globalError}</p>}
 
       {/* ── Top Spectrum Visualizer Animation (Curva Orgánica Dinámica) ── */}
-      <div title="Indicador animado de actividad de audio; no representa un análisis de frecuencias" className={`dsp-visualizer-bar ${isVisualizerActive ? "active" : "inactive"}`}>
+      <div
+        title="Indicador animado de actividad de audio; no representa un análisis de frecuencias"
+        className={`dsp-visualizer-bar ${visualizerStatus} ${isVisualizerActive ? "active" : "inactive"}`}
+      >
         {SPECTRUM_BARS.map((bar) => (
           <div
             className={`dsp-viz-column ${bar.animType}`}
