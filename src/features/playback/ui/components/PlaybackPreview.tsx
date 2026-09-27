@@ -99,6 +99,17 @@ export function PlaybackPreview({
 
   const queueCount = queueState?.queue.items.length ?? 0;
 
+  const previousVolumeRef = useRef<number>(snapshot.volume > 0 ? snapshot.volume : 80);
+
+  const handleToggleMute = () => {
+    if (snapshot.volume > 0) {
+      previousVolumeRef.current = snapshot.volume;
+      onVolume(0);
+    } else {
+      onVolume(previousVolumeRef.current > 0 ? previousVolumeRef.current : 80);
+    }
+  };
+
   // Precarga fluida de carátulas para pistas siguientes y anteriores en la cola
   useEffect(() => {
     if (!queueState || queueState.queue.items.length === 0) return;
@@ -207,8 +218,7 @@ export function PlaybackPreview({
         setViewMode((prev) => (prev === "queue" ? "cover" : "queue"));
       } else if (key === "m") {
         e.preventDefault();
-        const currentVol = snapshot.volume ?? 100;
-        onVolume(currentVol > 0 ? 0 : 100);
+        handleToggleMute();
       } else if (key === "d" && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         if (effectivePath) {
@@ -349,6 +359,8 @@ export function PlaybackPreview({
               disabled={!enabled || !hasEffectiveMedia || duration <= 0}
               onSeek={onSeek}
               ariaLabel="Posición de reproducción"
+              activeColor={palette?.accent}
+              thumbColor={palette ? "#ffffff" : undefined}
             />
             <span>{formatTime(snapshot.positionSeconds)}</span>
             <span>{formatTime(snapshot.durationSeconds)}</span>
@@ -412,8 +424,24 @@ export function PlaybackPreview({
               <span>{queueCount > 0 ? "COLA" : "SESIÓN"}</span>
               <strong>{queueCount > 0 ? `${(queueState?.queue.currentIndex ?? 0) + 1} de ${queueCount}` : formatSession(snapshot.session)}</strong>
             </div>
-            <label className="preview-volume">
-              <Icon name="volume" />
+            <div className="preview-volume">
+              <button
+                type="button"
+                className="preview-volume-btn"
+                onClick={handleToggleMute}
+                title={snapshot.volume === 0 ? "Restaurar volumen (M)" : "Silenciar volumen (M)"}
+                aria-label={snapshot.volume === 0 ? "Restaurar volumen" : "Silenciar volumen"}
+              >
+                <Icon
+                  name={
+                    snapshot.volume === 0
+                      ? "volume-mute"
+                      : snapshot.volume < 40
+                        ? "volume-1"
+                        : "volume"
+                  }
+                />
+              </button>
               <input
                 aria-label="Volumen"
                 type="range"
@@ -424,7 +452,7 @@ export function PlaybackPreview({
                 onChange={(event) => onVolume(Number(event.target.value))}
               />
               <span>{Math.round(snapshot.volume)}%</span>
-            </label>
+            </div>
             <button
               disabled={!hasMedia}
               onClick={() => {

@@ -64,6 +64,27 @@
   accent-color: var(--album-accent);
 }
 
+.preview-screen.has-album-palette .preview-actions > button.is-active {
+  background: var(--album-accent-soft, color-mix(in srgb, var(--album-accent) 22%, var(--surface-container))) !important;
+  color: var(--album-accent) !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--album-accent) 26%, transparent) !important;
+}
+
+.preview-screen.has-album-palette .preview-actions > button.is-active:hover:not(:disabled) {
+  background: var(--album-accent) !important;
+  color: var(--album-on-accent) !important;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--album-accent) 36%, transparent) !important;
+}
+
+.preview-screen.has-album-palette .preview-volume:hover svg,
+.preview-screen.has-album-palette .preview-volume-btn:hover svg {
+  color: var(--album-accent) !important;
+}
+
+.preview-screen.has-album-palette .preview-fav-btn.is-favorite {
+  color: var(--album-accent) !important;
+}
+
 .preview-screen.has-album-palette .preview-artwork {
   box-shadow:
     0 30px 74px color-mix(in srgb, var(--album-accent-deep) 26%, transparent),

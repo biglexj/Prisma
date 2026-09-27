@@ -147,13 +147,13 @@ function AppContent() {
     !playback.snapshot.eofReached
   );
   const isPrismaPlaying = isAudioPlaying || isVideoPlaying;
-  const currentPlayingAudioPath = isAudioPlaying ? playback.snapshot.path : null;
-  const currentArtwork = useMusicArtwork(currentPlayingAudioPath, Boolean(currentPlayingAudioPath));
+  const currentAudioPath = playback.snapshot.path || null;
+  const currentArtwork = useMusicArtwork(currentAudioPath, Boolean(currentAudioPath));
   const currentAlbumPalette = useAlbumPalette(currentArtwork);
 
   useEffect(() => {
-    applyMusicPalette(isAudioPlaying ? currentAlbumPalette : null);
-  }, [isAudioPlaying, currentAlbumPalette, applyMusicPalette]);
+    applyMusicPalette(currentAudioPath ? currentAlbumPalette : null);
+  }, [currentAudioPath, currentAlbumPalette, applyMusicPalette]);
 
   const isVideoActive = Boolean(activeVideoPath) && (activeView === "video_player" || isPip);
 
