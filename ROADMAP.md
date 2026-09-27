@@ -8,17 +8,16 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [ ] **Activación Estricta del Tema Dinámico Reactivo a Música**: El tema adaptativo por carátula solo debe teñir la interfaz a partir del momento en que el usuario dé *Play* (reproducción activa real). Con canciones en cola, pausadas o en estado inicial «Listo para reproducir», debe permanecer inactivo conservando la paleta predeterminada del usuario sin alteraciones agresivas.
-- [ ] **Reposo Absoluto del Espectro Visualizador DSP**: Garantizar que las barras del ecualizador permanezcan totalmente planas y apagadas en línea base (sin barras elevadas ni animaciones residuales) cuando no exista reproducción activa verificada en Prisma o audio sonando en el sistema.
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
 - [ ] **Refactorización y Modularización de Galería Visual (`VisualLibrary.tsx`)**: Extracción de sub-componentes de la vista principal (1,230 líneas: filtros, barra de acciones y modales de soporte) para reingresar al umbral preferido (< 900 líneas) estipulado en la arquitectura del proyecto.
+- [ ] **Atajos de teclado configurables**: Personalización interactiva de atajos de teclado desde la vista de Configuración.
 
 ---
 
 ## 🟡 Intermedio (Prioridad Media/Baja)
 
-- [ ] Atajos de teclado totalmente reconfigurables desde la interfaz de Configuración.
 - [ ] Integración de marca de agua por lotes en el Convertidor Prisma.
+- [ ] Opciones avanzadas de normalización de ganancia y replaygain en DSP.
 
 ---
 
@@ -32,11 +31,19 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 ## 🟢 Completado
 
 - [x] **v1.1.6**
-  - **Sincronización SMTC, Control de Hardware y Rendimiento de Transporte**:
+  - **Identidad SMTC Nativa de Prisma y Portadas HD**:
+    - Integración en Rust de la API nativa System Media Transport Controls vinculada al HWND de `prisma.exe`, reemplazando el proceso genérico de WebView en el control multimedia de Windows 10/11.
+    - Extracción dinámica y rotación de carátulas de alta resolución desde metadatos ID3/FLAC para proyección nítida en el overlay del sistema.
+  - **Ergonomía de Volumen, Paleta Cromática y Transporte**:
+    - Botón interactivo de alternancia rápida de silencio (`.preview-volume-btn`) en la barra inferior con memoria del nivel previo, icono `volume-mute` y atajo `M`.
+    - Barra de progreso con acento tonal coordinado de carátula (`activeColor={palette?.accent}`).
+    - Paleta adaptativa de álbum estabilizada al archivo activo (`currentAudioPath`), eliminando parpadeos cromáticos al pausar o reanudar.
     - Sincronización continua de metadatos y controles multimedia SMTC de Windows tanto para música como para vídeo.
     - Desacoplamiento de teclas multimedia de volumen de hardware (`VolumeUp`, `VolumeDown`, `Mute`) para operar con total exclusividad sobre el volumen maestro de Windows, previniendo atenuación accidental en Prisma.
     - Eliminación de bloqueos y parpadeo de opacidad en botones de transporte (play/pause/anterior/siguiente) desacoplando el estado `busy`.
     - Conmutación selectiva de Volume OSD: restringido exclusivamente a reproducción de vídeo nativo, manteniendo la reproducción musical completamente limpia y sin avisos invasivos.
+  - **Empaquetado Universal y Portabilidad del Binario**:
+    - Inclusión nativa de `libunwind.dll` en el instalador NSIS y en el directorio de salida del target Rust (`build.rs`), erradicando fallos por DLL faltante en instalaciones limpias de Windows.
   - **Ergonomía de Reproducción, Colas y Controles de Vídeo**:
     - Reubicación ergonómica del botón del Ecualizador en la cabecera del reproductor de vídeo (en el centro, entre Favoritos y Papelera).
     - Selector de pistas de audio reposicionado junto a la cola en el extremo inferior derecho; botón de captura de fotogramas en el lateral inferior izquierdo.
