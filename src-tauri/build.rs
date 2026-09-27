@@ -2,6 +2,7 @@
 fn main() {
     verify_native_icons();
     configure_libmpv();
+    configure_libunwind();
     configure_ffmpeg();
     tauri_build::build();
 }
@@ -79,6 +80,37 @@ fn copy_libmpv_runtime(libmpv_dir: &std::path::Path) {
 
     let _ = std::fs::copy(&runtime_dll, &destination);
     println!("cargo:rerun-if-changed={}", runtime_dll.display());
+}
+
+fn configure_libunwind() {
+    if !cfg!(target_os = "windows") {
+        return;
+    }
+
+    let manifest_dir = std::path::PathBuf::from(
+        std::env::var_os("CARGO_MANIFEST_DIR").expect("Cargo no proporcionó CARGO_MANIFEST_DIR"),
+    );
+    let unwind_dll = manifest_dir.join("vendor").join("libunwind.dll");
+    if !unwind_dll.is_file() {
+        return;
+    }
+
+    let out_dir = std::path::PathBuf::from(
+        std::env::var_os("OUT_DIR").expect("Cargo no proporcionó OUT_DIR"),
+    );
+    let profile_dir = out_dir
+        .ancestors()
+        .nth(3)
+        .expect("No se pudo resolver la carpeta del perfil de Cargo");
+    let destination = profile_dir.join("libunwind.dll");
+
+    if destination.exists() {
+        println!("cargo:rerun-if-changed={}", unwind_dll.display());
+        return;
+    }
+
+    let _ = std::fs::copy(&unwind_dll, &destination);
+    println!("cargo:rerun-if-changed={}", unwind_dll.display());
 }
 
 fn verify_native_icons() {
