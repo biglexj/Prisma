@@ -9,6 +9,7 @@ interface QuickLookTextProps {
 
 export function QuickLookText({ payload, onEdit }: QuickLookTextProps) {
   const [copied, setCopied] = useState(false);
+  const [isWrapped, setIsWrapped] = useState(false);
   const content = payload.textContent || "Archivo de texto vacío.";
   const lines = content.split("\n");
 
@@ -24,27 +25,38 @@ export function QuickLookText({ payload, onEdit }: QuickLookTextProps) {
         <span className="quicklook-text-stats">
           {lines.length} {lines.length === 1 ? "línea" : "líneas"} • {content.length} caracteres
         </span>
-        {onEdit && (
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <button
-            className="quicklook-copy-btn quicklook-edit-btn"
-            onClick={onEdit}
+            className={`quicklook-copy-btn ${isWrapped ? "is-active" : ""}`}
+            onClick={() => setIsWrapped((w) => !w)}
             type="button"
-            title="Abrir editor completo en Prisma"
+            title={isWrapped ? "Desactivar ajuste automático de línea" : "Ajustar líneas al ancho de ventana"}
           >
-            <Icon name="edit" />
-            <span>Editar</span>
+            <Icon name="layout" />
+            <span>{isWrapped ? "Ajuste activo" : "Ajuste de línea"}</span>
           </button>
-        )}
-        <button
-          className={`quicklook-copy-btn ${copied ? "is-copied" : ""}`}
-          onClick={handleCopy}
-          type="button"
-        >
-          <Icon name={copied ? "check" : "copy"} />
-          <span>{copied ? "Copiado" : "Copiar texto"}</span>
-        </button>
+          {onEdit && (
+            <button
+              className="quicklook-copy-btn quicklook-edit-btn"
+              onClick={onEdit}
+              type="button"
+              title="Abrir editor completo en Prisma"
+            >
+              <Icon name="edit" />
+              <span>Editar</span>
+            </button>
+          )}
+          <button
+            className={`quicklook-copy-btn ${copied ? "is-copied" : ""}`}
+            onClick={handleCopy}
+            type="button"
+          >
+            <Icon name={copied ? "check" : "copy"} />
+            <span>{copied ? "Copiado" : "Copiar texto"}</span>
+          </button>
+        </div>
       </div>
-      <div className="quicklook-text-viewport">
+      <div className={`quicklook-text-viewport ${isWrapped ? "is-wrapped" : ""}`}>
         <div className="quicklook-line-numbers" aria-hidden="true">
           {lines.map((_, i) => (
             <span key={i}>{i + 1}</span>
