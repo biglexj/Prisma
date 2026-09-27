@@ -139,10 +139,15 @@ function AppContent() {
     activeView, onAddMusicFolder: library.addFolder, onAddImageFolder: imageLibrary.addFolder, onAddVideoFolder: videoLibrary.addFolder,
   });
 
-  // Sincronización del tema dinámico reactivo global con la pista en reproducción activa
-  const isAudioPlaying = (!playback.snapshot.paused && Boolean(playback.snapshot.path || playback.queue.currentItem || (playback.snapshot.positionSeconds !== null && (playback.snapshot.durationSeconds ?? 0) > 0))) || false;
+  // Sincronización del tema dinámico reactivo global con la pista en reproducción activa:
+  // ÚNICAMENTE si hay una pista cargada en libmpv y se está reproduciendo activamente (no en pausa, ni detenida, ni en reposo de cola)
+  const isAudioPlaying = Boolean(
+    playback.snapshot.path &&
+    !playback.snapshot.paused &&
+    !playback.snapshot.eofReached
+  );
   const isPrismaPlaying = isAudioPlaying || isVideoPlaying;
-  const currentPlayingAudioPath = isAudioPlaying ? (playback.snapshot.path || playback.queue.currentItem?.path || null) : null;
+  const currentPlayingAudioPath = isAudioPlaying ? playback.snapshot.path : null;
   const currentArtwork = useMusicArtwork(currentPlayingAudioPath, Boolean(currentPlayingAudioPath));
   const currentAlbumPalette = useAlbumPalette(currentArtwork);
 

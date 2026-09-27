@@ -36,11 +36,12 @@ export function useMediaSessionSync({
   onNext,
   onSeek,
 }: UseMediaSessionSyncParams) {
-  const effectivePath = snapshot.path || currentItem?.path || null;
+  // Solo consideramos pista efectiva si libmpv tiene una ruta cargada en tiempo real
+  const effectivePath = snapshot.path;
   const isAudioActive = Boolean(effectivePath) && !isVideoActive;
-  const isAudioPlaying = isAudioActive && !snapshot.paused;
+  const isAudioPlaying = isAudioActive && !snapshot.paused && !snapshot.eofReached;
 
-  // Obtener carátula si la música está activa
+  // Obtener carátula únicamente si la música está activa
   const artwork = useMusicArtwork(isAudioActive ? effectivePath : null, isAudioActive);
 
   // Mantener referencias actualizadas a las funciones para evitar re-binds innecesarios de handlers
@@ -55,7 +56,7 @@ export function useMediaSessionSync({
   const onSeekRef = useRef(onSeek);
   onSeekRef.current = onSeek;
 
-  // 1. Control del elemento de audio silencioso para mantener vivo el SMTC de Chromium
+  // 1. Control del elemento de audio silencioso: SOLO reproducir cuando Prisma esté sonando activamente
   useEffect(() => {
     const audio = silentAudioRef.current;
     if (!audio) return;
@@ -69,6 +70,7 @@ export function useMediaSessionSync({
       }
     } else {
       audio.pause();
+      audio.currentTime = 0;
     }
   }, [isAudioPlaying, silentAudioRef]);
 
@@ -79,7 +81,8 @@ export function useMediaSessionSync({
     // Si hay un vídeo activo, delegar la MediaSession por completo a VideoPlayer
     if (isVideoActive) return;
 
-    if (!effectivePath) {
+    // Si Prisma no está reproduciendo o no hay pista cargada en libmpv, liberar SMTC al 100%
+    if (!effectivePath || !isAudioPlaying) {
       navigator.mediaSession.playbackState = "none";
       navigator.mediaSession.metadata = null;
       return;
@@ -95,11 +98,14 @@ export function useMediaSessionSync({
     if (artwork) {
       artworkList.push({ src: artwork, sizes: "512x512" });
     }
-    artworkList.push(
-      { src: "/icon/icon.png", sizes: "512x512", type: "image/png" },
-      { src: "/icon.png", sizes: "512x512", type: "image/png" },
-      { src: "/favicon.ico", sizes: "256x256", type: "image/x-icon" },
-    );
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    if (origin) {
+      artworkList.push(
+        { src: `${origin}/icon/icon.png`, sizes: "512x512", type: "image/png" },
+        { src: `${origin}/icon.png`, sizes: "512x512", type: "image/png" },
+        { src: `${origin}/favicon.ico`, sizes: "256x256", type: "image/x-icon" },
+      );
+    }
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title,
@@ -108,7 +114,7 @@ export function useMediaSessionSync({
       artwork: artworkList,
     });
 
-    navigator.mediaSession.playbackState = snapshot.paused ? "paused" : "playing";
+    navigator.mediaSession.playbackState = "playing";
 
     // Registrar Action Handlers para teclas multimedia globales (F6, F7, F8, headset, etc.)
     const actions: Array<{ action: MediaSessionAction; handler: MediaSessionActionHandler }> = [

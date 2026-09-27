@@ -48,45 +48,63 @@ impl MpvBackend {
     }
 
     fn read_snapshot(&self) -> PlaybackSnapshot {
-        let track_title = self
-            .mpv
-            .get_property::<String>("metadata/by-key/Title")
-            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/TITLE"))
-            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/title"))
-            .or_else(|_| self.mpv.get_property::<String>("media-title"))
-            .ok()
-            .map(|s| s.trim().to_owned())
-            .filter(|s| !s.is_empty());
+        let is_idle = self.mpv.get_property::<bool>("idle-active").unwrap_or(false);
+        let has_path = self.path.is_some() && !is_idle;
 
-        let track_artist = self
-            .mpv
-            .get_property::<String>("metadata/by-key/Artist")
-            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/ARTIST"))
-            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/artist"))
-            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/Album_Artist"))
-            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/album_artist"))
-            .ok()
-            .map(|s| s.trim().to_owned())
-            .filter(|s| !s.is_empty());
+        let track_title = if has_path {
+            self.mpv
+                .get_property::<String>("metadata/by-key/Title")
+                .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/TITLE"))
+                .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/title"))
+                .or_else(|_| self.mpv.get_property::<String>("media-title"))
+                .ok()
+                .map(|s| s.trim().to_owned())
+                .filter(|s| !s.is_empty())
+        } else {
+            None
+        };
 
-        let track_album = self
-            .mpv
-            .get_property::<String>("metadata/by-key/Album")
-            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/ALBUM"))
-            .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/album"))
-            .ok()
-            .map(|s| s.trim().to_owned())
-            .filter(|s| !s.is_empty());
+        let track_artist = if has_path {
+            self.mpv
+                .get_property::<String>("metadata/by-key/Artist")
+                .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/ARTIST"))
+                .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/artist"))
+                .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/Album_Artist"))
+                .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/album_artist"))
+                .ok()
+                .map(|s| s.trim().to_owned())
+                .filter(|s| !s.is_empty())
+        } else {
+            None
+        };
+
+        let track_album = if has_path {
+            self.mpv
+                .get_property::<String>("metadata/by-key/Album")
+                .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/ALBUM"))
+                .or_else(|_| self.mpv.get_property::<String>("metadata/by-key/album"))
+                .ok()
+                .map(|s| s.trim().to_owned())
+                .filter(|s| !s.is_empty())
+        } else {
+            None
+        };
+
+        let paused = if !has_path {
+            true
+        } else {
+            self.mpv.get_property("pause").unwrap_or(true)
+        };
 
         PlaybackSnapshot {
-            path: self.path.clone(),
-            paused: self.mpv.get_property("pause").unwrap_or(true),
-            position_seconds: self.mpv.get_property("time-pos").ok(),
-            duration_seconds: self.mpv.get_property("duration").ok(),
+            path: if has_path { self.path.clone() } else { None },
+            paused,
+            position_seconds: if has_path { self.mpv.get_property("time-pos").ok() } else { None },
+            duration_seconds: if has_path { self.mpv.get_property("duration").ok() } else { None },
             volume: self.mpv.get_property("volume").unwrap_or(100.0),
             speed: self.mpv.get_property("speed").unwrap_or(1.0),
             session: None,
-            eof_reached: self.mpv.get_property::<bool>("eof-reached").ok(),
+            eof_reached: if has_path { self.mpv.get_property::<bool>("eof-reached").ok() } else { None },
             track_title,
             track_artist,
             track_album,
