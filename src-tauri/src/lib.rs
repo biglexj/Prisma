@@ -17,7 +17,8 @@ use app::commands::playback::{
     playback_get_audio_devices, playback_load, playback_next, playback_pause, playback_previous,
     playback_resume, playback_seek, playback_set_audio_device, playback_set_dsp_config,
     playback_set_speed, playback_set_system_default_device, playback_set_volume,
-    playback_snapshot, playback_toggle_pause,
+    playback_snapshot, playback_toggle_pause, smtc_clear, smtc_update_metadata,
+    smtc_update_playback, smtc_update_timeline,
 };
 use app::commands::playlists::{
     playlists_add_files, playlists_add_item, playlists_clean_missing, playlists_create,
@@ -349,7 +350,29 @@ pub fn run() {
 
             app.manage(quick_look_state);
 
+            let smtc_state: infrastructure::media::smtc::NativeSmtcState =
+                std::sync::Arc::new(std::sync::Mutex::new(None));
+            app.manage(smtc_state.clone());
+
             if let Some(main_window) = app.get_webview_window("main") {
+                #[cfg(windows)]
+                {
+                    if let Ok(hwnd) = main_window.hwnd() {
+                        let win_hwnd = windows::Win32::Foundation::HWND(hwnd.0);
+                        match infrastructure::media::smtc::NativeSmtcManager::new(win_hwnd, app.handle().clone()) {
+                            Ok(mgr) => {
+                                if let Ok(mut guard) = smtc_state.lock() {
+                                    *guard = Some(mgr);
+                                }
+                                println!("[SMTC] Native Windows SMTC initialized for Prisma main window");
+                            }
+                            Err(e) => {
+                                eprintln!("[SMTC] Failed to initialize native SMTC: {e}");
+                            }
+                        }
+                    }
+                }
+
                 if is_dev_mode {
                     let _ = main_window.set_title("Prisma (Dev) · Tu espacio de multimedia");
                     let _ = main_window.set_size(tauri::Size::Logical(tauri::LogicalSize {
@@ -577,6 +600,10 @@ pub fn run() {
             playback_get_audio_devices,
             playback_set_audio_device,
             playback_set_system_default_device,
+            smtc_update_playback,
+            smtc_update_metadata,
+            smtc_update_timeline,
+            smtc_clear,
             global_passthru_get_status,
             global_passthru_toggle,
             global_passthru_list_endpoints,

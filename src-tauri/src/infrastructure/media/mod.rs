@@ -2,6 +2,7 @@
 mod mpv;
 mod unavailable;
 pub mod passthru;
+pub mod smtc;
 
 use crate::features::playback::backend::PlaybackBackend;
 

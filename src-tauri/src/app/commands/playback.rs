@@ -154,4 +154,67 @@ pub fn playback_set_system_default_device(
     Ok(())
 }
 
+#[tauri::command]
+pub fn smtc_update_playback(
+    is_playing: bool,
+    state: State<'_, crate::infrastructure::media::smtc::NativeSmtcState>,
+) -> Result<(), String> {
+    if let Ok(guard) = state.lock() {
+        if let Some(mgr_arc) = guard.as_ref() {
+            if let Ok(mgr) = mgr_arc.lock() {
+                mgr.set_playback_status(is_playing);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn smtc_update_metadata(
+    title: String,
+    artist: String,
+    album: String,
+    source_path: Option<String>,
+    state: State<'_, crate::infrastructure::media::smtc::NativeSmtcState>,
+) -> Result<(), String> {
+    if let Ok(guard) = state.lock() {
+        if let Some(mgr_arc) = guard.as_ref() {
+            if let Ok(mgr) = mgr_arc.lock() {
+                mgr.update_metadata(&title, &artist, &album, source_path.as_deref());
+            }
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn smtc_update_timeline(
+    position_secs: f64,
+    duration_secs: f64,
+    state: State<'_, crate::infrastructure::media::smtc::NativeSmtcState>,
+) -> Result<(), String> {
+    if let Ok(guard) = state.lock() {
+        if let Some(mgr_arc) = guard.as_ref() {
+            if let Ok(mgr) = mgr_arc.lock() {
+                mgr.update_timeline(position_secs, duration_secs);
+            }
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn smtc_clear(
+    state: State<'_, crate::infrastructure::media::smtc::NativeSmtcState>,
+) -> Result<(), String> {
+    if let Ok(guard) = state.lock() {
+        if let Some(mgr_arc) = guard.as_ref() {
+            if let Ok(mgr) = mgr_arc.lock() {
+                mgr.clear();
+            }
+        }
+    }
+    Ok(())
+}
+
 

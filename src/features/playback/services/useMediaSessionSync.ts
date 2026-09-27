@@ -1,19 +1,19 @@
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import type { PlaybackSnapshot } from "../model/types";
 import type { MusicQueueItem } from "../model/queue";
 import { parseTrackInfo } from "../../music_library/model/trackInfo";
 import { mediaTitle } from "../ui/formatters";
-import { useMusicArtwork } from "../../music_library/useMusicArtwork";
 
-export const SILENT_AUDIO_URI =
-  "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQIAAAAAAA==";
+export const SILENT_AUDIO_URI = "";
 
 interface UseMediaSessionSyncParams {
   snapshot: PlaybackSnapshot;
   currentItem?: MusicQueueItem | null;
   isVideoActive: boolean;
-  silentAudioRef: RefObject<HTMLAudioElement | null>;
+  silentAudioRef?: RefObject<HTMLAudioElement | null>;
   onPlay: () => Promise<unknown> | void;
   onPause: () => Promise<unknown> | void;
   onPrevious: () => void;
@@ -22,29 +22,28 @@ interface UseMediaSessionSyncParams {
 }
 
 /**
- * Hook para sincronizar la reproducción de música por libmpv con el servicio
- * MediaSession de Chromium y el control de transporte multimedia del sistema operativo (Windows SMTC).
+ * Hook para sincronizar la reproducción de música con el servicio nativo
+ * Windows System Media Transport Controls (SMTC) de Prisma en Rust.
+ *
+ * Al ejecutarse directamente sobre el HWND de la ventana Win32 de Prisma,
+ * Windows atribuye la sesión multimedia a "Prisma" (reemplazando a "Microsoft Edge WebView2"),
+ * muestra el icono oficial de la aplicación y carga la carátula real del álbum en el flyout de volumen.
  */
 export function useMediaSessionSync({
   snapshot,
   currentItem,
   isVideoActive,
-  silentAudioRef,
   onPlay,
   onPause,
   onPrevious,
   onNext,
   onSeek,
 }: UseMediaSessionSyncParams) {
-  // Solo consideramos pista efectiva si libmpv tiene una ruta cargada en tiempo real
   const effectivePath = snapshot.path;
   const isAudioActive = Boolean(effectivePath) && !isVideoActive;
   const isAudioPlaying = isAudioActive && !snapshot.paused && !snapshot.eofReached;
 
-  // Obtener carátula únicamente si la música está activa
-  const artwork = useMusicArtwork(isAudioActive ? effectivePath : null, isAudioActive);
-
-  // Mantener referencias actualizadas a las funciones para evitar re-binds innecesarios de handlers
+  // Mantener referencias estables a las funciones para el listener de eventos de SMTC
   const onPlayRef = useRef(onPlay);
   onPlayRef.current = onPlay;
   const onPauseRef = useRef(onPause);
@@ -56,35 +55,56 @@ export function useMediaSessionSync({
   const onSeekRef = useRef(onSeek);
   onSeekRef.current = onSeek;
 
-  // 1. Control del elemento de audio silencioso: SOLO reproducir cuando Prisma esté sonando activamente
+  // 1. Desactivar y limpiar cualquier sesión multimedia remanente de Chromium WebView2
   useEffect(() => {
-    const audio = silentAudioRef.current;
-    if (!audio) return;
-
-    if (isAudioPlaying) {
-      audio.volume = 0.001;
-      audio.muted = false;
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {});
-      }
-    } else {
-      audio.pause();
-      audio.currentTime = 0;
+    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+      try {
+        navigator.mediaSession.playbackState = "none";
+        navigator.mediaSession.metadata = null;
+      } catch {}
     }
-  }, [isAudioPlaying, silentAudioRef]);
+  }, []);
 
-  // 2. Registro de handlers y sincronización de metadatos cuando la música tiene el control
+  // 2. Suscripción a eventos de hardware/flyout multimedia de Windows emitidos por Rust ("prisma://smtc-action")
   useEffect(() => {
-    if (!("mediaSession" in navigator)) return;
+    let unlisten: (() => void) | undefined;
+    let isMounted = true;
 
-    // Si hay un vídeo activo, delegar la MediaSession por completo a VideoPlayer
-    if (isVideoActive) return;
+    void listen<string>("prisma://smtc-action", (event) => {
+      if (!isMounted) return;
+      const action = event.payload;
+      switch (action) {
+        case "play":
+          void onPlayRef.current();
+          break;
+        case "pause":
+          void onPauseRef.current();
+          break;
+        case "next":
+          onNextRef.current();
+          break;
+        case "previous":
+          onPreviousRef.current();
+          break;
+      }
+    }).then((fn) => {
+      if (isMounted) {
+        unlisten = fn;
+      } else {
+        fn();
+      }
+    });
 
-    // Si Prisma no está reproduciendo o no hay pista cargada en libmpv, liberar SMTC al 100%
-    if (!effectivePath || !isAudioPlaying) {
-      navigator.mediaSession.playbackState = "none";
-      navigator.mediaSession.metadata = null;
+    return () => {
+      isMounted = false;
+      if (unlisten) unlisten();
+    };
+  }, []);
+
+  // 3. Sincronización de metadatos y carátula del álbum con el SMTC nativo de Rust
+  useEffect(() => {
+    if (isVideoActive || !effectivePath) {
+      void invoke("smtc_clear").catch(() => {});
       return;
     }
 
@@ -94,97 +114,60 @@ export function useMediaSessionSync({
     const artist = snapshot.trackArtist?.trim() || currentItem?.artist || parsed.artist || "Prisma";
     const album = snapshot.trackAlbum?.trim() || "Música";
 
-    const artworkList: MediaImage[] = [];
-    if (artwork) {
-      artworkList.push({ src: artwork, sizes: "512x512" });
-    }
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    if (origin) {
-      artworkList.push(
-        { src: `${origin}/icon/icon.png`, sizes: "512x512", type: "image/png" },
-        { src: `${origin}/icon.png`, sizes: "512x512", type: "image/png" },
-        { src: `${origin}/favicon.ico`, sizes: "256x256", type: "image/x-icon" },
-      );
-    }
-
-    navigator.mediaSession.metadata = new MediaMetadata({
+    void invoke("smtc_update_metadata", {
       title,
       artist,
       album,
-      artwork: artworkList,
-    });
-
-    navigator.mediaSession.playbackState = "playing";
-
-    // Registrar Action Handlers para teclas multimedia globales (F6, F7, F8, headset, etc.)
-    const actions: Array<{ action: MediaSessionAction; handler: MediaSessionActionHandler }> = [
-      { action: "play", handler: () => void onPlayRef.current() },
-      { action: "pause", handler: () => void onPauseRef.current() },
-      { action: "stop", handler: () => void onPauseRef.current() },
-      { action: "previoustrack", handler: () => onPreviousRef.current() },
-      { action: "nexttrack", handler: () => onNextRef.current() },
-      {
-        action: "seekto",
-        handler: (details) => {
-          if (details.seekTime != null) {
-            void onSeekRef.current(details.seekTime);
-          }
-        },
-      },
-    ];
-
-    for (const { action, handler } of actions) {
-      try {
-        navigator.mediaSession.setActionHandler(action, handler);
-      } catch {}
-    }
-
-    return () => {
-      // Limpiar handlers solo si este hook sigue a cargo
-      if (!isVideoActive) {
-        for (const { action } of actions) {
-          try {
-            navigator.mediaSession.setActionHandler(action, null);
-          } catch {}
-        }
-      }
-    };
+      sourcePath: effectivePath,
+    }).catch(() => {});
   }, [
     effectivePath,
     isVideoActive,
     snapshot.trackTitle,
     snapshot.trackArtist,
     snapshot.trackAlbum,
-    snapshot.paused,
     currentItem?.title,
     currentItem?.artist,
-    artwork,
   ]);
 
-  // 3. Sincronización continua de la barra de posición y duración (Timeline en Windows SMTC)
+  // 4. Sincronización del estado de reproducción (Playing / Paused) con SMTC nativo
   useEffect(() => {
-    if (!("mediaSession" in navigator) || isVideoActive) return;
+    if (isVideoActive || !effectivePath) {
+      return;
+    }
 
-    if (
-      "setPositionState" in navigator.mediaSession &&
-      snapshot.durationSeconds &&
-      snapshot.durationSeconds > 0
-    ) {
-      try {
-        navigator.mediaSession.setPositionState({
-          duration: Math.max(0, snapshot.durationSeconds),
-          playbackRate: snapshot.speed ?? 1.0,
-          position: Math.min(
-            snapshot.durationSeconds,
-            Math.max(0, snapshot.positionSeconds ?? 0),
-          ),
-        });
-      } catch {}
+    void invoke("smtc_update_playback", {
+      isPlaying: isAudioPlaying,
+    }).catch(() => {});
+  }, [isAudioPlaying, isVideoActive, effectivePath]);
+
+  // 5. Sincronización de la línea de tiempo (Timeline de Windows SMTC)
+  const lastReportedPos = useRef<number>(-1);
+  useEffect(() => {
+    if (isVideoActive || !effectivePath || !snapshot.durationSeconds || snapshot.durationSeconds <= 0) {
+      return;
+    }
+
+    const pos = Math.floor(snapshot.positionSeconds ?? 0);
+    // Limitar la tasa de actualización a 1 llamada por segundo para evitar sobrecarga IPC
+    if (pos !== lastReportedPos.current) {
+      lastReportedPos.current = pos;
+      void invoke("smtc_update_timeline", {
+        positionSecs: snapshot.positionSeconds ?? 0,
+        durationSecs: snapshot.durationSeconds,
+      }).catch(() => {});
     }
   }, [
-    snapshot.durationSeconds,
     snapshot.positionSeconds,
-    snapshot.speed,
+    snapshot.durationSeconds,
     isVideoActive,
+    effectivePath,
   ]);
+
+  // 6. Limpieza al desmontar
+  useEffect(() => {
+    return () => {
+      void invoke("smtc_clear").catch(() => {});
+    };
+  }, []);
 }

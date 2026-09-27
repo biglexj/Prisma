@@ -55,7 +55,7 @@ import { SeekOsd, useSeekOsd } from "../shared/ui/SeekOsd";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
 import "../features/visual_library/ui/video-player.css";
-import { useMediaSessionSync, SILENT_AUDIO_URI } from "../features/playback/services/useMediaSessionSync";
+import { useMediaSessionSync } from "../features/playback/services/useMediaSessionSync";
 
 const VIEW_TITLES: Record<AppView, string> = {
   home: "Inicio",
@@ -155,14 +155,12 @@ function AppContent() {
     applyMusicPalette(isAudioPlaying ? currentAlbumPalette : null);
   }, [isAudioPlaying, currentAlbumPalette, applyMusicPalette]);
 
-  const silentAudioRef = useRef<HTMLAudioElement | null>(null);
   const isVideoActive = Boolean(activeVideoPath) && (activeView === "video_player" || isPip);
 
   useMediaSessionSync({
     snapshot: playback.snapshot,
     currentItem: playback.queue.currentItem,
     isVideoActive,
-    silentAudioRef,
     onPlay: () => playback.resume(),
     onPause: () => playback.pause(),
     onPrevious: () => playback.previous(),
@@ -1424,19 +1422,6 @@ function AppContent() {
             </div>
           ) : null}
 
-          {/* Audio silencioso para mantener activa la sesión SMTC de Windows en WebView2 para libmpv */}
-          <audio
-            ref={silentAudioRef}
-            aria-hidden="true"
-            className="prisma-silent-audio"
-            data-silent="true"
-            id="prisma-silent-audio"
-            loop
-            preload="auto"
-            src={SILENT_AUDIO_URI}
-            style={{ display: "none" }}
-            tabIndex={-1}
-          />
 
           {activeView === "settings" ? (
             <AppSettings
