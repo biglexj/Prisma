@@ -11,6 +11,18 @@ export interface FFmpegStatus {
   version: string | null;
 }
 
+export interface ImageWatermarkOptions {
+  enabled: boolean;
+  author_text?: string;
+  include_date?: boolean;
+  date_text?: string;
+  logo_path?: string;
+  position?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center" | "custom";
+  scale?: number;
+  opacity?: number;
+  drop_shadow?: boolean;
+}
+
 export interface ImageConvertOptions {
   target_format: string; // "jpg" | "png" | "webp" | "avif" | "bmp" | "tiff" | "gif"
   quality?: number; // 1 - 100
@@ -18,6 +30,7 @@ export interface ImageConvertOptions {
   resize_height?: number;
   keep_aspect_ratio?: boolean;
   strip_metadata?: boolean;
+  watermark?: ImageWatermarkOptions;
 }
 
 export interface VideoToAudioOptions {

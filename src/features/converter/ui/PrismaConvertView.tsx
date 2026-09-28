@@ -1,6 +1,8 @@
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import { CustomSelect, type CustomSelectOption } from "../../../shared/ui/CustomSelect";
 import { useMediaConverter } from "../hooks/useMediaConverter";
+import type { WatermarkPosition } from "../../visual_library/model/watermark";
 import type { ConversionMode } from "../model/types";
 import "./prisma-convert.css";
 
@@ -8,6 +10,14 @@ const IMAGE_FORMATS = ["webp", "jpg", "png", "avif", "bmp", "tiff", "gif"];
 const VIDEO_TO_AUDIO_FORMATS = ["mp3", "flac", "wav", "aac", "ogg", "m4a"];
 const VIDEO_FORMATS = ["mp4", "mkv", "webm"];
 const AUDIO_FORMATS = ["mp3", "flac", "wav", "ogg", "aac", "m4a"];
+
+const WATERMARK_POSITIONS: { id: WatermarkPosition; label: string }[] = [
+  { id: "top-left", label: "↖ Superior Izq" },
+  { id: "top-right", label: "↗ Superior Der" },
+  { id: "center", label: "• Centro" },
+  { id: "bottom-left", label: "↙ Inferior Izq" },
+  { id: "bottom-right", label: "↘ Inferior Der" },
+];
 
 const AUDIO_BITRATE_OPTIONS: CustomSelectOption<string>[] = [
   { value: "320k", label: "320 kbps (Máxima calidad MP3)", description: "Calidad recomendada" },
@@ -92,6 +102,10 @@ export function PrismaConvertView() {
     setVideoTranscodeOptions,
     audioTranscodeOptions,
     setAudioTranscodeOptions,
+    watermarkConfig,
+    setWatermarkConfig,
+    pickWatermarkLogo,
+    removeWatermarkLogo,
     renameRules,
     setRenameRules,
     pickFiles,
@@ -293,6 +307,181 @@ export function PrismaConvertView() {
                   />
                   <span>Eliminar metadatos EXIF</span>
                 </label>
+              </div>
+
+              {/* Marca de agua y metadatos de autoría por lotes */}
+              <div className="convert-watermark-card">
+                <div className="convert-watermark-header">
+                  <div className="convert-watermark-title">
+                    <Icon name="watermark" />
+                    <span>Marca de agua y autoría por lote</span>
+                  </div>
+                  <label className="convert-watermark-toggle" title="Activar marca de agua en lote">
+                    <input
+                      type="checkbox"
+                      checked={watermarkConfig.enabled}
+                      onChange={(e) =>
+                        setWatermarkConfig((prev) => ({ ...prev, enabled: e.target.checked }))
+                      }
+                      disabled={isRunning}
+                    />
+                    <span className="convert-watermark-toggle-slider" />
+                  </label>
+                </div>
+
+                {watermarkConfig.enabled ? (
+                  <div className="convert-watermark-body">
+                    <div className="convert-watermark-row">
+                      <div className="convert-control-group" style={{ flex: 1 }}>
+                        <label>Firma / Texto de autoría</label>
+                        <div className="convert-input-with-icon">
+                          <Icon name="edit" />
+                          <input
+                            type="text"
+                            placeholder="ej. © 2026 Biglex J"
+                            value={watermarkConfig.text}
+                            onChange={(e) =>
+                              setWatermarkConfig((prev) => ({ ...prev, text: e.target.value }))
+                            }
+                            disabled={isRunning}
+                          />
+                        </div>
+                      </div>
+
+                      <label className="convert-watermark-checkbox-inline">
+                        <input
+                          type="checkbox"
+                          checked={watermarkConfig.includeDate}
+                          onChange={(e) =>
+                            setWatermarkConfig((prev) => ({ ...prev, includeDate: e.target.checked }))
+                          }
+                          disabled={isRunning}
+                        />
+                        <span>Añadir fecha actual</span>
+                      </label>
+                    </div>
+
+                    <div className="convert-watermark-row">
+                      <div className="convert-control-group" style={{ flex: 1 }}>
+                        <label>Logotipo gráfico (PNG / WebP transparente)</label>
+                        <div className="convert-logo-picker">
+                          {watermarkConfig.logoPath ? (
+                            <div className="convert-logo-selected">
+                              <img
+                                src={convertFileSrc(watermarkConfig.logoPath)}
+                                alt="Logo"
+                                className="convert-logo-preview-img"
+                              />
+                              <span className="convert-logo-filename" title={watermarkConfig.logoPath}>
+                                {watermarkConfig.logoPath.split(/[/\\]/).pop()}
+                              </span>
+                              <button
+                                type="button"
+                                className="convert-logo-btn-clear"
+                                onClick={removeWatermarkLogo}
+                                disabled={isRunning}
+                                title="Quitar logotipo"
+                              >
+                                <Icon name="close" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="convert-logo-btn-pick"
+                              onClick={pickWatermarkLogo}
+                              disabled={isRunning}
+                            >
+                              <Icon name="image" />
+                              <span>Examinar logotipo PNG...</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="convert-control-group">
+                      <label>Posición en la imagen</label>
+                      <div className="convert-watermark-positions">
+                        {WATERMARK_POSITIONS.map((pos) => (
+                          <button
+                            key={pos.id}
+                            type="button"
+                            className={`convert-watermark-pos-btn ${
+                              watermarkConfig.position === pos.id ? "is-selected" : ""
+                            }`}
+                            onClick={() =>
+                              setWatermarkConfig((prev) => ({ ...prev, position: pos.id }))
+                            }
+                            disabled={isRunning}
+                          >
+                            {pos.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="convert-controls-grid">
+                      <div className="convert-control-group">
+                        <div className="convert-slider-label">
+                          <label>Tamaño / Escala</label>
+                          <span className="convert-slider-val">{watermarkConfig.scale.toFixed(1)}x</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.4"
+                          max="2.5"
+                          step="0.1"
+                          value={watermarkConfig.scale}
+                          onChange={(e) =>
+                            setWatermarkConfig((prev) => ({
+                              ...prev,
+                              scale: parseFloat(e.target.value),
+                            }))
+                          }
+                          disabled={isRunning}
+                          className="convert-slider"
+                        />
+                      </div>
+
+                      <div className="convert-control-group">
+                        <div className="convert-slider-label">
+                          <label>Opacidad</label>
+                          <span className="convert-slider-val">
+                            {Math.round(watermarkConfig.opacity * 100)}%
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.1"
+                          max="1.0"
+                          step="0.05"
+                          value={watermarkConfig.opacity}
+                          onChange={(e) =>
+                            setWatermarkConfig((prev) => ({
+                              ...prev,
+                              opacity: parseFloat(e.target.value),
+                            }))
+                          }
+                          disabled={isRunning}
+                          className="convert-slider"
+                        />
+                      </div>
+                    </div>
+
+                    <label className="convert-watermark-checkbox-inline" style={{ marginTop: "0.25rem" }}>
+                      <input
+                        type="checkbox"
+                        checked={watermarkConfig.withShadow}
+                        onChange={(e) =>
+                          setWatermarkConfig((prev) => ({ ...prev, withShadow: e.target.checked }))
+                        }
+                        disabled={isRunning}
+                      />
+                      <span>Sombra de contraste suave (Drop Shadow sobre fondos claros)</span>
+                    </label>
+                  </div>
+                ) : null}
               </div>
             </>
           ) : null}

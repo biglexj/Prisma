@@ -1,4 +1,4 @@
-export type EditorTab = "transform" | "filters" | "adjust" | "draw";
+export type EditorTab = "transform" | "filters" | "adjust" | "draw" | "watermark";
 
 export type AspectRatioOption = "free" | "1:1" | "4:3" | "3:4" | "16:9" | "9:16";
 

@@ -108,7 +108,8 @@ export type IconName =
   | "upload"
   | "pin"
   | "tool"
-  | "hand";
+  | "hand"
+  | "watermark";
 
 const paths: Record<IconName, ReactNode> = {
   hand: (
@@ -243,6 +244,7 @@ const paths: Record<IconName, ReactNode> = {
   chevronUp: <polyline points="18 15 12 9 6 15" />,
   convert: <><path d="M21 7v6h-6" /><path d="M3 17v-6h6" /><path d="M6 7.5a9 9 0 0 1 14.5-1.5L21 7" /><path d="M18 16.5a9 9 0 0 1-14.5 1.5L3 17" /></>,
   tool: <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />,
+  watermark: <><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></>,
 };
 
 export function Icon({ name, width = "1em", height = "1em", ...props }: SVGProps<SVGSVGElement> & { name: IconName }) {

@@ -472,3 +472,274 @@
   }
 }
 
+/* ==========================================================================
+   Tarjeta de Marca de Agua y Autoría por Lotes (Material 3 Expressive)
+   ========================================================================== */
+.convert-watermark-card {
+  margin-top: 1rem;
+  background: var(--surface-container, #23191c);
+  border: 1px solid var(--outline-variant, rgba(207, 185, 188, 0.2));
+  border-radius: 20px;
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.convert-watermark-card:hover {
+  border-color: var(--primary, #ffb1c0);
+}
+
+.convert-watermark-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.convert-watermark-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--on-surface, #ffffff);
+}
+
+.convert-watermark-title svg {
+  color: var(--primary, #ffb1c0);
+  width: 20px;
+  height: 20px;
+}
+
+/* Switch Toggle M3 */
+.convert-watermark-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.convert-watermark-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.convert-watermark-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--surface-container-highest, #36292c);
+  border-radius: 24px;
+  transition: 0.24s cubic-bezier(0.2, 0, 0, 1);
+  border: 2px solid var(--outline, #9b898c);
+}
+
+.convert-watermark-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background: var(--outline, #9b898c);
+  border-radius: 50%;
+  transition: 0.24s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.convert-watermark-toggle input:checked + .convert-watermark-toggle-slider {
+  background: var(--primary, #ffb1c0);
+  border-color: var(--primary, #ffb1c0);
+}
+
+.convert-watermark-toggle input:checked + .convert-watermark-toggle-slider:before {
+  transform: translateX(20px);
+  background: var(--on-primary, #650025);
+}
+
+.convert-watermark-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--outline-variant, rgba(207, 185, 188, 0.15));
+  animation: convertFadeIn 0.2s ease-out;
+}
+
+.convert-watermark-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.convert-watermark-checkbox-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.84rem;
+  color: var(--on-surface-variant, #cfb9bc);
+  cursor: pointer;
+  user-select: none;
+}
+
+.convert-watermark-checkbox-inline input {
+  accent-color: var(--primary, #ffb1c0);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Input con Icono */
+.convert-input-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface-container-high, #2b1f22);
+  border: 1px solid var(--outline-variant, rgba(207, 185, 188, 0.2));
+  border-radius: 12px;
+  padding: 0.45rem 0.75rem;
+  color: var(--on-surface, #ffffff);
+}
+
+.convert-input-with-icon svg {
+  color: var(--on-surface-variant, #cfb9bc);
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.convert-input-with-icon input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: inherit;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+/* Selector de Logo */
+.convert-logo-picker {
+  display: flex;
+  align-items: center;
+}
+
+.convert-logo-btn-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface-container-high, #2b1f22);
+  border: 1px dashed var(--primary, #ffb1c0);
+  color: var(--on-surface, #ffffff);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.convert-logo-btn-pick:hover {
+  background: var(--surface-container-highest, #36292c);
+  transform: translateY(-1px);
+}
+
+.convert-logo-selected {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--surface-container-high, #2b1f22);
+  border: 1px solid var(--primary, #ffb1c0);
+  padding: 0.35rem 0.65rem;
+  border-radius: 12px;
+}
+
+.convert-logo-preview-img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.convert-logo-filename {
+  font-size: 0.82rem;
+  color: var(--on-surface, #ffffff);
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.convert-logo-btn-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--on-surface-variant, #cfb9bc);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.convert-logo-btn-clear:hover {
+  color: #ff5449;
+  background: rgba(255, 84, 73, 0.12);
+}
+
+/* Botones de Posición */
+.convert-watermark-positions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.convert-watermark-pos-btn {
+  padding: 0.4rem 0.75rem;
+  background: var(--surface-container-high, #2b1f22);
+  border: 1px solid var(--outline-variant, rgba(207, 185, 188, 0.2));
+  color: var(--on-surface-variant, #cfb9bc);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.convert-watermark-pos-btn:hover {
+  background: var(--surface-container-highest, #36292c);
+  color: var(--on-surface, #ffffff);
+}
+
+.convert-watermark-pos-btn.is-selected {
+  background: var(--primary, #ffb1c0);
+  color: var(--on-primary, #650025);
+  border-color: var(--primary, #ffb1c0);
+  font-weight: 600;
+}
+
+/* Sliders */
+.convert-slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  margin-bottom: 0.35rem;
+}
+
+.convert-slider-val {
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--primary, #ffb1c0);
+}
+
+.convert-slider {
+  width: 100%;
+  accent-color: var(--primary, #ffb1c0);
+  cursor: pointer;
+}
+

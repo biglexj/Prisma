@@ -1,6 +1,8 @@
 use std::path::Path;
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde::{Deserialize, Serialize};
 
+use crate::features::folder_session::clean_path_str;
 use crate::infrastructure::converter::{
     convert_image, extract_video_audio, get_ffmpeg_status, transcode_audio, transcode_video,
     AudioTranscodeOptions, FFmpegStatus, ImageConvertOptions, VideoToAudioOptions,
@@ -276,3 +278,40 @@ pub async fn converter_extract_zip(path: String) -> Result<String, String> {
         crate::infrastructure::converter::extract_zip(Path::new(&path)).map(|p| p.to_string_lossy().into_owned())
     }).await.map_err(|e| e.to_string())?
 }
+
+#[tauri::command]
+pub async fn converter_save_image_data(
+    output_path: String,
+    image_base64: String,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let clean = clean_path_str(&output_path);
+        let out_path = Path::new(&clean);
+        if let Some(parent) = out_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let raw_b64 = if let Some(idx) = image_base64.find(";base64,") {
+            &image_base64[idx + 8..]
+        } else if let Some(stripped) = image_base64.strip_prefix("data:image/") {
+            if let Some(idx) = stripped.find(',') {
+                &stripped[idx + 1..]
+            } else {
+                &image_base64
+            }
+        } else {
+            &image_base64
+        };
+
+        let image_bytes = STANDARD
+            .decode(raw_b64.trim())
+            .map_err(|e| format!("Error decodificando imagen base64: {e}"))?;
+
+        std::fs::write(out_path, image_bytes)
+            .map_err(|e| format!("Error escribiendo archivo destino {clean}: {e}"))?;
+
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Error en tarea de guardado de imagen: {e}"))?
+}
+

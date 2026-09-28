@@ -6,6 +6,12 @@ import type { VisualLibraryItem } from "../../model/types";
 import { ImageCropOverlay } from "./ImageCropOverlay";
 import { ImageEditorToolbar } from "./ImageEditorToolbar";
 import { SaveImageDialog } from "./SaveImageDialog";
+import { WatermarkModal } from "./WatermarkModal";
+import {
+  type WatermarkConfig,
+  DEFAULT_WATERMARK_CONFIG,
+  applyWatermarkToCanvas,
+} from "../../model/watermark";
 import { getFilterCss } from "./filterPresets";
 import type {
   AspectRatioOption,
@@ -58,6 +64,11 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
   const [doodleStrokes, setDoodleStrokes] = useState<DoodleStroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<DoodlePoint[] | null>(null);
 
+  // Watermark
+  const [watermark, setWatermark] = useState<WatermarkConfig>(DEFAULT_WATERMARK_CONFIG);
+  const [showWatermarkModal, setShowWatermarkModal] = useState(false);
+  const [logoImageElement, setLogoImageElement] = useState<HTMLImageElement | null>(null);
+
   // Loading & Saving
   const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null);
   const [stageDimensions, setStageDimensions] = useState<{ width: number; height: number }>({
@@ -80,6 +91,19 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
       setImageElement(img);
     };
   }, [item.path]);
+
+  // Cargar logotipo de marca de agua si se especifica
+  useEffect(() => {
+    if (!watermark.logoDataUrl) {
+      setLogoImageElement(null);
+      return;
+    }
+    const logoImg = new Image();
+    logoImg.crossOrigin = "anonymous";
+    logoImg.onload = () => setLogoImageElement(logoImg);
+    logoImg.onerror = () => setLogoImageElement(null);
+    logoImg.src = watermark.logoDataUrl;
+  }, [watermark.logoDataUrl]);
 
   // Manejador de teclado (Escape, Ctrl+Z, Ctrl+S)
   useEffect(() => {
@@ -213,6 +237,11 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
       }
       ctx.restore();
     }
+
+    // 3. Estampar marca de agua si está activa
+    if (watermark.enabled) {
+      applyWatermarkToCanvas(ctx, canvas.width, canvas.height, watermark, logoImageElement);
+    }
   }, [
     imageElement,
     stageDimensions,
@@ -224,6 +253,8 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
     currentStroke,
     brushColor,
     brushWidth,
+    watermark,
+    logoImageElement,
   ]);
 
   useEffect(() => {
@@ -381,6 +412,11 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
         cropPxH
       );
 
+      // 4. Estampar marca de agua si está activa sobre el canvas final de alta resolución
+      if (watermark.enabled) {
+        applyWatermarkToCanvas(finalCtx, cropPxW, cropPxH, watermark, logoImageElement);
+      }
+
       // Determinar formato de exportación
       const origExt = item.path.split(".").pop()?.toLowerCase();
       const mime =
@@ -511,6 +547,17 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
         doodleStrokes={doodleStrokes}
         onUndoStroke={handleUndoStroke}
         onClearStrokes={handleClearStrokes}
+        // Watermark
+        watermark={watermark}
+        onOpenWatermarkModal={() => setShowWatermarkModal(true)}
+      />
+
+      {/* Diálogo de marca de agua */}
+      <WatermarkModal
+        isOpen={showWatermarkModal}
+        config={watermark}
+        onClose={() => setShowWatermarkModal(false)}
+        onApply={(newConfig) => setWatermark(newConfig)}
       />
 
       {/* Diálogo de guardar */}

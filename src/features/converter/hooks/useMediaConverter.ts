@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { cleanPath } from "../../../shared/mediaTree";
+import {
+  DEFAULT_WATERMARK_CONFIG,
+  applyWatermarkToCanvas,
+  loadWatermarkImage,
+  type WatermarkConfig,
+} from "../../visual_library/model/watermark";
 import type {
   AudioTranscodeOptions,
   BatchRenameRules,
@@ -63,6 +70,10 @@ export function useMediaConverter() {
     replaceText: "",
     numberingStart: 1,
     numberingDigits: 2,
+  });
+
+  const [watermarkConfig, setWatermarkConfig] = useState<WatermarkConfig>({
+    ...DEFAULT_WATERMARK_CONFIG,
   });
 
   const abortControllerRef = useRef<boolean>(false);
@@ -401,6 +412,26 @@ export function useMediaConverter() {
     }
   };
 
+  const pickWatermarkLogo = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        title: "Seleccionar logotipo PNG para la marca de agua",
+        filters: [{ name: "Logotipo PNG/WebP", extensions: ["png", "webp"] }],
+      });
+      if (typeof selected === "string") {
+        setWatermarkConfig((prev) => ({ ...prev, logoPath: selected }));
+      }
+    } catch (e) {
+      console.warn("Error seleccionando logotipo de marca de agua:", e);
+    }
+  };
+
+  const removeWatermarkLogo = () => {
+    setWatermarkConfig((prev) => ({ ...prev, logoPath: null }));
+  };
+
   const removeItem = (id: string) => {
     setQueue((prev) => prev.filter((item) => item.id !== id));
   };
@@ -417,6 +448,16 @@ export function useMediaConverter() {
     setIsRunning(true);
     abortControllerRef.current = false;
 
+    // Precargar logotipo de marca de agua si aplica
+    let batchLogoImg: HTMLImageElement | null = null;
+    if (mode === "image" && watermarkConfig.enabled && watermarkConfig.logoPath) {
+      try {
+        batchLogoImg = await loadWatermarkImage(watermarkConfig.logoPath);
+      } catch (err) {
+        console.warn("No se pudo precargar el logotipo de la marca de agua:", err);
+      }
+    }
+
     for (let i = 0; i < queue.length; i++) {
       if (abortControllerRef.current) break;
       const item = queue[i];
@@ -428,6 +469,78 @@ export function useMediaConverter() {
       );
 
       try {
+        // Si el modo es imagen y la marca de agua está activa, renderizar con canvas y estamparla
+        if (mode === "image" && watermarkConfig.enabled) {
+          const assetUrl = convertFileSrc(cleanPath(item.inputPath));
+          const sourceImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error("No se pudo cargar la imagen para estampar la marca de agua"));
+            img.src = assetUrl;
+          });
+
+          let targetW = sourceImg.naturalWidth;
+          let targetH = sourceImg.naturalHeight;
+
+          if (imageOptions.resize_width && imageOptions.resize_height) {
+            if (imageOptions.keep_aspect_ratio ?? true) {
+              const ratio = Math.min(
+                imageOptions.resize_width / targetW,
+                imageOptions.resize_height / targetH
+              );
+              targetW = Math.max(1, Math.round(targetW * ratio));
+              targetH = Math.max(1, Math.round(targetH * ratio));
+            } else {
+              targetW = imageOptions.resize_width;
+              targetH = imageOptions.resize_height;
+            }
+          } else if (imageOptions.resize_width) {
+            const ratio = imageOptions.resize_width / targetW;
+            targetW = imageOptions.resize_width;
+            targetH = Math.max(1, Math.round(targetH * ratio));
+          } else if (imageOptions.resize_height) {
+            const ratio = imageOptions.resize_height / targetH;
+            targetH = imageOptions.resize_height;
+            targetW = Math.max(1, Math.round(targetW * ratio));
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = targetW;
+          canvas.height = targetH;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) throw new Error("No se pudo inicializar el lienzo para la marca de agua");
+
+          ctx.drawImage(sourceImg, 0, 0, targetW, targetH);
+
+          // Estampar marca de agua paramétrica con fidelidad total
+          applyWatermarkToCanvas(ctx, targetW, targetH, watermarkConfig, batchLogoImg);
+
+          const fmt = imageOptions.target_format.toLowerCase();
+          const mime =
+            fmt === "jpg" || fmt === "jpeg"
+              ? "image/jpeg"
+              : fmt === "png"
+              ? "image/png"
+              : "image/webp";
+          const quality = (imageOptions.quality ?? 85) / 100;
+          const base64Data = canvas.toDataURL(mime, quality);
+
+          await converterClient.saveImageData(item.outputPath, base64Data);
+
+          setQueue((prev) =>
+            prev.map((it, idx) =>
+              idx === i
+                ? {
+                    ...it,
+                    status: "completed",
+                    errorMessage: undefined,
+                  }
+                : it
+            )
+          );
+          continue;
+        }
+
         let payloadOptions:
           | ImageConvertOptions
           | VideoToAudioOptions
@@ -504,6 +617,10 @@ export function useMediaConverter() {
     setVideoTranscodeOptions,
     audioTranscodeOptions,
     setAudioTranscodeOptions,
+    watermarkConfig,
+    setWatermarkConfig,
+    pickWatermarkLogo,
+    removeWatermarkLogo,
     renameRules,
     setRenameRules,
     addFilesToQueue,

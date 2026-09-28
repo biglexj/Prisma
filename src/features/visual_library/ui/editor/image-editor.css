@@ -711,3 +711,284 @@
   font-weight: 700;
   color: #ffffff;
 }
+
+/* ── Modal de Marca de Agua ── */
+.watermark-modal-card {
+  width: min(520px, 94vw);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(26, 17, 21, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+  padding: 0;
+  overflow: hidden;
+}
+
+.watermark-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.watermark-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.watermark-modal-title h3 {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.watermark-modal-title p {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: #c9b4b8;
+}
+
+.watermark-modal-close {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.watermark-modal-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.watermark-modal-body {
+  padding: 18px 22px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.watermark-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.watermark-toggle-row input[type="checkbox"] {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  accent-color: #ffb1c0;
+}
+
+.watermark-toggle-label strong {
+  display: block;
+  font-size: 0.92rem;
+  color: #ffffff;
+}
+
+.watermark-toggle-label small {
+  display: block;
+  font-size: 0.78rem;
+  color: #c9b4b8;
+  margin-top: 2px;
+}
+
+.watermark-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.watermark-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e0cfd2;
+}
+
+.watermark-text-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.18s;
+}
+
+.watermark-text-input:focus {
+  border-color: #ffb1c0;
+}
+
+.watermark-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.watermark-checkbox-row input {
+  accent-color: #ffb1c0;
+  width: 16px;
+  height: 16px;
+}
+
+.watermark-logo-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.watermark-logo-preview {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+.watermark-logo-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.watermark-logo-remove-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff5449;
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.7rem;
+}
+
+.watermark-logo-pick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.watermark-logo-pick-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: #ffb1c0;
+}
+
+.watermark-position-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.watermark-pos-btn {
+  padding: 9px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.watermark-pos-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.watermark-pos-btn.is-selected {
+  background: #8f003a;
+  border-color: #ffb1c0;
+  color: #ffd9df;
+  font-weight: 700;
+}
+
+.watermark-sliders-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.watermark-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.watermark-slider-header span {
+  font-size: 0.8rem;
+  color: #ffb1c0;
+  font-weight: 600;
+}
+
+.watermark-slider {
+  width: 100%;
+  accent-color: #ffb1c0;
+  margin-top: 4px;
+}
+
+.watermark-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.watermark-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.watermark-disable-btn {
+  color: #ffb4ab !important;
+}
+

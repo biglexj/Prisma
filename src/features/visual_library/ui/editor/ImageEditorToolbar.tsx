@@ -8,6 +8,7 @@ import type {
   EditorTab,
   PhotoFilter,
 } from "./editorTypes";
+import type { WatermarkConfig } from "../../model/watermark";
 
 interface ImageEditorToolbarProps {
   activeTab: EditorTab;
@@ -41,6 +42,9 @@ interface ImageEditorToolbarProps {
   doodleStrokes: DoodleStroke[];
   onUndoStroke: () => void;
   onClearStrokes: () => void;
+  // Watermark
+  watermark: WatermarkConfig;
+  onOpenWatermarkModal: () => void;
 }
 
 const PRESET_COLORS = [
@@ -86,6 +90,9 @@ export function ImageEditorToolbar({
   doodleStrokes,
   onUndoStroke,
   onClearStrokes,
+  // Watermark
+  watermark,
+  onOpenWatermarkModal,
 }: ImageEditorToolbarProps) {
   return (
     <div className="image-editor-toolbar-container">
@@ -378,6 +385,15 @@ export function ImageEditorToolbar({
         >
           <Icon name="brush" />
           <span>Dibujar</span>
+        </button>
+
+        <button
+          className={`editor-tab-btn ${watermark.enabled ? "is-active" : ""}`}
+          onClick={onOpenWatermarkModal}
+          title={watermark.enabled ? "Marca de agua activa (haz clic para editar)" : "Añadir marca de agua"}
+        >
+          <Icon name="watermark" />
+          <span>Marca</span>
         </button>
       </div>
     </div>

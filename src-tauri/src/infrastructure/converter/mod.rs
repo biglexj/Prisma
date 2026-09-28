@@ -13,6 +13,19 @@ pub struct FFmpegStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageWatermarkOptions {
+    pub enabled: bool,
+    pub author_text: Option<String>,
+    pub include_date: Option<bool>,
+    pub date_text: Option<String>,
+    pub logo_path: Option<String>,
+    pub position: Option<String>,
+    pub scale: Option<f32>,
+    pub opacity: Option<f32>,
+    pub drop_shadow: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImageConvertOptions {
     pub target_format: String, // "jpg", "png", "webp", "avif", "bmp", "tiff", "gif"
     pub quality: Option<u32>,   // 1 - 100
@@ -20,6 +33,7 @@ pub struct ImageConvertOptions {
     pub resize_height: Option<u32>,
     pub keep_aspect_ratio: Option<bool>,
     pub strip_metadata: Option<bool>,
+    pub watermark: Option<ImageWatermarkOptions>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

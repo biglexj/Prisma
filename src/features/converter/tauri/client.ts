@@ -43,6 +43,9 @@ export const converterClient = {
   processBatchItem: (job: BatchJobPayload) =>
     invoke<BatchJobResult>("converter_process_batch_item", { job }),
 
+  saveImageData: (output_path: string, image_base64: string) =>
+    invoke<void>("converter_save_image_data", { outputPath: output_path, imageBase64: image_base64 }),
+
   scanFolder: (folder_path: string, mode: string) =>
     invoke<string[]>("converter_scan_folder", { folderPath: folder_path, mode }),
 };

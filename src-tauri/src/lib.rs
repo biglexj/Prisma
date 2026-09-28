@@ -28,7 +28,7 @@ use app::commands::playlists::{
 };
 use app::commands::converter::{
     converter_convert_image, converter_extract_video_audio, converter_get_status,
-    converter_process_batch_item, converter_extract_zip, converter_scan_folder, converter_transcode_audio,
+    converter_process_batch_item, converter_extract_zip, converter_save_image_data, converter_scan_folder, converter_transcode_audio,
     converter_transcode_video,
 };
 use app::commands::custom_libraries::{
@@ -687,6 +687,7 @@ pub fn run() {
             converter_process_batch_item,
             converter_scan_folder,
             converter_extract_zip,
+            converter_save_image_data,
             audio_read_tags,
             audio_write_tags,
             audio_batch_write_tags,
