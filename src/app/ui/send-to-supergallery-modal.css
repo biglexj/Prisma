@@ -401,9 +401,32 @@
 }
 
 .send-btn-primary:disabled,
-.send-btn-secondary:disabled {
+.send-btn-secondary:disabled,
+.send-btn-danger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.send-btn-danger {
+  padding: 0.6rem 1.35rem;
+  border-radius: 0.85rem;
+  border: none;
+  background: var(--color-error-container, #ef4444);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.28);
+}
+
+.send-btn-danger:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.38);
 }
 
 /* Floating background transfer pill */

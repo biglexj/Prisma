@@ -117,6 +117,14 @@ export function SendToSuperGalleryModal({
     }
   };
 
+  const handleCancel = () => {
+    setIsSending(false);
+    setIsMinimized(false);
+    setProgress(0);
+    setStatusMessage(null);
+    setErrorMessage("Transferencia cancelada");
+  };
+
   const mobileDevices = devices.filter(
     (d) => d.targetApp === "supergallery" || d.deviceType === "mobile"
   );
@@ -288,33 +296,46 @@ export function SendToSuperGalleryModal({
 
         <footer className="send-modal-footer">
           {isSending ? (
-            <button
-              type="button"
-              className="send-btn-secondary"
-              onClick={() => setIsMinimized(true)}
-              title="Continuar transferencia en segundo plano"
-            >
-              <Icon name="chevron-down" />
-              <span>Ocultar</span>
-            </button>
+            <>
+              <button
+                type="button"
+                className="send-btn-secondary"
+                onClick={() => setIsMinimized(true)}
+                title="Continuar transferencia en segundo plano"
+              >
+                <Icon name="chevron-down" />
+                <span>Ocultar</span>
+              </button>
+              <button
+                type="button"
+                className="send-btn-danger"
+                onClick={handleCancel}
+                title="Cancelar transferencia"
+              >
+                <Icon name="x" />
+                <span>Cancelar</span>
+              </button>
+            </>
           ) : (
-            <button
-              type="button"
-              className="send-btn-secondary"
-              onClick={onClose}
-            >
-              Cancelar
-            </button>
+            <>
+              <button
+                type="button"
+                className="send-btn-secondary"
+                onClick={onClose}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="send-btn-primary"
+                onClick={handleSend}
+                disabled={!selectedDevice}
+              >
+                <Icon name="smartphone" />
+                <span>Enviar al Teléfono</span>
+              </button>
+            </>
           )}
-          <button
-            type="button"
-            className="send-btn-primary"
-            onClick={handleSend}
-            disabled={!selectedDevice || isSending}
-          >
-            <Icon name="smartphone" />
-            <span>{isSending ? "Enviando…" : "Enviar al Teléfono"}</span>
-          </button>
         </footer>
       </div>
     </div>
