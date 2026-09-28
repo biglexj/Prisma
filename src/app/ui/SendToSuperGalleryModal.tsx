@@ -42,6 +42,7 @@ export function SendToSuperGalleryModal({
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -51,6 +52,7 @@ export function SendToSuperGalleryModal({
       setProgress(0);
       setStatusMessage(null);
       setErrorMessage(null);
+      setIsMinimized(false);
       return;
     }
 
@@ -105,11 +107,13 @@ export function SendToSuperGalleryModal({
       setProgress(100);
 
       setTimeout(() => {
+        setIsMinimized(false);
         onClose();
       }, 1600);
     } catch (err) {
       setErrorMessage(String(err));
       setIsSending(false);
+      setIsMinimized(false);
     }
   };
 
@@ -120,8 +124,51 @@ export function SendToSuperGalleryModal({
     (d) => d.targetApp !== "supergallery" && d.deviceType !== "mobile"
   );
 
+  if (isMinimized && isSending) {
+    return (
+      <aside
+        className="send-floating-pill"
+        onClick={() => setIsMinimized(false)}
+        role="status"
+        aria-live="polite"
+        title="Transferencia hacia Super Galería en curso. Clic para abrir detalles."
+      >
+        <div className="send-floating-icon">
+          <Icon name="smartphone" />
+        </div>
+        <div className="send-floating-content">
+          <span className="send-floating-title">Enviando a Super Galería</span>
+          <span className="send-floating-filename" title={fileName}>
+            {fileName} • <strong>{progress}%</strong>
+          </span>
+          <div className="send-floating-progress-track">
+            <div
+              className="send-floating-progress-fill"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+        <button
+          type="button"
+          className="send-floating-expand-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsMinimized(false);
+          }}
+          aria-label="Expandir modal de transferencia"
+          title="Ver detalles"
+        >
+          <Icon name="expand" />
+        </button>
+      </aside>
+    );
+  }
+
   return (
-    <div className="send-modal-backdrop" onClick={!isSending ? onClose : undefined}>
+    <div
+      className="send-modal-backdrop"
+      onClick={isSending ? () => setIsMinimized(true) : onClose}
+    >
       <div
         className="send-modal-card"
         onClick={(e) => e.stopPropagation()}
@@ -139,15 +186,14 @@ export function SendToSuperGalleryModal({
               {fileName}
             </p>
           </div>
-          {!isSending ? (
-            <button
-              className="send-modal-close-btn"
-              onClick={onClose}
-              aria-label="Cerrar"
-            >
-              <Icon name="x" />
-            </button>
-          ) : null}
+          <button
+            className="send-modal-close-btn"
+            onClick={isSending ? () => setIsMinimized(true) : onClose}
+            aria-label={isSending ? "Ocultar en segundo plano" : "Cerrar"}
+            title={isSending ? "Ocultar en segundo plano" : "Cerrar"}
+          >
+            <Icon name={isSending ? "chevron-down" : "x"} />
+          </button>
         </header>
 
         <div className="send-modal-body">
@@ -241,14 +287,25 @@ export function SendToSuperGalleryModal({
         </div>
 
         <footer className="send-modal-footer">
-          <button
-            type="button"
-            className="send-btn-secondary"
-            onClick={onClose}
-            disabled={isSending}
-          >
-            Cancelar
-          </button>
+          {isSending ? (
+            <button
+              type="button"
+              className="send-btn-secondary"
+              onClick={() => setIsMinimized(true)}
+              title="Continuar transferencia en segundo plano"
+            >
+              <Icon name="chevron-down" />
+              <span>Ocultar</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="send-btn-secondary"
+              onClick={onClose}
+            >
+              Cancelar
+            </button>
+          )}
           <button
             type="button"
             className="send-btn-primary"
