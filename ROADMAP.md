@@ -8,7 +8,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [ ] **Arrastre Nativo hacia Apps Externas (Drag & Drop OS / DaVinci Resolve)**: Soporte nativo para mantener presionado y arrastrar archivos de vídeo, imagen o música desde Prisma directamente hacia DaVinci Resolve, editores multimedia o Explorador de Windows mediante OLE `CF_HDROP`.
+- [ ] **Arrastre Nativo Universal hacia Apps Externas (Drag & Drop OS: DaVinci, Affinity, Krita, etc.)**: Soporte nativo del sistema operativo para mantener pulsado y arrastrar cualquier archivo (vídeos, fotos, música, documentos PDF, etc.) desde las cuadrículas o visores de Prisma directamente hacia aplicaciones externas como Affinity (Photo, Designer, Publisher), Krita, DaVinci Resolve, Photoshop o el Explorador de Windows mediante OLE `CF_HDROP`.
 - [ ] **Marca de Agua Visual y Metadatos de Autoría (Individual y por Lotes)**: Estampado paramétrico de marca de agua (logo PNG y texto con fecha/autor, escala, opacidad y anclaje adaptativo a esquinas, bordes o centro, basado en el estándar de Super Galería) en el Editor de Imágenes y en el Convertidor Prisma, junto con inyección de metadatos de derechos y autoría.
 - [ ] **Normalización de Volumen y ReplayGain Conmutable en DSP**: Nivelación acústica automática en el pipeline WASAPI con botón de encendido/apagado en el Ecualizador y atajo de teclado dedicado.
 - [ ] **Metadatos Técnicos y Marcado de Tomas de Vídeo (Workflow DaVinci)**: Ficha técnica de cámara, códec, fps y perfil de color en el reproductor de vídeo, con marcadores rápidos de toma (*Good Take*, *Descarte*, *B-Roll*, colores de clip) para pre-clasificación de material.
