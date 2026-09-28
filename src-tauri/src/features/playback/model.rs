@@ -26,6 +26,8 @@ pub struct DspConfig {
     pub preamp_db: f64,
     pub bands: Vec<DspBandConfig>,
     pub effects: DspEffectsConfig,
+    #[serde(default)]
+    pub volume_normalization: bool,
 }
 
 impl From<&DspConfig> for crate::infrastructure::media::passthru::dsp_engine::DspParameters {
@@ -43,6 +45,7 @@ impl From<&DspConfig> for crate::infrastructure::media::passthru::dsp_engine::Ds
             surround: cfg.effects.surround as f32,
             dynamic_boost: cfg.effects.dynamic_boost as f32,
             bass_boost: cfg.effects.bass_boost as f32,
+            volume_normalization: cfg.volume_normalization,
         }
     }
 }

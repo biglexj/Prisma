@@ -31,13 +31,16 @@ impl MpvBackend {
     }
 
     fn apply_dsp(&mut self) -> Result<(), String> {
-        let af_string = if let Some(ref config) = self.current_dsp {
-            build_af_filter_string(config)
+        let (af_string, replaygain_mode) = if let Some(ref config) = self.current_dsp {
+            let af = build_af_filter_string(config);
+            let rg = if config.volume_normalization { "track" } else { "no" };
+            (af, rg)
         } else {
-            String::new()
+            (String::new(), "no")
         };
 
-        eprintln!("[Prisma DSP] Sincronizando filtros AF: '{}'", af_string);
+        eprintln!("[Prisma DSP] Sincronizando filtros AF: '{}', ReplayGain: '{}'", af_string, replaygain_mode);
+        let _ = self.mpv.set_property("replaygain", replaygain_mode);
         self.mpv
             .set_property("af", af_string.as_str())
             .map_err(|err| {
@@ -269,6 +272,11 @@ fn build_af_filter_string(config: &DspConfig) -> String {
     }
 
     let mut filters: Vec<String> = Vec::new();
+
+    // 0. Normalización de Volumen Acústica y Dinámica (EBU R128 / ReplayGain)
+    if config.volume_normalization {
+        filters.push("dynaudnorm=f=150:g=15:p=0.95:m=10.0:r=0.9:b=1".to_string());
+    }
 
     // 1. Ganancia Maestro / Preamp Limpio (Ajuste de ganancia base sin sobrecargar etapas)
     let p_db = config.preamp_db.clamp(-12.0, 12.0);

@@ -118,6 +118,7 @@ pub struct DspParameters {
     pub surround: f32,            // 0 a 10
     pub dynamic_boost: f32,       // 0 a 10
     pub bass_boost: f32,          // 0 a 10
+    pub volume_normalization: bool,
 }
 
 impl Default for DspParameters {
@@ -131,6 +132,7 @@ impl Default for DspParameters {
             surround: 3.0,
             dynamic_boost: 2.0,
             bass_boost: 3.0,
+            volume_normalization: false,
         }
     }
 }
@@ -158,6 +160,9 @@ pub struct DspProcessor {
     // Estado del Maximizer / Dynamic Boost
     compressor_env: f32,
     limiter_env: f32,
+    // Estado del Normalizador Acústico / ReplayGain
+    norm_rms_env: f32,
+    norm_current_gain: f32,
 }
 
 impl DspProcessor {
@@ -175,6 +180,8 @@ impl DspProcessor {
             ambience_idx: 0,
             compressor_env: 0.0,
             limiter_env: 0.0,
+            norm_rms_env: 0.04,
+            norm_current_gain: 1.0,
         };
         proc.recalculate_filters();
         proc
@@ -259,12 +266,36 @@ impl DspProcessor {
         let lim_attack_coef = (-1.0 / (0.005 * self.sample_rate)).exp();
         let lim_release_coef = (-1.0 / (0.050 * self.sample_rate)).exp();
 
+        // Parámetros de Normalización de Volumen acústica (-14 LUFS / RMS)
+        let norm_enabled = self.params.volume_normalization;
+        let norm_alpha = (-1.0 / (0.400 * self.sample_rate)).exp();
+        let norm_slew_rate = (-1.0 / (0.500 * self.sample_rate)).exp();
+        let target_rms = 0.1995f32; // -14 dBFS estándar broadcast/streaming
+        let silence_threshold_power = 3.0e-6f32; // -55 dBFS umbral de silencio
+
         let num_frames = buffer.len() / 2;
         let buf_cap = self.ambience_buf_l.len();
 
         for i in 0..num_frames {
             let mut l = buffer[i * 2] * preamp_linear;
             let mut r = buffer[i * 2 + 1] * preamp_linear;
+
+            // 0. Normalización de volumen adaptativa en tiempo real (ReplayGain acústico)
+            if norm_enabled {
+                let frame_power = (l * l + r * r) * 0.5;
+                self.norm_rms_env = norm_alpha * self.norm_rms_env + (1.0 - norm_alpha) * frame_power;
+
+                if self.norm_rms_env > silence_threshold_power {
+                    let current_rms = self.norm_rms_env.sqrt();
+                    let target_gain = (target_rms / current_rms).clamp(0.25, 3.5);
+                    self.norm_current_gain = self.norm_current_gain * norm_slew_rate + target_gain * (1.0 - norm_slew_rate);
+                } else {
+                    self.norm_current_gain = self.norm_current_gain * norm_slew_rate + 1.0 * (1.0 - norm_slew_rate);
+                }
+
+                l *= self.norm_current_gain;
+                r *= self.norm_current_gain;
+            }
 
             // 1. Filtros del Ecualizador de 10 Bandas
             for filter in &mut self.eq_filters {

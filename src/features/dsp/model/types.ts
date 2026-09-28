@@ -16,6 +16,7 @@ export interface DspConfig {
   preampDb: number;
   bands: DspBandConfig[];
   effects: DspEffectsConfig;
+  volumeNormalization?: boolean;
 }
 
 export interface AudioDeviceItem {

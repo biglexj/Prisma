@@ -205,7 +205,6 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
   // Modo alternable de vista izquierda (Efectos DSP vs Controles Maestros)
   const [isMasterControlsView, setIsMasterControlsView] = useState(false);
   const [bandCount, setBandCount] = useState<number>(10);
-  const [volumeLeveling, setVolumeLeveling] = useState<number>(0.0);
   const [filterQ, setFilterQ] = useState<number>(1.0);
   const [balance, setBalance] = useState<number>(0);
 
@@ -530,6 +529,22 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
               <span>{dsp.globalPassthruEnabled ? (dsp.globalPassthruStatus?.isRunning ? "🌐 Global" : "Reconectando…") : "🎵 Solo Prisma"}</span>
             </button>
 
+            {/* Botón Normalización Acústica y ReplayGain Conmutable */}
+            <button
+              className={`dsp-norm-btn ${dsp.volumeNormalization ? "is-active" : "is-inactive"}`}
+              onClick={dsp.toggleVolumeNormalization}
+              title={
+                dsp.volumeNormalization
+                  ? "Normalización acústica activa (-14 LUFS / ReplayGain). Clic o Shift+N para alternar"
+                  : "Normalización acústica desactivada. Clic o Shift+N para alternar"
+              }
+              type="button"
+            >
+              <span className={`dsp-norm-dot ${dsp.volumeNormalization ? "active" : ""}`} />
+              <Icon name="waveform" />
+              <span>{dsp.volumeNormalization ? "Nivelación ON" : "Nivelación OFF"}</span>
+            </button>
+
             {/* Botón Power Maestro (Bypass) */}
             <button
               className={`dsp-power-btn ${dsp.enabled ? "on" : "off"}`}
@@ -770,24 +785,26 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
                 <span className="dsp-effect-desc">Ganancia de salida del motor DSP</span>
               </div>
 
-              {/* Nivelación de volumen */}
+              {/* Nivelación acústica / ReplayGain */}
               <div className="dsp-effect-row">
                 <div className="dsp-effect-label-row">
                   <span className="dsp-effect-name">
-                    <Icon name="pulse" /> Nivelación de volumen
+                    <Icon name="waveform" /> Normalización acústica (ReplayGain)
                   </span>
-                  <span className="dsp-effect-val-pill">{volumeLeveling.toFixed(1)} dB</span>
+                  <label className="dsp-switch-toggle" title="Alternar nivelación automática de volumen (Shift + N)">
+                    <input
+                      type="checkbox"
+                      checked={dsp.volumeNormalization}
+                      onChange={dsp.toggleVolumeNormalization}
+                    />
+                    <span className="dsp-switch-slider" />
+                  </label>
                 </div>
-                <input
-                  className="dsp-slider"
-                  max={10}
-                  min={0}
-                  onChange={(e) => setVolumeLeveling(parseFloat(e.target.value))}
-                  step={0.5}
-                  type="range"
-                  value={volumeLeveling}
-                />
-                <span className="dsp-effect-desc">Compensación automática de volumen entre pistas</span>
+                <span className="dsp-effect-desc">
+                  {dsp.volumeNormalization
+                    ? "Nivelación activa: compensa picos y caídas a -14 LUFS (ReplayGain / AGC inteligente)"
+                    : "Desactivada: dinámica original de la pista sin nivelación automática"}
+                </span>
               </div>
 
               {/* Q del filtro */}
@@ -841,7 +858,6 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
                   className="dsp-master-reset-btn"
                   onClick={() => {
                     dsp.setPreampDb(-1.0);
-                    setVolumeLeveling(0.0);
                     setFilterQ(1.0);
                     setBalance(0);
                   }}

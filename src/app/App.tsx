@@ -933,6 +933,21 @@ function AppContent() {
           }
         }
 
+        // Conmutar normalización de volumen acústica (ReplayGain / AGC) con Shift + N
+        const isToggleNorm =
+          e.shiftKey &&
+          e.key.toLowerCase() === "n" &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          !e.metaKey;
+
+        if (isToggleNorm) {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent("prisma-toggle-volume-normalization"));
+          showGlobalFavToast("🔊 Normalización de volumen acústica (ReplayGain)");
+          return;
+        }
+
         // Teclas multimedia de hardware y teclas F6 / F7 / F8
         const isPlayPauseKey =
           e.key === "MediaPlayPause" ||

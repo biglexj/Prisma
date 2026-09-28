@@ -20,12 +20,18 @@ const STORAGE_KEY_CUSTOM_PRESETS = "prisma_dsp_custom_presets";
 const STORAGE_KEY_GLOBAL_ENABLED = "prisma_dsp_global_passthru_enabled";
 const STORAGE_KEY_CAPTURE_DEVICE = "prisma_dsp_capture_device";
 const STORAGE_KEY_RENDER_DEVICE = "prisma_dsp_render_device";
+const STORAGE_KEY_NORMALIZATION = "prisma_dsp_volume_normalization";
 
 const PRISMA_PRESET = DEFAULT_PRESETS[0];
 
 export function useDspController() {
   const [enabled, setEnabled] = useState<boolean>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_ENABLED);
+    return saved !== null ? saved === "true" : true;
+  });
+
+  const [volumeNormalization, setVolumeNormalization] = useState<boolean>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_NORMALIZATION);
     return saved !== null ? saved === "true" : true;
   });
 
@@ -139,6 +145,7 @@ export function useDspController() {
         gainDb,
       })),
       effects,
+      volumeNormalization,
     };
 
     localStorage.setItem(STORAGE_KEY_ENABLED, String(enabled));
@@ -147,10 +154,22 @@ export function useDspController() {
       JSON.stringify({ preampDb, bands, frequencies, effects }),
     );
     localStorage.setItem(STORAGE_KEY_PRESET, activePresetId);
+    localStorage.setItem(STORAGE_KEY_NORMALIZATION, String(volumeNormalization));
 
     pushConfigToBackend(currentConfig);
     window.dispatchEvent(new CustomEvent("prisma-dsp-change", { detail: currentConfig }));
-  }, [enabled, preampDb, bands, frequencies, effects, activePresetId, pushConfigToBackend]);
+  }, [enabled, preampDb, bands, frequencies, effects, activePresetId, volumeNormalization, pushConfigToBackend]);
+
+  // Listener para alternancia externa o atajo de teclado
+  useEffect(() => {
+    const handleToggleNormalization = () => {
+      setVolumeNormalization((prev) => !prev);
+    };
+    window.addEventListener("prisma-toggle-volume-normalization", handleToggleNormalization);
+    return () => {
+      window.removeEventListener("prisma-toggle-volume-normalization", handleToggleNormalization);
+    };
+  }, []);
 
   const previousEndpoints = useRef<Set<string> | null>(null);
   const selectedOutputRef = useRef(selectedRenderDeviceId);
@@ -425,9 +444,16 @@ export function useDspController() {
   }, [refreshAudioEndpoints, refreshGlobalStatus]);
 
 
+  const toggleVolumeNormalization = useCallback(() => {
+    setVolumeNormalization((prev) => !prev);
+  }, []);
+
   return {
     enabled,
     toggleEnabled,
+    volumeNormalization,
+    setVolumeNormalization,
+    toggleVolumeNormalization,
     preampDb,
     setPreampDb,
     bands,
