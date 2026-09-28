@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { formatTime } from "../formatters";
 import { Icon } from "../../../../shared/ui/Icon";
+import { dispatchGlobalVolumeOsd } from "../../../../shared/ui/VolumeOsd";
 import { useTrackLyrics } from "../../useTrackLyrics";
 import { LyricsEditorModal } from "./LyricsEditorModal";
 import { MediaProgressBar } from "../../../../shared/ui/MediaProgressBar";
@@ -118,10 +119,14 @@ export function FullscreenLyrics({
         onSeek(Math.max(0, positionSeconds - 5));
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        onVolume?.(Math.min(100, volume + 5));
+        const next = Math.min(100, volume + 5);
+        onVolume?.(next);
+        dispatchGlobalVolumeOsd(next, false);
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        onVolume?.(Math.max(0, volume - 5));
+        const next = Math.max(0, volume - 5);
+        onVolume?.(next);
+        dispatchGlobalVolumeOsd(next, next === 0);
       } else if (e.key.toLowerCase() === "n") {
         e.preventDefault();
         onNext?.();
@@ -363,7 +368,11 @@ export function FullscreenLyrics({
             <div className="fullscreen-volume-control">
               <button
                 className="fullscreen-aux-btn"
-                onClick={() => onVolume?.(volume > 0 ? 0 : 100)}
+                onClick={() => {
+                  const next = volume > 0 ? 0 : 100;
+                  onVolume?.(next);
+                  dispatchGlobalVolumeOsd(next, next === 0);
+                }}
                 title={volume > 0 ? "Silenciar" : "Restaurar volumen"}
                 aria-label="Volumen"
               >
@@ -374,7 +383,11 @@ export function FullscreenLyrics({
                 min={0}
                 max={100}
                 value={volume}
-                onChange={(e) => onVolume?.(Number(e.target.value))}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  onVolume?.(val);
+                  dispatchGlobalVolumeOsd(val, val === 0);
+                }}
                 className="fullscreen-volume-slider"
                 aria-label="Control de volumen"
               />

@@ -175,12 +175,19 @@ pub fn smtc_update_metadata(
     artist: String,
     album: String,
     source_path: Option<String>,
+    media_type: Option<String>,
     state: State<'_, crate::infrastructure::media::smtc::NativeSmtcState>,
 ) -> Result<(), String> {
     if let Ok(guard) = state.lock() {
         if let Some(mgr_arc) = guard.as_ref() {
             if let Ok(mgr) = mgr_arc.lock() {
-                mgr.update_metadata(&title, &artist, &album, source_path.as_deref());
+                mgr.update_metadata(
+                    &title,
+                    &artist,
+                    &album,
+                    source_path.as_deref(),
+                    media_type.as_deref(),
+                );
             }
         }
     }

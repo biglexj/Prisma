@@ -168,6 +168,12 @@ pub fn load_video_thumbnail_data_url(path: &Path) -> Option<String> {
     load_video_thumbnail_ffmpeg(path)
 }
 
+pub fn load_video_thumbnail_raw_bytes(path: &Path) -> Option<Vec<u8>> {
+    let data_url = load_video_thumbnail_data_url(path)?;
+    let comma_idx = data_url.find(',')?;
+    STANDARD.decode(&data_url[comma_idx + 1..]).ok()
+}
+
 #[cfg(target_os = "windows")]
 fn convert_hbitmap_to_jpeg_data_url(hbitmap: *mut std::ffi::c_void) -> Option<String> {
     unsafe extern "system" {

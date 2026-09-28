@@ -27,6 +27,13 @@
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
+.prisma-volume-osd.is-global {
+  position: fixed;
+  top: 28px;
+  right: 28px;
+  z-index: 99999;
+}
+
 @keyframes prismaVolumePopIn {
   from {
     opacity: 0;

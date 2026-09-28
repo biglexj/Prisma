@@ -55,6 +55,9 @@ export function useMediaSessionSync({
   const onSeekRef = useRef(onSeek);
   onSeekRef.current = onSeek;
 
+  const isVideoActiveRef = useRef(isVideoActive);
+  isVideoActiveRef.current = isVideoActive;
+
   // 1. Desactivar y limpiar cualquier sesión multimedia remanente de Chromium WebView2
   useEffect(() => {
     if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
@@ -71,7 +74,7 @@ export function useMediaSessionSync({
     let isMounted = true;
 
     void listen<string>("prisma://smtc-action", (event) => {
-      if (!isMounted) return;
+      if (!isMounted || isVideoActiveRef.current) return;
       const action = event.payload;
       switch (action) {
         case "play":
@@ -103,7 +106,10 @@ export function useMediaSessionSync({
 
   // 3. Sincronización de metadatos y carátula del álbum con el SMTC nativo de Rust
   useEffect(() => {
-    if (isVideoActive || !effectivePath) {
+    if (isVideoActive) {
+      return;
+    }
+    if (!effectivePath) {
       void invoke("smtc_clear").catch(() => {});
       return;
     }
@@ -119,6 +125,7 @@ export function useMediaSessionSync({
       artist,
       album,
       sourcePath: effectivePath,
+      mediaType: "music",
     }).catch(() => {});
   }, [
     effectivePath,

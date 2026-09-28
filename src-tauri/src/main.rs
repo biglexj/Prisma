@@ -20,6 +20,23 @@ fn main() {
     }
 
     #[cfg(target_os = "windows")]
+    {
+        let extra_args = "--disable-features=HardwareMediaKeyHandling";
+        if let Ok(existing) = std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS") {
+            if !existing.contains("HardwareMediaKeyHandling") {
+                let combined = format!("{} {}", existing.trim(), extra_args);
+                unsafe {
+                    std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", combined);
+                }
+            }
+        } else {
+            unsafe {
+                std::env::set_var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", extra_args);
+            }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
     if is_dev_mode {
         if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
             let dev_udf = std::path::PathBuf::from(local_app_data)

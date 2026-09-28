@@ -46,6 +46,19 @@ export function useVolumeOsd(initialVolume = 100, initialMuted = false) {
 }
 
 /**
+ * Despacha un evento global para mostrar el OSD de volumen en cualquier parte de la aplicación.
+ */
+export function dispatchGlobalVolumeOsd(volume: number, isMuted = false) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("prisma-global-volume-osd", {
+        detail: { volume, isMuted },
+      })
+    );
+  }
+}
+
+/**
  * HUD / OSD de Volumen con micro-animaciones Material 3 Expressive,
  * ondas concéntricas dinámicas que crecen y disminuyen reactivamente,
  * porcentaje numérico exacto y micro-barra de progreso.

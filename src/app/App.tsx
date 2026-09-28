@@ -52,6 +52,7 @@ import { DspProvider } from "../features/dsp/DspContext";
 import { useGlobalFileDrop } from "./hooks/useGlobalFileDrop";
 import { Icon, type IconName } from "../shared/ui/Icon";
 import { SeekOsd, useSeekOsd } from "../shared/ui/SeekOsd";
+import { VolumeOsd, useVolumeOsd } from "../shared/ui/VolumeOsd";
 import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
 import "../features/visual_library/ui/video-player.css";
@@ -121,6 +122,7 @@ function AppContent() {
   const { confirmDeletion, sidebarDensity, auroraOnlineServicesEnabled } = useSystemSettings();
   const playback = usePlaybackController();
   const { osdState: globalSeekOsd, triggerSeekOsd: triggerGlobalSeekOsd } = useSeekOsd();
+  const { osdState: globalVolumeOsd, triggerOsd: triggerGlobalVolumeOsd } = useVolumeOsd(playback.snapshot.volume ?? 100);
   const library = useMusicLibrary();
   const imageLibrary = useVisualLibrary("image");
   const videoLibrary = useVisualLibrary("video");
@@ -867,6 +869,7 @@ function AppContent() {
           const currentVol = playback.snapshot.volume ?? 100;
           const nextVol = Math.min(100, currentVol + 5);
           void playback.setVolume(nextVol);
+          triggerGlobalVolumeOsd(nextVol, false);
           return;
         }
         if (isVolDown) {
@@ -874,6 +877,7 @@ function AppContent() {
           const currentVol = playback.snapshot.volume ?? 100;
           const nextVol = Math.max(0, currentVol - 5);
           void playback.setVolume(nextVol);
+          triggerGlobalVolumeOsd(nextVol, nextVol === 0);
           return;
         }
         if (isMute) {
@@ -881,8 +885,10 @@ function AppContent() {
           const currentVol = playback.snapshot.volume ?? 100;
           if (currentVol > 0) {
             void playback.setVolume(0);
+            triggerGlobalVolumeOsd(0, true);
           } else {
             void playback.setVolume(100);
+            triggerGlobalVolumeOsd(100, false);
           }
           return;
         }
@@ -980,14 +986,23 @@ function AppContent() {
       }
     };
 
+    const handleCustomVolumeOsd = (ev: Event) => {
+      const customEv = ev as CustomEvent<{ volume: number; isMuted?: boolean }>;
+      if (customEv.detail) {
+        triggerGlobalVolumeOsd(customEv.detail.volume, customEv.detail.isMuted ?? false);
+      }
+    };
+
     window.addEventListener("keydown", handleGlobalKeyDown);
     window.addEventListener("prisma-global-seek-osd", handleCustomSeekOsd);
+    window.addEventListener("prisma-global-volume-osd", handleCustomVolumeOsd);
     window.addEventListener("prisma-send-to-supergallery", handleSendToSuperGallery);
     window.addEventListener("contextmenu", handleGlobalContextMenu);
 
     return () => {
       window.removeEventListener("keydown", handleGlobalKeyDown);
       window.removeEventListener("prisma-global-seek-osd", handleCustomSeekOsd);
+      window.removeEventListener("prisma-global-volume-osd", handleCustomVolumeOsd);
       window.removeEventListener("prisma-open-converter", handleOpenConverter);
       window.removeEventListener("prisma-open-renamer", handleOpenRenamer);
       window.removeEventListener("prisma-open-duplicates", handleOpenDuplicates);
@@ -1557,6 +1572,13 @@ function AppContent() {
         seconds={globalSeekOsd.seconds}
         style={{ position: "fixed" }}
         visible={globalSeekOsd.visible && activeView !== "video_player"}
+      />
+
+      <VolumeOsd
+        volume={globalVolumeOsd.volume}
+        isMuted={globalVolumeOsd.isMuted}
+        className="is-global"
+        visible={globalVolumeOsd.visible && activeView !== "video_player"}
       />
 
       {globalFavToast ? (

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { formatTime, mediaTitle } from "../../playback/ui/formatters";
 import { Icon } from "../../../shared/ui/Icon";
@@ -802,108 +803,104 @@ export function VideoPlayer({
     }
   };
 
-  // ── Sincronización de MediaSession para Vídeo (SMTC de Windows y teclas de hardware) ──
+  // ── Sincronización nativa con Windows System Media Transport Controls (SMTC) de Prisma ──
+  // 1. Limpiar cualquier remanente de MediaSession en Chromium WebView2
   useEffect(() => {
-    if (!("mediaSession" in navigator)) return;
+    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+      try {
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = "none";
+      } catch {}
+    }
+  }, []);
 
+  // 2. Suscripción a eventos de hardware / flyout de volumen de Windows ("prisma://smtc-action")
+  const handleNextRef = useRef(handleNext);
+  handleNextRef.current = handleNext;
+  const handlePreviousRef = useRef(handlePrevious);
+  handlePreviousRef.current = handlePrevious;
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    let isMounted = true;
+
+    void listen<string>("prisma://smtc-action", (event) => {
+      if (!isMounted) return;
+      const action = event.payload;
+      switch (action) {
+        case "play":
+          if (videoRef.current && videoRef.current.paused) {
+            void videoRef.current.play().catch(() => {});
+          }
+          break;
+        case "pause":
+          if (videoRef.current && !videoRef.current.paused) {
+            videoRef.current.pause();
+          }
+          break;
+        case "next":
+          handleNextRef.current();
+          break;
+        case "previous":
+          handlePreviousRef.current(true);
+          break;
+      }
+    }).then((fn) => {
+      if (isMounted) unlisten = fn;
+      else fn();
+    });
+
+    return () => {
+      isMounted = false;
+      if (unlisten) unlisten();
+    };
+  }, []);
+
+  // 3. Sincronización de metadatos y miniatura de vídeo con SMTC nativo de Rust
+  useEffect(() => {
     if (!path) {
-      navigator.mediaSession.metadata = null;
-      navigator.mediaSession.playbackState = "none";
+      void invoke("smtc_clear").catch(() => {});
       return;
     }
 
     const videoName = title || path.split(/[/\\]/).pop() || "Prisma Vídeo";
-    navigator.mediaSession.metadata = new MediaMetadata({
+    void invoke("smtc_update_metadata", {
       title: videoName,
       artist: "Prisma Vídeos",
       album: "Vídeos",
-      artwork: [
-        { src: "/icon/icon.png", sizes: "512x512", type: "image/png" },
-        { src: "/icon.png", sizes: "512x512", type: "image/png" },
-        { src: "/favicon.ico", sizes: "256x256", type: "image/x-icon" },
-      ],
-    });
+      sourcePath: path,
+      mediaType: "video",
+    }).catch(() => {});
+  }, [path, title]);
 
-    navigator.mediaSession.playbackState = paused ? "paused" : "playing";
-
-    const actions: Array<{ action: MediaSessionAction; handler: MediaSessionActionHandler }> = [
-      {
-        action: "play",
-        handler: () => {
-          if (videoRef.current && videoRef.current.paused) {
-            void videoRef.current.play().catch(() => {});
-          }
-        },
-      },
-      {
-        action: "pause",
-        handler: () => {
-          if (videoRef.current && !videoRef.current.paused) {
-            videoRef.current.pause();
-          }
-        },
-      },
-      {
-        action: "stop",
-        handler: () => {
-          if (videoRef.current && !videoRef.current.paused) {
-            videoRef.current.pause();
-          }
-        },
-      },
-      {
-        action: "previoustrack",
-        handler: () => {
-          handlePrevious(true);
-        },
-      },
-      {
-        action: "nexttrack",
-        handler: () => {
-          handleNext();
-        },
-      },
-      {
-        action: "seekto",
-        handler: (details) => {
-          if (details.seekTime != null && videoRef.current) {
-            videoRef.current.currentTime = details.seekTime;
-            setPosition(details.seekTime);
-          }
-        },
-      },
-    ];
-
-    for (const { action, handler } of actions) {
-      try {
-        navigator.mediaSession.setActionHandler(action, handler);
-      } catch {}
-    }
-
-    return () => {
-      for (const { action } of actions) {
-        try {
-          navigator.mediaSession.setActionHandler(action, null);
-        } catch {}
-      }
-      navigator.mediaSession.metadata = null;
-      navigator.mediaSession.playbackState = "none";
-    };
-  }, [path, title, paused, handlePrevious, handleNext]);
-
-  // Sincronización continua de posición y duración para SMTC en vídeo
+  // 4. Sincronización del estado de reproducción (Playing / Paused) con SMTC nativo
   useEffect(() => {
-    if (!("mediaSession" in navigator) || !path || duration <= 0) return;
-    if ("setPositionState" in navigator.mediaSession) {
-      try {
-        navigator.mediaSession.setPositionState({
-          duration: Math.max(0, duration),
-          playbackRate: playbackSpeed || 1.0,
-          position: Math.min(duration, Math.max(0, position)),
-        });
-      } catch {}
+    if (!path) return;
+    void invoke("smtc_update_playback", {
+      isPlaying: !paused,
+    }).catch(() => {});
+  }, [path, paused]);
+
+  // 5. Sincronización de línea de tiempo con SMTC nativo (limitado a 1Hz)
+  const lastReportedPos = useRef<number>(-1);
+  useEffect(() => {
+    if (!path || duration <= 0) return;
+    const pos = Math.floor(position);
+    if (pos !== lastReportedPos.current) {
+      lastReportedPos.current = pos;
+      void invoke("smtc_update_timeline", {
+        positionSecs: position,
+        durationSecs: duration,
+      }).catch(() => {});
     }
-  }, [path, duration, position, playbackSpeed]);
+  }, [path, duration, position]);
+
+  // 6. Limpieza al desmontar el reproductor de vídeo
+  useEffect(() => {
+    return () => {
+      void invoke("smtc_clear").catch(() => {});
+    };
+  }, []);
 
   const handleSeek = (newTime: number) => {
     if (!videoRef.current) return;

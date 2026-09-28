@@ -3,6 +3,7 @@ import type { PlaybackCapabilities, PlaybackSnapshot } from "../../model/types";
 import type { PlaybackQueueState } from "../../usePlaybackQueue";
 import { invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../../../shared/ui/Icon";
+import { dispatchGlobalVolumeOsd } from "../../../../shared/ui/VolumeOsd";
 import { useMusicArtwork, prefetchArtwork } from "../../../music_library/useMusicArtwork";
 import { VisualThumbnail } from "../../../visual_library/ui/VisualThumbnail";
 import { VideoThumbnail } from "../../../visual_library/ui/VideoThumbnail";
@@ -105,8 +106,11 @@ export function PlaybackPreview({
     if (snapshot.volume > 0) {
       previousVolumeRef.current = snapshot.volume;
       onVolume(0);
+      dispatchGlobalVolumeOsd(0, true);
     } else {
-      onVolume(previousVolumeRef.current > 0 ? previousVolumeRef.current : 80);
+      const restored = previousVolumeRef.current > 0 ? previousVolumeRef.current : 80;
+      onVolume(restored);
+      dispatchGlobalVolumeOsd(restored, false);
     }
   };
 
@@ -206,10 +210,14 @@ export function PlaybackPreview({
         );
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        onVolume(Math.min(100, (snapshot.volume ?? 100) + 5));
+        const next = Math.min(100, (snapshot.volume ?? 100) + 5);
+        onVolume(next);
+        dispatchGlobalVolumeOsd(next, false);
       } else if (e.key === "ArrowDown") {
         e.preventDefault();
-        onVolume(Math.max(0, (snapshot.volume ?? 100) - 5));
+        const next = Math.max(0, (snapshot.volume ?? 100) - 5);
+        onVolume(next);
+        dispatchGlobalVolumeOsd(next, next === 0);
       } else if (key === "l") {
         e.preventDefault();
         setViewMode((prev) => (prev === "lyrics" ? "cover" : "lyrics"));
@@ -449,7 +457,11 @@ export function PlaybackPreview({
                 max={100}
                 value={snapshot.volume}
                 disabled={!enabled}
-                onChange={(event) => onVolume(Number(event.target.value))}
+                onChange={(event) => {
+                  const val = Number(event.target.value);
+                  onVolume(val);
+                  dispatchGlobalVolumeOsd(val, val === 0);
+                }}
               />
               <span>{Math.round(snapshot.volume)}%</span>
             </div>

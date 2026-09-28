@@ -98,6 +98,7 @@ pub mod windows_impl {
             artist: &str,
             album: &str,
             source_path: Option<&str>,
+            media_type: Option<&str>,
         ) {
             let Ok(updater) = self.controls.DisplayUpdater() else {
                 return;
@@ -110,27 +111,54 @@ pub mod windows_impl {
             let _ = self.controls.SetIsNextEnabled(true);
             let _ = self.controls.SetIsPreviousEnabled(true);
 
-            let _ = updater.SetType(MediaPlaybackType::Music);
-            if let Ok(music) = updater.MusicProperties() {
-                let _ = music.SetTitle(&HSTRING::from(title));
-                let _ = music.SetArtist(&HSTRING::from(artist));
-                let _ = music.SetAlbumTitle(&HSTRING::from(album));
+            let is_video = media_type == Some("video");
+            let _ = updater.SetType(if is_video {
+                MediaPlaybackType::Video
+            } else {
+                MediaPlaybackType::Music
+            });
+
+            if is_video {
+                if let Ok(video) = updater.VideoProperties() {
+                    let _ = video.SetTitle(&HSTRING::from(title));
+                    let _ = video.SetSubtitle(&HSTRING::from(artist));
+                }
+            } else {
+                if let Ok(music) = updater.MusicProperties() {
+                    let _ = music.SetTitle(&HSTRING::from(title));
+                    let _ = music.SetArtist(&HSTRING::from(artist));
+                    let _ = music.SetAlbumTitle(&HSTRING::from(album));
+                }
             }
 
             // Manejo de la miniatura/carátula nativa para el flyout de volumen
             let mut thumbnail_bytes: Option<Vec<u8>> = None;
+            let mut is_png_format = false;
+
             if let Some(path_str) = source_path {
-                let audio_path = Path::new(path_str);
-                if let Some((raw_bytes, _mime)) =
-                    crate::infrastructure::artwork::load_music_artwork_raw_bytes(audio_path)
+                let media_path = Path::new(path_str);
+                if is_video {
+                    if let Some(raw_bytes) =
+                        crate::infrastructure::media_preview::load_video_thumbnail_raw_bytes(media_path)
+                    {
+                        thumbnail_bytes = Some(raw_bytes);
+                    }
+                } else if let Some((raw_bytes, mime)) =
+                    crate::infrastructure::artwork::load_music_artwork_raw_bytes(media_path)
                 {
+                    is_png_format = mime.contains("png");
                     thumbnail_bytes = Some(raw_bytes);
                 }
             }
 
-            let bytes_to_write = thumbnail_bytes.as_deref().unwrap_or(FALLBACK_ICON_BYTES);
+            let (bytes_to_write, ext) = if let Some(bytes) = thumbnail_bytes.as_deref() {
+                (bytes, if is_png_format { "png" } else { "jpg" })
+            } else {
+                (FALLBACK_ICON_BYTES, "png")
+            };
+
             let slot = self.art_slot.fetch_add(1, std::sync::atomic::Ordering::Relaxed) % 4;
-            let temp_art_path = std::env::temp_dir().join(format!("prisma_smtc_art_{slot}.jpg"));
+            let temp_art_path = std::env::temp_dir().join(format!("prisma_smtc_art_{slot}.{ext}"));
 
             if std::fs::write(&temp_art_path, bytes_to_write).is_ok() {
                 let path_hstring = HSTRING::from(temp_art_path.to_string_lossy().to_string());
@@ -189,7 +217,15 @@ pub mod dummy_impl {
             Ok(Arc::new(Mutex::new(Self)))
         }
         pub fn set_playback_status(&self, _is_playing: bool) {}
-        pub fn update_metadata(&self, _title: &str, _artist: &str, _album: &str, _source_path: Option<&str>) {}
+        pub fn update_metadata(
+            &self,
+            _title: &str,
+            _artist: &str,
+            _album: &str,
+            _source_path: Option<&str>,
+            _media_type: Option<&str>,
+        ) {
+        }
         pub fn update_timeline(&self, _position_secs: f64, _duration_secs: f64) {}
         pub fn clear(&self) {}
     }
