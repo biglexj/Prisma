@@ -24,6 +24,7 @@ import { ExifDetailsModal } from "./components/ExifDetailsModal";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
 import { resolveVisualSessionForPath } from "../services/visualSessionResolver";
 import { copyImageToClipboard } from "../services/imageClipboard";
+import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
 import "./visual-library.css";
 
 const VISIBLE_ITEM_LIMIT = 400;
@@ -1066,6 +1067,8 @@ function VisualCard({
     <div className={`visual-media-card-wrapper ${layoutClass}`}>
       <button
         className={`visual-media-card ${isActivating ? "is-activating" : ""}`}
+        draggable={true}
+        onDragStart={(e) => handleNativeDragStart(e, item.path)}
         onClick={onClick}
         onContextMenu={onContextMenu}
         onKeyDown={(event) => {

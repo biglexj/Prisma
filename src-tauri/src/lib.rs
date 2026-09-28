@@ -292,6 +292,7 @@ pub fn run() {
     builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_drag::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_filename(if is_dev_mode { ".window-state-dev.json" } else { ".window-state-v2.json" })

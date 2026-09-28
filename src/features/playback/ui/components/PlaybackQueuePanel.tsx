@@ -4,6 +4,7 @@ import { Icon } from "../../../../shared/ui/Icon";
 import { MusicArtwork } from "../../../music_library/ui/MusicArtwork";
 import { cleanPath } from "../../../../shared/mediaTree";
 import { playlistsSaveFromItems } from "../../../collections/tauri/client";
+import { handleNativeDragStart } from "../../../../shared/useNativeFileDrag";
 import "./playback-queue.css";
 
 interface PlaybackQueuePanelProps {
@@ -595,6 +596,8 @@ export function PlaybackQueuePanel({
                     key={`${item.id || item.path}_${index}`}
                     ref={isPlaying ? activeRowRef : null}
                     className={`queue-item-row ${isPlaying ? "is-active" : ""}`}
+                    draggable={true}
+                    onDragStart={(e) => handleNativeDragStart(e, item.path)}
                     onClick={() => onSelectTrack(index)}
                     role="listitem"
                   >

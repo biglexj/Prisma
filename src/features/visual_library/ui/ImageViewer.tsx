@@ -17,6 +17,7 @@ import { quickLookClient } from "../../quick_look/tauri/client";
 import { ViewerToolsMenu } from "./components/ViewerToolsMenu";
 import { ImageInfoDrawer } from "./components/ImageInfoDrawer";
 import { copyImageToClipboard } from "../services/imageClipboard";
+import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
 import "./visual-library.css";
 import "./image-viewer.css";
 
@@ -901,7 +902,13 @@ export function ImageViewer({
         </div>
 
         <div className="image-viewer-top-center">
-          <h2 className="image-viewer-title" title={currentItem.title}>
+          <h2
+            className="image-viewer-title"
+            draggable={true}
+            onDragStart={(e) => handleNativeDragStart(e, currentItem.path)}
+            style={{ cursor: "grab" }}
+            title={`${currentItem.title} · Arrastrar hacia apps externas (DaVinci Resolve, Affinity, Explorer)`}
+          >
             {currentItem.title}
           </h2>
         </div>

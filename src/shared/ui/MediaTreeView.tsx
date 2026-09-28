@@ -5,6 +5,7 @@ import { MusicArtwork } from "../../features/music_library/ui/MusicArtwork";
 import { VisualThumbnail } from "../../features/visual_library/ui/VisualThumbnail";
 import { VideoThumbnail } from "../../features/visual_library/ui/VideoThumbnail";
 import { cleanPath } from "../mediaTree";
+import { handleNativeDragStart } from "../useNativeFileDrag";
 import "./media-tree.css";
 
 export interface MediaTreeItem {
@@ -354,6 +355,8 @@ export function MediaTreeView<T extends MediaTreeItem>({
       <div
         className="media-tree-row is-file"
         key={node.path}
+        draggable={true}
+        onDragStart={(e) => handleNativeDragStart(e, file.path)}
         onClick={() => onPlayItem(file, contextList)}
         onContextMenu={onOpenItemMenu ? (event) => onOpenItemMenu(event, file) : undefined}
         onKeyDown={(event) => {

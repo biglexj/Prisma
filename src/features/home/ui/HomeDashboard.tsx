@@ -12,6 +12,7 @@ import { useScrollRestoration } from "../../../shared/useScrollRestoration";
 import { useHistory, type HistoryCategory } from "../../../shared/useHistory";
 import { usePlaylists } from "../../collections/usePlaylists";
 import type { PlaylistMeta } from "../../collections/model/types";
+import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
 import "./home-dashboard.css";
 
 const HOME_ROW_ITEMS_LIMIT = 8;
@@ -306,6 +307,8 @@ export function HomeDashboard({
                       <button
                         className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
                         key={item.path}
+                        draggable={true}
+                        onDragStart={(e) => handleNativeDragStart(e, item.path)}
                         onClick={() => handlePlayMusicWithFeedback(item.path, homeMusicItems, "Inicio")}
                         title={artist ? `${artist} — ${title}` : title}
                       >
@@ -347,6 +350,8 @@ export function HomeDashboard({
                     <button
                       className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
                       key={item.path}
+                      draggable={true}
+                      onDragStart={(e) => handleNativeDragStart(e, item.path)}
                       onClick={() => handlePlayVideoWithFeedback(item.path, homeVideoItems)}
                       title={item.title}
                     >
@@ -386,6 +391,8 @@ export function HomeDashboard({
                     <button
                       className="home-media-card"
                       key={item.path}
+                      draggable={true}
+                      onDragStart={(e) => handleNativeDragStart(e, item.path)}
                       onClick={() => {
                         if (onOpenImage) {
                           onOpenImage(item.path, homeImageItems);

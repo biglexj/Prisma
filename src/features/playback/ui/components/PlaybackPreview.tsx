@@ -20,6 +20,7 @@ import { PlaybackSettingsModal } from "./PlaybackSettingsModal";
 import "./album-adaptive.css";
 import "./playback-queue.css";
 import { cleanPath, formatSession, formatTime, mediaTitle } from "../formatters";
+import { handleNativeDragStart } from "../../../../shared/useNativeFileDrag";
 
 const WAVE_BARS = Array.from({ length: 18 }, (_, index) => <i key={index} />);
 
@@ -306,8 +307,14 @@ export function PlaybackPreview({
         ) : (
           <div
             className={`preview-artwork ${hasEffectiveMedia ? "has-media" : "is-empty"} ${isVideo ? "is-video-surface" : ""} ${isAudio ? "is-interactive" : ""}`}
+            draggable={Boolean(effectivePath)}
+            onDragStart={(e) => {
+              if (effectivePath) {
+                handleNativeDragStart(e, effectivePath);
+              }
+            }}
             onClick={isAudio && hasEffectiveMedia ? () => setViewMode("lyrics") : undefined}
-            title={isAudio && hasEffectiveMedia ? "Haz clic en la carátula para ver las letras" : undefined}
+            title={effectivePath ? (isAudio ? "Haz clic para letras · Arrastra hacia DaVinci/apps externas" : "Arrastra hacia apps externas") : undefined}
             role={isAudio && hasEffectiveMedia ? "button" : undefined}
             tabIndex={isAudio && hasEffectiveMedia ? 0 : undefined}
           >
@@ -331,7 +338,18 @@ export function PlaybackPreview({
           <div className="preview-track-title">
             <div>
               <span>{hasMedia ? "REPRODUCIENDO" : "LISTO PARA REPRODUCIR"}</span>
-              <h2>{trackTitle}</h2>
+              <h2
+                draggable={Boolean(effectivePath)}
+                onDragStart={(e) => {
+                  if (effectivePath) {
+                    handleNativeDragStart(e, effectivePath);
+                  }
+                }}
+                style={{ cursor: effectivePath ? "grab" : "default" }}
+                title={effectivePath ? `${trackTitle} · Arrastrar hacia apps externas` : trackTitle}
+              >
+                {trackTitle}
+              </h2>
               {trackArtist ? (
                 <p className="preview-track-artist">{trackArtist}</p>
               ) : !hasEffectiveMedia ? (

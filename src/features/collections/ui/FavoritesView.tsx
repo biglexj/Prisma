@@ -14,6 +14,7 @@ import { useFavorites } from "../useFavorites";
 import { FavoriteFullView } from "./FavoriteFullView";
 import type { FavoriteMediaType } from "../model/types";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
+import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
 import "./collections.css";
 
 const FAVORITE_SHELF_LIMIT = 16; // Máximo 2 filas de 8 ítems
@@ -450,6 +451,8 @@ export function FavoritesView({
                 <div className="favorites-media-card-wrapper" key={item.path}>
                   <button
                     className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
+                    draggable={true}
+                    onDragStart={(e) => handleNativeDragStart(e, item.path)}
                     onClick={() => handlePlayMusicWithFeedback(item.path)}
                     onContextMenu={(e) => handleCardContextMenu(e, item, "music")}
                     title={artist ? `${artist} — ${title}` : title}
@@ -504,6 +507,8 @@ export function FavoritesView({
               <div className="favorites-media-card-wrapper" key={item.path}>
                 <button
                   className="home-media-card"
+                  draggable={true}
+                  onDragStart={(e) => handleNativeDragStart(e, item.path)}
                   onClick={() => (onOpenImage ? onOpenImage(item.path, favoriteImageItems) : undefined)}
                   onContextMenu={(e) => handleCardContextMenu(e, item, "image")}
                   title={item.title}
@@ -553,6 +558,8 @@ export function FavoritesView({
               <div className="favorites-media-card-wrapper is-video-wrapper" key={item.path}>
                 <button
                   className={`home-media-card is-video-card ${activatingPath === item.path ? "is-activating" : ""}`}
+                  draggable={true}
+                  onDragStart={(e) => handleNativeDragStart(e, item.path)}
                   onClick={() => handlePlayVideoWithFeedback(item.path)}
                   onContextMenu={(e) => handleCardContextMenu(e, item, "video")}
                   title={item.title}

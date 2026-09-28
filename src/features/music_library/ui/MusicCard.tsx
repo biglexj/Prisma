@@ -3,6 +3,7 @@ import type { MusicLibraryItem } from "../model/types";
 import { resolveLibraryTrackInfo } from "../model/trackInfo";
 import { MusicArtwork } from "./MusicArtwork";
 import { Icon } from "../../../shared/ui/Icon";
+import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
 
 export interface MusicCardProps {
   item: MusicLibraryItem;
@@ -33,6 +34,8 @@ export function MusicCard({
     <div className="music-media-card-wrapper">
       <button
         className={`music-media-card ${isActivating ? "is-activating" : ""}`}
+        draggable={true}
+        onDragStart={(e) => handleNativeDragStart(e, item.path)}
         onClick={onClick}
         onContextMenu={onContextMenu}
         onKeyDown={(event) => {

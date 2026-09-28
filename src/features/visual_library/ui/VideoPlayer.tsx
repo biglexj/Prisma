@@ -19,6 +19,7 @@ import { useSystemSettings } from "../../../app/useSystemSettings";
 import { ImageComparisonModal } from "../../comparison";
 import { VolumeOsd, useVolumeOsd } from "../../../shared/ui/VolumeOsd";
 import { SeekOsd, useSeekOsd } from "../../../shared/ui/SeekOsd";
+import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
 import "./video-player.css";
 
 interface VideoPlayerProps {
@@ -1580,7 +1581,17 @@ export function VideoPlayer({
         </div>
 
         <div className="video-header-center">
-          <h2 className="video-player-title" title={title}>
+          <h2
+            className="video-player-title"
+            draggable={Boolean(path)}
+            onDragStart={(e) => {
+              if (path) {
+                handleNativeDragStart(e, path);
+              }
+            }}
+            style={{ cursor: path ? "grab" : "default" }}
+            title={path ? `${title} · Arrastrar hacia apps externas (DaVinci Resolve, Premiere, Explorer)` : title}
+          >
             {title}
           </h2>
           {playbackSource?.is_proxy ? (
