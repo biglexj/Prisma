@@ -15,6 +15,30 @@
 
 Registro histórico de cambios y versiones de Prisma.
 
+## [1.1.7] - 2026-09-28
+
+### Resumen
+**Prisma v1.1.7** consolida la experiencia multimedia y la sincronización con el sistema operativo mediante la llegada del **soporte SMTC nativo para vídeo**, un nuevo **OSD de volumen flotante global** con lenguaje de diseño Material 3 Expressive y **transferencias en segundo plano hacia Super Galería (Móvil)**. Con esta entrega, el reproductor de vídeo asume el control directo del panel multimedia y la superposición de volumen de Windows 10 y 11, proyectando fotogramas reales del contenido en reproducción como miniatura y eliminando por completo cualquier identificación genérica del navegador.
+
+La interacción auditiva y el control de ganancia reciben una profunda unificación visual gracias al nuevo **OSD de volumen global**. Cualquier ajuste realizado a través de atajos de teclado (`Flecha Arriba`, `Flecha Abajo`, `+`, `-`, `M`), deslizadores de previsualización o mandos a distancia despliega un indicador flotante translúcido y no invasivo en la esquina superior de la ventana. Este componente cuenta con dinámicas de animación fluidas, ondas concéntricas proporcionales a la intensidad del volumen, memoria del nivel previo al silenciar y acento tonal adaptativo.
+
+La sincronización de medios en red local se perfecciona con la incorporación de **envíos en segundo plano hacia dispositivos móviles**. Al transferir fotos o vídeos a Super Galería, ahora es posible ocultar el diálogo principal para continuar explorando o reproduciendo medios mientras una píldora flotante en pantalla reporta el avance global en tiempo real. La interfaz ofrece una alternancia reactiva entre «Ocultar» y «Cancelar», previniendo cancelaciones accidentales y garantizando una conectividad fluida.
+
+### Detalles
+- **Identidad SMTC Nativa de Vídeo y Miniaturas en Tiempo Real**:
+  - Extensión del gestor nativo SMTC de Windows en Rust para soportar propiedades y tipos de reproducción de vídeo (`MediaPlaybackType::Video`), sincronizando título, pista y estado de reproducción.
+  - Extracción automática de fotogramas del vídeo en formato JPEG para alimentar la miniatura nativa del flyout de volumen de Windows 10 y 11, con icono oficial de Prisma de alta resolución como respaldo garantizado.
+  - Desactivación de sesiones multimedia secundarias de WebView2 mediante argumentos dedicados del motor de navegación, erradicando etiquetas huérfanas de «Microsoft Edge WebView2».
+  - Recepción de controles de transporte de hardware (`reproducir`, `pausar`, `siguiente`, `anterior`) en el reproductor de vídeo a través de eventos nativos del sistema.
+- **OSD de Volumen Global Material 3 Expressive**:
+  - Implementación del HUD flotante de volumen a nivel raíz de la aplicación con posición fija superior y z-index prioritario, visible en biblioteca, inicio, reproductor de audio y vista de letras completas.
+  - Sincronización instantánea con atajos de teclado (`Flecha Arriba`, `Flecha Abajo`, `+`, `-`, `M`), deslizadores de volumen en la barra inferior y controles remotos.
+  - Animación de pop-in elástica, indicador porcentual nítido y conmutación al icono de silencio cuando el volumen es 0%.
+- **Transferencias en Segundo Plano a Super Galería (Móvil)**:
+  - Posibilidad de continuar envíos de archivos a través de red local en segundo plano sin bloquear la navegación ni la vista activa de la suite.
+  - Píldora flotante compacta con barra de progreso y porcentaje en tiempo real durante la transferencia.
+  - Botón de acción interactivo que conmuta inteligentemente entre «Ocultar» (para transferencias activas) y «Cancelar», facilitando reabrir el modal detallado cuando sea necesario.
+
 ## [1.1.6] - 2026-09-27
 
 ### Resumen

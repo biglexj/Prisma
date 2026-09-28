@@ -1,30 +1,22 @@
-# 🚀 Prisma v1.1.6 — Navegación Multiformato, Identidad SMTC Nativa, Fidelidad Acústica y Ergonomía Cinemática
+# 🚀 Prisma v1.1.7 — SMTC Nativo para Vídeo, OSD de Volumen Global y Transferencias en Segundo Plano
 
-Llega **Prisma v1.1.6**, una actualización mayor repleta de novedades que elevan la ergonomía, la presencia en el sistema operativo y la precisión acústica de la suite. Ahora puedes explorar de forma continua todos los medios de una carpeta en Quick Look con las flechas del teclado o botones laterales, y al abrir canciones externas, Prisma organiza automáticamente una cola de reproducción inteligente con la carpeta contenedora. La experiencia multimedia se consolida con **identidad nativa SMTC en Windows** (nombre oficial y portadas HD en el overlay del sistema), botón interactivo de silencio en volumen (`M`), paleta adaptativa estabilizada, desacoplamiento de teclas de volumen de hardware, copia directa al portapapeles (`Ctrl + C`), modo fijado (*Always-on-Top*) blindado ante pérdidas de foco, un motor DSP calibrado en tiempo real y **empaquetado universal autónomo con librerías integradas** para cualquier equipo.
+Llega **Prisma v1.1.7**, una actualización enfocada en la sincronización fluida con Windows y la comodidad visual. El reproductor de vídeo ahora cuenta con **identidad SMTC nativa**, mostrando el nombre oficial de Prisma y fotogramas reales de la reproducción como miniatura en el panel de volumen de Windows 10/11. Estrenamos un nuevo **OSD de volumen flotante global** con diseño Material 3 Expressive para todos los atajos de teclado y controles multimedia, junto a la capacidad de continuar **transferencias a Super Galería en segundo plano** con una discreta píldora de progreso en pantalla.
 
 ---
 
 ### ✨ Novedades destacadas
 
-- 🖼️ **Identidad SMTC Nativa y Carátulas HD**: Integración oficial con el panel multimedia y control de volumen de Windows 10/11 con nombre nativo de Prisma y extracción dinámica de carátula en alta resolución.
-- 📁 **Navegación Secuencial Multiformato**: Explora imágenes, vídeos, música y documentos de una carpeta en Quick Look usando `←` / `→` o botones flotantes laterales sin salir de la vista previa.
-- 🎵 **Encolado Inteligente de Música Externa**: Abre cualquier canción desde el Explorador de Windows y Prisma generará una cola con las pistas de la carpeta, situando el tema abierto como #1 en ciclo continuo.
-- 🔊 **Botón de Silencio y Paleta Estable**: Silencia rápidamente el volumen con un clic o el atajo `M` (con memoria de nivel), barra de progreso con acento tonal coordinado y colores de álbum estables sin parpadeos al pausar.
-- 🎛️ **Control de Hardware y Transporte Instantáneo**: Teclas multimedia de volumen del teclado exclusivas para Windows para evitar atenuaciones dobles, y transporte de reproducción sin latencia ni bloqueos de interfaz.
-- 🎚️ **Fidelidad y Verificación Acústica DSP**: Visualizador de espectro gobernado por detección de señal en tiempo real (música, vídeo, YouTube o TikTok) con reposo plano absoluto a 3px al pausar y factor Q limpio.
-- 🎬 **Ergonomía Cinemática y Controles de Vídeo**: Reorganización de herramientas con acceso directo al ecualizador, selector de pistas de audio junto a la cola, botón de instantánea y OSDs universales desacoplados de la relación de aspecto.
-- 📋 **Copiar Imagen al Portapapeles (`Ctrl + C`)**: Nueva función de copia rápida tanto en la cabecera y menú del visor de imágenes como en las tarjetas de la galería visual para compartir de inmediato en chats y apps de edición.
-- ⏱️ **Inmersión y Auto-Ocultamiento de Controles**: Desaparición fluida de barras y herramientas tras 3 segundos de inactividad garantizada en imágenes panorámicas 16:9 y verticales, con desvanecimiento instantáneo al hacer clic en área libre.
-- 📌 **Modo Fijado (*Pin Always-on-Top*) Robusto**: Fija la ventana al frente con `P` o el botón pin; permanece visible mientras interactúas con otras apps y se actualiza al presionar Espacio sobre otro archivo en el Explorador.
-- 📦 **Empaquetado Universal Autónomo**: Inclusión de `libunwind.dll` en el instalador y binarios compilados para garantizar funcionamiento inmediato y sin librerías faltantes en cualquier instalación limpia de Windows.
-- 💖 **Gestión Avanzada en Favoritos**: Badge interactivo de corazón en hover y menú contextual anticlic para canciones, fotos y vídeos, con soporte resiliente incluso para archivos inexistentes o movidos en disco.
-- 🔄 **Reinicio Seguro desde la Bandeja del Sistema**: Acción «Reiniciar Prisma» en el System Tray renovada con proceso desacoplado para un relanzamiento limpio y sin bloqueos de instancia.
+- 🎬 **SMTC Nativo para Vídeo y Miniaturas Reales**: Integración directa con el panel de volumen y flyout multimedia de Windows 10/11, proyectando fotogramas reales del vídeo y erradicando procesos genéricos de WebView2.
+- 🔊 **OSD de Volumen Global Material 3**: Indicador flotante translúcido con micro-animaciones elásticas y memoria de volumen al usar flechas (`↑` / `↓`), `+` / `-`, tecla `M` o deslizadores en cualquier vista.
+- 📲 **Transferencias en Segundo Plano a Super Galería**: Oculta el modal de envío a dispositivos móviles sin interrumpir la transmisión por red local, monitoreando el avance en una píldora flotante animada.
+- 🔄 **Alternancia Inteligente Ocultar / Cancelar**: Transición fluida entre ocultar la transferencia activa o cancelarla, garantizando que el trabajo multitarea continúe sin interrupciones.
+- 🎵 **Convivencia Armónica Audio y Vídeo**: Transición atómica entre música y clips sin solapamientos ni sesiones SMTC duplicadas.
 
 ---
 
 ### 📦 Descargas oficiales
 
-- 💾 [Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.6/Prisma_1.1.6_x64-setup.exe)
+- 💾 [Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.7/Prisma_1.1.7_x64-setup.exe)
 
 ---
 
@@ -34,3 +26,4 @@ Si disfrutas usando **Prisma**, considera apoyar el desarrollo continuo:
 - ☕ **Buy Me a Coffee**: https://buymeacoffee.com/biglexj
 - 💳 **Donaciones directas (Yape / Plin / Web)**: https://www.biglexj.com/donaciones
 - 🐙 **GitHub**: https://github.com/biglexj
+

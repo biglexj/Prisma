@@ -8,8 +8,6 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [x] **OSD de Volumen Global y SMTC Nativo para Vídeo**: Unificación de la identidad del reproductor SMTC en Windows (erradicando "Microsoft Edge WebView2" e iconos genéricos de notas musicales) e indicador visual OSD de volumen flotante Material 3 en todas las vistas de la aplicación para atajos de teclado y mandos a distancia.
-
 - [ ] **Marcadores y Etiquetas de Colección en Galería Visual**: Sistema de etiquetado personalizado (*tags*) y marcadores visuales para organización rápida de ilustraciones y fotos.
 - [ ] **Refactorización y Modularización de Galería Visual (`VisualLibrary.tsx`)**: Extracción de sub-componentes de la vista principal (1,230 líneas: filtros, barra de acciones y modales de soporte) para reingresar al umbral preferido (< 900 líneas) estipulado en la arquitectura del proyecto.
 - [ ] **Atajos de teclado configurables**: Personalización interactiva de atajos de teclado desde la vista de Configuración.
@@ -31,6 +29,19 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 ---
 
 ## 🟢 Completado
+
+- [x] **v1.1.7**
+  - **Identidad SMTC Nativa para Vídeo y Miniaturas Reales**:
+    - Extensión en Rust de `NativeSmtcManager` con `MediaPlaybackType::Video` y propiedades nativas de vídeo.
+    - Extracción de fotogramas de vídeo en JPEG para alimentar la miniatura del flyout multimedia en Windows 10/11.
+    - Inactivación de sesiones secundarias y genéricas de WebView2 (`--disable-features=HardwareMediaKeyHandling`).
+    - Recepción de controles de transporte físico de hardware (`prisma://smtc-action`) en el reproductor de vídeo.
+  - **OSD de Volumen Global Material 3 Expressive**:
+    - Indicador flotante superior fijo a nivel de aplicación (`App.tsx`) con acento tonal, micro-animaciones elásticas y memoria de volumen al silenciar.
+    - Despliegue unificado al ajustar ganancia con atajos de teclado (`↑` / `↓`, `+` / `-`, `M`), deslizadores de previsualización o mandos remotos.
+  - **Transferencias en Segundo Plano a Super Galería (Móvil)**:
+    - Envíos por red local desacoplados de la interfaz: capacidad de ocultar el modal con una píldora flotante animada de progreso en tiempo real.
+    - Alternancia inteligente y segura entre botones «Ocultar» y «Cancelar».
 
 - [x] **v1.1.6**
   - **Identidad SMTC Nativa de Prisma y Portadas HD**:
