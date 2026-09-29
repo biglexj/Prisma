@@ -15,6 +15,7 @@ export interface VisualLibraryItem {
   relativeFolder: string;
   kind: VisualMediaKind | "audio";
   modifiedAtMillis: number;
+  createdAtMillis?: number;
   sizeBytes: number;
   isExcluded?: boolean;
 }

@@ -76,6 +76,11 @@ pub fn scan_visual_folder(
                 .duration_since(UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis();
+            let created_at_millis = metadata
+                .as_ref()
+                .and_then(|metadata| metadata.created().ok())
+                .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+                .map_or(0, |duration| duration.as_millis());
             let relative_folder = path
                 .parent()
                 .and_then(|parent| parent.strip_prefix(&canonical_root).ok())
@@ -99,6 +104,7 @@ pub fn scan_visual_folder(
                 relative_folder,
                 kind,
                 modified_at_millis,
+                created_at_millis,
                 size_bytes: metadata.map_or(0, |metadata| metadata.len()),
                 is_excluded,
             });

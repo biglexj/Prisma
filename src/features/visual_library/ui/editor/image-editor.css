@@ -175,6 +175,41 @@
   cursor: crosshair;
 }
 
+.image-editor-canvas.is-moving-watermark {
+  cursor: grab;
+}
+
+.image-editor-canvas.is-moving-watermark:active {
+  cursor: grabbing;
+}
+
+.watermark-move-hint {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 16px;
+  border: 1px solid rgba(255, 177, 192, 0.5);
+  border-radius: 999px;
+  background: rgba(28, 13, 19, 0.94);
+  color: #fff;
+  font-size: 0.8rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.watermark-move-hint button {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: #e60050;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* ── Superposición de Recorte (Crop Overlay) ── */
 .image-crop-overlay-container {
   position: absolute;
@@ -925,6 +960,12 @@
   gap: 8px;
 }
 
+.watermark-position-help {
+  color: #c9b4b8;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
 .watermark-pos-btn {
   padding: 9px 8px;
   background: rgba(255, 255, 255, 0.06);
@@ -986,6 +1027,27 @@
   align-items: center;
   gap: 10px;
   margin-left: auto;
+}
+
+.watermark-apply-btn {
+  border: 1px solid #ff6b96;
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: #e60050;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 750;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(230, 0, 80, 0.3);
+}
+
+.watermark-apply-btn:hover {
+  background: #fa1d68;
+}
+
+.watermark-apply-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
 .watermark-disable-btn {

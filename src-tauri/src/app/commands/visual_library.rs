@@ -872,6 +872,7 @@ pub async fn visual_library_scan_folder_items(
                         relative_folder: kind.label().to_string(),
                         kind,
                         modified_at_millis: 0,
+                        created_at_millis: 0,
                         size_bytes: 0,
                         is_excluded: false,
                     }],
@@ -904,6 +905,7 @@ pub async fn visual_library_scan_folder_items(
                         relative_folder: folder_name,
                         kind,
                         modified_at_millis: 0,
+                        created_at_millis: 0,
                         size_bytes: 0,
                         is_excluded: false,
                     }],
@@ -911,7 +913,7 @@ pub async fn visual_library_scan_folder_items(
             }
         };
 
-        let mut collected: Vec<(std::path::PathBuf, String, u128, u64)> = Vec::new();
+        let mut collected: Vec<(std::path::PathBuf, String, u128, u128, u64)> = Vec::new();
         for entry in entries.flatten() {
             let p = entry.path();
             if !p.is_file() {
@@ -939,8 +941,13 @@ pub async fn visual_library_scan_folder_items(
                 .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                 .map(|d| d.as_millis())
                 .unwrap_or(0);
+            let created_time = meta
+                .as_ref()
+                .and_then(|m| m.created().ok())
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map_or(0, |duration| duration.as_millis());
             let size = meta.as_ref().map(|m| m.len()).unwrap_or(0);
-            collected.push((p, stem, mod_time, size));
+            collected.push((p, stem, mod_time, created_time, size));
         }
 
         // Orden natural canónico correlativo
@@ -955,7 +962,7 @@ pub async fn visual_library_scan_folder_items(
             .map(|n| n.to_string_lossy().to_lowercase())
             .unwrap_or_default();
 
-        let pos = collected.iter().position(|(p, _, _, _)| {
+        let pos = collected.iter().position(|(p, _, _, _, _)| {
             p == &canonical_file
                 || p.file_name().map(|n| n.to_string_lossy().to_lowercase()) == Some(target_name_lower.clone())
                 || p.canonicalize().ok() == Some(canonical_file.clone())
@@ -966,13 +973,14 @@ pub async fn visual_library_scan_folder_items(
         let parent_str = crate::features::folder_session::clean_path(parent);
         let items: Vec<VisualLibraryItem> = collected
             .into_iter()
-            .map(|(p, stem, mod_time, size)| VisualLibraryItem {
+            .map(|(p, stem, mod_time, created_time, size)| VisualLibraryItem {
                 path: crate::features::folder_session::clean_path(&p),
                 title: stem,
                 source_path: parent_str.clone(),
                 relative_folder: folder_name.clone(),
                 kind,
                 modified_at_millis: mod_time,
+                created_at_millis: created_time,
                 size_bytes: size,
                 is_excluded: false,
             })

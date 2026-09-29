@@ -15,7 +15,9 @@ interface ImageEditorToolbarProps {
   onSelectTab: (tab: EditorTab) => void;
   // Transform
   isCropActive: boolean;
+  isCropPreview: boolean;
   onToggleCrop: () => void;
+  onToggleCropPreview: () => void;
   aspectRatio: AspectRatioOption;
   onSelectAspectRatio: (ratio: AspectRatioOption) => void;
   onRotateCw: () => void;
@@ -63,7 +65,9 @@ export function ImageEditorToolbar({
   onSelectTab,
   // Transform
   isCropActive,
+  isCropPreview,
   onToggleCrop,
+  onToggleCropPreview,
   aspectRatio,
   onSelectAspectRatio,
   onRotateCw,
@@ -104,13 +108,23 @@ export function ImageEditorToolbar({
               <button
                 className={`editor-chip-btn ${isCropActive ? "is-active" : ""}`}
                 onClick={onToggleCrop}
-                title="Activar/Desactivar recorte"
+                title={isCropActive ? "Quitar recorte" : "Activar recorte"}
               >
                 <Icon name="crop" />
                 <span>Recortar</span>
               </button>
 
               {isCropActive && (
+                <button
+                  className="editor-text-btn"
+                  onClick={onToggleCropPreview}
+                  title={isCropPreview ? "Volver a editar el recorte (Enter)" : "Ver el resultado del recorte (Enter)"}
+                >
+                  {isCropPreview ? "Editar recorte" : "Vista previa · Enter"}
+                </button>
+              )}
+
+              {isCropActive && !isCropPreview && (
                 <div className="editor-ratio-chips">
                   {(["free", "1:1", "4:3", "3:4", "16:9", "9:16"] as AspectRatioOption[]).map(
                     (ratio) => (

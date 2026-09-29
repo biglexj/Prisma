@@ -57,6 +57,11 @@ export function ImageCropOverlay({
     const targetRatio = getTargetRatio();
     if (!targetRatio || containerWidth <= 0 || containerHeight <= 0) return;
 
+    // Volver de la vista previa monta otra vez el marco. Conserva el recorte
+    // ajustado por el usuario cuando ya respeta la proporción elegida.
+    const currentRatio = (crop.width * containerWidth) / (crop.height * containerHeight);
+    if (Math.abs(currentRatio - targetRatio) < 0.005) return;
+
     const imgAspect = containerWidth / containerHeight;
     let w = 0.9;
     let h = 0.9;

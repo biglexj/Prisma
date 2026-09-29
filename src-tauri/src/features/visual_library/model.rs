@@ -44,6 +44,7 @@ pub struct VisualLibraryItem {
     pub relative_folder: String,
     pub kind: VisualMediaKind,
     pub modified_at_millis: u128,
+    pub created_at_millis: u128,
     pub size_bytes: u64,
     pub is_excluded: bool,
 }

@@ -1,0 +1,18 @@
+# Inicio reciente y editor de imagen estable
+
+## Objetivo
+
+Mostrar primero los archivos incorporados recientemente, permitir su arrastre nativo desde Inicio y completar el flujo de recorte, dibujo y marca de agua del editor. Corregir el bloqueo de DLL durante la recompilación de Prisma en desarrollo.
+
+## Diseño
+
+- Ordenar cada estante por la fecha más reciente entre creación y modificación; mostrar hasta 20 imágenes y canciones, y 12 vídeos, en carruseles horizontales.
+- Hacer que la tarjeta completa de Inicio inicie el arrastre nativo, incluidos sus elementos visuales internos.
+- Conservar el recorte como operación no destructiva: Enter alterna entre marco y vista previa; el guardado usa el recorte vigente.
+- Activar el pincel al entrar en Dibujar y permitir trazos incluso si hay un recorte pendiente.
+- Situar el borde de la marca de agua al 5 % de cada esquina elegida y permitir moverla sobre la vista previa antes de guardar.
+- En desarrollo, reutilizar las DLL y herramientas copiadas al directorio de Cargo; conservar los recursos del instalador.
+
+## Límite de validación
+
+La compilación confirma integridad de código. El arrastre entre aplicaciones, el aspecto final de la imagen guardada y la experiencia de edición requieren prueba manual en Prisma de desarrollo.

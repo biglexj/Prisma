@@ -74,6 +74,11 @@ pub fn scan_music_folder(
                 .duration_since(UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis();
+            let created_at_millis = metadata
+                .as_ref()
+                .and_then(|metadata| metadata.created().ok())
+                .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+                .map_or(0, |duration| duration.as_millis());
 
             let mut title = path
                 .file_stem()
@@ -135,6 +140,7 @@ pub fn scan_music_folder(
                 source_path: source_path.clone(),
                 relative_folder,
                 modified_at_millis,
+                created_at_millis,
                 size_bytes: metadata.map_or(0, |metadata| metadata.len()),
                 is_excluded,
             });

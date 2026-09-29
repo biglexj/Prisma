@@ -11,6 +11,7 @@ import {
   type WatermarkConfig,
   DEFAULT_WATERMARK_CONFIG,
   applyWatermarkToCanvas,
+  getWatermarkBounds,
 } from "../../model/watermark";
 import { getFilterCss } from "./filterPresets";
 import type {
@@ -47,6 +48,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
   const [flipH, setFlipH] = useState(false);
   const [flipV, setFlipV] = useState(false);
   const [isCropActive, setIsCropActive] = useState(false);
+  const [isCropPreview, setIsCropPreview] = useState(false);
   const [aspectRatio, setAspectRatio] = useState<AspectRatioOption>("free");
   const [crop, setCrop] = useState<CropRect>(DEFAULT_CROP);
 
@@ -67,6 +69,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
   // Watermark
   const [watermark, setWatermark] = useState<WatermarkConfig>(DEFAULT_WATERMARK_CONFIG);
   const [showWatermarkModal, setShowWatermarkModal] = useState(false);
+  const [isMovingWatermark, setIsMovingWatermark] = useState(false);
   const [logoImageElement, setLogoImageElement] = useState<HTMLImageElement | null>(null);
 
   // Loading & Saving
@@ -81,6 +84,8 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageContainerRef = useRef<HTMLDivElement | null>(null);
+  const currentStrokeRef = useRef<DoodlePoint[] | null>(null);
+  const watermarkDragRef = useRef<{ pointerId: number; offsetX: number; offsetY: number } | null>(null);
 
   // Cargar elemento de imagen original
   useEffect(() => {
@@ -105,13 +110,21 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
     logoImg.src = watermark.logoDataUrl;
   }, [watermark.logoDataUrl]);
 
-  // Manejador de teclado (Escape, Ctrl+Z, Ctrl+S)
+  // Manejador de teclado del editor
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (showSaveDialog || isSaving) return;
+      if (showSaveDialog || showWatermarkModal || isSaving) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
+        if (isMovingWatermark) setIsMovingWatermark(false);
+        else onClose();
+      } else if (e.key === "Enter" && isCropActive && activeTab === "transform") {
+        if (target?.closest("button")) return;
+        e.preventDefault();
+        setIsCropPreview((current) => !current);
+        setIsMovingWatermark(false);
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
         handleUndoStroke();
@@ -122,7 +135,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showSaveDialog, isSaving, doodleStrokes, onClose]);
+  }, [showSaveDialog, showWatermarkModal, isSaving, doodleStrokes, onClose, isMovingWatermark, isCropActive, activeTab]);
 
   // Recalcular dimensiones de visualización en el viewport
   const updateDisplaySize = useCallback(() => {
@@ -133,15 +146,17 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
     const maxH = Math.max(100, container.clientHeight - padding);
 
     const isQuarterRotated = Math.abs(rotationDegrees % 180) === 90;
-    const baseW = isQuarterRotated ? imageElement.naturalHeight : imageElement.naturalWidth;
-    const baseH = isQuarterRotated ? imageElement.naturalWidth : imageElement.naturalHeight;
+    const baseW = (isQuarterRotated ? imageElement.naturalHeight : imageElement.naturalWidth)
+      * (isCropActive && isCropPreview ? crop.width : 1);
+    const baseH = (isQuarterRotated ? imageElement.naturalWidth : imageElement.naturalHeight)
+      * (isCropActive && isCropPreview ? crop.height : 1);
 
     const scale = Math.min(maxW / baseW, maxH / baseH, 1);
     const displayW = Math.round(baseW * scale);
     const displayH = Math.round(baseH * scale);
 
     setStageDimensions({ width: displayW, height: displayH });
-  }, [imageElement, rotationDegrees]);
+  }, [imageElement, rotationDegrees, isCropActive, isCropPreview, crop]);
 
   useEffect(() => {
     updateDisplaySize();
@@ -191,17 +206,22 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
     ctx.save();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const fullWidth = isCropActive && isCropPreview ? canvas.width / crop.width : canvas.width;
+    const fullHeight = isCropActive && isCropPreview ? canvas.height / crop.height : canvas.height;
+    const offsetX = isCropActive && isCropPreview ? crop.x * fullWidth : 0;
+    const offsetY = isCropActive && isCropPreview ? crop.y * fullHeight : 0;
+
     // Aplicar filtros CSS
     ctx.filter = buildCanvasFilterString();
 
     // Transformaciones de rotación y volteo centradas
-    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.translate(fullWidth / 2 - offsetX, fullHeight / 2 - offsetY);
     ctx.rotate((rotationDegrees * Math.PI) / 180);
     ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
 
     const isQuarterRotated = Math.abs(rotationDegrees % 180) === 90;
-    const drawW = isQuarterRotated ? canvas.height : canvas.width;
-    const drawH = isQuarterRotated ? canvas.width : canvas.height;
+    const drawW = isQuarterRotated ? fullHeight : fullWidth;
+    const drawH = isQuarterRotated ? fullWidth : fullHeight;
 
     ctx.drawImage(imageElement, -drawW / 2, -drawH / 2, drawW, drawH);
     ctx.restore();
@@ -227,20 +247,34 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
         ctx.lineJoin = "round";
 
         const first = stroke.points[0];
-        ctx.moveTo(first.x * canvas.width, first.y * canvas.height);
+        ctx.moveTo(first.x * fullWidth - offsetX, first.y * fullHeight - offsetY);
 
         for (let i = 1; i < stroke.points.length; i++) {
           const pt = stroke.points[i];
-          ctx.lineTo(pt.x * canvas.width, pt.y * canvas.height);
+          ctx.lineTo(pt.x * fullWidth - offsetX, pt.y * fullHeight - offsetY);
         }
-        ctx.stroke();
+        if (stroke.points.length === 1) {
+          ctx.beginPath();
+          ctx.arc(first.x * fullWidth - offsetX, first.y * fullHeight - offsetY, stroke.width / 2, 0, Math.PI * 2);
+          ctx.fillStyle = stroke.color;
+          ctx.fill();
+        } else {
+          ctx.stroke();
+        }
       }
       ctx.restore();
     }
 
     // 3. Estampar marca de agua si está activa
     if (watermark.enabled) {
-      applyWatermarkToCanvas(ctx, canvas.width, canvas.height, watermark, logoImageElement);
+      if (isCropActive && !isCropPreview) {
+        ctx.save();
+        ctx.translate(crop.x * canvas.width, crop.y * canvas.height);
+        applyWatermarkToCanvas(ctx, crop.width * canvas.width, crop.height * canvas.height, watermark, logoImageElement);
+        ctx.restore();
+      } else {
+        applyWatermarkToCanvas(ctx, canvas.width, canvas.height, watermark, logoImageElement);
+      }
     }
   }, [
     imageElement,
@@ -255,6 +289,9 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
     brushWidth,
     watermark,
     logoImageElement,
+    isCropActive,
+    isCropPreview,
+    crop,
   ]);
 
   useEffect(() => {
@@ -263,20 +300,52 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
 
   // Manejo de eventos de dibujo interactivo
   const handlePointerDownCanvas = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || activeTab !== "draw" || isCropActive) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    const pixelX = (e.clientX - rect.left) * canvas.width / rect.width;
+    const pixelY = (e.clientY - rect.top) * canvas.height / rect.height;
 
-    setCurrentStroke([{ x, y }]);
+    if (isMovingWatermark && watermark.enabled) {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const bounds = getWatermarkBounds(ctx, canvas.width, canvas.height, watermark, logoImageElement);
+      if (!bounds || pixelX < bounds.x - 12 || pixelX > bounds.x + bounds.width + 12 || pixelY < bounds.y - 12 || pixelY > bounds.y + bounds.height + 12) return;
+      watermarkDragRef.current = {
+        pointerId: e.pointerId,
+        offsetX: pixelX - (bounds.x + bounds.width / 2),
+        offsetY: pixelY - (bounds.y + bounds.height / 2),
+      };
+      e.currentTarget.setPointerCapture(e.pointerId);
+      return;
+    }
+
+    if (!isDrawing || activeTab !== "draw") return;
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+    currentStrokeRef.current = [{ x, y }];
+    setCurrentStroke(currentStrokeRef.current);
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   const handlePointerMoveCanvas = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!currentStroke) return;
+    const drag = watermarkDragRef.current;
+    if (drag?.pointerId === e.pointerId) {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const pixelX = (e.clientX - rect.left) * canvas.width / rect.width;
+      const pixelY = (e.clientY - rect.top) * canvas.height / rect.height;
+      setWatermark((current) => ({
+        ...current,
+        position: "custom",
+        normX: Math.max(0, Math.min(1, (pixelX - drag.offsetX) / canvas.width)),
+        normY: Math.max(0, Math.min(1, (pixelY - drag.offsetY) / canvas.height)),
+      }));
+      return;
+    }
+    if (!currentStrokeRef.current) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -284,21 +353,29 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
     const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
 
-    setCurrentStroke((prev) => (prev ? [...prev, { x, y }] : [{ x, y }]));
+    currentStrokeRef.current = [...currentStrokeRef.current, { x, y }];
+    setCurrentStroke(currentStrokeRef.current);
   };
 
   const handlePointerUpCanvas = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!currentStroke) return;
-    if (currentStroke.length > 0) {
+    if (watermarkDragRef.current?.pointerId === e.pointerId) {
+      watermarkDragRef.current = null;
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+      return;
+    }
+    const strokePoints = currentStrokeRef.current;
+    if (!strokePoints) return;
+    if (strokePoints.length > 0) {
       setDoodleStrokes((prev) => [
         ...prev,
         {
-          points: currentStroke,
+          points: strokePoints,
           color: brushColor,
           width: brushWidth,
         },
       ]);
     }
+    currentStrokeRef.current = null;
     setCurrentStroke(null);
     try {
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
@@ -316,6 +393,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
     setFlipV(false);
     setCrop(DEFAULT_CROP);
     setIsCropActive(false);
+    setIsCropPreview(false);
     setAspectRatio("free");
   };
 
@@ -326,6 +404,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
   const handleUndoStroke = () => setDoodleStrokes((prev) => prev.slice(0, -1));
   const handleClearStrokes = () => {
     setDoodleStrokes([]);
+    currentStrokeRef.current = null;
     setCurrentStroke(null);
   };
 
@@ -373,7 +452,8 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
       // 2. Renderizar trazos de dibujo en el canvas de alta resolución
       if (doodleStrokes.length > 0) {
         interCtx.save();
-        const scaleFactor = fullRotatedW / (stageDimensions.width || fullRotatedW);
+        const fullDisplayWidth = stageDimensions.width / (isCropActive && isCropPreview ? crop.width : 1);
+        const scaleFactor = fullRotatedW / (fullDisplayWidth || fullRotatedW);
         for (const stroke of doodleStrokes) {
           if (stroke.points.length === 0) continue;
           interCtx.beginPath();
@@ -388,7 +468,14 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
             const pt = stroke.points[i];
             interCtx.lineTo(pt.x * fullRotatedW, pt.y * fullRotatedH);
           }
-          interCtx.stroke();
+          if (stroke.points.length === 1) {
+            interCtx.beginPath();
+            interCtx.arc(first.x * fullRotatedW, first.y * fullRotatedH, interCtx.lineWidth / 2, 0, Math.PI * 2);
+            interCtx.fillStyle = stroke.color;
+            interCtx.fill();
+          } else {
+            interCtx.stroke();
+          }
         }
         interCtx.restore();
       }
@@ -489,13 +576,14 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
         >
           <canvas
             ref={canvasRef}
-            className={`image-editor-canvas ${isDrawing && activeTab === "draw" ? "is-drawing" : ""}`}
+            className={`image-editor-canvas ${isDrawing && activeTab === "draw" ? "is-drawing" : ""} ${isMovingWatermark ? "is-moving-watermark" : ""}`}
             onPointerDown={handlePointerDownCanvas}
             onPointerMove={handlePointerMoveCanvas}
             onPointerUp={handlePointerUpCanvas}
+            onPointerCancel={handlePointerUpCanvas}
           />
 
-          {isCropActive && activeTab === "transform" && stageDimensions.width > 0 && (
+          {isCropActive && !isCropPreview && activeTab === "transform" && stageDimensions.width > 0 && (
             <ImageCropOverlay
               containerWidth={stageDimensions.width}
               containerHeight={stageDimensions.height}
@@ -505,6 +593,12 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
             />
           )}
         </div>
+        {isMovingWatermark && (
+          <div className="watermark-move-hint">
+            Arrastra la marca para ubicarla
+            <button type="button" onClick={() => setIsMovingWatermark(false)}>Listo</button>
+          </div>
+        )}
       </div>
 
       {/* Error Toast */}
@@ -517,12 +611,32 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
       {/* Barra inferior con controles y pestañas */}
       <ImageEditorToolbar
         activeTab={activeTab}
-        onSelectTab={setActiveTab}
+        onSelectTab={(tab) => {
+          setActiveTab(tab);
+          setIsMovingWatermark(false);
+          if (tab === "draw") {
+            setIsDrawing(true);
+            setIsCropPreview(false);
+          }
+        }}
         // Transform
         isCropActive={isCropActive}
-        onToggleCrop={() => setIsCropActive(!isCropActive)}
+        isCropPreview={isCropPreview}
+        onToggleCrop={() => {
+          setIsCropActive((current) => !current);
+          setIsCropPreview(false);
+          setIsMovingWatermark(false);
+        }}
+        onToggleCropPreview={() => {
+          setIsCropPreview((current) => !current);
+          setIsMovingWatermark(false);
+        }}
         aspectRatio={aspectRatio}
-        onSelectAspectRatio={setAspectRatio}
+        onSelectAspectRatio={(ratio) => {
+          setAspectRatio(ratio);
+          setIsCropPreview(false);
+          setIsMovingWatermark(false);
+        }}
         onRotateCw={handleRotateCw}
         onRotateCcw={handleRotateCcw}
         onFlipH={handleFlipH}
@@ -553,12 +667,18 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
       />
 
       {/* Diálogo de marca de agua */}
-      <WatermarkModal
-        isOpen={showWatermarkModal}
-        config={watermark}
-        onClose={() => setShowWatermarkModal(false)}
-        onApply={(newConfig) => setWatermark(newConfig)}
-      />
+      {showWatermarkModal && (
+        <WatermarkModal
+          isOpen={showWatermarkModal}
+          config={watermark}
+          onClose={() => setShowWatermarkModal(false)}
+          onApply={(newConfig) => {
+            setWatermark(newConfig);
+            setIsMovingWatermark(newConfig.enabled && Boolean(newConfig.text.trim() || newConfig.includeDate || newConfig.logoDataUrl));
+            if (newConfig.enabled && isCropActive) setIsCropPreview(true);
+          }}
+        />
+      )}
 
       {/* Diálogo de guardar */}
       {showSaveDialog && (

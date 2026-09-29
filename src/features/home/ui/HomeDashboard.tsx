@@ -9,15 +9,15 @@ import { ImageViewer } from "../../visual_library/ui/ImageViewer";
 import { Icon } from "../../../shared/ui/Icon";
 import { cleanPath } from "../../../shared/mediaTree";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
-import { useHistory, type HistoryCategory } from "../../../shared/useHistory";
+import { useHistory } from "../../../shared/useHistory";
 import { usePlaylists } from "../../collections/usePlaylists";
 import type { PlaylistMeta } from "../../collections/model/types";
 import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
 import { formatFriendlyErrorMessage } from "../../../shared/errorFormatters";
 import "./home-dashboard.css";
 
-const HOME_ROW_ITEMS_LIMIT = 8;
-const HOME_VIDEO_ROW_LIMIT = 4;
+const HOME_ROW_ITEMS_LIMIT = 20;
+const HOME_VIDEO_ROW_LIMIT = 12;
 
 interface HomeDashboardProps {
   musicFolders: MusicFolderSource[];
@@ -125,96 +125,18 @@ export function HomeDashboard({
     }
   };
 
-  // ── Algoritmo Híbrido: Combina Historial (Recientes + Más reproducidas/vistas) con Archivos Nuevos/Entrantes ──
-  const homeMusicItems = useMemo(() => {
-    const musicMap = new Map(nonExcludedMusic.map((it) => [normalizePath(it.path), it]));
-    const seen = new Set<string>();
-    const result: MusicLibraryItem[] = [];
-
-    const sortedHistory = [...historySnapshot.music].sort((a, b) => {
-      const scoreA = (a.playCount || 1) * 0.4 + (a.playedAt / 1_000_000_000) * 0.6;
-      const scoreB = (b.playCount || 1) * 0.4 + (b.playedAt / 1_000_000_000) * 0.6;
-      return scoreB - scoreA;
-    });
-
-    for (const h of sortedHistory) {
-      const item = musicMap.get(normalizePath(h.path));
-      if (item && !seen.has(normalizePath(item.path))) {
-        seen.add(normalizePath(item.path));
-        result.push(item);
-      }
-    }
-
-    const newItems = [...nonExcludedMusic]
-      .filter((it) => !seen.has(normalizePath(it.path)))
-      .sort((a, b) => (b.modifiedAtMillis || 0) - (a.modifiedAtMillis || 0));
-
-    for (const item of newItems) {
-      result.push(item);
-    }
-
-    return result.slice(0, HOME_ROW_ITEMS_LIMIT);
-  }, [nonExcludedMusic, historySnapshot.music]);
-
-  const homeVideoItems = useMemo(() => {
-    const vidMap = new Map(nonExcludedVideos.map((it) => [normalizePath(it.path), it]));
-    const seen = new Set<string>();
-    const result: VisualLibraryItem[] = [];
-
-    const sortedHistory = [...historySnapshot.videos].sort((a, b) => {
-      const scoreA = (a.playCount || 1) * 0.4 + (a.playedAt / 1_000_000_000) * 0.6;
-      const scoreB = (b.playCount || 1) * 0.4 + (b.playedAt / 1_000_000_000) * 0.6;
-      return scoreB - scoreA;
-    });
-
-    for (const h of sortedHistory) {
-      const item = vidMap.get(normalizePath(h.path));
-      if (item && !seen.has(normalizePath(item.path))) {
-        seen.add(normalizePath(item.path));
-        result.push(item);
-      }
-    }
-
-    const newItems = [...nonExcludedVideos]
-      .filter((it) => !seen.has(normalizePath(it.path)))
-      .sort((a, b) => (b.modifiedAtMillis || 0) - (a.modifiedAtMillis || 0));
-
-    for (const item of newItems) {
-      result.push(item);
-    }
-
-    return result.slice(0, HOME_VIDEO_ROW_LIMIT);
-  }, [nonExcludedVideos, historySnapshot.videos]);
-
-  const homeImageItems = useMemo(() => {
-    const imgMap = new Map(nonExcludedImages.map((it) => [normalizePath(it.path), it]));
-    const seen = new Set<string>();
-    const result: VisualLibraryItem[] = [];
-
-    const sortedHistory = [...historySnapshot.images].sort((a, b) => {
-      const scoreA = (a.playCount || 1) * 0.4 + (a.playedAt / 1_000_000_000) * 0.6;
-      const scoreB = (b.playCount || 1) * 0.4 + (b.playedAt / 1_000_000_000) * 0.6;
-      return scoreB - scoreA;
-    });
-
-    for (const h of sortedHistory) {
-      const item = imgMap.get(normalizePath(h.path));
-      if (item && !seen.has(normalizePath(item.path))) {
-        seen.add(normalizePath(item.path));
-        result.push(item);
-      }
-    }
-
-    const newItems = [...nonExcludedImages]
-      .filter((it) => !seen.has(normalizePath(it.path)))
-      .sort((a, b) => (b.modifiedAtMillis || 0) - (a.modifiedAtMillis || 0));
-
-    for (const item of newItems) {
-      result.push(item);
-    }
-
-    return result.slice(0, HOME_ROW_ITEMS_LIMIT);
-  }, [nonExcludedImages, historySnapshot.images]);
+  const homeMusicItems = useMemo(
+    () => recentItems(nonExcludedMusic, HOME_ROW_ITEMS_LIMIT),
+    [nonExcludedMusic],
+  );
+  const homeVideoItems = useMemo(
+    () => recentItems(nonExcludedVideos, HOME_VIDEO_ROW_LIMIT),
+    [nonExcludedVideos],
+  );
+  const homeImageItems = useMemo(
+    () => recentItems(nonExcludedImages, HOME_ROW_ITEMS_LIMIT),
+    [nonExcludedImages],
+  );
 
   const homePlaylists = useMemo(() => {
     const plMap = new Map(visiblePlaylists.map((p) => [normalizePath(p.path), p]));
@@ -240,13 +162,7 @@ export function HomeDashboard({
     return result.slice(0, HOME_ROW_ITEMS_LIMIT);
   }, [visiblePlaylists, historySnapshot.playlists]);
 
-  // ── Determinar el orden dinámico de los estantes según lo último visto/reproducido ──
-  const shelvesOrder = useMemo(() => {
-    const defaultOrder: HistoryCategory[] = ["music", "video", "image", "playlist"];
-    const last = historySnapshot.lastPlayedKind;
-    if (!last) return defaultOrder;
-    return [last, ...defaultOrder.filter((k) => k !== last)];
-  }, [historySnapshot.lastPlayedKind]);
+  const shelvesOrder = ["image", "music", "video", "playlist"] as const;
 
   const totalFolders = musicFolders.length + imageFolders.length + videoFolders.length;
   const totalItems = nonExcludedMusic.length + nonExcludedImages.length + nonExcludedVideos.length;
@@ -258,7 +174,7 @@ export function HomeDashboard({
         <div className="section-heading">
           <span className="preview-kicker">LIENZO MULTIMEDIA LOCAL</span>
           <h1>Tu biblioteca,<br />en un solo lugar</h1>
-          <p>Música, imágenes y vídeos organizados desde tus propias carpetas, combinando lo más visto y nuevos descubrimientos.</p>
+          <p>Música, imágenes y vídeos de tus carpetas, con los archivos más recientes al frente.</p>
         </div>
         <div className="home-orbit" aria-hidden="true"><i /><i /><i /><Icon name="layout" /></div>
       </header>
@@ -295,13 +211,13 @@ export function HomeDashboard({
         </section>
       ) : null}
 
-      {/* Renderizado Dinámico de Estantes según lo último reproducido/visto */}
+      {/* Los archivos recientes se muestran primero en cada estante. */}
       {shelvesOrder.map((category) => {
         if (category === "music" && (!sourcesReady || musicFolders.length > 0)) {
           return (
             <MediaShelf
               key="shelf-music"
-              title="Música para ti"
+              title="Música reciente"
               kicker="MÚSICA"
               onOpen={() => (homeMusicItems[0] ? onPlayMusic(homeMusicItems[0].path, homeMusicItems, "Inicio") : onOpenFolders())}
             >
@@ -329,7 +245,7 @@ export function HomeDashboard({
                     );
                   })
                 ) : loading || !sourcesReady ? (
-                  Array.from({ length: HOME_ROW_ITEMS_LIMIT }).map((_, i) => (
+                  Array.from({ length: 8 }).map((_, i) => (
                     <div className="home-media-card is-skeleton" key={i}>
                       <span className="home-media-frame" />
                       <strong />
@@ -346,7 +262,7 @@ export function HomeDashboard({
           return (
             <MediaShelf
               key="shelf-video"
-              title="Vídeos destacados"
+              title="Vídeos recientes"
               kicker="VÍDEOS"
               onOpen={onOpenVideos}
             >
@@ -370,7 +286,7 @@ export function HomeDashboard({
                     </button>
                   ))
                 ) : loading || !sourcesReady ? (
-                  Array.from({ length: HOME_VIDEO_ROW_LIMIT }).map((_, i) => (
+                  Array.from({ length: 4 }).map((_, i) => (
                     <div className="home-media-card is-skeleton" key={i}>
                       <span className="home-media-frame" />
                       <strong />
@@ -387,7 +303,7 @@ export function HomeDashboard({
           return (
             <MediaShelf
               key="shelf-image"
-              title="Galería destacada"
+              title="Imágenes recientes"
               kicker="IMÁGENES"
               onOpen={onOpenImages}
             >
@@ -416,7 +332,7 @@ export function HomeDashboard({
                     </button>
                   ))
                 ) : loading || !sourcesReady ? (
-                  Array.from({ length: HOME_ROW_ITEMS_LIMIT }).map((_, i) => (
+                  Array.from({ length: 8 }).map((_, i) => (
                     <div className="home-media-card is-skeleton" key={i}>
                       <span className="home-media-frame" />
                       <strong />
@@ -481,6 +397,13 @@ export function HomeDashboard({
       ) : null}
     </section>
   );
+}
+
+function recentItems<T extends { path: string; modifiedAtMillis?: number; createdAtMillis?: number }>(items: T[], limit: number): T[] {
+  return [...items]
+    .sort((a, b) => Math.max(b.modifiedAtMillis ?? 0, b.createdAtMillis ?? 0)
+      - Math.max(a.modifiedAtMillis ?? 0, a.createdAtMillis ?? 0) || a.path.localeCompare(b.path))
+    .slice(0, limit);
 }
 
 function MediaShelf({ title, kicker, onOpen, children }: { title: string; kicker: string; onOpen: () => void; children: React.ReactNode }) {

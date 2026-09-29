@@ -2,8 +2,29 @@
 fn main() {
     verify_native_icons();
     configure_libmpv();
+    configure_libunwind();
     configure_ffmpeg();
     tauri_build::build();
+}
+
+fn configure_libunwind() {
+    if !cfg!(target_os = "windows") {
+        return;
+    }
+
+    let source = std::path::PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap())
+        .join("vendor/libunwind.dll");
+    println!("cargo:rerun-if-changed={}", source.display());
+    if !source.is_file() {
+        panic!("Falta {}. Ejecuta scripts/setup-libmpv.ps1", source.display());
+    }
+
+    let out = std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap());
+    let destination = out.ancestors().nth(3).unwrap().join("libunwind.dll");
+    if !destination.exists() {
+        std::fs::copy(&source, &destination)
+            .unwrap_or_else(|error| panic!("No se pudo copiar {}: {error}", source.display()));
+    }
 }
 
 fn configure_libmpv() {

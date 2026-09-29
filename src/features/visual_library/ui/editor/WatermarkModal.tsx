@@ -119,7 +119,10 @@ export function WatermarkModal({
               className="watermark-text-input"
               placeholder="Ej. © biglexj / Fotografía"
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (e.target.value.trim()) setEnabled(true);
+              }}
             />
           </div>
 
@@ -128,7 +131,10 @@ export function WatermarkModal({
             <input
               type="checkbox"
               checked={includeDate}
-              onChange={(e) => setIncludeDate(e.target.checked)}
+              onChange={(e) => {
+                setIncludeDate(e.target.checked);
+                if (e.target.checked) setEnabled(true);
+              }}
             />
             <span>Incluir fecha actual (año-mes-día)</span>
           </label>
@@ -184,6 +190,10 @@ export function WatermarkModal({
                 </button>
               ))}
             </div>
+            <small className="watermark-position-help">
+              Los bordes mantienen un margen del 5 % de la imagen. Al aplicar, puedes arrastrar la marca a una ubicación libre.
+              {position === "custom" ? " Ubicación libre seleccionada." : ""}
+            </small>
           </div>
 
           {/* 6. Deslizadores de Escala y Opacidad */}
@@ -248,7 +258,7 @@ export function WatermarkModal({
             </button>
             <button
               type="button"
-              className="primary-button"
+              className="watermark-apply-btn"
               onClick={handleConfirm}
             >
               Aplicar cambios
