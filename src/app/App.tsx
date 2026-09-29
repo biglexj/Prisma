@@ -861,8 +861,9 @@ function AppContent() {
         return;
       }
 
-      // Subir / Bajar volumen interno de Prisma con flechas arriba/abajo o +/- si no estamos en video_player
-      if (activeView !== "video_player") {
+      // El visor de fotos usa sus propias teclas y no debe alterar ni mostrar controles de audio.
+      // Sigue permitiendo volumen al explorar la biblioteca sin abrir una imagen.
+      if (activeView !== "video_player" && !document.getElementById("image-cinema-container")) {
         const isVolUp =
           e.key === "ArrowUp" ||
           e.key === "+" ||

@@ -34,6 +34,11 @@
   z-index: 99999;
 }
 
+/* El volumen global puede seguir activo para música en segundo plano, pero no invade el visor de fotos. */
+body:has(#image-cinema-container) .prisma-volume-osd.is-global {
+  display: none;
+}
+
 @keyframes prismaVolumePopIn {
   from {
     opacity: 0;

@@ -16,6 +16,10 @@
   box-sizing: border-box;
 }
 
+body:has(#image-cinema-container) .prisma-seek-osd {
+  display: none;
+}
+
 .prisma-seek-osd.is-forward {
   right: clamp(28px, 6vw, 68px);
   left: auto;

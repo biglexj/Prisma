@@ -15,4 +15,5 @@
 - [x] Aceptar un logotipo soltado en el diálogo desde el Explorador de Windows.
 - [x] Elegir PNG, JPEG o WebP al guardar una copia y seleccionar todo el nombre con un clic.
 - [x] Comprobar correspondencia entre el formato codificado y la extensión, y proteger la sobrescritura de formatos no compatibles.
+- [x] Retirar del visor de imágenes los atajos superpuestos y avisos globales de volumen y avance de audio.
 - [ ] Probar manualmente arrastre, recorte, dibujo, marca y exportación en Prisma de desarrollo.

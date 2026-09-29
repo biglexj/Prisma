@@ -15,6 +15,8 @@
 - [x] `git diff --check`: sin errores de espacios.
 - [x] `bun test test/saveImageFormat.test.ts`: dos pruebas correctas de formato inicial, extensión, MIME y bloqueo de sobrescritura incompatible.
 - [x] `bun run build`: TypeScript y Vite correctos tras el selector de formato y la selección del nombre; persiste la advertencia existente sobre el tamaño de los chunks.
+- [x] `bun run build`: TypeScript y Vite correctos tras impedir volumen y avisos de audio sobre el visor de imágenes; persiste la advertencia existente sobre el tamaño de los chunks.
+- [ ] Comprobar en Prisma de desarrollo que `↑`, `↓`, `+` y `−` no muestran volumen al ver una foto, y que el volumen sigue disponible en las vistas de audio.
 - [ ] Probar visualmente el selector y guardar una copia en PNG, JPEG y WebP desde Prisma de desarrollo; comprobar que cada archivo abre correctamente y conserva la extensión elegida.
 - [ ] Probar el arrastre desde cada tipo de tarjeta de Inicio a una aplicación externa.
 - [ ] Probar Enter, regreso a edición y guardado de un recorte.
