@@ -66,6 +66,22 @@ describe("flyout auto hide", () => {
     expect(f.hidden()).toBe(1);
   });
 
+  test("repeated presentations at an unchanged volume expire after the last key", () => {
+    const f = fixture();
+    // At 100%, subsequent up keys still present the panel without a new value.
+    for (let key = 0; key < 10; key++) {
+      f.flyout.shown();
+      f.advance(100);
+    }
+    expect(f.hidden()).toBe(0);
+    f.advance(899);
+    expect(f.hidden()).toBe(0);
+    f.advance(1);
+    expect(f.hidden()).toBe(1);
+    f.advance(10000);
+    expect(f.hidden()).toBe(1);
+  });
+
   test("rechecks hover or pin at expiry and recovers even without a leave event", () => {
     const f = fixture();
     f.flyout.shown();

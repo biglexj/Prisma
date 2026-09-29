@@ -73,3 +73,16 @@
 - Ajuste visual posterior solicitado por Biglex: tarjeta multimedia 8 px más alta (98 px con bordes y padding), tres barras de hasta 24 px en un área de 52 px, animaciones con duraciones y desfases distintos.
 - Comprobación final conjunta: 17/17 pruebas (42 aserciones) incluyendo transiciones de reproducción, y compilación de frontend correcta con 275 módulos.
 - El watcher existente recompiló la comparación de notificaciones nativas y arrancó `target/debug/prisma.exe` correctamente: `Finished dev profile` en 11.06 s. No se lanzó otra instancia ni se repitió Cargo contra DLLs en uso.
+
+## Corrección de visibilidad nativa y límites — 2026-09-29
+
+- Biglex volvió a reportar persistencia durante más de diez segundos, al pulsar subir estando al 100 %, y barras sin movimiento.
+- Causa comprobada en fuentes locales: se abría con `SetWindowPos(SWP_SHOWWINDOW)`, pero se cerraba con `win.hide()`. Tao conserva sus flags iniciales de ventana oculta; su `apply_diff` retorna sin operación cuando se solicita de nuevo ese estado. No se atribuye el fallo al temporizador solo por sus pruebas unitarias.
+- El cierre de Windows ahora usa `ShowWindow(SW_HIDE)`, coherente con la apertura nativa. Ambos caminos sincronizan la visibilidad del controlador WebView2. La apertura sigue usando `SWP_NOACTIVATE`.
+- Reacción de límite recibida por evento dedicado: pulsa la cápsula y el porcentaje durante 250 ms cuando la tecla intenta superar 100 % o bajar de 0 %. Cada pulsación sigue presentando el flyout, aunque no cambie el valor.
+- Cinco barras de 5 px, alturas de 16–24 px y fases distintas, dentro del mismo espacio de 52 px. Se conserva la variante secundaria del tema y el respeto a movimiento reducido.
+- Consulta de solo lectura `SPI_GETCLIENTAREAANIMATION`: Windows permite animaciones de área cliente en esta sesión; no se modificó esa preferencia.
+- `bun run build`: TypeScript y Vite correctos, 277 módulos; aviso preexistente de tamaño de bundle.
+- `bun test tests/flyout-auto-hide.test.ts tests/flyout-media.test.ts tests/system-volume-writer.test.ts`: 16/16, 47 comprobaciones. Incluye nuevas presentaciones repetidas sin cambio de volumen y expiración tras la última pulsación.
+- Watcher nativo existente: compilación correcta en 12,57 s y ejecución de `target/debug/prisma.exe`. No se inició otra instancia de Prisma.
+- `git diff --check`: correcto. Aceptación física de autoocultado y animación pendiente; se pidió comprobar la tecla soltada y el ratón fuera del panel. El anclaje o mantener el ratón sobre el contenido siguen suspendiendo el autoocultado según el comportamiento vigente.

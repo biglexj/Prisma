@@ -20,6 +20,7 @@ function PlaybackIndicator({ active }: { active: boolean }) {
     <span className={`flyout-playback-indicator${active ? " is-playing" : ""}`}
       role="img" aria-label="Reproduciendo" title="Indicador de reproducción">
       <span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" />
+      <span aria-hidden="true" /><span aria-hidden="true" />
     </span>
   );
 }
@@ -48,6 +49,11 @@ export function FlyoutWindow() {
   const limitPulseTimerRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const writerRef = useRef<ReturnType<typeof createSystemVolumeWriter> | null>(null);
+  const pulseLimit = useCallback(() => {
+    setIsAtLimit(true);
+    if (limitPulseTimerRef.current !== null) window.clearTimeout(limitPulseTimerRef.current);
+    limitPulseTimerRef.current = window.setTimeout(() => setIsAtLimit(false), 250);
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -102,6 +108,7 @@ export function FlyoutWindow() {
       listen<SystemVolumeState>("prisma://system-volume-changed", ({ payload }) => {
         updateVolume(payload);
       }),
+      listen("prisma://flyout-volume-limit", () => { if (!disposed) pulseLimit(); }),
       listen("prisma://flyout-shown", () => {
         if (disposed) return;
         presentationReceived = true;
@@ -148,7 +155,7 @@ export function FlyoutWindow() {
       void Promise.all(subscriptions).then((unlisten) => unlisten.forEach((fn) => fn()));
       if (limitPulseTimerRef.current !== null) window.clearTimeout(limitPulseTimerRef.current);
     };
-  }, []);
+  }, [pulseLimit]);
 
   const hasActiveMedia = activeMedia !== null;
   useEffect(() => { updateWindowGeometry(); }, [hasActiveMedia, showOptions, settings.showSpectrum, updateWindowGeometry]);
@@ -188,11 +195,6 @@ export function FlyoutWindow() {
     setSystemVolume(next);
     writerRef.current?.set(next);
     resetHideTimer();
-  };
-  const pulseLimit = () => {
-    setIsAtLimit(true);
-    if (limitPulseTimerRef.current !== null) window.clearTimeout(limitPulseTimerRef.current);
-    limitPulseTimerRef.current = window.setTimeout(() => setIsAtLimit(false), 250);
   };
   const effectiveVol = Math.round(systemVolume?.volume ?? 0);
 

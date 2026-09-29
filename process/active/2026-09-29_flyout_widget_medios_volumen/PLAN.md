@@ -21,7 +21,7 @@ Implementar un Flyout y Mini Widget de escritorio nativo en Prisma para control 
     4. Arriba Izquierda (estilo Windows 10 OSD)
     5. Arriba Centro (estilo HUD / Dynamic Island)
     6. Arriba Derecha (estilo notificaciones)
-  - **Indicador de reproducción**: Tres barras decorativas animadas junto al título, con variante secundaria del tema dinámico.
+  - **Indicador de reproducción**: Cinco barras decorativas animadas junto al título, con variante secundaria del tema dinámico.
   - **Modo Anclado / Pin**: Botón de fijación para transformar el flyout en un mini-widget persistente mientras se trabaja en otras aplicaciones.
   - **Panel de Configuración en Prisma**: Opciones de personalización (posición, duración en ms, apilado de volumen sobre medios, visualizador activo).
 - No incluye:
@@ -39,7 +39,7 @@ Implementar un Flyout y Mini Widget de escritorio nativo en Prisma para control 
    - Conectar la reproducción activa de Prisma (Música y Vídeo) para alimentar carátulas en memoria (evitando caídas o retardos de archivos temporales).
    - Conectar notificaciones y teclas de volumen maestro de Windows, manteniendo independiente el volumen del reproductor.
 4. **Indicador de reproducción & Controles en Ajustes**:
-   - Integrar tres barras decorativas de reproducción, sin consultas de audio para animarlas.
+   - Integrar cinco barras decorativas de reproducción, sin consultas de audio para animarlas.
    - Añadir la sección de personalización en la vista de Ajustes / Configuración de Prisma.
 
 ## Criterios de finalización

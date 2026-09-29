@@ -52,3 +52,12 @@
 - [x] Sincronizar colores con el tema dinámico, usar una variante secundaria en las barras y aumentar 8 px la tarjeta multimedia.
 - [x] Comprobar seis pruebas del temporizador y cuatro del escritor de volumen, más compilación del frontend.
 - [ ] Validar visualmente autoocultado, pausa/reproducción, tres barras, seis posiciones y cambio físico de salida.
+
+## Persistencia al 100 % y cinco barras — 2026-09-29
+
+- [x] Identificar la diferencia entre apertura nativa y cierre mediante flags de Tauri/Tao.
+- [x] Ocultar con `ShowWindow(SW_HIDE)` y sincronizar `ICoreWebView2Controller::SetIsVisible` al mostrar y ocultar.
+- [x] Emitir señal visual al pulsar subir en 100 % o bajar en 0 %, aunque el valor no cambie.
+- [x] Ampliar a cinco barras desfasadas dentro del mismo espacio y conservar colores dinámicos.
+- [x] Verificar compilaciones web/nativa y 16 pruebas del flyout.
+- [ ] Confirmar físicamente reacción y autoocultado en ambos límites, con reproducción y sin ella.

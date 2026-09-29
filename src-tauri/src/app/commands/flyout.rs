@@ -205,6 +205,13 @@ pub fn flyout_show(
                 ).map_err(|e| e.to_string())?;
             }
         }
+        // Native visibility bypasses Tao's window flags. Wake the renderer too,
+        // so its timers and playback animations run while the overlay is shown.
+        win.with_webview(|webview| unsafe {
+            if let Err(error) = webview.controller().SetIsVisible(true) {
+                eprintln!("[Flyout] No se pudo mostrar la vista web: {error}");
+            }
+        }).map_err(|error| error.to_string())?;
     }
 
     let _ = app.emit_to("flyout", "prisma://flyout-shown", ());
@@ -214,6 +221,20 @@ pub fn flyout_show(
 #[tauri::command]
 pub fn flyout_hide(app: AppHandle) -> Result<(), String> {
     if let Some(win) = app.get_webview_window("flyout") {
+        #[cfg(windows)]
+        {
+            // Match the native show path. Tao still records this initially hidden
+            // window as hidden, so win.hide() alone can be a no-op.
+            use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_HIDE};
+            let hwnd = win.hwnd().map_err(|error| error.to_string())?;
+            unsafe { let _ = ShowWindow(windows::Win32::Foundation::HWND(hwnd.0), SW_HIDE); }
+            win.with_webview(|webview| unsafe {
+                if let Err(error) = webview.controller().SetIsVisible(false) {
+                    eprintln!("[Flyout] No se pudo ocultar la vista web: {error}");
+                }
+            }).map_err(|error| error.to_string())?;
+        }
+        #[cfg(not(windows))]
         win.hide().map_err(|e| e.to_string())?;
         let _ = app.emit_to("flyout", "prisma://flyout-hidden", ());
     }
@@ -228,11 +249,16 @@ pub fn flyout_is_visible(app: AppHandle) -> bool {
 }
 
 pub fn flyout_show_from_app(app: &AppHandle) -> Result<(), String> {
+    show_from_app_with_feedback(app, false)
+}
+
+fn show_from_app_with_feedback(app: &AppHandle, at_limit: bool) -> Result<(), String> {
     if !ENABLED.load(Ordering::Relaxed) { return Ok(()); }
     let handle = app.clone();
     app.run_on_main_thread(move || {
         if ENABLED.load(Ordering::Relaxed) {
-            let _ = flyout_show(handle, None, None, None);
+            let _ = flyout_show(handle.clone(), None, None, None);
+            if at_limit { let _ = handle.emit_to("flyout", "prisma://flyout-volume-limit", ()); }
         }
     }).map_err(|e| e.to_string())
 }
@@ -378,8 +404,13 @@ pub fn init_system_volume_listener(app: AppHandle) {
                     Ok(VolumeCommand::Key(key)) => {
                         if let Ok(current) = native::read() {
                             let next = next_volume(current, key);
+                            let at_limit = matches!(key, VolumeKey::Up) && current.volume >= 100.0
+                                || matches!(key, VolumeKey::Down) && current.volume <= 0.0;
                             match native::write(next.volume, Some(next.is_muted)) {
-                                Ok(actual) => publish_volume(&app, actual, true),
+                                Ok(actual) => {
+                                    publish_volume(&app, actual, false);
+                                    let _ = show_from_app_with_feedback(&app, at_limit);
+                                },
                                 Err(error) => eprintln!("[Flyout] No se pudo ajustar el volumen: {error}"),
                             }
                         }

@@ -207,14 +207,14 @@ html.is-flyout #root,
   flex: none;
   align-items: center;
   justify-content: space-evenly;
-  gap: 5px;
+  gap: 4px;
   width: 52px;
   height: 24px;
   color: var(--flyout-theme-secondary, var(--flyout-text-muted));
 }
 
 .flyout-playback-indicator > span {
-  width: 6px;
+  width: 5px;
   height: 20px;
   border-radius: 4px;
   background: currentColor;
@@ -226,6 +226,8 @@ html.is-flyout #root,
 }
 .flyout-playback-indicator > span:nth-child(2) { animation-delay: -0.3s; animation-duration: 0.7s; height: 24px; }
 .flyout-playback-indicator > span:nth-child(3) { animation-delay: -0.5s; animation-duration: 1s; height: 18px; }
+.flyout-playback-indicator > span:nth-child(4) { animation-delay: -0.15s; animation-duration: 0.95s; height: 23px; }
+.flyout-playback-indicator > span:nth-child(5) { animation-delay: -0.65s; animation-duration: 0.75s; height: 16px; }
 
 @keyframes flyout-playback-wave {
   0%, 100% { transform: scaleY(0.25); }
