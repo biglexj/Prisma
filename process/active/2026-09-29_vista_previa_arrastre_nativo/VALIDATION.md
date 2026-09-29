@@ -29,5 +29,15 @@
 - Biglex confirmó que aparecen las miniaturas flotantes al arrastrar imágenes, vídeos verticales y horizontales, y música. Dio por terminada la parte visual.
 - Tras observar problemas en Paint, probó otra aplicación: aportó una captura de Affinity con `Power.png` recibido y visible en el documento.
 - Arrastró la imagen desde Prisma a este chat. Se recibió como adjunto `D:/Imágenes/Prisma/Power.png`, con su contenido visible; esto confirma una entrega externa real del archivo de imagen.
-- La recepción en dos destinos permite cerrar el arreglo del arrastre de imágenes y su vista previa. Es compatible con un problema particular de Paint, pero no demuestra su causa.
+- La recepción en dos destinos confirma el arrastre de imágenes en esos destinos y su vista previa; no permite cerrar la compatibilidad con Paint.
 - No se midió el efecto OLE de estos gestos manuales ni se confirmó recepción externa de archivos de música o vídeo; su miniatura flotante sí fue confirmada.
+
+## Comparación posterior con Paint
+
+- Biglex comparó `Power.png` desde el Explorador y Prisma sobre la misma zona del lienzo. El Explorador sí importa y Prisma no. Paint muestra el aviso «Abrir» durante el gesto desde Prisma, pero el archivo no aparece al soltar.
+- Registro temporal y prueba nativa del objeto Shell: `QueryGetData(CF_HDROP)` devuelve `S_OK`; `GetData` contiene una ruta, idéntica a la ruta absoluta de `Power.png`; `EnumFormatEtc` ofrece `CF_HDROP`; `IDataObjectAsyncCapability` inicia con modo asíncrono desactivado.
+- Esta evidencia descarta una lista de rutas vacía en el objeto probado; aún no identifica la causa de la diferencia con Paint.
+- Se amplió la máscara permitida de `COPY` a `COPY | LINK` para negociar apertura. El registro posterior observó un efecto `LINK` durante un gesto, pero no identifica por sí solo el receptor ni demuestra importación en Paint.
+- Biglex confirmó posteriormente que la recepción desde Prisma también funciona en Krita. Pidió no prolongar la investigación por Paint; se conserva esa diferencia como límite específico, sin atribuir su causa exclusivamente al receptor.
+- El registro temporal se retiró del código al terminar; su historial queda en `temp/native-drag-paint.log`, ignorado por Git.
+- Harness temporal `temp/drag-paint-check` con el código real de Windows: 2 pruebas correctas (ruta/formatos Shell y bitmap BGRA). Tras retirar el registro, `cargo check --offline --manifest-path src-tauri/Cargo.toml` y `git diff --check` fueron correctos. Estas comprobaciones no sustituyen la recepción manual en Paint.

@@ -19,6 +19,7 @@ Mostrar la miniatura visible del medio al arrastrarlo desde Prisma hacia otra ap
 - Inicializar y liberar OLE en el hilo de cada arrastre, sin guardar un fallo global permanentemente.
 - Entregar a Shell un DIB de 32 bits con BGRA sin premultiplicar; el helper realiza su propia multiplicación alfa.
 - Notificar `IDropTargetHelper` en la superficie receptora de Prisma para que también muestre la imagen flotante.
+- Permitir `COPY | LINK` en el modo copia para que un receptor pueda negociar apertura del archivo Shell sin solicitar movimiento.
 
 ## Validación
 

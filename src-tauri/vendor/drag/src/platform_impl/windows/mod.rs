@@ -22,6 +22,7 @@ use windows::{
         System::Ole::{DoDragDrop, OleInitialize, OleUninitialize},
         System::Ole::{
             IDropSource, IDropSource_Impl, CF_HDROP, DROPEFFECT, DROPEFFECT_COPY, DROPEFFECT_MOVE,
+            DROPEFFECT_LINK,
         },
         System::SystemServices::{MK_LBUTTON, MODIFIERKEYS_FLAGS},
         UI::{
@@ -259,7 +260,8 @@ pub fn start_drag<W: HasWindowHandle, F: Fn(DragResult, CursorPosition) + Send +
 
                     let mut out_dropeffect = DROPEFFECT::default();
                     let effect = match options.mode {
-                        DragMode::Copy => DROPEFFECT_COPY,
+                        // Opening a Shell file can negotiate LINK. Both effects preserve the source.
+                        DragMode::Copy => DROPEFFECT_COPY | DROPEFFECT_LINK,
                         DragMode::Move => DROPEFFECT_MOVE,
                     };
 

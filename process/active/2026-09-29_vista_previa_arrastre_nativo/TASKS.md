@@ -25,3 +25,7 @@
 - [x] Usar `IDropTargetHelper` en los eventos del receptor nativo.
 - [x] Reproducir un gesto real y observar la llegada a `DoDragDrop`, sin el error COM anterior.
 - [x] Confirmar la recepción externa efectiva de una imagen: Biglex la arrastró desde Prisma a Affinity y a este chat; el chat recibió `D:/Imágenes/Prisma/Power.png`.
+- [x] Comparar el mismo archivo en Paint: Biglex confirma que desde el Explorador funciona y desde Prisma no.
+- [x] Confirmar recepción de imágenes en Krita: Biglex confirmó que funciona.
+- [x] Ofrecer `COPY | LINK` para la apertura de archivos Shell en modo copia, conservando el original.
+- Compatibilidad con Paint: pendiente específica diferida por indicación de Biglex; no prolongar la investigación por este receptor.
