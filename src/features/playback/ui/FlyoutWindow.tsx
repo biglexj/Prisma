@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import {
-  getFlyoutSettings,
-  saveFlyoutSettings,
-  type FlyoutSettings,
-  type FlyoutZone,
+  FLYOUT_SETTINGS_EVENT, getFlyoutSettings, saveFlyoutSettings,
+  type FlyoutSettings, type FlyoutZone,
 } from "../services/flyoutSettings";
+import { createSystemVolumeWriter, type SystemVolumeState } from "../services/systemVolumeWriter";
+import { createFlyoutAutoHide } from "../services/flyoutAutoHide";
+import { FLYOUT_THEME_EVENT, type FlyoutTheme } from "../services/flyoutTheme";
 import { Icon } from "../../../shared/ui/Icon";
 import "./flyout-window.css";
 
@@ -16,274 +17,200 @@ export interface FlyoutSyncState {
   artist: string;
   artworkUrl: string | null;
   mediaType: "audio" | "video";
-  volume: number;
-  isMuted: boolean;
-  duration?: number;
-  currentTime?: number;
-  zone?: FlyoutZone;
+}
+
+function PlaybackIndicator({ active }: { active: boolean }) {
+  return (
+    <span className={`flyout-playback-indicator${active ? " is-playing" : ""}`}
+      role="img" aria-label="Reproduciendo" title="Indicador de reproducción">
+      <span aria-hidden="true" /><span aria-hidden="true" /><span aria-hidden="true" />
+    </span>
+  );
 }
 
 export function FlyoutWindow() {
   const [settings, setSettings] = useState<FlyoutSettings>(() => getFlyoutSettings());
   const [mediaState, setMediaState] = useState<FlyoutSyncState>({
-    isPlaying: false,
-    title: "Prisma",
-    artist: "Listo para reproducir",
-    artworkUrl: null,
-    mediaType: "audio",
-    volume: 80,
-    isMuted: false,
+    isPlaying: false, title: "", artist: "", artworkUrl: null, mediaType: "audio",
   });
-
-  // Tema del sistema o sincronizado con Prisma
+  const [systemVolume, setSystemVolume] = useState<SystemVolumeState | null>(null);
+  const [volumeError, setVolumeError] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
-    const saved = localStorage.getItem("prisma_theme");
-    if (saved === "light") return "light";
-    if (saved === "dark") return "dark";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    const mode = localStorage.getItem("prisma_theme");
+    return mode === "dark" || (mode !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ? "dark" : "light";
   });
-
-  const [isHovered, setIsHovered] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
-  const hideTimerRef = useRef<number | null>(null);
+  const [isAtLimit, setIsAtLimit] = useState(false);
+  const autoHideRef = useRef<ReturnType<typeof createFlyoutAutoHide> | null>(null);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const limitPulseTimerRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const writerRef = useRef<ReturnType<typeof createSystemVolumeWriter> | null>(null);
 
-  // Sincronizar tema con documentElement
   useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute("data-theme", theme);
-    root.classList.toggle("dark", theme === "dark");
-
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === "prisma_theme" && e.newValue) {
-        const next =
-          e.newValue === "dark" ||
-          (e.newValue === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
-            ? "dark"
-            : "light";
-        setTheme(next);
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-
-    const unlistenTheme = listen<string>("prisma://theme-changed", (event) => {
-      const mode = event.payload;
-      const isDark =
-        mode === "dark" ||
-        (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-      setTheme(isDark ? "dark" : "light");
-    });
-
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      unlistenTheme.then((fn) => fn());
-    };
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
-  // Reiniciar o cancelar temporizador de ocultamiento automático (3 segundos por defecto)
   const resetHideTimer = useCallback(() => {
-    if (hideTimerRef.current) {
-      window.clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = null;
-    }
-
-    if (settings.isPinned || isHovered || showOptions) {
-      return; // No ocultar mientras esté fijado, con cursor encima o menú de opciones abierto
-    }
-
-    hideTimerRef.current = window.setTimeout(() => {
-      void invoke("flyout_hide").catch(() => {});
-    }, settings.durationMs || 3000);
-  }, [settings.isPinned, settings.durationMs, isHovered, showOptions]);
-
-  // Actualizar tamaño y posición en Rust según el contenido renderizado (340px ancho)
-  const updateWindowGeometry = useCallback(() => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const width = 368;
-    const height = Math.max(68, Math.ceil(rect.height) + 26);
-
-    void invoke("flyout_set_position", {
-      zone: settings.zone,
-      width,
-      height,
-    }).catch(() => {});
-  }, [settings.zone]);
-
-  const handleSelectZone = (newZone: FlyoutZone) => {
-    const updated = saveFlyoutSettings({ zone: newZone });
-    setSettings(updated);
-    setShowOptions(false);
-    void invoke("flyout_set_position", { zone: newZone }).catch(() => {});
-    resetHideTimer();
-  };
-
-  // Inicializar volumen del sistema al montar
-  useEffect(() => {
-    void invoke<{ volume: number; isMuted: boolean }>("flyout_get_system_volume")
-      .then((data) => {
-        if (data && typeof data.volume === "number") {
-          setMediaState((prev) => ({
-            ...prev,
-            volume: data.volume,
-            isMuted: data.isMuted,
-          }));
-        }
-      })
-      .catch(() => {});
+    autoHideRef.current?.activity();
   }, []);
 
-  // Escuchar sincronización de estado desde la ventana principal de Prisma y eventos de sistema
+  const updateWindowGeometry = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    void invoke("flyout_set_position", {
+      zone: settings.zone, width: 368, height: Math.ceil(container.getBoundingClientRect().height) + 24,
+    }).catch(console.error);
+  }, [settings.zone]);
+
   useEffect(() => {
-    let unlistenSync: (() => void) | undefined;
-    let unlistenVol: (() => void) | undefined;
-    let unlistenSysVol: (() => void) | undefined;
-
-    void listen<FlyoutSyncState>("prisma://flyout-state-sync", (event) => {
-      setMediaState((prev) => ({
-        ...prev,
-        ...event.payload,
-      }));
-    }).then((fn) => {
-      unlistenSync = fn;
+    let disposed = false;
+    let presentationReceived = false;
+    const autoHide = createFlyoutAutoHide({
+      duration: () => settingsRef.current.durationMs || 1000,
+      isHeld: () => settingsRef.current.isPinned || Boolean(containerRef.current?.querySelector(".prisma-flyout-card:hover")),
+      hide: () => { void invoke("flyout_hide").catch(console.error); },
+      schedule: (callback, delay) => window.setTimeout(callback, delay),
+      cancel: (timer) => window.clearTimeout(timer),
     });
-
-    void listen<number>("prisma://flyout-volume-change", (event) => {
-      setMediaState((prev) => ({
-        ...prev,
-        volume: event.payload,
-        isMuted: event.payload === 0,
-      }));
-      resetHideTimer();
-    }).then((fn) => {
-      unlistenVol = fn;
-    });
-
-    // Evento disparado directamente al pulsar teclas de volumen en el teclado
-    void listen<{ volume: number; isMuted: boolean }>(
-      "prisma://system-volume-changed",
-      (event) => {
-        setMediaState((prev) => ({
-          ...prev,
-          volume: event.payload.volume,
-          isMuted: event.payload.isMuted,
-        }));
-        resetHideTimer();
-      }
-    ).then((fn) => {
-      unlistenSysVol = fn;
-    });
-
-    return () => {
-      if (unlistenSync) unlistenSync();
-      if (unlistenVol) unlistenVol();
-      if (unlistenSysVol) unlistenSysVol();
-      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+    autoHideRef.current = autoHide;
+    const writer = createSystemVolumeWriter(
+      (state) => invoke<SystemVolumeState>("flyout_set_system_volume", { volume: state.volume, muted: state.isMuted }),
+      (state) => { setSystemVolume(state); setVolumeError(false); },
+      (error) => {
+        console.error("No se pudo ajustar el volumen global", error);
+        setVolumeError(true);
+        void invoke<SystemVolumeState>("flyout_get_system_volume").then((state) => {
+          if (!disposed) setSystemVolume(state);
+        }).catch(() => {});
+      },
+    );
+    writerRef.current = writer;
+    const updateVolume = (state: SystemVolumeState) => {
+      if (!disposed && !writer.busy) { setSystemVolume(state); setVolumeError(false); }
     };
-  }, [resetHideTimer]);
-
-  // Reajustar dimensiones al cambiar de pista o estado
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      updateWindowGeometry();
-    }, 40);
-    return () => window.clearTimeout(timer);
-  }, [mediaState.title, mediaState.isPlaying, showOptions, updateWindowGeometry]);
-
-  // Reaccionar a cambios de hover para el timer
-  useEffect(() => {
-    if (isHovered) {
-      if (hideTimerRef.current) {
-        window.clearTimeout(hideTimerRef.current);
-        hideTimerRef.current = null;
+    const subscriptions = [
+      listen<FlyoutSyncState>("prisma://flyout-state-sync", ({ payload }) => {
+        if (disposed) return;
+        // Read only media fields; the player cannot overwrite Windows volume.
+        setMediaState({ isPlaying: payload.isPlaying, title: payload.title,
+          artist: payload.artist, artworkUrl: payload.artworkUrl, mediaType: payload.mediaType });
+      }),
+      listen<SystemVolumeState>("prisma://system-volume-changed", ({ payload }) => {
+        updateVolume(payload);
+      }),
+      listen("prisma://flyout-shown", () => {
+        if (disposed) return;
+        presentationReceived = true;
+        setVisible(true);
+        autoHide.shown();
+        void invoke<SystemVolumeState>("flyout_get_system_volume").then(updateVolume).catch(() => { if (!disposed) setVolumeError(true); });
+      }),
+      listen("prisma://flyout-hidden", () => {
+        if (disposed) return;
+        presentationReceived = true;
+        setVisible(false);
+        setShowOptions(false);
+        autoHide.hidden();
+      }),
+      listen<FlyoutSettings>(FLYOUT_SETTINGS_EVENT, ({ payload }) => { if (!disposed) setSettings(payload); }),
+      listen<FlyoutTheme>(FLYOUT_THEME_EVENT, ({ payload }) => {
+        if (disposed) return;
+        setTheme(payload.mode);
+        document.documentElement.style.setProperty("--flyout-theme-primary", payload.primary);
+        document.documentElement.style.setProperty("--flyout-theme-secondary", payload.secondary);
+      }),
+      listen<string>("prisma://theme-changed", ({ payload }) => {
+        if (disposed) return;
+        setTheme(payload === "dark" || (payload === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
+          ? "dark" : "light");
+      }),
+    ];
+    void Promise.all(subscriptions).then(() => {
+      if (!disposed) void emit("prisma://flyout-request-state");
+    });
+    void invoke<boolean>("flyout_is_visible").then((value) => {
+      if (!disposed && !presentationReceived) {
+        setVisible(value);
+        if (value) autoHide.shown();
       }
-    } else {
-      resetHideTimer();
-    }
-  }, [isHovered, resetHideTimer]);
-
-  // Acciones de transporte hacia Prisma
-  const handleTogglePlay = () => {
-    void emit("prisma://flyout-action", { action: "play-pause" });
-    setMediaState((prev) => ({ ...prev, isPlaying: !prev.isPlaying }));
-    resetHideTimer();
-  };
-
-  const handleNext = () => {
-    void emit("prisma://flyout-action", { action: "next" });
-    resetHideTimer();
-  };
-
-  const handlePrevious = () => {
-    void emit("prisma://flyout-action", { action: "previous" });
-    resetHideTimer();
-  };
-
-  const handleVolumeChange = (newVal: number) => {
-    const clamped = Math.max(0, Math.min(100, newVal));
-    setMediaState((prev) => ({
-      ...prev,
-      volume: clamped,
-      isMuted: clamped === 0,
-    }));
-
-    // Sincronizar en Windows y en el reproductor interno
-    void invoke("flyout_set_system_volume", { volume: clamped, muted: false }).catch(() => {});
-    void emit("prisma://flyout-action", {
-      action: "set-volume",
-      value: clamped,
-    });
-    resetHideTimer();
-  };
-
-  const handleToggleMute = () => {
-    const nextMuted = !mediaState.isMuted;
-    setMediaState((prev) => ({
-      ...prev,
-      isMuted: nextMuted,
-    }));
-    void invoke("flyout_set_system_volume", {
-      volume: mediaState.volume,
-      muted: nextMuted,
     }).catch(() => {});
-    void emit("prisma://flyout-action", {
-      action: "toggle-mute",
-    });
+    void invoke<SystemVolumeState>("flyout_get_system_volume").then((state) => {
+      if (!disposed) updateVolume(state);
+    }).catch(() => { if (!disposed) setVolumeError(true); });
+    return () => {
+      disposed = true;
+      autoHide.hidden();
+      writer.dispose();
+      void Promise.all(subscriptions).then((unlisten) => unlisten.forEach((fn) => fn()));
+      if (limitPulseTimerRef.current !== null) window.clearTimeout(limitPulseTimerRef.current);
+    };
+  }, []);
+
+  const hasActiveMedia = mediaState.isPlaying && Boolean(mediaState.title);
+  useEffect(() => { updateWindowGeometry(); }, [hasActiveMedia, showOptions, settings.showSpectrum, updateWindowGeometry]);
+  useEffect(() => { resetHideTimer(); }, [settings.isPinned, settings.durationMs, resetHideTimer]);
+
+  const handleSelectZone = (zone: FlyoutZone) => {
+    setSettings(saveFlyoutSettings({ zone }));
+    setShowOptions(false);
     resetHideTimer();
   };
-
-  const handleTogglePin = () => {
-    const nextPinned = !settings.isPinned;
-    const updated = saveFlyoutSettings({ isPinned: nextPinned });
-    setSettings(updated);
-    if (!nextPinned) {
-      resetHideTimer();
-    }
+  const handleTogglePin = () => setSettings(saveFlyoutSettings({ isPinned: !settings.isPinned }));
+  const transport = (action: string) => {
+    void emit("prisma://flyout-action", { action });
+    resetHideTimer();
   };
+  const handleTogglePlay = () => transport("play-pause");
+  const handleNext = () => transport("next");
+  const handlePrevious = () => transport("previous");
+  const handleVolumeChange = (newVal: number) => {
+    const volume = Math.max(0, Math.min(100, newVal));
+    const next = { volume, isMuted: false };
+    setSystemVolume(next);
+    writerRef.current?.set(next);
+    resetHideTimer();
+  };
+  const handleToggleMute = () => {
+    if (!systemVolume) return;
+    const next = { ...systemVolume, isMuted: !systemVolume.isMuted };
+    setSystemVolume(next);
+    writerRef.current?.set(next);
+    resetHideTimer();
+  };
+  const pulseLimit = () => {
+    setIsAtLimit(true);
+    if (limitPulseTimerRef.current !== null) window.clearTimeout(limitPulseTimerRef.current);
+    limitPulseTimerRef.current = window.setTimeout(() => setIsAtLimit(false), 250);
+  };
+  const effectiveVol = Math.round(systemVolume?.volume ?? 0);
 
-  const effectiveVol = mediaState.isMuted ? 0 : Math.round(mediaState.volume);
-  const hasActiveMedia =
-    Boolean(mediaState.title && mediaState.title !== "Prisma") || mediaState.isPlaying;
 
   return (
     <div
       className="prisma-flyout-wrapper"
       data-theme={theme}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={resetHideTimer}
+      onMouseLeave={resetHideTimer}
     >
       <div ref={containerRef} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {/* ── 1. Cápsula de Volumen (Superior, estilo Fluent/Windows 11) ── */}
-        <div className="prisma-flyout-card flyout-volume-capsule">
+        <div className={`prisma-flyout-card flyout-volume-capsule ${isAtLimit ? "is-at-limit" : ""}`}>
           <button
             className="flyout-vol-btn"
             onClick={handleToggleMute}
-            title={mediaState.isMuted ? "Reactivar sonido (M)" : "Silenciar (M)"}
+            title={systemVolume?.isMuted ? "Reactivar sonido de Windows" : "Silenciar Windows"}
+            aria-label={systemVolume?.isMuted ? "Reactivar sonido de Windows" : "Silenciar Windows"}
+            disabled={!systemVolume}
             type="button"
           >
             <Icon
               name={
-                mediaState.isMuted || effectiveVol === 0
+                systemVolume?.isMuted || effectiveVol === 0
                   ? "volume-mute"
                   : effectiveVol < 50
                   ? "volume-1"
@@ -294,10 +221,17 @@ export function FlyoutWindow() {
 
           <div className="flyout-slider-wrap">
             <input
-              aria-label="Volumen Maestro"
+              aria-label="Volumen global de Windows"
+              aria-valuetext={`${effectiveVol}%${systemVolume?.isMuted ? ", silenciado" : ""}`}
+              disabled={!systemVolume}
               className="flyout-slider"
               max="100"
               min="0"
+              step="1"
+              onKeyDown={(event) => {
+                if ((event.key === "ArrowRight" && effectiveVol === 100) ||
+                    (event.key === "ArrowLeft" && effectiveVol === 0)) pulseLimit();
+              }}
               onChange={(e) => handleVolumeChange(Number(e.target.value))}
               style={{ "--vol-pct": `${effectiveVol}%` } as React.CSSProperties}
               type="range"
@@ -305,7 +239,9 @@ export function FlyoutWindow() {
             />
           </div>
 
-          <span className="flyout-vol-percent">{effectiveVol}</span>
+          <span className="flyout-vol-percent" title={volumeError ? "No se pudo leer o ajustar el volumen de Windows" : "Volumen de Windows"}>
+            {volumeError ? "—" : systemVolume ? effectiveVol : "…"}
+          </span>
 
           <button
             className={`flyout-expand-btn ${showOptions ? "is-open" : ""}`}
@@ -421,9 +357,12 @@ export function FlyoutWindow() {
             {/* Columna derecha con Info y Controles */}
             <div className="flyout-media-body">
               <div className="flyout-media-info">
-                <span className="flyout-media-title" title={mediaState.title}>
-                  {mediaState.title}
-                </span>
+                <div className="flyout-media-heading">
+                  <span className="flyout-media-title" title={mediaState.title}>
+                    {mediaState.title}
+                  </span>
+                  {settings.showSpectrum && <PlaybackIndicator active={visible && hasActiveMedia} />}
+                </div>
                 <span className="flyout-media-artist" title={mediaState.artist}>
                   {mediaState.artist}
                 </span>

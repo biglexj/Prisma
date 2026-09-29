@@ -4,7 +4,7 @@ mod infrastructure;
 
 use app::commands::flyout::{
     flyout_get_system_volume, flyout_hide, flyout_is_visible, flyout_set_position,
-    flyout_set_system_volume, flyout_show,
+    flyout_set_system_volume, flyout_show, flyout_configure, flyout_get_audio_peak,
 };
 use app::commands::favorites::{
     favorites_get_all, favorites_is_favorite, favorites_toggle,
@@ -308,7 +308,8 @@ pub fn run() {
                 .with_filename(if is_dev_mode { ".window-state-dev.json" } else { ".window-state-v2.json" })
                 .skip_initial_state("main")
                 .skip_initial_state("quicklook")
-                .with_denylist(&["quicklook"])
+                .skip_initial_state("flyout")
+                .with_denylist(&["quicklook", "flyout"])
                 .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
                 .build(),
         )
@@ -671,6 +672,8 @@ pub fn run() {
             flyout_is_visible,
             flyout_get_system_volume,
             flyout_set_system_volume,
+            flyout_configure,
+            flyout_get_audio_peak,
             global_passthru_get_status,
             global_passthru_toggle,
             global_passthru_list_endpoints,

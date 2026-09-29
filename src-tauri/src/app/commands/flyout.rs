@@ -1,8 +1,10 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, atomic::{AtomicBool, Ordering}};
 use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, WebviewWindow};
 
 static LAST_ZONE: Mutex<Option<String>> = Mutex::new(None);
 static LAST_SIZE: Mutex<(f64, f64)> = Mutex::new((380.0, 160.0));
+static ENABLED: AtomicBool = AtomicBool::new(false);
+static VOLUME_WORKER_READY: AtomicBool = AtomicBool::new(false);
 
 #[cfg(windows)]
 fn get_work_area_for_cursor() -> (i32, i32, i32, i32, f64) {
@@ -95,7 +97,10 @@ pub fn position_window_inner(
     height: f64,
 ) -> Result<(), String> {
     let scale = window.scale_factor().unwrap_or(1.0);
-    let _ = window.set_size(LogicalSize::new(width, height));
+    let size = window.inner_size().map_err(|e| e.to_string())?.to_logical::<f64>(scale);
+    if (size.width - width).abs() > 1.0 || (size.height - height).abs() > 1.0 {
+        window.set_size(LogicalSize::new(width, height)).map_err(|e| e.to_string())?;
+    }
     let (target_x, target_y) = calculate_flyout_coordinates(zone, width, height, scale);
     window
         .set_position(LogicalPosition::new(target_x, target_y))
@@ -114,11 +119,13 @@ pub fn flyout_set_position(
         .get_webview_window("flyout")
         .ok_or_else(|| "Ventana flyout no encontrada".to_string())?;
 
-    let mut current_size = LAST_SIZE.lock().unwrap();
-    if let (Some(w), Some(h)) = (width, height) {
-        *current_size = (w, h);
-    }
-    let (w, h) = *current_size;
+    // Release before window calls: a callback thread can otherwise wait on the
+    // UI thread while the UI thread waits on this same mutex.
+    let (w, h) = {
+        let mut current_size = LAST_SIZE.lock().unwrap();
+        if let (Some(w), Some(h)) = (width, height) { *current_size = (w, h); }
+        *current_size
+    };
 
     if let Ok(mut z_lock) = LAST_ZONE.lock() {
         *z_lock = Some(zone.clone());
@@ -140,15 +147,16 @@ pub fn flyout_show(
 
     let target_zone = zone.or_else(|| LAST_ZONE.lock().ok()?.clone()).unwrap_or_else(|| "bottom-left".to_string());
     
-    let mut current_size = LAST_SIZE.lock().unwrap();
-    if let (Some(w), Some(h)) = (width, height) {
-        *current_size = (w, h);
-    }
-    let (w, h) = *current_size;
+    let (w, h) = {
+        let mut current_size = LAST_SIZE.lock().unwrap();
+        if let (Some(w), Some(h)) = (width, height) { *current_size = (w, h); }
+        *current_size
+    };
 
-    let _ = position_window_inner(&win, &target_zone, w, h);
+    position_window_inner(&win, &target_zone, w, h)?;
 
-    let _ = win.show();
+    #[cfg(not(windows))]
+    win.show().map_err(|e| e.to_string())?;
 
     #[cfg(windows)]
     {
@@ -158,7 +166,7 @@ pub fn flyout_show(
         if let Ok(hwnd) = win.hwnd() {
             let win_hwnd = windows::Win32::Foundation::HWND(hwnd.0);
             unsafe {
-                let _ = SetWindowPos(
+                SetWindowPos(
                     win_hwnd,
                     HWND_TOPMOST,
                     0,
@@ -166,11 +174,12 @@ pub fn flyout_show(
                     0,
                     0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
-                );
+                ).map_err(|e| e.to_string())?;
             }
         }
     }
 
+    let _ = app.emit_to("flyout", "prisma://flyout-shown", ());
     Ok(())
 }
 
@@ -178,6 +187,7 @@ pub fn flyout_show(
 pub fn flyout_hide(app: AppHandle) -> Result<(), String> {
     if let Some(win) = app.get_webview_window("flyout") {
         win.hide().map_err(|e| e.to_string())?;
+        let _ = app.emit_to("flyout", "prisma://flyout-hidden", ());
     }
     Ok(())
 }
@@ -190,180 +200,115 @@ pub fn flyout_is_visible(app: AppHandle) -> bool {
 }
 
 pub fn flyout_show_from_app(app: &AppHandle) -> Result<(), String> {
-    flyout_show(app.clone(), None, None, None)
-}
-
-#[cfg(windows)]
-pub fn get_system_master_volume() -> Option<(f32, bool)> {
-    use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
-    use windows::Win32::Media::Audio::{eMultimedia, eRender, IMMDeviceEnumerator, MMDeviceEnumerator};
-    use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_ALL};
-
-    unsafe {
-        let _com = crate::infrastructure::windows_com::ComApartment::multithreaded().ok()?;
-        let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok()?;
-        let device = enumerator.GetDefaultAudioEndpoint(eRender, eMultimedia).ok()?;
-        let endpoint_volume: IAudioEndpointVolume = device.Activate(CLSCTX_ALL, None).ok()?;
-        let vol = endpoint_volume.GetMasterVolumeLevelScalar().ok()?;
-        let muted = endpoint_volume.GetMute().ok()?.as_bool();
-        Some((vol, muted))
-    }
-}
-
-#[cfg(not(windows))]
-pub fn get_system_master_volume() -> Option<(f32, bool)> {
-    None
-}
-
-#[tauri::command]
-pub fn flyout_get_system_volume() -> Result<serde_json::Value, String> {
-    if let Some((vol, muted)) = get_system_master_volume() {
-        let vol_pct = (vol * 100.0).round() as u32;
-        Ok(serde_json::json!({
-            "volume": vol_pct,
-            "isMuted": muted
-        }))
-    } else {
-        Err("No se pudo obtener el volumen del sistema".to_string())
-    }
-}
-
-#[cfg(windows)]
-#[tauri::command]
-pub fn flyout_set_system_volume(volume: f32, muted: Option<bool>) -> Result<(), String> {
-    use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
-    use windows::Win32::Media::Audio::{eMultimedia, eRender, IMMDeviceEnumerator, MMDeviceEnumerator};
-    use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_ALL};
-
-    unsafe {
-        let _com = crate::infrastructure::windows_com::ComApartment::multithreaded()
-            .map_err(|e| e.to_string())?;
-        let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
-            .map_err(|e| e.to_string())?;
-        let device = enumerator.GetDefaultAudioEndpoint(eRender, eMultimedia)
-            .map_err(|e| e.to_string())?;
-        let endpoint_volume: IAudioEndpointVolume = device.Activate(CLSCTX_ALL, None)
-            .map_err(|e| e.to_string())?;
-        let clamped = (volume / 100.0).clamp(0.0, 1.0);
-        let _ = endpoint_volume.SetMasterVolumeLevelScalar(clamped, std::ptr::null());
-        if let Some(m) = muted {
-            use windows::Win32::Foundation::BOOL;
-            let _ = endpoint_volume.SetMute(BOOL(if m { 1 } else { 0 }), std::ptr::null());
+    if !ENABLED.load(Ordering::Relaxed) { return Ok(()); }
+    let handle = app.clone();
+    app.run_on_main_thread(move || {
+        if ENABLED.load(Ordering::Relaxed) {
+            let _ = flyout_show(handle, None, None, None);
         }
-        Ok(())
-    }
+    }).map_err(|e| e.to_string())
 }
 
-#[cfg(not(windows))]
+use tauri::Emitter;
+use crate::infrastructure::media::system_volume::{SystemVolume, VolumeKey};
+
 #[tauri::command]
-pub fn flyout_set_system_volume(_volume: f32, _muted: Option<bool>) -> Result<(), String> {
+pub fn flyout_configure(app: AppHandle, enabled: bool, zone: String) -> Result<(), String> {
+    ENABLED.store(enabled, Ordering::Relaxed);
+    *LAST_ZONE.lock().map_err(|e| e.to_string())? = Some(zone);
+    if !enabled { flyout_hide(app)?; }
     Ok(())
 }
 
-pub fn system_volume_step_up(app: &AppHandle) {
+#[tauri::command]
+pub async fn flyout_get_system_volume() -> Result<SystemVolume, String> {
     #[cfg(windows)]
-    {
-        if let Some((vol, muted)) = get_system_master_volume() {
-            let next_vol = if vol >= 0.99 { 1.0 } else { (vol + 0.02).min(1.0) };
-            let _ = flyout_set_system_volume(next_vol * 100.0, if muted { Some(false) } else { None });
-            let vol_pct = (next_vol * 100.0).round() as u32;
-            let _ = app.emit("prisma://system-volume-changed", serde_json::json!({
-                "volume": vol_pct,
-                "isMuted": false
-            }));
-            let _ = flyout_show_from_app(app);
-        }
-    }
+    { crate::infrastructure::media::system_volume::native::read() }
     #[cfg(not(windows))]
-    {
-        let _ = app;
-    }
+    { Err("El volumen global está disponible en Windows".into()) }
 }
 
-pub fn system_volume_step_down(app: &AppHandle) {
+#[tauri::command]
+pub async fn flyout_set_system_volume(app: AppHandle, volume: f32, muted: Option<bool>) -> Result<SystemVolume, String> {
     #[cfg(windows)]
     {
-        if let Some((vol, _muted)) = get_system_master_volume() {
-            let next_vol = if vol <= 0.01 { 0.0 } else { (vol - 0.02).max(0.0) };
-            let is_muted = next_vol == 0.0;
-            let _ = flyout_set_system_volume(next_vol * 100.0, None);
-            let vol_pct = (next_vol * 100.0).round() as u32;
-            let _ = app.emit("prisma://system-volume-changed", serde_json::json!({
-                "volume": vol_pct,
-                "isMuted": is_muted
-            }));
-            let _ = flyout_show_from_app(app);
+        let _ = app;
+        let sender = VOLUME_KEYS.get().ok_or("El control de volumen no está disponible")?;
+        if !VOLUME_WORKER_READY.load(Ordering::Relaxed) {
+            return Err("El control de volumen se está iniciando".into());
         }
+        let (reply, result) = tokio::sync::oneshot::channel();
+        sender.send(VolumeCommand::Set { volume, muted, reply }).map_err(|e| e.to_string())?;
+        result.await.map_err(|e| e.to_string())?
     }
     #[cfg(not(windows))]
-    {
-        let _ = app;
-    }
+    { let _ = (app, volume, muted); Err("El volumen global está disponible en Windows".into()) }
 }
 
-pub fn system_volume_toggle_mute(app: &AppHandle) {
+#[tauri::command]
+pub async fn flyout_get_audio_peak() -> Result<f32, String> {
     #[cfg(windows)]
-    {
-        if let Some((vol, muted)) = get_system_master_volume() {
-            let next_muted = !muted;
-            let _ = flyout_set_system_volume(vol * 100.0, Some(next_muted));
-            let vol_pct = (vol * 100.0).round() as u32;
-            let _ = app.emit("prisma://system-volume-changed", serde_json::json!({
-                "volume": vol_pct,
-                "isMuted": next_muted
-            }));
-            let _ = flyout_show_from_app(app);
-        }
-    }
+    { crate::infrastructure::media::system_volume::native::peak() }
     #[cfg(not(windows))]
-    {
-        let _ = app;
-    }
+    { Ok(0.0) }
+}
+
+fn publish_volume(app: &AppHandle, volume: SystemVolume, show: bool) {
+    let _ = app.emit("prisma://system-volume-changed", volume);
+    if show { let _ = flyout_show_from_app(app); }
 }
 
 #[cfg(windows)]
-use windows::core::implement;
-#[cfg(windows)]
-use windows::Win32::Media::Audio::Endpoints::{
-    IAudioEndpointVolume, IAudioEndpointVolumeCallback, IAudioEndpointVolumeCallback_Impl,
-};
-#[cfg(windows)]
-use windows::Win32::Media::Audio::{
-    eMultimedia, eRender, AUDIO_VOLUME_NOTIFICATION_DATA, IMMDeviceEnumerator, MMDeviceEnumerator,
-};
-#[cfg(windows)]
-use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED};
-use tauri::Emitter;
+enum VolumeCommand {
+    Key(VolumeKey),
+    Set { volume: f32, muted: Option<bool>, reply: tokio::sync::oneshot::Sender<Result<SystemVolume, String>> },
+}
 
 #[cfg(windows)]
-#[implement(IAudioEndpointVolumeCallback)]
+static VOLUME_KEYS: std::sync::OnceLock<std::sync::mpsc::Sender<VolumeCommand>> = std::sync::OnceLock::new();
+
+// Called inside WH_KEYBOARD_LL. Never perform COM or window operations here.
+pub fn handle_volume_key(key: u16, pressed: bool) -> bool {
+    if !ENABLED.load(Ordering::Relaxed) || !VOLUME_WORKER_READY.load(Ordering::Relaxed) { return false; }
+    #[cfg(windows)]
+    {
+        let Some(sender) = VOLUME_KEYS.get() else { return false; };
+        let action = match key {
+            0xAF => VolumeKey::Up,
+            0xAE => VolumeKey::Down,
+            0xAD => VolumeKey::Mute,
+            _ => return false,
+        };
+        return !pressed || sender.send(VolumeCommand::Key(action)).is_ok();
+    }
+    #[cfg(not(windows))]
+    { let _ = (key, pressed); false }
+}
+
+#[cfg(windows)]
+#[windows::core::implement(windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolumeCallback)]
 struct NativeVolumeChangeCallback {
     app: AppHandle,
+    last_volume: Mutex<Option<(i32, bool)>>,
 }
 
 #[cfg(windows)]
 #[allow(non_snake_case)]
-impl IAudioEndpointVolumeCallback_Impl for NativeVolumeChangeCallback_Impl {
-    fn OnNotify(&self, pnotify: *mut AUDIO_VOLUME_NOTIFICATION_DATA) -> windows::core::Result<()> {
-        if !pnotify.is_null() {
-            let (vol_pct, is_muted) = unsafe {
-                let data = &*pnotify;
-                (
-                    (data.fMasterVolume * 100.0).round() as u32,
-                    data.bMuted.as_bool(),
-                )
+impl windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolumeCallback_Impl for NativeVolumeChangeCallback_Impl {
+    fn OnNotify(&self, notification: *mut windows::Win32::Media::Audio::AUDIO_VOLUME_NOTIFICATION_DATA) -> windows::core::Result<()> {
+        if let Some(data) = unsafe { notification.as_ref() } {
+            let own_change = data.guidEventContext == crate::infrastructure::media::system_volume::native::VOLUME_CONTEXT;
+            let state = ((data.fMasterVolume * 100.0).round() as i32, data.bMuted.as_bool());
+            let changed = {
+                let mut last = self.last_volume.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+                let changed = *last != Some(state);
+                *last = Some(state);
+                changed
             };
-            let app = self.app.clone();
-            std::thread::spawn(move || {
-                let _ = app.emit(
-                    "prisma://system-volume-changed",
-                    serde_json::json!({
-                        "volume": vol_pct,
-                        "isMuted": is_muted
-                    }),
-                );
-                let _ = flyout_show_from_app(&app);
-            });
+            publish_volume(&self.app, SystemVolume {
+                volume: state.0 as f32,
+                is_muted: state.1,
+            }, !own_change && changed);
         }
         Ok(())
     }
@@ -372,36 +317,59 @@ impl IAudioEndpointVolumeCallback_Impl for NativeVolumeChangeCallback_Impl {
 pub fn init_system_volume_listener(app: AppHandle) {
     #[cfg(windows)]
     {
-        std::thread::Builder::new()
-            .name("prisma-volume-listener".to_string())
-            .spawn(move || {
-                unsafe {
-                    let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
-                    let enumerator: Result<IMMDeviceEnumerator, _> =
-                        CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL);
-                    if let Ok(enum_dev) = enumerator {
-                        if let Ok(device) = enum_dev.GetDefaultAudioEndpoint(eRender, eMultimedia) {
-                            if let Ok(endpoint_volume) =
-                                device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)
-                            {
-                                let cb_impl: IAudioEndpointVolumeCallback =
-                                    NativeVolumeChangeCallback { app: app.clone() }.into();
-                                if endpoint_volume.RegisterControlChangeNotify(&cb_impl).is_ok() {
-                                    println!("[Flyout] Windows IAudioEndpointVolumeCallback registered successfully");
-                                    loop {
-                                        std::thread::park();
-                                    }
-                                }
+        use crate::infrastructure::media::system_volume::{native, next_volume};
+        use windows::Win32::Media::Audio::Endpoints::{IAudioEndpointVolume, IAudioEndpointVolumeCallback};
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let _ = VOLUME_KEYS.set(sender);
+        let _ = std::thread::Builder::new().name("prisma-system-volume".into()).spawn(move || {
+            let Ok(_com) = crate::infrastructure::windows_com::ComApartment::multithreaded() else { return; };
+            VOLUME_WORKER_READY.store(true, Ordering::Relaxed);
+            let callback: IAudioEndpointVolumeCallback = NativeVolumeChangeCallback {
+                app: app.clone(), last_volume: Mutex::new(None),
+            }.into();
+            let mut bound: Option<(String, IAudioEndpointVolume)> = None;
+            let mut refreshed = std::time::Instant::now() - std::time::Duration::from_secs(1);
+            loop {
+                // Rebind after a default-device change or a disconnected endpoint.
+                if refreshed.elapsed() >= std::time::Duration::from_millis(500) {
+                    refreshed = std::time::Instant::now();
+                    let next = native::default_endpoint().ok();
+                    if bound.as_ref().map(|v| &v.0) != next.as_ref().map(|v| &v.0) {
+                        if let Some((_, old)) = bound.take() {
+                            unsafe { let _ = old.UnregisterControlChangeNotify(&callback); }
+                        }
+                        if let Some((id, endpoint)) = next {
+                            if unsafe { endpoint.RegisterControlChangeNotify(&callback) }.is_ok() {
+                                bound = Some((id, endpoint));
+                                if let Ok(volume) = native::read() { publish_volume(&app, volume, false); }
                             }
                         }
                     }
                 }
-            })
-            .ok();
+                match receiver.recv_timeout(std::time::Duration::from_millis(100)) {
+                    Ok(VolumeCommand::Key(key)) => {
+                        if let Ok(current) = native::read() {
+                            let next = next_volume(current, key);
+                            match native::write(next.volume, Some(next.is_muted)) {
+                                Ok(actual) => publish_volume(&app, actual, true),
+                                Err(error) => eprintln!("[Flyout] No se pudo ajustar el volumen: {error}"),
+                            }
+                        }
+                    }
+                    Ok(VolumeCommand::Set { volume, muted, reply }) => {
+                        let result = native::write(volume, muted);
+                        if let Ok(actual) = result.as_ref() { publish_volume(&app, *actual, false); }
+                        let _ = reply.send(result);
+                    }
+                    Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {},
+                    Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                        VOLUME_WORKER_READY.store(false, Ordering::Relaxed);
+                        break;
+                    },
+                }
+            }
+        });
     }
     #[cfg(not(windows))]
-    {
-        let _ = app;
-    }
+    { let _ = app; }
 }
-

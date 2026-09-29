@@ -3,6 +3,7 @@ mod mpv;
 mod unavailable;
 pub mod passthru;
 pub mod smtc;
+pub mod system_volume;
 
 use crate::features::playback::backend::PlaybackBackend;
 

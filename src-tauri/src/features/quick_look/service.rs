@@ -98,24 +98,6 @@ impl QuickLookState {
                     ql_log!("Callback (async thread): RestorePrisma");
                     state.restore_prisma();
                 }
-                TriggerEvent::VolumeUp => {
-                    let app = state.app_handle.clone();
-                    std::thread::spawn(move || {
-                        crate::app::commands::flyout::system_volume_step_up(&app);
-                    });
-                }
-                TriggerEvent::VolumeDown => {
-                    let app = state.app_handle.clone();
-                    std::thread::spawn(move || {
-                        crate::app::commands::flyout::system_volume_step_down(&app);
-                    });
-                }
-                TriggerEvent::VolumeMute => {
-                    let app = state.app_handle.clone();
-                    std::thread::spawn(move || {
-                        crate::app::commands::flyout::system_volume_toggle_mute(&app);
-                    });
-                }
                 TriggerEvent::MediaNext | TriggerEvent::MediaPrevious => {
                     let app = state.app_handle.clone();
                     let _ = crate::app::commands::flyout::flyout_show_from_app(&app);

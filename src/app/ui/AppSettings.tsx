@@ -547,7 +547,7 @@ export function AppSettings({
                     <div>
                       <h3>Flyout y Mini Widget de Escritorio</h3>
                       <p>
-                        Panel flotante nativo de volumen y reproducción multimedia con diseño Material 3 Expressive, visualizador de audio en vivo y fijación en pantalla (sin dependencias externas).
+                        Controla el volumen global de Windows. La tarjeta multimedia aparece durante la reproducción; puedes fijar el panel y elegir su posición.
                       </p>
                     </div>
                     <label className="toggle-switch">
@@ -584,15 +584,15 @@ export function AppSettings({
                       <div className="system-toggles-list" style={{ marginTop: 14 }}>
                         <div className="system-toggle-item">
                           <div className="system-toggle-info">
-                            <strong>Visualizador de Audio Reactivo (Live Spectrum)</strong>
-                            <p>Anima barras de frecuencia sonoras en vivo al reproducir música o vídeos.</p>
+                            <strong>Indicador de reproducción</strong>
+                            <p>Muestra tres barras animadas mientras se reproduce música o vídeo.</p>
                           </div>
                           <label className="toggle-switch">
                             <input
                               type="checkbox"
                               checked={flyoutSettings.showSpectrum}
                               onChange={(e) => handleUpdateFlyout({ showSpectrum: e.target.checked })}
-                              aria-label="Visualizador de Audio Reactivo"
+                              aria-label="Indicador de reproducción"
                             />
                             <span className="toggle-slider" />
                           </label>
@@ -601,10 +601,10 @@ export function AppSettings({
                         <div className="system-toggle-item">
                           <div className="system-toggle-info">
                             <strong>Duración en Pantalla</strong>
-                            <p>Tiempo antes de ocultarse automáticamente (3 segundos recomendado).</p>
+                            <p>Tiempo antes de ocultarse automáticamente (1 segundo predeterminado).</p>
                           </div>
                           <div style={{ display: "flex", gap: 8 }}>
-                            {[1500, 3000, 5000].map((ms) => (
+                            {[1000, 1500, 3000, 5000].map((ms) => (
                               <button
                                 key={ms}
                                 type="button"

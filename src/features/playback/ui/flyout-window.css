@@ -3,7 +3,7 @@
 :root,
 [data-theme="light"] {
   /* Modo Claro Fluent / Modern: Fondo sólido blanco nítido, textos de máximo contraste */
-  --flyout-bg: #ffffff;
+  --flyout-bg: #f8f8fc;
   --flyout-surface: #f1f2f6;
   --flyout-surface-hover: #e2e4ee;
   --flyout-border: rgba(0, 0, 0, 0.08);
@@ -13,8 +13,8 @@
   --flyout-text-main: #0f172a;        /* Slate 900: negro suave nítido */
   --flyout-text-muted: #334155;       /* Slate 700: gris oscuro 100% legible */
   --flyout-slider-track: #e2e8f0;     /* Slate 200 */
-  --flyout-slider-fill: #0067c0;      /* Azul Fluent o color de acento */
-  --flyout-radius: 12px;
+  --flyout-slider-fill: var(--flyout-theme-primary, #c90045);
+  --flyout-radius: 10px;
   --flyout-shadow: 0 4px 14px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
@@ -31,8 +31,8 @@
   --flyout-text-main: #f8fafc;        /* Blanco nítido */
   --flyout-text-muted: #cbd5e1;       /* Gris claro Slate 300 legible */
   --flyout-slider-track: #334155;     /* Slate 700 */
-  --flyout-slider-fill: #38bdf8;      /* Cyan / celeste activo */
-  --flyout-radius: 12px;
+  --flyout-slider-fill: var(--flyout-theme-primary, #ffb1c0);
+  --flyout-radius: 10px;
   --flyout-shadow: 0 4px 16px rgba(0, 0, 0, 0.40), 0 1px 4px rgba(0, 0, 0, 0.20);
 }
 
@@ -91,7 +91,22 @@ html.is-flyout #root,
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 44px;
+  min-height: 48px;
+}
+
+.flyout-volume-capsule.is-at-limit {
+  animation: flyout-limit-bump 0.22s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes flyout-limit-bump {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.022); }
+  100% { transform: scale(1); }
+}
+
+.flyout-volume-capsule.is-at-limit .flyout-vol-percent {
+  color: var(--flyout-slider-fill);
+  transform: scale(1.08);
 }
 
 .flyout-vol-btn {
@@ -173,6 +188,60 @@ html.is-flyout #root,
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--flyout-text-main);
+}
+
+.flyout-slider:focus-visible,
+.prisma-flyout-card button:focus-visible {
+  outline: 2px solid var(--flyout-slider-fill);
+  outline-offset: 3px;
+}
+
+.prisma-flyout-card button:disabled,
+.flyout-slider:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.flyout-playback-indicator {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 5px;
+  width: 52px;
+  height: 24px;
+  color: var(--flyout-theme-secondary, var(--flyout-text-muted));
+}
+
+.flyout-playback-indicator > span {
+  width: 6px;
+  height: 20px;
+  border-radius: 4px;
+  background: currentColor;
+  transform: scaleY(0.45);
+}
+
+.flyout-playback-indicator.is-playing > span {
+  animation: flyout-playback-wave 0.85s ease-in-out infinite;
+}
+.flyout-playback-indicator > span:nth-child(2) { animation-delay: -0.3s; animation-duration: 0.7s; height: 24px; }
+.flyout-playback-indicator > span:nth-child(3) { animation-delay: -0.5s; animation-duration: 1s; height: 18px; }
+
+@keyframes flyout-playback-wave {
+  0%, 100% { transform: scaleY(0.25); }
+  25% { transform: scaleY(0.7); }
+  50% { transform: scaleY(1); }
+  75% { transform: scaleY(0.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prisma-flyout-card,
+  .prisma-flyout-card *,
+  .prisma-flyout-card *::before,
+  .prisma-flyout-card *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 .flyout-expand-btn {
@@ -282,6 +351,7 @@ html.is-flyout #root,
 /* ── 2. Tarjeta de Medios (Fluent Parity: Álbum a la izquierda, Controles + Logo abajo) ── */
 .flyout-media-capsule {
   padding: 10px 12px;
+  min-height: 98px;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -313,7 +383,7 @@ html.is-flyout #root,
 .flyout-media-body {
   flex: 1;
   min-width: 0;
-  height: 68px;
+  height: 76px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -327,6 +397,8 @@ html.is-flyout #root,
 }
 
 .flyout-media-title {
+  flex: 1;
+  min-width: 0;
   font-size: 13.5px;
   font-weight: 700;
   color: var(--flyout-text-main);
@@ -335,6 +407,13 @@ html.is-flyout #root,
   text-overflow: ellipsis;
   letter-spacing: -0.01em;
   line-height: 1.25;
+}
+
+.flyout-media-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .flyout-media-artist {

@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { parseTrackInfo } from "../../music_library/model/trackInfo";
 import { mediaTitle } from "../ui/formatters";
-import { getFlyoutSettings } from "./flyoutSettings";
+import { FLYOUT_SETTINGS_EVENT, getFlyoutSettings, type FlyoutSettings } from "./flyoutSettings";
 import type { usePlaybackController } from "../usePlaybackController";
 
 interface UseFlyoutSyncParams {
@@ -31,8 +31,29 @@ export function useFlyoutSync({
   onNextVideo,
   onPrevVideo,
 }: UseFlyoutSyncParams) {
-  const previousVolumeRef = useRef<number>(playback.snapshot.volume);
   const lastActiveMediaRef = useRef<string | null>(null);
+  const lastStateRef = useRef<Record<string, unknown> | null>(null);
+
+  useEffect(() => {
+    const subscription = listen("prisma://flyout-request-state", () => {
+      if (lastStateRef.current) void emit("prisma://flyout-state-sync", lastStateRef.current);
+    });
+    return () => { void subscription.then((unlisten) => unlisten()); };
+  }, []);
+
+  useEffect(() => {
+    const configure = (settings = getFlyoutSettings()) => {
+      void invoke("flyout_configure", { enabled: settings.enabled, zone: settings.zone }).catch(console.error);
+    };
+    const changed = () => configure();
+    configure();
+    window.addEventListener(FLYOUT_SETTINGS_EVENT, changed);
+    const unlisten = listen<FlyoutSettings>(FLYOUT_SETTINGS_EVENT, (event) => configure(event.payload));
+    return () => {
+      window.removeEventListener(FLYOUT_SETTINGS_EVENT, changed);
+      void unlisten.then((fn) => fn());
+    };
+  }, []);
 
   // 1. Escuchar acciones despachadas desde el Flyout (Play/Pause, Next, Prev, Volume)
   useEffect(() => {
@@ -41,7 +62,7 @@ export function useFlyoutSync({
 
     void listen<{ action: string; value?: unknown }>("prisma://flyout-action", (event) => {
       if (!isMounted) return;
-      const { action, value } = event.payload;
+      const { action } = event.payload;
 
       switch (action) {
         case "play-pause":
@@ -68,24 +89,10 @@ export function useFlyoutSync({
           }
           break;
 
-        case "set-volume":
-          if (typeof value === "number") {
-            void playback.setVolume(value);
-          }
-          break;
-
-        case "toggle-mute":
-          if (playback.snapshot.volume === 0) {
-            const restored = previousVolumeRef.current > 0 ? previousVolumeRef.current : 50;
-            void playback.setVolume(restored);
-          } else {
-            previousVolumeRef.current = playback.snapshot.volume;
-            void playback.setVolume(0);
-          }
-          break;
       }
     }).then((fn) => {
-      unlisten = fn;
+      if (isMounted) unlisten = fn;
+      else fn();
     });
 
     return () => {
@@ -97,7 +104,6 @@ export function useFlyoutSync({
   // 2. Transmitir estado y metadatos hacia el Flyout
   useEffect(() => {
     const settings = getFlyoutSettings();
-    if (!settings.enabled) return;
 
     let title = "Prisma";
     let artist = "Listo para reproducir";
@@ -122,18 +128,16 @@ export function useFlyoutSync({
       artworkUrl = currentArtwork || null;
     }
 
-    void emit("prisma://flyout-state-sync", {
+    const state = {
       isPlaying,
       title,
       artist,
       artworkUrl,
       mediaType,
-      volume: playback.snapshot.volume,
-      isMuted: playback.snapshot.volume === 0,
-      duration: playback.snapshot.durationSeconds,
-      currentTime: playback.snapshot.positionSeconds,
       zone: settings.zone,
-    });
+    };
+    lastStateRef.current = state;
+    void emit("prisma://flyout-state-sync", state);
 
     if (currentMediaId && currentMediaId !== lastActiveMediaRef.current) {
       const isInitial = lastActiveMediaRef.current === null;
@@ -153,35 +157,8 @@ export function useFlyoutSync({
     currentArtwork,
     playback.snapshot.trackTitle,
     playback.snapshot.trackArtist,
-    playback.snapshot.volume,
-    playback.snapshot.durationSeconds,
-    playback.snapshot.positionSeconds,
     playback.queue.currentItem?.title,
     playback.queue.currentItem?.artist,
   ]);
 
-  // 3. Notificar cambios de volumen al flyout y mostrarlo ÚNICAMENTE al alterar el volumen
-  const lastVolRef = useRef<number>(playback.snapshot.volume);
-  const isFirstMountRef = useRef<boolean>(true);
-
-  useEffect(() => {
-    if (isFirstMountRef.current) {
-      isFirstMountRef.current = false;
-      lastVolRef.current = playback.snapshot.volume;
-      return;
-    }
-
-    const currentVol = playback.snapshot.volume;
-    if (currentVol !== lastVolRef.current) {
-      lastVolRef.current = currentVol;
-      void emit("prisma://flyout-volume-change", currentVol);
-
-      const settings = getFlyoutSettings();
-      if (settings.enabled) {
-        void invoke("flyout_show", {
-          zone: settings.zone,
-        }).catch(() => {});
-      }
-    }
-  }, [playback.snapshot.volume]);
 }

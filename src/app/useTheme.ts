@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AlbumPalette } from "../features/playback/ui/useAlbumPalette";
+import { emitTo, listen } from "@tauri-apps/api/event";
+import { FLYOUT_THEME_EVENT, type FlyoutTheme } from "../features/playback/services/flyoutTheme";
 
 export type ThemeMode = "light" | "dark" | "system";
 export type AccentColorId = "purple" | "rose" | "blue" | "emerald" | "amber" | "cyan";
@@ -57,6 +59,19 @@ const STORAGE_THEME_KEY = "prisma_theme";
 const STORAGE_ACCENT_KEY = "prisma_accent";
 const STORAGE_BG_VARIANT_KEY = "prisma_bg_variant";
 const STORAGE_DYNAMIC_MUSIC_KEY = "prisma_dynamic_music_theme";
+
+function publishFlyoutTheme(): void {
+  const root = document.documentElement;
+  const tokens = getComputedStyle(root);
+  const primary = tokens.getPropertyValue("--primary").trim();
+  const secondaryBase = tokens.getPropertyValue("--on-surface-variant").trim();
+  const payload: FlyoutTheme = {
+    mode: root.classList.contains("dark") ? "dark" : "light",
+    primary,
+    secondary: `color-mix(in srgb, ${primary} 45%, ${secondaryBase} 55%)`,
+  };
+  void emitTo("flyout", FLYOUT_THEME_EVENT, payload).catch(() => {});
+}
 
 function computeIsDark(mode: ThemeMode): boolean {
   if (mode === "dark") return true;
@@ -169,7 +184,15 @@ export function useTheme() {
     } else {
       applyMusicPaletteTokens(null, theme);
     }
+    publishFlyoutTheme();
   }, [dynamicMusicTheme, activeMusicPalette, theme]);
+
+  useEffect(() => { publishFlyoutTheme(); }, [accentColor, backgroundVariant]);
+
+  useEffect(() => {
+    const subscription = listen("prisma://flyout-request-state", publishFlyoutTheme);
+    return () => { void subscription.then((unlisten) => unlisten()); };
+  }, []);
 
   // Escuchar cambios de preferencia del sistema si el modo es "system"
   useEffect(() => {
@@ -180,6 +203,7 @@ export function useTheme() {
         if (dynamicMusicTheme && activeMusicPalette) {
           applyMusicPaletteTokens(activeMusicPalette, "system");
         }
+        publishFlyoutTheme();
       }
     };
     mq.addEventListener("change", handler);

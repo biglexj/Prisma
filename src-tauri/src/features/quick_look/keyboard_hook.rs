@@ -43,9 +43,6 @@ pub mod windows_hook {
         Close,
         Navigation,
         RestorePrisma,
-        VolumeUp,
-        VolumeDown,
-        VolumeMute,
         MediaNext,
         MediaPrevious,
     }
@@ -217,22 +214,13 @@ pub mod windows_hook {
         let msg_type = w_param.0 as u32;
         let is_key_down = msg_type == WM_KEYDOWN || msg_type == WM_SYSKEYDOWN;
 
-        // Intercepción y supresión 100% exclusiva de teclas de volumen de Windows:
-        // Consumimos tanto WM_KEYDOWN como WM_KEYUP para que Windows jamás despliegue su OSD nativo
+        // Consume only when the enabled flyout has accepted the event. COM and
+        // UI operations run on its serial worker, outside this low-level hook.
         if vk_code == 0xAF || vk_code == 0xAE || vk_code == 0xAD {
-            if is_key_down {
-                if let Ok(guard) = GLOBAL_CALLBACK.lock() {
-                    if let Some(ref cb) = *guard {
-                        match vk_code {
-                            0xAF => cb(TriggerEvent::VolumeUp),
-                            0xAE => cb(TriggerEvent::VolumeDown),
-                            0xAD => cb(TriggerEvent::VolumeMute),
-                            _ => {}
-                        }
-                    }
-                }
+            if crate::app::commands::flyout::handle_volume_key(vk_code, is_key_down) {
+                return LRESULT(1);
             }
-            return LRESULT(1); // Suprimir completamente el evento de Windows en keydown y keyup
+            return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
 
         if !is_key_down {
@@ -606,9 +594,6 @@ pub mod windows_hook {
         Close,
         Navigation,
         RestorePrisma,
-        VolumeUp,
-        VolumeDown,
-        VolumeMute,
         MediaNext,
         MediaPrevious,
     }

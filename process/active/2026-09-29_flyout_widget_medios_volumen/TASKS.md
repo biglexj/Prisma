@@ -32,3 +32,23 @@
   - [ ] Comprobar compilación y ejecución de Tauri con la ventana flyout.
   - [ ] Verificar reposicionamiento en las 6 zonas y ausencia de cortes o parpadeos.
   - [ ] Comprobar funcionamiento tanto en música como en reproducción de vídeo.
+
+## Corrección de volumen global y bloqueos — 2026-09-29
+
+- [x] Separar el estado del volumen maestro de Windows de los metadatos y el volumen interno del reproductor.
+- [x] Eliminar acciones que ajustaban simultáneamente Windows y Prisma desde el deslizador y silencio del flyout.
+- [x] Liberar los mutex de geometría antes de operar la ventana; mostrar desde el hilo principal sin activar el foco.
+- [x] Unificar teclas físicas y escrituras del deslizador en un worker serial; coalescer movimientos rápidos del deslizador.
+- [x] Devolver las teclas a Windows cuando el flyout está desactivado o su worker no está disponible.
+- [x] Cambiar la suscripción de volumen al cambiar el dispositivo predeterminado de Windows.
+- [x] Ocultar la tarjeta multimedia cuando no hay música ni vídeo en reproducción.
+- [x] Sustituir el historial de amplitud por tres barras animadas de reproducción junto al título, siguiendo la petición posterior de Biglex.
+- [x] Excluir el flyout de la restauración de geometría y maximización persistida.
+- [x] Comprobar cuatro pruebas del escritor de volumen, dos del cálculo de teclas y compilación de frontend.
+- [ ] Confirmar teclas físicas, nivel global, ausencia de bloqueo y un único indicador con FluentFlyout cerrado.
+- [x] Autoocultado de un segundo independiente de la sincronización de volumen y de la reproducción; limpiar temporizadores al ocultar y revisar hover actual al expirar.
+- [x] Migrar el anclaje antiguo a desactivado y reducir el radio exterior a 10 px.
+- [x] No reabrir por notificaciones nativas con el mismo volumen y silencio.
+- [x] Sincronizar colores con el tema dinámico, usar una variante secundaria en las barras y aumentar 8 px la tarjeta multimedia.
+- [x] Comprobar seis pruebas del temporizador y cuatro del escritor de volumen, más compilación del frontend.
+- [ ] Validar visualmente autoocultado, pausa/reproducción, tres barras, seis posiciones y cambio físico de salida.

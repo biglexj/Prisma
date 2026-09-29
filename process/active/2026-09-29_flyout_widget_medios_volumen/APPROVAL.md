@@ -12,5 +12,12 @@ Implementación del sistema nativo de Flyout y Mini Widget multimedia de escrito
 ## Registro de Aprobación
 
 - [x] Inicio autorizado por el usuario.
-- [ ] Verificación técnica concluida.
+- [x] Verificación técnica concluida.
 - [ ] Aprobación final registrada.
+
+## Corrección autorizada — 2026-09-29
+
+- Biglex solicitó que el panel controle el volumen global, corrija la colisión de niveles y el bloqueo, y muestre solo volumen cuando no hay reproducción.
+- Implementación realizada y comprobaciones técnicas registradas en `VALIDATION.md`.
+- Aceptación visual y prueba de teclas físicas pendientes. El proceso sigue `EN CURSO`; la compilación no acredita ausencia de indicadores duplicados ni continuidad de audio.
+- Biglex solicitó después autoocultado de un segundo, esquinas menos redondeadas y tres barras animadas junto al título. Cambios implementados y pruebas técnicas registradas; aceptación del comportamiento real pendiente.
