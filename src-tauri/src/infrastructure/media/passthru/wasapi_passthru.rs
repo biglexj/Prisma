@@ -28,7 +28,7 @@ use super::render_slot::RenderDeviceSlot;
 pub struct WasapiBridge {
     pub capture_id: Option<String>,
     pub render_id: Option<String>,
-    pub output_ids: Vec<String>,
+    output_ids: Arc<Mutex<Vec<String>>>,
     running: Arc<AtomicBool>,
     worker_handle: Option<JoinHandle<()>>,
     params_shared: Arc<Mutex<DspParameters>>,
@@ -54,7 +54,8 @@ impl WasapiBridge {
             (Some(a), Some(b)) => a == b,
             _ => false,
         };
-        same_capture && same_render && self.output_ids == outputs.iter().map(|output| output.id.clone()).collect::<Vec<_>>()
+        same_capture && same_render && self.output_ids.lock().is_ok_and(|ids|
+            *ids == outputs.iter().map(|output| output.id.clone()).collect::<Vec<_>>())
     }
 
     pub fn get_status(&self) -> GlobalPassthruStatus {
@@ -154,6 +155,7 @@ impl WasapiBridge {
         let params_shared = Arc::new(Mutex::new(initial_params));
         let volume_req = Arc::new(AtomicI32::new(-1));
         let output_gains = Arc::new(Mutex::new(outputs.clone()));
+        let output_ids = Arc::new(Mutex::new(outputs.iter().map(|output| output.id.clone()).collect()));
         let status = Arc::new(Mutex::new(GlobalPassthruStatus {
             is_running: false,
             has_signal: false,
@@ -169,6 +171,7 @@ impl WasapiBridge {
         let thread_status = status.clone();
         let thread_volume_req = volume_req.clone();
         let thread_output_gains = output_gains.clone();
+        let thread_output_ids = output_ids.clone();
 
         let loop_capture_id = capture_id.clone();
         let loop_render_id = render_id.clone();
@@ -190,6 +193,7 @@ impl WasapiBridge {
                     thread_status.clone(),
                     thread_volume_req,
                     thread_output_gains,
+                    thread_output_ids,
                 );
 
                 thread_running.store(false, Ordering::SeqCst);
@@ -207,7 +211,7 @@ impl WasapiBridge {
         Ok(Self {
             capture_id,
             render_id,
-            output_ids: output_gains.lock().map_or_else(|_| Vec::new(), |items| items.iter().map(|item| item.id.clone()).collect()),
+            output_ids,
             running,
             worker_handle: Some(worker_handle),
             params_shared,
@@ -228,6 +232,7 @@ fn run_passthru_loop(
     status: Arc<Mutex<GlobalPassthruStatus>>,
     volume_req: Arc<AtomicI32>,
     output_gains: Arc<Mutex<Vec<MultiOutputDevice>>>,
+    active_output_ids: Arc<Mutex<Vec<String>>>,
 ) {
     unsafe {
         let enumerator: IMMDeviceEnumerator = match CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) {
@@ -408,10 +413,13 @@ fn run_passthru_loop(
                 }
                 Err(error) => {
                     eprintln!("[Prisma Passthru] {error}");
-                    for slot in &render_slots { let _ = slot.client.Stop(); }
-                    return;
+                    // A secondary can disappear between enumeration and opening it.
+                    if render_slots.is_empty() { return; }
                 }
             }
+        }
+        if let Ok(mut ids) = active_output_ids.lock() {
+            *ids = render_slots.iter().map(|slot| slot.id.clone()).collect();
         }
 
         // 5. Iniciar la captura después de preparar todas las salidas.
@@ -531,14 +539,7 @@ fn run_passthru_loop(
             };
 
             if packet_length == 0 {
-                for slot in &mut render_slots {
-                    if let Err(error) = slot.write_available(channels) {
-                        eprintln!("[Prisma Passthru] La salida {} dejó de responder: {error}", slot.id);
-                        running.store(false, Ordering::Relaxed);
-                        break;
-                    }
-                }
-                if !running.load(Ordering::Relaxed) { break; }
+                if !write_render_slots(&mut render_slots, channels, &active_output_ids) { break; }
                 if last_signal.elapsed() > Duration::from_millis(350) {
                     if had_signal {
                         had_signal = false;
@@ -629,11 +630,10 @@ fn run_passthru_loop(
                     }
                     for slot in &mut render_slots {
                         slot.queue.push(&local_interleaved);
-                        if let Err(error) = slot.write_available(channels) {
-                            eprintln!("[Prisma Passthru] La salida {} dejó de responder: {error}", slot.id);
-                            running.store(false, Ordering::Relaxed);
-                            break;
-                        }
+                    }
+                    if !write_render_slots(&mut render_slots, channels, &active_output_ids) {
+                        let _ = capture_service.ReleaseBuffer(num_frames_read);
+                        break;
                     }
                 }
                 let _ = capture_service.ReleaseBuffer(num_frames_read);
@@ -645,6 +645,26 @@ fn run_passthru_loop(
         let _ = capture_client.Stop();
         for slot in &render_slots { let _ = slot.client.Stop(); }
     }
+}
+
+/// A failed secondary is detached without stopping the primary audio stream.
+unsafe fn write_render_slots(slots: &mut Vec<RenderDeviceSlot>, channels: usize, active_ids: &Mutex<Vec<String>>) -> bool {
+    let mut index = 0;
+    while index < slots.len() {
+        match unsafe { slots[index].write_available(channels) } {
+            Ok(()) => index += 1,
+            Err(error) => {
+                eprintln!("[Prisma Passthru] La salida {} dejó de responder: {error}", slots[index].id);
+                if index == 0 { return false; }
+                let slot = slots.remove(index);
+                let _ = unsafe { slot.client.Stop() };
+                if let Ok(mut ids) = active_ids.lock() {
+                    *ids = slots.iter().map(|slot| slot.id.clone()).collect();
+                }
+            }
+        }
+    }
+    !slots.is_empty()
 }
 
 pub fn is_prisma_name(name: &str) -> bool {

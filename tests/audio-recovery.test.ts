@@ -9,7 +9,7 @@ test("recupera un motor detenido y cambia de salida sin perder la intención", a
   await reconcileGlobalAudio(client, () => intent);
   intent.render = "altavoces";
   await reconcileGlobalAudio(client, () => intent);
-  expect(calls).toEqual([[true, null, "auriculares"], [true, null, "altavoces"]]);
+  expect(calls).toEqual([[true, null, "auriculares", true], [true, null, "altavoces", true]]);
   expect(intent.enabled).toBe(true);
 });
 
@@ -29,7 +29,7 @@ test("espera sin salida y vuelve a conectar cuando reaparece", async () => {
   expect(calls).toEqual([[false, null, null]]);
   intent.render = "auriculares";
   await reconcileGlobalAudio(client, () => intent);
-  expect(calls).toEqual([[false, null, null], [true, null, "auriculares"]]);
+  expect(calls).toEqual([[false, null, null], [true, null, "auriculares", true]]);
 });
 
 test("una consulta cancelada al desmontar no detiene una sesión nueva", async () => {
@@ -37,4 +37,11 @@ test("una consulta cancelada al desmontar no detiene una sesión nueva", async (
   const client = { globalPassthruGetStatus: async () => ({ ...stopped, isRunning: true }), globalPassthruToggle: async () => { called = true; return stopped; } };
   await reconcileGlobalAudio(client, () => ({ enabled: false, capture: null, render: null }), () => true);
   expect(called).toBe(false);
+});
+
+test("duplicación local conserva la principal sin cambiar la salida predeterminada de Windows", async () => {
+  const calls: unknown[] = [];
+  const client = { globalPassthruGetStatus: async () => stopped, globalPassthruToggle: async (...args: unknown[]) => { calls.push(args); return stopped; } };
+  await reconcileGlobalAudio(client, () => ({ enabled: true, capture: null, render: "main", routeSystemDefault: false }));
+  expect(calls).toEqual([[true, null, "main", false]]);
 });

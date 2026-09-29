@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import type { MultiOutputConfig, MultiOutputDevice } from "./model/types";
+import type { AudioEndpointInfo, MultiOutputConfig, MultiOutputDevice } from "./model/types";
 import { dspClient } from "./tauri/client";
+import { includePrimaryOutput, outputErrorMessage } from "./multiOutputState";
 
 const STORAGE_KEY = "prisma_dsp_multi_output";
 
@@ -24,10 +25,11 @@ function savedConfig(): MultiOutputConfig {
   return { enabled: false, devices: [] };
 }
 
-export function useMultiAudioOutput() {
+export function useMultiAudioOutput(endpoints: AudioEndpointInfo[], primary: string | null) {
   const [config, setConfig] = useState<MultiOutputConfig>(savedConfig);
   const configRef = useRef(config);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(true);
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shortcutError, setShortcutError] = useState<string | null>(null);
   const gainTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -49,9 +51,11 @@ export function useMultiAudioOutput() {
         if (!disposed) save(next);
       } catch (cause) {
         if (!disposed) {
-          setError(`No se pudieron restaurar las salidas: ${String(cause)}`);
-          setConfig((previous) => ({ ...previous, enabled: false }));
+          console.warn("No se pudieron restaurar las salidas múltiples:", cause);
+          setError(outputErrorMessage(cause));
         }
+      } finally {
+        if (!disposed) { setReady(true); setBusy(false); }
       }
     };
     void restore();
@@ -64,12 +68,13 @@ export function useMultiAudioOutput() {
       if (!disposed) save(event.payload);
     });
     const errorListener = listen<string>("prisma://multi-output-shortcut-error", (event) => {
-      if (!disposed) setError(event.payload);
+      if (!disposed) setError(outputErrorMessage(event.payload));
     });
     void dspClient.getGlobalMultiOutputShortcutError().then((message) => {
-      if (!disposed) setShortcutError(message);
+      if (!disposed) setShortcutError(message ? "El atajo global no está disponible. Usa Ctrl + Mayús + O dentro de Prisma." : null);
     }).catch((cause) => {
-      if (!disposed) setShortcutError(`No se pudo comprobar el atajo global: ${String(cause)}`);
+      console.warn("No se pudo comprobar el atajo global:", cause);
+      if (!disposed) setShortcutError("No se pudo comprobar el atajo global. El atajo de Prisma sigue disponible.");
     });
     return () => {
       disposed = true;
@@ -82,12 +87,19 @@ export function useMultiAudioOutput() {
     if (gainTimer.current) clearTimeout(gainTimer.current);
     setBusy(true);
     try {
-      if (config.enabled && devices.length < 2) await dspClient.toggleMultiOutput(false);
+      if (configRef.current.enabled && devices.length < 2) await dspClient.toggleMultiOutput(false);
       const next = await dspClient.setMultiOutputDevices(devices);
       save(next);
-    } catch (cause) { setError(String(cause)); }
+    } catch (cause) { console.warn("No se pudieron actualizar las salidas:", cause); setError(outputErrorMessage(cause)); }
     finally { setBusy(false); }
-  }, [config.enabled, save]);
+  }, [save]);
+
+  useEffect(() => {
+    if (!ready || busy) return;
+    const current = configRef.current;
+    const next = includePrimaryOutput(current.devices, endpoints, primary);
+    if (next !== current.devices) void setDevices(next);
+  }, [ready, busy, endpoints, primary, setDevices]);
 
   const updateDevice = useCallback((id: string, values: Partial<MultiOutputDevice>) => {
     const current = configRef.current;
@@ -97,7 +109,10 @@ export function useMultiAudioOutput() {
     save(next);
     if (gainTimer.current) clearTimeout(gainTimer.current);
     gainTimer.current = setTimeout(() => {
-      void dspClient.setMultiOutputDevices(next.devices).catch((cause) => setError(String(cause)));
+      void dspClient.setMultiOutputDevices(next.devices).catch((cause) => {
+        console.warn("No se pudieron ajustar las salidas:", cause);
+        setError(outputErrorMessage(cause));
+      });
     }, 80);
   }, [save]);
 
@@ -113,10 +128,10 @@ export function useMultiAudioOutput() {
 
   const toggle = useCallback(async () => {
     setBusy(true);
-    try { save(await dspClient.toggleMultiOutput(!config.enabled)); return true; }
-    catch (cause) { setError(String(cause)); return false; }
+    try { save(await dspClient.toggleMultiOutput(!configRef.current.enabled)); return true; }
+    catch (cause) { console.warn("No se pudo alternar la duplicación:", cause); setError(outputErrorMessage(cause)); return false; }
     finally { setBusy(false); }
-  }, [config.enabled, save]);
+  }, [save]);
 
   return { config, busy, error, shortcutError, setDevices, setGain, setDelay, toggle };
 }

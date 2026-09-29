@@ -323,7 +323,7 @@ pub fn run() {
             {
                 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
                 let held = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-                let registration = app.global_shortcut().on_shortcut("Ctrl+Shift+Alt+O", move |app, _shortcut, event| {
+                let registration = app.global_shortcut().on_shortcut("Ctrl+Shift+Alt+P", move |app, _shortcut, event| {
                     if event.state() == ShortcutState::Released {
                         held.store(false, std::sync::atomic::Ordering::Relaxed);
                         return;
@@ -349,8 +349,8 @@ pub fn run() {
                     });
                 });
                 if let Err(error) = registration {
-                    let message = format!("Ctrl+Mayús+Alt+O no está disponible: {error}");
-                    eprintln!("[Prisma] {message}");
+                    let message = "El atajo global está ocupado; Ctrl + Mayús + O sigue disponible dentro de Prisma.".to_string();
+                    eprintln!("[Prisma] No se pudo registrar Ctrl+Mayús+Alt+P: {error}");
                     if let Ok(mut status) = app.state::<app::commands::playback::GlobalMultiOutputShortcutStatus>().error.lock() {
                         *status = Some(message);
                     }

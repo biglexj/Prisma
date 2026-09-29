@@ -117,7 +117,7 @@ export function useDspController() {
   });
   const [isGlobalLoading, setIsGlobalLoading] = useState<boolean>(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
-  const multiOutput = useMultiAudioOutput();
+  const multiOutput = useMultiAudioOutput(audioEndpoints, selectedRenderDeviceId);
 
   const allPresets: DspPreset[] = [...DEFAULT_PRESETS, ...customPresets];
   const syncTimeoutRef = useRef<number | null>(null);
@@ -421,7 +421,10 @@ export function useDspController() {
           setGlobalError(desired.enabled && !desired.render ? "Esperando una salida de audio disponible…" : null);
         }
       } catch (error) {
-        if (!disposed) setGlobalError(`Reconectando audio: ${String(error)}`);
+        if (!disposed) {
+          console.warn("Reintentando la conexión de audio:", error);
+          setGlobalError("Reconectando audio con las salidas disponibles…");
+        }
       } finally {
         if (!disposed) {
           setIsGlobalLoading(false);
@@ -450,16 +453,6 @@ export function useDspController() {
       localStorage.removeItem(STORAGE_KEY_RENDER_DEVICE);
     }
   }, []);
-
-  useEffect(() => {
-    if (!multiOutput.config.enabled || !selectedRenderDeviceId || audioEndpoints.length === 0) return;
-    const active = multiOutput.config.devices.filter((device) => audioEndpoints.some((endpoint) => endpoint.id === device.id && !endpoint.isVirtual));
-    if (active.length === multiOutput.config.devices.length && active.some((device) => device.id === selectedRenderDeviceId)) return;
-    const next = active.some((device) => device.id === selectedRenderDeviceId)
-      ? active
-      : [{ id: selectedRenderDeviceId, gain: 1, delayMs: 0 }, ...active];
-    void multiOutput.setDevices(next);
-  }, [multiOutput.config.enabled, multiOutput.config.devices, multiOutput.setDevices, selectedRenderDeviceId, audioEndpoints]);
 
   // Consultar endpoints y estado inicial de passthru global
   useEffect(() => {

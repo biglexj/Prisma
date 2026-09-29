@@ -53,7 +53,7 @@ export function MultiAudioOutputSelector() {
   }, [open]);
 
   const changeSelection = (id: string) => {
-    let next = config.devices.filter((device) => device.id !== id && endpoints.some((endpoint) => endpoint.id === device.id));
+    let next = config.devices.filter((device) => device.id !== id);
     if (!selected.has(id)) next = [...next, { id, gain: 1, delayMs: 0 }];
     if (primary && !next.some((device) => device.id === primary)) {
       next = [{ id: primary, gain: 1, delayMs: 0 }, ...next];
@@ -79,8 +79,8 @@ export function MultiAudioOutputSelector() {
       <div className="multi-output-status" aria-live="polite">
         <span className={`multi-output-signal ${config.enabled && dsp.globalPassthruStatus?.hasSignal ? "is-live" : ""}`} />
         {config.enabled && dsp.globalPassthruStatus?.isRunning
-          ? `${activeCount} salidas conectadas · Búfer principal ~${Math.round(dsp.globalPassthruStatus.latencyMs)} ms`
-          : `${activeCount} salidas preparadas`}
+          ? `${activeCount === 1 ? "1 salida conectada" : `${activeCount} salidas conectadas`} · Búfer principal ~${Math.round(dsp.globalPassthruStatus.latencyMs)} ms`
+          : activeCount === 1 ? "1 salida preparada" : `${activeCount} salidas preparadas`}
       </div>
       <div className="multi-output-list">
         {endpoints.map((endpoint) => {
@@ -134,9 +134,8 @@ export function MultiAudioOutputSelector() {
       </div>
       {!virtualAvailable && <p className="multi-output-message">Se necesita Prisma Audio Enhancer para duplicar el audio.</p>}
       {error && <p className="multi-output-message" role="alert">{error}</p>}
-      {shortcutError && <p className="multi-output-message" role="alert">{shortcutError}</p>}
       <div className="multi-output-footer">
-        <span>Prisma: Ctrl + Mayús + O<br />Global: Ctrl + Mayús + Alt + O</span>
+        <span>Prisma: Ctrl + Mayús + O<br /><span title={shortcutError ?? undefined}>Global: Ctrl + Mayús + Alt + P{shortcutError ? " (no disponible)" : ""}</span></span>
         <button
           className={`multi-output-toggle ${config.enabled ? "is-on" : ""}`}
           type="button"

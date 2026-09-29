@@ -26,7 +26,15 @@ Implementar un sistema de enrutamiento y duplicación de audio multi-dispositivo
     - Casillas por dispositivo, indicador de señal común, volumen y retardo por dispositivo. El retardo avanza 10 ms con cada flecha o pulsación.
     - Estado de conexión visible en el selector y aviso breve al usar el atajo, sin indicador permanente sobre otras vistas.
   - **Atajo de Teclado**:
-    - Atajo local `Ctrl+Mayús+O` y segundo atajo global `Ctrl+Mayús+Alt+O` para alternar la duplicación aun con otra aplicación en primer plano.
+    - Atajo local `Ctrl+Mayús+O` y segundo atajo global `Ctrl+Mayús+Alt+P` para alternar la duplicación aun con otra aplicación en primer plano. Biglex aprobó P el 29 de septiembre: O colisionaba con AutoHotkey (`aurora-stop all`).
+
+## Recuperación de dispositivos — 29 de septiembre
+
+- Conservar preferencias de volumen y retardo de salidas desconectadas; no rechazar la restauración completa por un dispositivo ausente.
+- Resolver la principal siguiendo el selector base y usar únicamente salidas físicas disponibles en el motor.
+- Mantener la intención de duplicación cuando queda una sola salida, para recuperar las secundarias al volver a conectar.
+- Desacoplar secundarias que fallan sin detener la principal; recuperar cambios de principal mediante el reconciliador existente.
+- Presentar avisos breves de audio y disponibilidad del atajo, dejando el detalle técnico en los registros.
 - No incluye:
   - Soporte ASIO exclusivo ni drivers propietarios de terceros (se utiliza WASAPI estándar compartido por máxima estabilidad y cero dependencias externas).
   - Calibración automática de latencia: requiere una medición fiable por dispositivo y queda como mejora posterior.

@@ -1,5 +1,6 @@
 pub mod dsp_engine;
 pub mod multi_output;
+mod output_selection;
 #[cfg(target_os = "windows")]
 pub mod render_slot;
 
@@ -106,18 +107,7 @@ impl PassthruService {
 
     pub fn set_multi_output(&self, devices: Vec<MultiOutputDevice>) -> Result<MultiOutputConfig, String> {
         let endpoints = Self::list_endpoints()?;
-        let mut seen = std::collections::HashSet::new();
-        for device in &devices {
-            if !device.gain.is_finite() || !(0.0..=1.0).contains(&device.gain) {
-                return Err("La ganancia de cada salida debe estar entre 0 y 1".to_string());
-            }
-            if device.delay_ms > 2_000 {
-                return Err("El retardo de cada salida debe estar entre 0 y 2000 ms".to_string());
-            }
-            if !seen.insert(device.id.as_str()) || !endpoints.iter().any(|ep| ep.id == device.id && !ep.is_virtual) {
-                return Err(format!("Salida duplicada, virtual o desconectada: {}", device.id));
-            }
-        }
+        let devices = output_selection::remember_devices(devices, &endpoints)?;
         let mut config = self.multi_output.lock().map_err(|e| e.to_string())?;
         config.devices = devices;
         if config.devices.len() < 2 { config.enabled = false; }
@@ -223,17 +213,10 @@ impl PassthruService {
             let capture_device_id = Some(endpoints.iter().find(|ep| ep.is_virtual && capture_device_id.as_ref().map_or(true, |id| id == &ep.id))
                 .or_else(|| endpoints.iter().find(|ep| ep.is_virtual))
                 .ok_or("No se encontró el controlador virtual de Prisma. El modo local sigue disponible.")?.id.clone());
-            let primary_id = render_device_id.clone().or_else(|| endpoints.iter().find(|ep| ep.is_default && !ep.is_virtual)
-                .or_else(|| endpoints.iter().find(|ep| !ep.is_virtual)).map(|ep| ep.id.clone()))
-                .ok_or("No hay una salida física disponible")?;
             let config = self.get_multi_output();
-            let mut outputs = vec![MultiOutputDevice { id: primary_id.clone(), gain: 1.0, delay_ms: 0 }];
-            if config.enabled {
-                for output in config.devices {
-                    if output.id == primary_id { outputs[0] = output; }
-                    else { outputs.push(output); }
-                }
-            }
+            let outputs = output_selection::available_devices(&endpoints, render_device_id.as_deref(), &config);
+            let primary_id = outputs.first().ok_or("No hay una salida física disponible")?.id.clone();
+            let render_device_id = Some(primary_id);
             let mut guard = self.inner.lock().map_err(|e| e.to_string())?;
             if let Some(ref bridge) = *guard {
                 if bridge.is_running()

@@ -11,7 +11,14 @@
 - [x] T05 — Diseñar el selector compacto desplegable `MultiAudioOutputSelector.tsx` en el Ecualizador con casillas y ganancias por salida, sin desplazar el resto de la vista.
 - [x] T06 — Integrar el atajo `Ctrl+Mayús+O` y un aviso breve al conmutar en `App.tsx`.
 - [x] T07 — Añadir retardo manual por salida, también en la principal, con controles de 10 ms y actualización en caliente.
-- [x] T08 — Registrar `Ctrl+Mayús+Alt+O` como segundo atajo global mediante Tauri, compartir el estado con el selector y avisar si el registro falla.
+- [x] T08 — Registrar `Ctrl+Mayús+Alt+P` como segundo atajo global mediante Tauri, compartir el estado con el selector y avisar si el registro falla. Sustituye O por decisión de Biglex del 29 de septiembre.
 - [ ] T09 — Completar validación funcional en dispositivos reales, chequeo de tipos TypeScript y tests unitarios de Rust.
 
 Las pruebas se documentan en `VALIDATION.md`.
+
+- [x] Conservar preferencias de dispositivos ausentes y filtrar las salidas solo al preparar el motor.
+- [x] Incluir la principal actual incluso con duplicación desactivada; conservar ajustes al cambiar la selección.
+- [x] Aislar el fallo de una secundaria en el hilo WASAPI.
+- [x] Identificar la colisión con AutoHotkey: Ctrl + Alt + Mayús + O ejecuta `aurora-stop all`.
+- [x] Confirmar con Biglex la salida preparada, eliminación del bloque técnico y nuevo global desde otra aplicación sin abrir Aurora.
+- [ ] Verificar desconexión/reconexión física en uso real.
