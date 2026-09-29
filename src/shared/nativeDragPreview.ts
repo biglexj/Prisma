@@ -1,4 +1,4 @@
-const PREVIEW_SIZE = 152;
+const PREVIEW_SIZE = 176;
 const INSET = 8;
 const CONTENT_SIZE = PREVIEW_SIZE - INSET * 2;
 
@@ -46,16 +46,16 @@ function drawFallback(context: CanvasRenderingContext2D, kind: PreviewKind) {
   context.fillStyle = colors[kind];
   if (kind === "video") {
     context.beginPath();
-    context.moveTo(64, 48);
-    context.lineTo(111, 76);
-    context.lineTo(64, 104);
+    context.moveTo(PREVIEW_SIZE * 0.42, PREVIEW_SIZE * 0.31);
+    context.lineTo(PREVIEW_SIZE * 0.73, PREVIEW_SIZE * 0.5);
+    context.lineTo(PREVIEW_SIZE * 0.42, PREVIEW_SIZE * 0.69);
     context.closePath();
     context.fill();
   } else {
-    context.font = "bold 72px Segoe UI Symbol, Segoe UI, sans-serif";
+    context.font = `bold ${Math.round(PREVIEW_SIZE * 0.48)}px Segoe UI Symbol, Segoe UI, sans-serif`;
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.fillText(kind === "music" ? "♫" : kind === "image" ? "▧" : "▤", 76, 74);
+    context.fillText(kind === "music" ? "♫" : kind === "image" ? "▧" : "▤", PREVIEW_SIZE / 2, PREVIEW_SIZE / 2);
   }
 }
 
@@ -96,13 +96,13 @@ export function createNativeDragPreview(path: string, element?: Element | null, 
     if (count > 1) {
       context.fillStyle = "#ed0056";
       context.beginPath();
-      context.arc(130, 25, 18, 0, Math.PI * 2);
+      context.arc(PREVIEW_SIZE - 22, 25, 18, 0, Math.PI * 2);
       context.fill();
       context.fillStyle = "#fff";
       context.font = "bold 15px Segoe UI, sans-serif";
       context.textAlign = "center";
       context.textBaseline = "middle";
-      context.fillText(count > 99 ? "99+" : String(count), 130, 25);
+      context.fillText(count > 99 ? "99+" : String(count), PREVIEW_SIZE - 22, 25);
     }
     try {
       return canvas.toDataURL("image/png");

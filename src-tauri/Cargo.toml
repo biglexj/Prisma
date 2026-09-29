@@ -71,3 +71,7 @@ debug = 1
 
 [profile.dev.package."*"]
 debug = false
+
+[patch.crates-io]
+# Windows drag previews need a 32-bit DIB with straight alpha.
+drag = { path = "vendor/drag" }

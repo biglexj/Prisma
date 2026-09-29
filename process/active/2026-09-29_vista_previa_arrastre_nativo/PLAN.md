@@ -10,6 +10,7 @@ Mostrar la miniatura visible del medio al arrastrarlo desde Prisma hacia otra ap
 - Dibujar un icono amplio según el tipo de archivo cuando la miniatura aún no esté disponible o el WebView impida copiarla.
 - Reutilizar el mismo mecanismo desde Inicio, Música, Imágenes, Vídeos, Favoritos, filas y visores sin cambiar las rutas entregadas al sistema.
 - Mantener una imagen de respaldo mínima si falla la generación del PNG.
+- En Windows, crear un bitmap de 32 bits que conserve el alfa de la miniatura y colocarlo alrededor del cursor.
 - Ignorar una soltada del archivo de Prisma sobre la misma ventana para que no se intente importar como carpeta.
 
 ## Validación

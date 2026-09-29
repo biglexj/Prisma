@@ -46,10 +46,10 @@ describe("vista previa del arrastre nativo", () => {
       const image = new LoadedImage();
       const result = createNativeDragPreview("retrato.png", image as unknown as Element);
       expect(result).toStartWith("data:image/png;base64,");
-      expect(canvases[0]).toMatchObject({ width: 152, height: 152 });
+      expect(canvases[0]).toMatchObject({ width: 176, height: 176 });
       expect(drawn).toHaveLength(1);
       expect(drawn[0]?.[0]).toBe(image);
-      expect(drawn[0]?.slice(1)).toEqual([-60, 8, 272, 136]);
+      expect(drawn[0]?.slice(1)).toEqual([-72, 8, 320, 160]);
     } finally {
       Object.assign(globalThis, {
         document: originalDocument,
