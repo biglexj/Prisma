@@ -136,7 +136,13 @@ export function useFlyoutSync({
     });
 
     if (currentMediaId && currentMediaId !== lastActiveMediaRef.current) {
+      const isInitial = lastActiveMediaRef.current === null;
       lastActiveMediaRef.current = currentMediaId;
+      if (!isInitial && settings.enabled) {
+        void invoke("flyout_show", {
+          zone: settings.zone,
+        }).catch(() => {});
+      }
     }
   }, [
     isVideoActive,

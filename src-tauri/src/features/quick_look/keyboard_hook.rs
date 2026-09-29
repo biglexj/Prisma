@@ -292,9 +292,9 @@ pub mod windows_hook {
             }
         }
 
-        // Detección de teclas de volumen del sistema (VK_VOLUME_MUTE 0xAD, VK_VOLUME_DOWN 0xAE, VK_VOLUME_UP 0xAF)
-        let is_volume_key = vk_code == 0xAD || vk_code == 0xAE || vk_code == 0xAF;
-        if is_volume_key && (w_param.0 as u32 == WM_KEYDOWN || w_param.0 as u32 == WM_SYSKEYDOWN) {
+        // Detección de teclas de volumen y navegación multimedia (0xAD Mute, 0xAE VolDown, 0xAF VolUp, 0xB0 Next, 0xB1 Prev)
+        let is_media_action_key = vk_code >= 0xAD && vk_code <= 0xB1;
+        if is_media_action_key && (w_param.0 as u32 == WM_KEYDOWN || w_param.0 as u32 == WM_SYSKEYDOWN) {
             if let Ok(guard) = GLOBAL_CALLBACK.lock() {
                 if let Some(ref cb) = *guard {
                     cb(TriggerEvent::VolumeKey);

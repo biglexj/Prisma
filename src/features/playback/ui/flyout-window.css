@@ -55,7 +55,7 @@ html.is-flyout #root,
   width: max-content;
   height: max-content;
   box-sizing: border-box;
-  padding: 6px;
+  padding: 8px 10px;
   display: inline-flex;
   flex-direction: column;
   gap: 8px;
@@ -75,24 +75,25 @@ html.is-flyout #root,
   box-shadow: var(--flyout-shadow);
   color: var(--flyout-text-main);
   box-sizing: border-box;
+  overflow: hidden;
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease;
 }
 
 .prisma-flyout-card:hover {
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.25), 0 6px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.22), 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 .dark .prisma-flyout-card:hover {
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65), 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 
-/* ── 1. Cápsula de Volumen Superior ── */
+/* ── 1. Cápsula de Volumen Superior (Estilo Fluent / Windows 11) ── */
 .flyout-volume-capsule {
-  padding: 8px 14px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 48px;
+  gap: 10px;
+  min-height: 44px;
 }
 
 .flyout-vol-btn {
@@ -129,7 +130,7 @@ html.is-flyout #root,
   width: 100%;
   -webkit-appearance: none;
   appearance: none;
-  height: 6px;
+  height: 5px;
   border-radius: 4px;
   background: linear-gradient(
     to right,
@@ -145,66 +146,158 @@ html.is-flyout #root,
 }
 
 .flyout-slider::-webkit-slider-runnable-track {
-  height: 6px;
+  height: 5px;
   border-radius: 4px;
 }
 
 .flyout-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   background: var(--flyout-slider-fill);
   border: 2px solid #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   margin-top: -4.5px;
   transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .flyout-slider:hover::-webkit-slider-thumb {
-  transform: scale(1.25);
+  transform: scale(1.22);
 }
 
 .flyout-vol-percent {
   font-size: 13px;
   font-weight: 700;
-  min-width: 28px;
+  min-width: 26px;
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--flyout-text-main);
 }
 
-.flyout-top-actions {
+.flyout-expand-btn {
+  background: transparent;
+  border: none;
+  color: var(--flyout-text-muted);
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
-  gap: 2px;
-  margin-left: 2px;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
-/* ── 2. Tarjeta de Medios Inferior ── */
-.flyout-media-capsule {
-  padding: 12px 14px;
+.flyout-expand-btn:hover {
+  background: var(--flyout-surface-hover);
+  color: var(--flyout-text-main);
+  transform: scale(1.08);
+}
+
+.flyout-expand-btn.is-open {
+  background: var(--flyout-surface-hover);
+  color: var(--flyout-slider-fill);
+}
+
+/* ── Panel de Opciones Expandible (Posición & Fijar) ── */
+.flyout-options-panel {
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  animation: flyoutFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.flyout-media-main-row {
+.flyout-options-header {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flyout-options-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--flyout-text-muted);
+}
+
+.flyout-pin-btn {
+  background: var(--flyout-surface);
+  border: 1px solid var(--flyout-border);
+  color: var(--flyout-text-main);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.flyout-pin-btn:hover {
+  background: var(--flyout-surface-hover);
+}
+
+.flyout-pin-btn.is-pinned {
+  background: var(--flyout-primary-container);
+  color: var(--flyout-on-primary-container);
+  border-color: transparent;
+}
+
+.flyout-zones-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.flyout-zone-cell {
+  background: var(--flyout-surface);
+  border: 1px solid transparent;
+  color: var(--flyout-text-main);
+  padding: 6px 4px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.flyout-zone-cell:hover {
+  background: var(--flyout-surface-hover);
+  border-color: var(--flyout-slider-fill);
+}
+
+.flyout-zone-cell.is-active {
+  background: var(--flyout-surface-hover);
+  color: var(--flyout-slider-fill);
+  border-color: var(--flyout-slider-fill);
+  font-weight: 700;
+}
+
+/* ── 2. Tarjeta de Medios (Fluent Parity: Álbum a la izquierda, Controles + Logo abajo) ── */
+.flyout-media-capsule {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 12px;
 }
 
 .flyout-media-art {
-  width: 58px;
-  height: 58px;
-  border-radius: 12px;
-  object-fit: cover;
+  width: 68px;
+  height: 68px;
+  min-width: 68px;
+  border-radius: 8px;
   background: var(--flyout-surface);
   border: 1px solid var(--flyout-border);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -216,49 +309,59 @@ html.is-flyout #root,
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+.flyout-media-body {
+  flex: 1;
+  min-width: 0;
+  height: 68px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .flyout-media-info {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
+  min-width: 0;
 }
 
 .flyout-media-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--flyout-text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.01em;
   line-height: 1.25;
 }
 
 .flyout-media-artist {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11.5px;
+  font-weight: 400;
   color: var(--flyout-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
-/* ── Controles de Transporte Hápticos ── */
+/* Fila de controles alineada con FluentFlyout */
 .flyout-controls-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 2px;
+  gap: 8px;
+  margin-top: auto;
 }
 
 .flyout-transport-btns {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .flyout-ctrl-btn {
@@ -266,8 +369,8 @@ html.is-flyout #root,
   border: none;
   color: var(--flyout-text-main);
   cursor: pointer;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -286,91 +389,31 @@ html.is-flyout #root,
 }
 
 .flyout-play-btn {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 28px;
   background: var(--flyout-text-main);
   color: var(--flyout-bg);
   border: none;
-  border-radius: 12px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease, box-shadow 0.15s ease;
 }
 
 .flyout-play-btn:hover {
-  transform: scale(1.08);
+  transform: scale(1.06);
   opacity: 0.92;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.22);
 }
 
 .flyout-play-btn:active {
   transform: scale(0.94);
 }
 
-/* ── Visualizador de Audio Reactivo (Live Spectrum) ── */
-.flyout-spectrum-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 18px;
-  padding: 0 4px;
-}
-
-.flyout-spectrum-bar {
-  width: 3px;
-  background: var(--flyout-slider-fill);
-  border-radius: 2px;
-  min-height: 3px;
-  transition: height 0.08s ease;
-}
-
-.flyout-spectrum-bar.animating-1 {
-  animation: spectrumDance1 0.75s ease-in-out infinite alternate;
-}
-.flyout-spectrum-bar.animating-2 {
-  animation: spectrumDance2 0.6s ease-in-out infinite alternate;
-}
-.flyout-spectrum-bar.animating-3 {
-  animation: spectrumDance3 0.85s ease-in-out infinite alternate;
-}
-.flyout-spectrum-bar.animating-4 {
-  animation: spectrumDance4 0.5s ease-in-out infinite alternate;
-}
-.flyout-spectrum-bar.animating-5 {
-  animation: spectrumDance5 0.9s ease-in-out infinite alternate;
-}
-
-@keyframes spectrumDance1 {
-  0% { height: 3px; }
-  100% { height: 16px; }
-}
-@keyframes spectrumDance2 {
-  0% { height: 5px; }
-  100% { height: 14px; }
-}
-@keyframes spectrumDance3 {
-  0% { height: 4px; }
-  100% { height: 18px; }
-}
-@keyframes spectrumDance4 {
-  0% { height: 6px; }
-  100% { height: 12px; }
-}
-@keyframes spectrumDance5 {
-  0% { height: 3px; }
-  100% { height: 15px; }
-}
-
-/* ── Badges y Acciones Auxiliares (Pin, Cerrar) ── */
-.flyout-aux-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
+/* Badge al final de la fila: Logo colorido de Prisma + texto "Prisma" */
 .flyout-app-badge {
   display: inline-flex;
   align-items: center;
@@ -378,41 +421,23 @@ html.is-flyout #root,
   font-size: 11px;
   font-weight: 600;
   color: var(--flyout-text-muted);
-  background: var(--flyout-surface);
-  padding: 3px 8px;
+  user-select: none;
+  padding: 3px 6px;
   border-radius: 6px;
-  border: 1px solid var(--flyout-border);
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.flyout-badge-icon {
-  width: 12px;
-  height: 12px;
-  color: var(--flyout-slider-fill);
-}
-
-.flyout-icon-btn {
-  background: transparent;
-  border: none;
-  color: var(--flyout-text-muted);
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
-}
-
-.flyout-icon-btn:hover {
+.flyout-app-badge:hover {
   background: var(--flyout-surface-hover);
   color: var(--flyout-text-main);
-  transform: scale(1.08);
 }
 
-.flyout-icon-btn.is-active {
-  color: var(--flyout-slider-fill);
-  background: var(--flyout-surface-hover);
+.flyout-badge-logo {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 
 @keyframes flyoutFadeIn {
@@ -424,50 +449,4 @@ html.is-flyout #root,
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* ── Selector Rápido de Posición (Pop-over) ── */
-.flyout-zone-popover {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  right: 0;
-  background: var(--flyout-bg);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid var(--flyout-border);
-  border-radius: 12px;
-  padding: 6px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  box-shadow: var(--flyout-shadow);
-  z-index: 999;
-  animation: flyoutFadeIn 0.15s ease-out;
-}
-
-.flyout-zone-btn {
-  background: var(--flyout-surface);
-  border: 1px solid transparent;
-  color: var(--flyout-text-main);
-  padding: 6px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-}
-
-.flyout-zone-btn:hover {
-  background: var(--flyout-surface-hover);
-  border-color: var(--flyout-slider-fill);
-  transform: scale(1.08);
-}
-
-.flyout-zone-btn.is-active {
-  background: var(--flyout-surface-hover);
-  color: var(--flyout-slider-fill);
-  border-color: var(--flyout-slider-fill);
-  font-weight: 700;
 }

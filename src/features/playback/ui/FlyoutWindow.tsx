@@ -44,7 +44,7 @@ export function FlyoutWindow() {
   });
 
   const [isHovered, setIsHovered] = useState(false);
-  const [showZonePicker, setShowZonePicker] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const hideTimerRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -87,21 +87,21 @@ export function FlyoutWindow() {
       hideTimerRef.current = null;
     }
 
-    if (settings.isPinned || isHovered) {
-      return; // No ocultar mientras esté fijado o con el cursor encima
+    if (settings.isPinned || isHovered || showOptions) {
+      return; // No ocultar mientras esté fijado, con cursor encima o menú de opciones abierto
     }
 
     hideTimerRef.current = window.setTimeout(() => {
       void invoke("flyout_hide").catch(() => {});
     }, settings.durationMs || 3000);
-  }, [settings.isPinned, settings.durationMs, isHovered]);
+  }, [settings.isPinned, settings.durationMs, isHovered, showOptions]);
 
   // Actualizar tamaño y posición en Rust según el contenido renderizado (340px ancho)
   const updateWindowGeometry = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const width = 356;
-    const height = Math.max(76, Math.ceil(rect.height) + 16);
+    const width = 360;
+    const height = Math.max(68, Math.ceil(rect.height) + 20);
 
     void invoke("flyout_set_position", {
       zone: settings.zone,
@@ -113,7 +113,7 @@ export function FlyoutWindow() {
   const handleSelectZone = (newZone: FlyoutZone) => {
     const updated = saveFlyoutSettings({ zone: newZone });
     setSettings(updated);
-    setShowZonePicker(false);
+    setShowOptions(false);
     void invoke("flyout_set_position", { zone: newZone }).catch(() => {});
     resetHideTimer();
   };
@@ -188,7 +188,7 @@ export function FlyoutWindow() {
       updateWindowGeometry();
     }, 40);
     return () => window.clearTimeout(timer);
-  }, [mediaState.title, mediaState.isPlaying, updateWindowGeometry]);
+  }, [mediaState.title, mediaState.isPlaying, showOptions, updateWindowGeometry]);
 
   // Reaccionar a cambios de hover para el timer
   useEffect(() => {
@@ -261,10 +261,6 @@ export function FlyoutWindow() {
     }
   };
 
-  const handleClose = () => {
-    void invoke("flyout_hide").catch(() => {});
-  };
-
   const effectiveVol = mediaState.isMuted ? 0 : Math.round(mediaState.volume);
   const hasActiveMedia =
     Boolean(mediaState.title && mediaState.title !== "Prisma") || mediaState.isPlaying;
@@ -311,117 +307,119 @@ export function FlyoutWindow() {
 
           <span className="flyout-vol-percent">{effectiveVol}</span>
 
-          <div className="flyout-top-actions" style={{ position: "relative" }}>
-            {/* Botón Selector de Posición Rápido */}
-            <button
-              className={`flyout-icon-btn ${showZonePicker ? "is-active" : ""}`}
-              onClick={() => setShowZonePicker((p) => !p)}
-              title="Cambiar posición en pantalla (6 cuadrantes)"
-              type="button"
-            >
-              <Icon name="grid" style={{ width: 14, height: 14 }} />
-            </button>
-
-            {/* Popover con las 6 zonas de pantalla */}
-            {showZonePicker && (
-              <div className="flyout-zone-popover">
-                <button
-                  className={`flyout-zone-btn ${settings.zone === "top-left" ? "is-active" : ""}`}
-                  onClick={() => handleSelectZone("top-left")}
-                  title="Arriba Izquierda"
-                  type="button"
-                >
-                  ↖️
-                </button>
-                <button
-                  className={`flyout-zone-btn ${settings.zone === "top-center" ? "is-active" : ""}`}
-                  onClick={() => handleSelectZone("top-center")}
-                  title="Arriba Centro"
-                  type="button"
-                >
-                  ⬆️
-                </button>
-                <button
-                  className={`flyout-zone-btn ${settings.zone === "top-right" ? "is-active" : ""}`}
-                  onClick={() => handleSelectZone("top-right")}
-                  title="Arriba Derecha"
-                  type="button"
-                >
-                  ↗️
-                </button>
-                <button
-                  className={`flyout-zone-btn ${settings.zone === "bottom-left" ? "is-active" : ""}`}
-                  onClick={() => handleSelectZone("bottom-left")}
-                  title="Abajo Izquierda (Predeterminado)"
-                  type="button"
-                >
-                  ↙️
-                </button>
-                <button
-                  className={`flyout-zone-btn ${settings.zone === "bottom-center" ? "is-active" : ""}`}
-                  onClick={() => handleSelectZone("bottom-center")}
-                  title="Abajo Centro"
-                  type="button"
-                >
-                  ⬇️
-                </button>
-                <button
-                  className={`flyout-zone-btn ${settings.zone === "bottom-right" ? "is-active" : ""}`}
-                  onClick={() => handleSelectZone("bottom-right")}
-                  title="Abajo Derecha"
-                  type="button"
-                >
-                  ↘️
-                </button>
-              </div>
-            )}
-
-            {/* Botón Pin de Escritorio */}
-            <button
-              className={`flyout-icon-btn ${settings.isPinned ? "is-active" : ""}`}
-              onClick={handleTogglePin}
-              title={
-                settings.isPinned
-                  ? "Desanclar del escritorio"
-                  : "Fijar como Widget persistente en el escritorio"
-              }
-              type="button"
-            >
-              <svg
-                fill={settings.isPinned ? "currentColor" : "none"}
-                height="14"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                width="14"
-              >
-                <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
-              </svg>
-            </button>
-          </div>
+          <button
+            className={`flyout-expand-btn ${showOptions ? "is-open" : ""}`}
+            onClick={() => {
+              setShowOptions((prev) => !prev);
+              resetHideTimer();
+            }}
+            title={showOptions ? "Ocultar opciones" : "Opciones y posición del flyout"}
+            type="button"
+          >
+            <Icon
+              name={showOptions ? "chevron-up" : "chevron-down"}
+              style={{ width: 14, height: 14 }}
+            />
+          </button>
         </div>
 
-        {/* ── 2. Tarjeta de Medios (Inferior, solo si hay medio activo) ── */}
+        {/* Panel de Opciones Expandible (al pulsar ⌃) */}
+        {showOptions && (
+          <div className="prisma-flyout-card flyout-options-panel">
+            <div className="flyout-options-header">
+              <span className="flyout-options-title">Posición en pantalla</span>
+              <button
+                className={`flyout-pin-btn ${settings.isPinned ? "is-pinned" : ""}`}
+                onClick={handleTogglePin}
+                title={
+                  settings.isPinned
+                    ? "Desanclar del escritorio"
+                    : "Fijar como Widget persistente en el escritorio"
+                }
+                type="button"
+              >
+                <svg
+                  fill={settings.isPinned ? "currentColor" : "none"}
+                  height="13"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  width="13"
+                >
+                  <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
+                </svg>
+                <span>{settings.isPinned ? "Fijado" : "Fijar"}</span>
+              </button>
+            </div>
+
+            <div className="flyout-zones-grid">
+              <button
+                className={`flyout-zone-cell ${settings.zone === "top-left" ? "is-active" : ""}`}
+                onClick={() => handleSelectZone("top-left")}
+                type="button"
+              >
+                ↖ Arriba Izq
+              </button>
+              <button
+                className={`flyout-zone-cell ${settings.zone === "top-center" ? "is-active" : ""}`}
+                onClick={() => handleSelectZone("top-center")}
+                type="button"
+              >
+                ↑ Arriba Centro
+              </button>
+              <button
+                className={`flyout-zone-cell ${settings.zone === "top-right" ? "is-active" : ""}`}
+                onClick={() => handleSelectZone("top-right")}
+                type="button"
+              >
+                ↗ Arriba Der
+              </button>
+              <button
+                className={`flyout-zone-cell ${settings.zone === "bottom-left" ? "is-active" : ""}`}
+                onClick={() => handleSelectZone("bottom-left")}
+                type="button"
+              >
+                ↙ Abajo Izq
+              </button>
+              <button
+                className={`flyout-zone-cell ${settings.zone === "bottom-center" ? "is-active" : ""}`}
+                onClick={() => handleSelectZone("bottom-center")}
+                type="button"
+              >
+                ↓ Abajo Centro
+              </button>
+              <button
+                className={`flyout-zone-cell ${settings.zone === "bottom-right" ? "is-active" : ""}`}
+                onClick={() => handleSelectZone("bottom-right")}
+                type="button"
+              >
+                ↘ Abajo Der
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── 2. Tarjeta de Medios (Inferior, estilo FluentFlyout) ── */}
         {hasActiveMedia && (
           <div className="prisma-flyout-card flyout-media-capsule">
-            <div className="flyout-media-main-row">
-              {/* Carátula / Miniatura */}
-              <div className="flyout-media-art">
-                {mediaState.artworkUrl ? (
-                  <img
-                    alt={mediaState.title}
-                    crossOrigin="anonymous"
-                    src={mediaState.artworkUrl}
-                  />
-                ) : (
-                  <Icon
-                    name={mediaState.mediaType === "video" ? "film" : "disc"}
-                    style={{ width: 28, height: 28, color: "var(--flyout-text-muted)" }}
-                  />
-                )}
-              </div>
+            {/* Carátula / Miniatura a la izquierda */}
+            <div className="flyout-media-art">
+              {mediaState.artworkUrl ? (
+                <img
+                  alt={mediaState.title}
+                  crossOrigin="anonymous"
+                  src={mediaState.artworkUrl}
+                />
+              ) : (
+                <Icon
+                  name={mediaState.mediaType === "video" ? "film" : "disc"}
+                  style={{ width: 28, height: 28, color: "var(--flyout-text-muted)" }}
+                />
+              )}
+            </div>
 
-              {/* Metadatos (Alto Contraste y 100% Legibles) */}
+            {/* Columna derecha con Info y Controles */}
+            <div className="flyout-media-body">
               <div className="flyout-media-info">
                 <span className="flyout-media-title" title={mediaState.title}>
                   {mediaState.title}
@@ -430,127 +428,79 @@ export function FlyoutWindow() {
                   {mediaState.artist}
                 </span>
               </div>
-            </div>
 
-            {/* Fila de Controles de Transporte y Auxiliares */}
-            <div className="flyout-controls-row">
-              <div className="flyout-transport-btns">
-                <button
-                  className="flyout-ctrl-btn"
-                  onClick={handlePrevious}
-                  title="Pista anterior"
-                  type="button"
-                >
-                  <svg
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
+              {/* Fila de Controles: botones a la izquierda, logo Prisma al final */}
+              <div className="flyout-controls-row">
+                <div className="flyout-transport-btns">
+                  <button
+                    className="flyout-ctrl-btn"
+                    onClick={handlePrevious}
+                    title="Pista anterior"
+                    type="button"
                   >
-                    <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
-                  </svg>
-                </button>
-
-                <button
-                  className="flyout-play-btn"
-                  onClick={handleTogglePlay}
-                  title={mediaState.isPlaying ? "Pausar" : "Reproducir"}
-                  type="button"
-                >
-                  {mediaState.isPlaying ? (
                     <svg
                       fill="currentColor"
-                      height="20"
+                      height="15"
                       viewBox="0 0 24 24"
-                      width="20"
+                      width="15"
                     >
-                      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                      <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
                     </svg>
-                  ) : (
+                  </button>
+
+                  <button
+                    className="flyout-play-btn"
+                    onClick={handleTogglePlay}
+                    title={mediaState.isPlaying ? "Pausar" : "Reproducir"}
+                    type="button"
+                  >
+                    {mediaState.isPlaying ? (
+                      <svg
+                        fill="currentColor"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        width="18"
+                      >
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                      </svg>
+                    ) : (
+                      <svg
+                        fill="currentColor"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        width="18"
+                      >
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    )}
+                  </button>
+
+                  <button
+                    className="flyout-ctrl-btn"
+                    onClick={handleNext}
+                    title="Siguiente pista"
+                    type="button"
+                  >
                     <svg
                       fill="currentColor"
-                      height="20"
+                      height="15"
                       viewBox="0 0 24 24"
-                      width="20"
+                      width="15"
                     >
-                      <path d="M8 5v14l11-7z" />
+                      <path d="m6 18 8.5-6L6 6v12zM16 6v12h2V6h-2z" />
                     </svg>
-                  )}
-                </button>
-
-                <button
-                  className="flyout-ctrl-btn"
-                  onClick={handleNext}
-                  title="Siguiente pista"
-                  type="button"
-                >
-                  <svg
-                    fill="currentColor"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    width="16"
-                  >
-                    <path d="m6 18 8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Visualizador de espectro reactivo (Live Spectrum FX) */}
-              {settings.showSpectrum && (
-                <div
-                  className="flyout-spectrum-bars"
-                  title="Visualizador de audio en vivo"
-                >
-                  <div
-                    className={`flyout-spectrum-bar ${
-                      mediaState.isPlaying ? "animating-1" : ""
-                    }`}
-                  />
-                  <div
-                    className={`flyout-spectrum-bar ${
-                      mediaState.isPlaying ? "animating-2" : ""
-                    }`}
-                  />
-                  <div
-                    className={`flyout-spectrum-bar ${
-                      mediaState.isPlaying ? "animating-3" : ""
-                    }`}
-                  />
-                  <div
-                    className={`flyout-spectrum-bar ${
-                      mediaState.isPlaying ? "animating-4" : ""
-                    }`}
-                  />
-                  <div
-                    className={`flyout-spectrum-bar ${
-                      mediaState.isPlaying ? "animating-5" : ""
-                    }`}
-                  />
+                  </button>
                 </div>
-              )}
 
-              {/* Acciones de Badge & Cerrar */}
-              <div className="flyout-aux-actions">
-                <span className="flyout-app-badge">
-                  <svg
-                    className="flyout-badge-icon"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle cx="12" cy="12" r="9" opacity="0.25" />
-                    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
-                  </svg>
-                  Prisma
-                </span>
-
-                <button
-                  className="flyout-icon-btn"
-                  onClick={handleClose}
-                  title="Ocultar flyout"
-                  type="button"
-                >
-                  <Icon name="close" style={{ width: 14, height: 14 }} />
-                </button>
+                {/* Badge al final a la derecha: logo oficial colorido de Prisma + texto "Prisma" */}
+                <div className="flyout-app-badge" title="Prisma">
+                  <img
+                    alt="Prisma"
+                    className="flyout-badge-logo"
+                    src="/icon/icon.png"
+                  />
+                  <span>Prisma</span>
+                </div>
               </div>
             </div>
           </div>
