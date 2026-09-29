@@ -287,6 +287,16 @@ export function createNativeDragPreview(
     const mediaHeight = media instanceof HTMLImageElement ? media.naturalHeight : media?.videoHeight ?? 0;
 
     const layout = nativeDragPreviewLayout(mediaWidth, mediaHeight, kind);
+    console.log(
+      "[NativeDrag] Vista previa para:",
+      path,
+      "| Medio detectado:",
+      media ? `${media.tagName} (${mediaWidth}x${mediaHeight})` : "NINGUNO (usando tarjeta de diseño)",
+      "| Silueta calculada:",
+      `${layout.width}x${layout.height}`,
+      "| Kind:",
+      kind
+    );
 
     const canvas = document.createElement("canvas");
     canvas.width = layout.width;
@@ -364,7 +374,8 @@ export function createNativeDragPreview(
 
     try {
       return canvas.toDataURL("image/png");
-    } catch {
+    } catch (error) {
+      console.warn("[NativeDrag] El lienzo arrojó error de exportación (posible contaminación):", error);
       // Si por alguna razón el canvas fue contaminado por un recurso remoto no marcado,
       // generar de inmediato un lienzo limpio con el fallback vectorial correspondiente.
       const safeCanvas = document.createElement("canvas");

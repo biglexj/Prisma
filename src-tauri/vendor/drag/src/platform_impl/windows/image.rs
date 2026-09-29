@@ -8,9 +8,9 @@ use windows::core::PCWSTR;
 use windows::Win32::Foundation::*;
 use windows::Win32::{
     Graphics::{
-        Gdi::{CreateDIBSection, BITMAPINFO, BI_RGB, DIB_RGB_COLORS, HBITMAP},
+        Gdi::{CreateBitmap, HBITMAP},
         Imaging::{
-            CLSID_WICImagingFactory, GUID_WICPixelFormat32bppBGRA, IWICBitmapDecoder,
+            CLSID_WICImagingFactory, GUID_WICPixelFormat32bppPBGRA, IWICBitmapDecoder,
             IWICImagingFactory, WICConvertBitmapSource, WICDecodeMetadataCacheOnDemand,
         },
     },
@@ -66,25 +66,19 @@ fn decoder_to_hbitmap(decoder: IWICBitmapDecoder) -> Result<HBITMAP> {
 
         let mut pixel_buf: Vec<u8> = vec![0; (width * height * 4) as usize];
         let pixel_format = frame.GetPixelFormat()?;
-        if pixel_format != GUID_WICPixelFormat32bppBGRA {
-            let bitmap_source = WICConvertBitmapSource(&GUID_WICPixelFormat32bppBGRA, &frame)?;
+        if pixel_format != GUID_WICPixelFormat32bppPBGRA {
+            let bitmap_source = WICConvertBitmapSource(&GUID_WICPixelFormat32bppPBGRA, &frame)?;
             bitmap_source.CopyPixels(std::ptr::null(), width * 4, &mut pixel_buf)?;
         } else {
             frame.CopyPixels(std::ptr::null(), width * 4, &mut pixel_buf)?;
         }
 
-        // InitializeFromBitmap applies alpha premultiplication itself. Keep the WIC
-        // pixels straight and use a DIB section so Windows retains the alpha channel.
-        let mut bitmap_info = BITMAPINFO::default();
-        bitmap_info.bmiHeader.biSize = std::mem::size_of_val(&bitmap_info.bmiHeader) as u32;
-        bitmap_info.bmiHeader.biWidth = width as i32;
-        bitmap_info.bmiHeader.biHeight = -(height as i32); // top-down, matching WIC rows
-        bitmap_info.bmiHeader.biPlanes = 1;
-        bitmap_info.bmiHeader.biBitCount = 32;
-        bitmap_info.bmiHeader.biCompression = BI_RGB.0;
-        let mut bits: *mut c_void = std::ptr::null_mut();
-        let bitmap = CreateDIBSection(None, &bitmap_info, DIB_RGB_COLORS, &mut bits, None, 0)?;
-        std::ptr::copy_nonoverlapping(pixel_buf.as_ptr(), bits.cast(), pixel_buf.len());
-        Ok(bitmap)
+        Ok(CreateBitmap(
+            width as i32,
+            height as i32,
+            1,
+            32,
+            Some(pixel_buf.as_ptr() as *const c_void),
+        ))
     }
 }

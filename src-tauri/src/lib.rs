@@ -773,3 +773,5 @@ pub fn run() {
             }
         });
 }
+// Trigger rebuild for native drag preview (CreateBitmap with 32bppPBGRA)
+

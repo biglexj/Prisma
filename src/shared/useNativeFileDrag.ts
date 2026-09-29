@@ -54,7 +54,10 @@ export async function startNativeFileDrag(
   // El plugin acepta PNG base64 o la ruta de un icono. El lienzo siempre produce un PNG pequeño.
   let dragIcon = options?.icon ?? createNativeDragPreview(validPaths[0], options?.previewElement, validPaths.length);
   if (!dragIcon || (!dragIcon.startsWith("data:image/png;base64,") && !dragIcon.includes("\\") && !dragIcon.includes("/"))) {
+    console.warn("[NativeFileDrag] Cayó al icono por omisión (DEFAULT_DRAG_ICON_BASE64)");
     dragIcon = DEFAULT_DRAG_ICON_BASE64;
+  } else {
+    console.log("[NativeFileDrag] Icono de arrastre listo:", dragIcon.slice(0, 40), `(longitud: ${dragIcon.length} caracteres)`);
   }
 
   try {

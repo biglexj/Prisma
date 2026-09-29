@@ -240,16 +240,30 @@ pub fn start_drag<W: HasWindowHandle, F: Fn(DragResult, CursorPosition) + Send +
 
                 unsafe {
                     if let Some(drag_image) = get_drag_image(image) {
+                        eprintln!(
+                            "[drag-native] Image size: {}x{}, offset: ({}, {}), crColorKey: 0x{:08X}",
+                            drag_image.sizeDragImage.cx,
+                            drag_image.sizeDragImage.cy,
+                            drag_image.ptOffset.x,
+                            drag_image.ptOffset.y,
+                            drag_image.crColorKey.0
+                        );
                         match create_instance::<IDragSourceHelper>(&CLSID_DragDropHelper) {
                             Ok(helper) => {
                                 if let Err(error) = helper.InitializeFromBitmap(&drag_image, &data_object) {
                                     log::warn!("Windows drag preview initialization failed: {error}");
-                                    #[cfg(debug_assertions)]
-                                    eprintln!("Windows drag preview initialization failed: {error}");
+                                    eprintln!("[drag-native] Windows drag preview initialization FAILED: {error}");
+                                } else {
+                                    eprintln!("[drag-native] Windows drag preview successfully initialized via IDragSourceHelper!");
                                 }
                             }
-                            Err(error) => log::warn!("Windows drag preview helper unavailable: {error}"),
+                            Err(error) => {
+                                log::warn!("Windows drag preview helper unavailable: {error}");
+                                eprintln!("[drag-native] Windows drag preview helper unavailable: {error}");
+                            }
                         }
+                    } else {
+                        eprintln!("[drag-native] get_drag_image returned None!");
                     }
 
                     let mut out_dropeffect = DROPEFFECT::default();

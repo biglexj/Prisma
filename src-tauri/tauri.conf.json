@@ -36,6 +36,21 @@
         "skipTaskbar": true,
         "center": true,
         "resizable": true
+      },
+      {
+        "label": "flyout",
+        "title": "Prisma Flyout",
+        "width": 380,
+        "height": 260,
+        "minWidth": 280,
+        "minHeight": 60,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "skipTaskbar": true,
+        "resizable": false,
+        "shadow": false
       }
     ],
     "security": {
