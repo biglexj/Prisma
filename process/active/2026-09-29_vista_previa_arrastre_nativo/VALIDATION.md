@@ -7,7 +7,7 @@
 - `crColorKey`: configurado a `COLORREF(0xFFFFFFFF)` (`CLR_INVALID`), eliminando la clave de color negro transparente que provocaba que Windows Shell recortara los píxeles oscuros de la miniatura.
 - `crossOrigin="anonymous"`: añadido a visores y miniaturas. Si el recurso no permite exportar el lienzo, se usa el respaldo; el atributo por sí solo no prueba que toda imagen sea exportable.
 - `VideoPlayer.tsx`: depurado el selector `.video-stage-surface`, permitiendo que el arrastre obtenga limpiamente el icono o miniatura de la biblioteca.
-- Pendiente: observación interactiva en Windows del arrastre de imagen, música y vídeo hacia el escritorio u otras aplicaciones como DaVinci Resolve o Affinity.
+- Observación interactiva en Windows: confirmada por Biglex para las miniaturas de imagen, música y vídeo; recepción externa de imagen confirmada en Affinity y en este chat (véase la validación manual al final).
 
 ## Reparación de la regresión del 29 de septiembre
 
@@ -20,6 +20,14 @@
 - `cargo check --offline --manifest-path src-tauri/Cargo.toml`: correcto con la implementación final.
 - Gesto interactivo real desde Inicio: la traza posterior a la corrección llegó a `OLE initialized → Shell data object ready → bitmap decoded → bitmap helper ready → DoDragDrop`. Desapareció el error `0x80010106`.
 - Los gestos observados devolvieron `DRAGDROP_S_DROP` con efecto `0`. Eso confirma que la sesión nativa llegó a ejecutarse; **no prueba que Paint ni otra aplicación hayan aceptado el archivo**. El callback del plugin los denomina `Dropped`, pero esa etiqueta sola no basta para afirmar recepción externa.
-- La automatización de Paint no pudo completar la prueba: estaba minimizado y los intentos de restaurarlo se interrumpieron con `user input was detected in this window`. Se conserva pendiente la recepción externa y la inspección de la miniatura flotante.
+- La automatización de Paint no pudo completar la prueba: estaba minimizado y los intentos de restaurarlo se interrumpieron con `user input was detected in this window`. Esa sesión automatizada no aportó prueba de recepción ni de aspecto visual; después Biglex completó la validación manual indicada abajo.
 - La instrumentación temporal se retiró después del diagnóstico; su último registro local queda en `temp/native-drag-trace.log`, ignorado por Git.
 - Referencias de implementación: [OleInitialize](https://learn.microsoft.com/en-us/windows/win32/api/ole2/nf-ole2-oleinitialize), [InitializeFromBitmap](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-idragsourcehelper-initializefrombitmap), [IDropTargetHelper](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nn-shobjidl_core-idroptargethelper).
+
+## Validación manual de Biglex — 29 de septiembre
+
+- Biglex confirmó que aparecen las miniaturas flotantes al arrastrar imágenes, vídeos verticales y horizontales, y música. Dio por terminada la parte visual.
+- Tras observar problemas en Paint, probó otra aplicación: aportó una captura de Affinity con `Power.png` recibido y visible en el documento.
+- Arrastró la imagen desde Prisma a este chat. Se recibió como adjunto `D:/Imágenes/Prisma/Power.png`, con su contenido visible; esto confirma una entrega externa real del archivo de imagen.
+- La recepción en dos destinos permite cerrar el arreglo del arrastre de imágenes y su vista previa. Es compatible con un problema particular de Paint, pero no demuestra su causa.
+- No se midió el efecto OLE de estos gestos manuales ni se confirmó recepción externa de archivos de música o vídeo; su miniatura flotante sí fue confirmada.
