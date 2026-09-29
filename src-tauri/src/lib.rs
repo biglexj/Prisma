@@ -72,6 +72,10 @@ use app::commands::visual_library::{
     visual_library_move_duplicates, visual_library_remove_excluded_folder, visual_library_remove_folder,
     visual_library_replace_duplicate, visual_library_rescan_folder, visual_library_scan_duplicates, visual_library_scan_folder_items, visual_library_sync_pip_icon,
 };
+use app::commands::video_takes::{
+    video_delete_take_marker, video_get_take_marker, video_get_technical_metadata,
+    video_list_take_markers, video_set_take_marker,
+};
 use app::commands::wallpapers::{wallpaper_save_and_apply, wallpaper_set_desktop};
 use app::state::{
     FavoritesState, InitialFileState, InitialSynapseSendState, MusicLibraryState,
@@ -328,6 +332,10 @@ pub fn run() {
                 features::custom_libraries::CustomLibrariesState::load(data_directory.clone())
                     .map_err(std::io::Error::other)?;
             app.manage(custom_libraries_state);
+            let video_takes_state =
+                infrastructure::video_takes::VideoTakesState::load(data_directory.clone())
+                    .map_err(std::io::Error::other)?;
+            app.manage(video_takes_state);
             let synapse_state = features::synapse::SynapseState::load(data_directory);
             app.manage(synapse_state);
 
@@ -699,6 +707,11 @@ pub fn run() {
             renamer_scan_folder,
             renamer_execute_batch,
             renamer_undo_batch,
+            video_get_technical_metadata,
+            video_get_take_marker,
+            video_set_take_marker,
+            video_list_take_markers,
+            video_delete_take_marker,
         ]);
 
         let mut context = tauri::generate_context!();

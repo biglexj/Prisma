@@ -9,7 +9,9 @@ pub mod quick_look;
 pub mod renamer;
 pub mod synapse;
 pub mod tags;
+pub mod video_takes;
 pub mod visual_library;
 pub mod wallpapers;
+
 
 
