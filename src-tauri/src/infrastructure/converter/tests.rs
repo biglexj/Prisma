@@ -9,7 +9,7 @@ fn real_media_conversion_and_overwrite_protection() {
     image::RgbImage::from_pixel(32, 24, image::Rgb([20, 180, 120])).save(&input).unwrap();
     for format in ["jpg", "png", "webp", "avif", "bmp", "tiff", "gif"] {
         let output = root.join(format!("salida.{format}"));
-        let options = ImageConvertOptions { target_format: format.into(), quality: Some(75), resize_width: Some(16), resize_height: None, keep_aspect_ratio: Some(true), strip_metadata: Some(true) };
+        let options = ImageConvertOptions { target_format: format.into(), quality: Some(75), resize_width: Some(16), resize_height: None, keep_aspect_ratio: Some(true), strip_metadata: Some(true), watermark: None };
         convert_image(&input, &output, &options).unwrap();
         assert!(output.metadata().unwrap().len() > 0);
         assert!(convert_image(&input, &output, &options).is_err());
