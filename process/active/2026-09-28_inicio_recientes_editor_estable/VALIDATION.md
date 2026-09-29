@@ -9,6 +9,7 @@
 - [x] `bun run build`: TypeScript y Vite correctos tras los controles de logotipo; persiste la advertencia existente sobre el tamaño de los chunks.
 - [x] `bun test test/watermarkLayout.test.ts`: ocho pruebas tras añadir contorno y colores; incluye silueta de logo transparente.
 - [x] `bun run build`: TypeScript y Vite correctos con el diálogo de dos columnas y los controles del conversor; persiste la advertencia de tamaño de chunks.
+- [x] Tras desactivar sombra y contorno por defecto: `bun run check` correcto y ocho pruebas de marca de agua correctas.
 - [x] `git diff --check`: sin errores de espacios.
 - [ ] Probar el arrastre desde cada tipo de tarjeta de Inicio a una aplicación externa.
 - [ ] Probar Enter, regreso a edición y guardado de un recorte.

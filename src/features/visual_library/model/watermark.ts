@@ -47,7 +47,7 @@ export const DEFAULT_WATERMARK_CONFIG: WatermarkConfig = {
   scale: 1.0,
   opacity: 0.85,
   color: "#ffffff",
-  withShadow: true,
+  withShadow: false,
   withOutline: false,
   outlineColor: "#151014",
   outlineWidth: 6,

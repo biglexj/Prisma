@@ -9,5 +9,6 @@
 - [x] Separar el tamaño del logotipo del texto y permitir colocarlos arriba, abajo, a los lados o superpuestos, tanto en el editor como en el conversor.
 - [x] Reorganizar el diálogo de marca de agua en dos columnas responsivas, con desplazamiento solo como respaldo para ventanas estrechas o bajas.
 - [x] Añadir color de texto y contorno configurable a la vista previa y exportación.
+- [x] Dejar contorno y sombra desactivados en la configuración inicial del editor y del conversor.
 - [x] Aceptar un logotipo soltado en el diálogo desde el Explorador de Windows.
 - [ ] Probar manualmente arrastre, recorte, dibujo, marca y exportación en Prisma de desarrollo.
