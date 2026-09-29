@@ -4,6 +4,7 @@ import { cleanPath, toSafeAssetUrl } from "../../../../shared/mediaTree";
 import { saveEditedImage } from "../../../../shared/mediaOperations";
 import type { VisualLibraryItem } from "../../model/types";
 import { ImageCropOverlay } from "./ImageCropOverlay";
+import { brushWidthInImage, fitCropToAspect, previewPointToImage } from "./cropGeometry";
 import { ImageEditorToolbar } from "./ImageEditorToolbar";
 import { SaveImageDialog } from "./SaveImageDialog";
 import { WatermarkModal } from "./WatermarkModal";
@@ -85,6 +86,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageContainerRef = useRef<HTMLDivElement | null>(null);
   const currentStrokeRef = useRef<DoodlePoint[] | null>(null);
+  const currentStrokeWidthRef = useRef(0);
   const watermarkDragRef = useRef<{ pointerId: number; offsetX: number; offsetY: number } | null>(null);
 
   // Cargar elemento de imagen original
@@ -96,6 +98,19 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
       setImageElement(img);
     };
   }, [item.path]);
+
+  // La proporción fija se recalcula al cargar o girar la imagen, nunca al
+  // volver de una vista previa ni al cambiar de pestaña.
+  useEffect(() => {
+    if (!imageElement) return;
+    const turned = Math.abs(rotationDegrees % 180) === 90;
+    const fitted = fitCropToAspect(
+      aspectRatio,
+      turned ? imageElement.naturalHeight : imageElement.naturalWidth,
+      turned ? imageElement.naturalWidth : imageElement.naturalHeight,
+    );
+    if (fitted) setCrop(fitted);
+  }, [aspectRatio, imageElement, rotationDegrees]);
 
   // Cargar logotipo de marca de agua si se especifica
   useEffect(() => {
@@ -232,7 +247,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
       allStrokes.push({
         points: currentStroke,
         color: brushColor,
-        width: brushWidth,
+        width: currentStrokeWidthRef.current,
       });
     }
 
@@ -242,7 +257,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
         if (stroke.points.length === 0) continue;
         ctx.beginPath();
         ctx.strokeStyle = stroke.color;
-        ctx.lineWidth = stroke.width;
+        ctx.lineWidth = stroke.width * fullWidth;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
 
@@ -255,7 +270,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
         }
         if (stroke.points.length === 1) {
           ctx.beginPath();
-          ctx.arc(first.x * fullWidth - offsetX, first.y * fullHeight - offsetY, stroke.width / 2, 0, Math.PI * 2);
+          ctx.arc(first.x * fullWidth - offsetX, first.y * fullHeight - offsetY, ctx.lineWidth / 2, 0, Math.PI * 2);
           ctx.fillStyle = stroke.color;
           ctx.fill();
         } else {
@@ -323,8 +338,9 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
     if (!isDrawing || activeTab !== "draw") return;
     const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-
-    currentStrokeRef.current = [{ x, y }];
+    const previewCrop = isCropActive && isCropPreview ? crop : null;
+    currentStrokeWidthRef.current = brushWidthInImage(brushWidth, canvas.width, previewCrop);
+    currentStrokeRef.current = [previewPointToImage(x, y, previewCrop)];
     setCurrentStroke(currentStrokeRef.current);
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
@@ -352,8 +368,8 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
     const rect = canvas.getBoundingClientRect();
     const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-
-    currentStrokeRef.current = [...currentStrokeRef.current, { x, y }];
+    const previewCrop = isCropActive && isCropPreview ? crop : null;
+    currentStrokeRef.current = [...currentStrokeRef.current, previewPointToImage(x, y, previewCrop)];
     setCurrentStroke(currentStrokeRef.current);
   };
 
@@ -371,7 +387,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
         {
           points: strokePoints,
           color: brushColor,
-          width: brushWidth,
+          width: currentStrokeWidthRef.current,
         },
       ]);
     }
@@ -452,13 +468,11 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
       // 2. Renderizar trazos de dibujo en el canvas de alta resolución
       if (doodleStrokes.length > 0) {
         interCtx.save();
-        const fullDisplayWidth = stageDimensions.width / (isCropActive && isCropPreview ? crop.width : 1);
-        const scaleFactor = fullRotatedW / (fullDisplayWidth || fullRotatedW);
         for (const stroke of doodleStrokes) {
           if (stroke.points.length === 0) continue;
           interCtx.beginPath();
           interCtx.strokeStyle = stroke.color;
-          interCtx.lineWidth = stroke.width * scaleFactor;
+          interCtx.lineWidth = stroke.width * fullRotatedW;
           interCtx.lineCap = "round";
           interCtx.lineJoin = "round";
 
@@ -616,7 +630,6 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
           setIsMovingWatermark(false);
           if (tab === "draw") {
             setIsDrawing(true);
-            setIsCropPreview(false);
           }
         }}
         // Transform
@@ -634,6 +647,15 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
         aspectRatio={aspectRatio}
         onSelectAspectRatio={(ratio) => {
           setAspectRatio(ratio);
+          if (imageElement) {
+            const turned = Math.abs(rotationDegrees % 180) === 90;
+            const fitted = fitCropToAspect(
+              ratio,
+              turned ? imageElement.naturalHeight : imageElement.naturalWidth,
+              turned ? imageElement.naturalWidth : imageElement.naturalHeight,
+            );
+            if (fitted) setCrop(fitted);
+          }
           setIsCropPreview(false);
           setIsMovingWatermark(false);
         }}

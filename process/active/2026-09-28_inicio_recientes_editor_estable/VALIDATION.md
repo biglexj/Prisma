@@ -10,9 +10,12 @@
 - [x] `bun test test/watermarkLayout.test.ts`: ocho pruebas tras añadir contorno y colores; incluye silueta de logo transparente.
 - [x] `bun run build`: TypeScript y Vite correctos con el diálogo de dos columnas y los controles del conversor; persiste la advertencia de tamaño de chunks.
 - [x] Tras desactivar sombra y contorno por defecto: `bun run check` correcto y ocho pruebas de marca de agua correctas.
+- [x] `bun test test/cropGeometry.test.ts test/watermarkLayout.test.ts`: 15 pruebas correctas; cinco relaciones fijas llenan el eje limitante y las coordenadas y el grosor del pincel se transforman al recorte.
+- [x] `bun run build`: TypeScript y Vite correctos tras conservar la vista previa en Dibujar; persiste la advertencia existente sobre el tamaño de chunks.
 - [x] `git diff --check`: sin errores de espacios.
 - [ ] Probar el arrastre desde cada tipo de tarjeta de Inicio a una aplicación externa.
 - [ ] Probar Enter, regreso a edición y guardado de un recorte.
+- [ ] Probar en la aplicación el cambio de relación, la vista previa al entrar en Dibujar y el grosor y ubicación del trazo exportado.
 - [ ] Probar trazos continuos y puntos aislados, antes y después del recorte.
 - [ ] Probar marca de agua con texto, fecha y logo; arrastrar y exportar en varias proporciones de imagen.
 - [ ] Soltar un logotipo desde el Explorador en el recuadro del diálogo y comprobar que el archivo se acepta solo allí.

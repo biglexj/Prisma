@@ -9,6 +9,8 @@ Mostrar primero los archivos incorporados recientemente, permitir su arrastre na
 - Ordenar cada estante por la fecha más reciente entre creación y modificación; mostrar hasta 20 imágenes y canciones, y 12 vídeos, en carruseles horizontales.
 - Hacer que la tarjeta completa de Inicio inicie el arrastre nativo, incluidos sus elementos visuales internos.
 - Conservar el recorte como operación no destructiva: Enter alterna entre marco y vista previa; el guardado usa el recorte vigente.
+- Al escoger una relación fija, recalcular el rectángulo centrado con el mayor tamaño que cabe en la imagen: tocar por completo el eje limitante y conservar la proporción exacta.
+- Conservar la vista previa recortada al entrar en Dibujar y registrar los trazos en coordenadas de la imagen completa para que vista previa y exportación coincidan.
 - Activar el pincel al entrar en Dibujar y permitir trazos incluso si hay un recorte pendiente.
 - Situar el borde de la marca de agua al 1 % de cada esquina elegida y permitir moverla sobre la vista previa antes de guardar.
 - Calibrar el logotipo con una escala independiente del texto; ofrecer cinco composiciones entre ambos y usar el mismo cálculo para vista previa, guardado y conversión.

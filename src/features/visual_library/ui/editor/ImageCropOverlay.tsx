@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useRef } from "react";
 import type { AspectRatioOption, CropRect } from "./editorTypes";
+import { aspectRatioValue } from "./cropGeometry";
 
 interface ImageCropOverlayProps {
   containerWidth: number;
@@ -36,52 +37,8 @@ export function ImageCropOverlay({
   });
 
   const getTargetRatio = useCallback((): number | null => {
-    switch (aspectRatio) {
-      case "1:1":
-        return 1;
-      case "4:3":
-        return 4 / 3;
-      case "3:4":
-        return 3 / 4;
-      case "16:9":
-        return 16 / 9;
-      case "9:16":
-        return 9 / 16;
-      default:
-        return null;
-    }
+    return aspectRatioValue(aspectRatio);
   }, [aspectRatio]);
-
-  // Si cambia la relación de aspecto y no es libre, ajustar el crop inicial
-  useEffect(() => {
-    const targetRatio = getTargetRatio();
-    if (!targetRatio || containerWidth <= 0 || containerHeight <= 0) return;
-
-    // Volver de la vista previa monta otra vez el marco. Conserva el recorte
-    // ajustado por el usuario cuando ya respeta la proporción elegida.
-    const currentRatio = (crop.width * containerWidth) / (crop.height * containerHeight);
-    if (Math.abs(currentRatio - targetRatio) < 0.005) return;
-
-    const imgAspect = containerWidth / containerHeight;
-    let w = 0.9;
-    let h = 0.9;
-
-    // Calcular ancho y alto normalizados que cumplan targetRatio en pixeles
-    // (w * containerWidth) / (h * containerHeight) = targetRatio
-    // w / h = targetRatio / imgAspect
-    const normalizedRatio = targetRatio / imgAspect;
-    if (normalizedRatio > 1) {
-      w = 0.9;
-      h = Math.min(0.9, w / normalizedRatio);
-    } else {
-      h = 0.9;
-      w = Math.min(0.9, h * normalizedRatio);
-    }
-
-    const x = (1 - w) / 2;
-    const y = (1 - h) / 2;
-    onChange({ x, y, width: w, height: h });
-  }, [aspectRatio, containerWidth, containerHeight]);
 
   const handlePointerDown = (
     e: React.PointerEvent<HTMLDivElement>,

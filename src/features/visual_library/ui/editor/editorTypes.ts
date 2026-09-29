@@ -35,7 +35,7 @@ export interface DoodlePoint {
 export interface DoodleStroke {
   points: DoodlePoint[];
   color: string;
-  width: number;
+  width: number; // Fracción del ancho de la imagen rotada
 }
 
 export interface CropRect {
