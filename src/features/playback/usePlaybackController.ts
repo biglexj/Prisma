@@ -4,6 +4,7 @@ import type { PlaybackCapabilities, PlaybackSnapshot } from "./model/types";
 import type { MusicQueueItem } from "./model/queue";
 import { playbackClient } from "./tauri/client";
 import { usePlaybackQueue } from "./usePlaybackQueue";
+import { createPlaybackSnapshotGuard, hasPlaybackEnded } from "./services/playbackSnapshotGuard";
 
 const STORAGE_KEY_PLAYBACK_VOLUME = "prisma_playback_volume";
 
@@ -38,19 +39,22 @@ export function usePlaybackController() {
   const [busy, setBusy] = useState(false);
   const queue = usePlaybackQueue();
   const lastCompletedPathRef = useRef<string | null>(null);
+  const snapshotGuardRef = useRef(createPlaybackSnapshotGuard());
+  const loadInFlightRef = useRef(false);
 
   const run = useCallback(async (action: () => Promise<PlaybackSnapshot>) => {
+    const generation = snapshotGuardRef.current.generation;
     setBusy(true);
     setError(null);
     try {
       const snap = await action();
-      setSnapshot(snap);
+      if (generation === snapshotGuardRef.current.generation) setSnapshot(snap);
       return snap;
     } catch (reason) {
-      setError(String(reason));
+      if (generation === snapshotGuardRef.current.generation) setError(String(reason));
       throw reason;
     } finally {
-      setBusy(false);
+      if (generation === snapshotGuardRef.current.generation) setBusy(false);
     }
   }, []);
 
@@ -61,7 +65,10 @@ export function usePlaybackController() {
         setCapabilities(caps);
         if (caps.available) {
           const initialVol = getInitialVolume();
-          void playbackClient.setVolume(initialVol).then(setSnapshot).catch(() => {});
+          const generation = snapshotGuardRef.current.generation;
+          void playbackClient.setVolume(initialVol).then((snap) => {
+            if (!loadInFlightRef.current && generation === snapshotGuardRef.current.generation) setSnapshot(snap);
+          }).catch(() => {});
         }
       })
       .catch((reason) => {
@@ -71,8 +78,28 @@ export function usePlaybackController() {
 
   const loadPath = useCallback(
     async (path: string) => {
+      const guard = snapshotGuardRef.current;
+      const generation = guard.beginLoad(path);
+      loadInFlightRef.current = true;
       lastCompletedPathRef.current = null;
-      return run(() => playbackClient.load(path));
+      try {
+        return await run(async () => {
+          const loaded = await playbackClient.load(path);
+          // loadfile acknowledges the command before the new media is necessarily ready.
+          // Keep polling this requested path while idle or old EOF snapshots settle.
+          return {
+            ...loaded, path, paused: false, eofReached: false,
+            positionSeconds: 0,
+            durationSeconds: null,
+            trackTitle: null, trackArtist: null, trackAlbum: null,
+          };
+        });
+      } catch (reason) {
+        guard.cancelLoad(generation);
+        throw reason;
+      } finally {
+        if (generation === guard.generation) loadInFlightRef.current = false;
+      }
     },
     [run],
   );
@@ -121,11 +148,8 @@ export function usePlaybackController() {
     if (queue.activeQueue.items.length > 0) {
       const res = queue.advanceNext();
       if (res) {
-        if (res.replay) {
-          void run(() => playbackClient.seek(0));
-        } else {
-          void loadPath(res.item.path);
-        }
+        // Repeat-one uses the same guarded load lifecycle, clearing EOF and the completion marker.
+        void loadPath(res.item.path);
         return;
       }
     }
@@ -149,22 +173,23 @@ export function usePlaybackController() {
 
   // Polling con detección precisa de fin de pista y auto-avance
   useEffect(() => {
-    if (!capabilities?.available || !snapshot.path) return;
+    if (!capabilities?.available) return;
 
     const interval = snapshot.paused ? 1200 : 400;
+    let disposed = false;
+    let polling = false;
     const timer = window.setInterval(() => {
+      if (polling || loadInFlightRef.current) return;
+      polling = true;
+      const generation = snapshotGuardRef.current.generation;
       playbackClient
         .snapshot()
         .then((snap) => {
+          if (disposed || loadInFlightRef.current || !snapshotGuardRef.current.accept(snap, generation)) return;
           setSnapshot(snap);
 
-          const duration = snap.durationSeconds ?? 0;
-          const pos = snap.positionSeconds ?? 0;
-          const isEof = snap.eofReached === true;
-          const isNearEnd = duration > 1 && pos >= duration - 0.35;
-
           if (
-            (isEof || isNearEnd) &&
+            hasPlaybackEnded(snap) &&
             snap.path &&
             lastCompletedPathRef.current !== snap.path
           ) {
@@ -203,10 +228,11 @@ export function usePlaybackController() {
             next();
           }
         })
-        .catch(() => undefined);
+        .catch(() => undefined)
+        .finally(() => { polling = false; });
     }, interval);
 
-    return () => window.clearInterval(timer);
+    return () => { disposed = true; window.clearInterval(timer); };
   }, [
     capabilities?.available,
     snapshot.path,

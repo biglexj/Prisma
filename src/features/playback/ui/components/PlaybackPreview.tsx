@@ -70,7 +70,7 @@ export function PlaybackPreview({
   const hasEffectiveMedia = Boolean(effectivePath);
   const duration = snapshot.durationSeconds ?? 0;
   const position = Math.min(snapshot.positionSeconds ?? 0, Math.max(duration, 1));
-  const rawTitle = mediaTitle(snapshot.path);
+  const rawTitle = mediaTitle(effectivePath);
   const parsed = parseTrackInfo(rawTitle);
   const tagTitle = snapshot.trackTitle?.trim();
   const tagArtist = snapshot.trackArtist?.trim();
@@ -338,7 +338,7 @@ export function PlaybackPreview({
         <div className="preview-controls">
           <div className="preview-track-title">
             <div>
-              <span>{hasMedia ? "REPRODUCIENDO" : "LISTO PARA REPRODUCIR"}</span>
+              <span>{hasMedia ? snapshot.paused ? "EN PAUSA" : "REPRODUCIENDO" : "LISTO PARA REPRODUCIR"}</span>
               <h2
                 draggable={false}
                 onDragStart={(event) => event.preventDefault()}
@@ -486,10 +486,10 @@ export function PlaybackPreview({
               <span>{Math.round(snapshot.volume)}%</span>
             </div>
             <button
-              disabled={!hasMedia}
+              disabled={!hasEffectiveMedia}
               onClick={() => {
-                if (snapshot.path) {
-                  void invoke("show_in_file_manager", { path: snapshot.path }).catch(() => {});
+                if (effectivePath) {
+                  void invoke("show_in_file_manager", { path: effectivePath }).catch(() => {});
                 }
               }}
               title="Abrir ubicación de la canción en el explorador"
@@ -537,10 +537,12 @@ export function PlaybackPreview({
 
           <div className="preview-runtime">
             <span><i className={enabled ? "is-ready" : ""} /> {capabilities?.backend ?? "Conectando…"}</span>
-            <span>{capabilities?.videoOutput ? "Salida de vídeo disponible" : "Salida de vídeo pendiente"}</span>
+            {isVideo ? <span>{capabilities?.videoOutput ? "Salida de vídeo disponible" : "Salida de vídeo pendiente"}</span> : null}
           </div>
 
-          {snapshot.path ? <p className="preview-path" title={cleanPath(snapshot.path)}>{cleanPath(snapshot.path)}</p> : null}
+          <p className="preview-path" title={effectivePath ? cleanPath(effectivePath) : undefined}>
+            {effectivePath ? cleanPath(effectivePath) : "\u00a0"}
+          </p>
         </div>
       </div>
       {tagEditorOpen && snapshot.path ? (
