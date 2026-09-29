@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { cleanPath } from "../../shared/mediaTree";
+import { isOwnNativeFileDrop } from "../../shared/useNativeFileDrag";
 import type { AppView } from "../ui/AppSidebar";
 
 interface UseGlobalFileDropProps {
@@ -73,6 +74,7 @@ export function useGlobalFileDrop({
 
     const handleDroppedPaths = (paths: string[]) => {
       if (!paths || paths.length === 0) return;
+      if (isOwnNativeFileDrop(paths)) return;
       // Si el comparador de imágenes o sus selectores están en pantalla, tienen prioridad exclusiva
       if (
         document.querySelector(".img-compare-modal-root") ||

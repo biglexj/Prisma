@@ -1638,7 +1638,7 @@ export function VideoPlayer({
             draggable={Boolean(path)}
             onDragStart={(e) => {
               if (path) {
-                handleNativeDragStart(e, path);
+                handleNativeDragStart(e, path, { previewElement: document.querySelector(".video-stage-surface") });
               }
             }}
             style={{ cursor: path ? "grab" : "default" }}
@@ -1651,7 +1651,7 @@ export function VideoPlayer({
               type="button"
               className="video-drag-handle-pill"
               draggable={true}
-              onDragStart={(e) => handleNativeDragStart(e, path)}
+              onDragStart={(e) => handleNativeDragStart(e, path, { previewElement: document.querySelector(".video-stage-surface") })}
               title="Mantén presionado y arrastra hacia DaVinci Resolve, Premiere, Explorer, etc."
             >
               <Icon name="film" />
@@ -1844,7 +1844,7 @@ export function VideoPlayer({
                 if (isFastForwarding) {
                   stopFastForward();
                 }
-                void startNativeFileDrag(path);
+                void startNativeFileDrag(path, { previewElement: document.querySelector(".video-stage-surface") });
               }
             }
           }}

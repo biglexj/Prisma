@@ -1,6 +1,7 @@
 import type { DragEvent as ReactDragEvent } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { toPlatformPath } from "./mediaTree";
+import { createNativeDragPreview } from "./nativeDragPreview";
 
 /**
  * Icono de arrastre universal compacto (32x32 PNG en base64).
@@ -14,6 +15,19 @@ export const DEFAULT_DRAG_ICON_BASE64 =
 export interface NativeDragOptions {
   icon?: string;
   mode?: "copy" | "move";
+  previewElement?: Element | null;
+}
+
+let outgoingPaths: string[] = [];
+let outgoingUntil = 0;
+
+const dragPathKey = (path: string) => toPlatformPath(path).replace(/\//g, "\\").toLowerCase();
+
+/** Evita que un archivo arrastrado desde Prisma se reimporte al soltarlo dentro de la propia ventana. */
+export function isOwnNativeFileDrop(paths: string[]): boolean {
+  return Date.now() <= outgoingUntil &&
+    paths.length > 0 &&
+    paths.every((path) => outgoingPaths.includes(dragPathKey(path)));
 }
 
 /**
@@ -37,14 +51,15 @@ export async function startNativeFileDrag(
     return;
   }
 
-  // Si se pasa un icono explícito (por ejemplo, ruta a un archivo de imagen en disco o data-url PNG),
-  // se utiliza; de lo contrario, se emplea el icono por defecto en base64 para máxima confiabilidad.
-  let dragIcon = options?.icon;
+  // El plugin acepta PNG base64 o la ruta de un icono. El lienzo siempre produce un PNG pequeño.
+  let dragIcon = options?.icon ?? createNativeDragPreview(validPaths[0], options?.previewElement, validPaths.length);
   if (!dragIcon || (!dragIcon.startsWith("data:image/png;base64,") && !dragIcon.includes("\\") && !dragIcon.includes("/"))) {
     dragIcon = DEFAULT_DRAG_ICON_BASE64;
   }
 
   try {
+    outgoingPaths = validPaths.map(dragPathKey);
+    outgoingUntil = Number.POSITIVE_INFINITY;
     await startDrag({
       item: validPaths,
       icon: dragIcon,
@@ -52,6 +67,9 @@ export async function startNativeFileDrag(
     });
   } catch (error) {
     console.warn("[NativeFileDrag] Error iniciando arrastre nativo hacia el SO:", error);
+  } finally {
+    // El evento de soltado puede llegar justo después de que termine DoDragDrop.
+    outgoingUntil = Date.now() + 1200;
   }
 }
 
@@ -69,7 +87,10 @@ export function handleNativeDragStart(
     e.stopPropagation();
   }
 
-  void startNativeFileDrag(files, options);
+  // currentTarget deja de ser fiable al salir del evento React: capturar la vista antes de iniciar OLE.
+  const fileList = Array.isArray(files) ? files : [files];
+  const icon = options?.icon ?? createNativeDragPreview(fileList[0] ?? "", options?.previewElement ?? e.currentTarget, fileList.length);
+  void startNativeFileDrag(files, { ...options, icon: icon ?? undefined });
 }
 
 /**

@@ -342,7 +342,7 @@ export function PlaybackPreview({
                 draggable={Boolean(effectivePath)}
                 onDragStart={(e) => {
                   if (effectivePath) {
-                    handleNativeDragStart(e, effectivePath);
+                    handleNativeDragStart(e, effectivePath, { previewElement: document.querySelector(".preview-artwork img") });
                   }
                 }}
                 style={{ cursor: effectivePath ? "grab" : "default" }}
