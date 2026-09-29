@@ -8,4 +8,6 @@
 - [x] Revisar el informe de Biglex: el archivo se suelta bien, pero Windows no muestra la miniatura.
 - [x] Corregir el bitmap nativo para conservar el canal alfa y ubicarlo junto al cursor.
 - [x] Ampliar la vista previa a 176 × 176 y compilar el controlador nativo por separado.
+- [x] Añadir las formas cuadrada, 16:9 y 9:16 sin cortar el contenido de la miniatura.
+- [x] Sacar la compilación temporal del módulo nativo de la carpeta vigilada por Prisma.
 - [ ] Verificar visualmente el arrastre real de imagen, música y vídeo hacia Windows u otra aplicación.
