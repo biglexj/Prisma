@@ -10,7 +10,7 @@ Mostrar primero los archivos incorporados recientemente, permitir su arrastre na
 - Hacer que la tarjeta completa de Inicio inicie el arrastre nativo, incluidos sus elementos visuales internos.
 - Conservar el recorte como operación no destructiva: Enter alterna entre marco y vista previa; el guardado usa el recorte vigente.
 - Activar el pincel al entrar en Dibujar y permitir trazos incluso si hay un recorte pendiente.
-- Situar el borde de la marca de agua al 5 % de cada esquina elegida y permitir moverla sobre la vista previa antes de guardar.
+- Situar el borde de la marca de agua al 1 % de cada esquina elegida y permitir moverla sobre la vista previa antes de guardar.
 - En desarrollo, reutilizar las DLL y herramientas copiadas al directorio de Cargo; conservar los recursos del instalador.
 
 ## Límite de validación

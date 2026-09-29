@@ -41,6 +41,8 @@ export const DEFAULT_WATERMARK_CONFIG: WatermarkConfig = {
   withShadow: true,
 };
 
+const EDGE_MARGIN_RATIO = 0.01;
+
 /**
  * Genera el texto final de la marca combinando autor y fecha ISO si corresponde.
  */
@@ -118,8 +120,8 @@ function getWatermarkLayout(
   const gap = hasLogo && text ? Math.max(4, Math.min(width, height) * 0.015 * scale) : 0;
   const markWidth = Math.max(textWidth, logoWidth);
   const markHeight = logoHeight + gap + (text ? fontSize * 1.2 : 0);
-  const marginX = width * 0.05;
-  const marginY = height * 0.05;
+  const marginX = width * EDGE_MARGIN_RATIO;
+  const marginY = height * EDGE_MARGIN_RATIO;
   const left = marginX;
   const right = width - marginX - markWidth;
   const top = marginY;

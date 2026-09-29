@@ -191,7 +191,7 @@ export function WatermarkModal({
               ))}
             </div>
             <small className="watermark-position-help">
-              Los bordes mantienen un margen del 5 % de la imagen. Al aplicar, puedes arrastrar la marca a una ubicación libre.
+              Los bordes mantienen un margen del 1 % de la imagen. Al aplicar, puedes arrastrar la marca a una ubicación libre.
               {position === "custom" ? " Ubicación libre seleccionada." : ""}
             </small>
           </div>
