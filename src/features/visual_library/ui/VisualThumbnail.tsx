@@ -61,6 +61,7 @@ export function VisualThumbnail({
         <img
           alt={alt}
           decoding="async"
+          draggable={false}
           loading={eager ? "eager" : "lazy"}
           onLoad={(e) => {
             const img = e.currentTarget;

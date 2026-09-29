@@ -906,11 +906,20 @@ export function ImageViewer({
             className="image-viewer-title"
             draggable={true}
             onDragStart={(e) => handleNativeDragStart(e, currentItem.path)}
-            style={{ cursor: "grab" }}
-            title={`${currentItem.title} · Arrastrar hacia apps externas (DaVinci Resolve, Affinity, Explorer)`}
+            title={`${currentItem.title} · Arrastrar hacia apps externas (Affinity, Photoshop, Krita, DaVinci, Explorer)`}
           >
             {currentItem.title}
           </h2>
+          <button
+            type="button"
+            className="image-viewer-drag-pill"
+            draggable={true}
+            onDragStart={(e) => handleNativeDragStart(e, currentItem.path)}
+            title="Mantén presionado y arrastra hacia Affinity, Photoshop, Krita, DaVinci, Explorer..."
+          >
+            <Icon name="image" />
+            <span>Arrastrar archivo</span>
+          </button>
         </div>
 
         <div className="image-viewer-top-right">

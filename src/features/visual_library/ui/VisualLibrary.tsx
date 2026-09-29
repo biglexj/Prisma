@@ -1123,13 +1123,20 @@ function VisualCard({
 
   return (
     <div className={`visual-media-card-wrapper ${layoutClass}`}>
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         className={`visual-media-card ${isActivating ? "is-activating" : ""}`}
         draggable={true}
         onDragStart={(e) => handleNativeDragStart(e, item.path)}
         onClick={onClick}
         onContextMenu={onContextMenu}
         onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onClick();
+            return;
+          }
           if (
             onDeleteRequest &&
             (event.key === "Delete" ||
@@ -1208,7 +1215,7 @@ function VisualCard({
             {cleanPath(item.relativeFolder)} · {formatBytes(item.sizeBytes)}
           </small>
         </span>
-      </button>
+      </div>
 
       {onToggleFavorite ? (
         <button

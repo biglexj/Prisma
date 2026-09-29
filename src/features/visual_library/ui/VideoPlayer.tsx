@@ -19,7 +19,7 @@ import { useSystemSettings } from "../../../app/useSystemSettings";
 import { ImageComparisonModal } from "../../comparison";
 import { VolumeOsd, useVolumeOsd } from "../../../shared/ui/VolumeOsd";
 import { SeekOsd, useSeekOsd } from "../../../shared/ui/SeekOsd";
-import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
+import { handleNativeDragStart, startNativeFileDrag } from "../../../shared/useNativeFileDrag";
 import { VideoTechnicalHud } from "./components/VideoTechnicalHud";
 import { getClipColorHex } from "../model/davinciColors";
 import { useVideoTakes, useVideoTechnicalMetadata } from "../hooks/useVideoTakes";
@@ -189,6 +189,8 @@ export function VideoPlayer({
   });
   const controlsTimeoutRef = useRef<number | null>(null);
   const fastForwardIntervalRef = useRef<number | null>(null);
+  const stageMouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
+  const isStageDraggingFileRef = useRef<boolean>(false);
   const audioMenuRef = useRef<HTMLDivElement | null>(null);
   const subMenuRef = useRef<HTMLDivElement | null>(null);
   const isHoveringControlsRef = useRef<boolean>(false);
@@ -1644,6 +1646,18 @@ export function VideoPlayer({
           >
             {title}
           </h2>
+          {path ? (
+            <button
+              type="button"
+              className="video-drag-handle-pill"
+              draggable={true}
+              onDragStart={(e) => handleNativeDragStart(e, path)}
+              title="Mantén presionado y arrastra hacia DaVinci Resolve, Premiere, Explorer, etc."
+            >
+              <Icon name="film" />
+              <span>Arrastrar archivo</span>
+            </button>
+          ) : null}
           {playbackSource?.is_proxy ? (
             <span
               className="video-pill-badge is-proxy"
@@ -1795,7 +1809,7 @@ export function VideoPlayer({
           onContextMenu={handleContextMenu}
           onDoubleClick={toggleFullscreen}
           onClick={(event) => {
-            if (isFastForwarding) return;
+            if (isFastForwarding || isStageDraggingFileRef.current) return;
             if (event.detail === 1) {
               if (showControls) {
                 setShowControls(false);
@@ -1812,12 +1826,36 @@ export function VideoPlayer({
           }}
           onMouseDown={(e) => {
             if (e.button === 0 && e.detail === 1) {
+              stageMouseDownPosRef.current = { x: e.clientX, y: e.clientY };
+              isStageDraggingFileRef.current = false;
               fastForwardIntervalRef.current = window.setTimeout(startFastForward, 350);
             }
           }}
+          onMouseMove={(e) => {
+            if (stageMouseDownPosRef.current && e.buttons === 1 && path && !isStageDraggingFileRef.current) {
+              const dx = e.clientX - stageMouseDownPosRef.current.x;
+              const dy = e.clientY - stageMouseDownPosRef.current.y;
+              if (Math.hypot(dx, dy) > 10) {
+                isStageDraggingFileRef.current = true;
+                if (fastForwardIntervalRef.current) {
+                  window.clearTimeout(fastForwardIntervalRef.current);
+                  fastForwardIntervalRef.current = null;
+                }
+                if (isFastForwarding) {
+                  stopFastForward();
+                }
+                void startNativeFileDrag(path);
+              }
+            }
+          }}
           onMouseUp={() => {
+            stageMouseDownPosRef.current = null;
+            setTimeout(() => {
+              isStageDraggingFileRef.current = false;
+            }, 120);
             if (fastForwardIntervalRef.current) {
               window.clearTimeout(fastForwardIntervalRef.current);
+              fastForwardIntervalRef.current = null;
             }
             if (isFastForwarding) {
               stopFastForward();

@@ -177,6 +177,7 @@ export function VideoThumbnail({
           alt={title}
           className="video-thumbnail-media"
           decoding="async"
+          draggable={false}
           src={thumbSrc}
           style={{ objectFit: fit }}
         />

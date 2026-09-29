@@ -55,26 +55,18 @@ export async function startNativeFileDrag(
   }
 }
 
-/**
- * Manejador estándar para eventos `onDragStart` de React.
- * Invoca el arrastre nativo en Tauri mientras el botón del ratón está presionado.
- */
 export function handleNativeDragStart(
   e: ReactDragEvent,
   files: string | string[],
   options?: NativeDragOptions
 ): void {
-  // En navegadores web e.dataTransfer es requerido para dragstart; en Tauri, iniciamos
-  // la llamada nativa a Windows OLE para que DoDragDrop tome el control global del cursor.
-  if (e.dataTransfer) {
-    e.dataTransfer.effectAllowed = "copyMove";
-    // Asignar un tipo MIME dummy para evitar que el motor de renderizado cancele el evento HTML5
-    try {
-      const firstPath = Array.isArray(files) ? files[0] : files;
-      e.dataTransfer.setData("text/plain", firstPath || "");
-    } catch {
-      // Ignorar restricciones en navegadores
-    }
+  // Prevenir que Chromium/WebView2 tome el control del drag OLE del sistema con datos HTML5 planos,
+  // permitiendo que tauri-plugin-drag inicialice de inmediato DoDragDrop con CF_HDROP nativo hacia el SO.
+  if (e.preventDefault) {
+    e.preventDefault();
+  }
+  if (e.stopPropagation) {
+    e.stopPropagation();
   }
 
   void startNativeFileDrag(files, options);
