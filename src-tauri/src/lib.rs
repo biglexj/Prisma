@@ -14,7 +14,7 @@ use app::commands::music_library::{
 use app::commands::playback::{
     get_initial_file, global_passthru_get_status, global_passthru_list_endpoints,
     global_passthru_set_volume, global_passthru_toggle, playback_capabilities,
-    playback_get_audio_devices, playback_get_multi_output, playback_set_multi_output_devices,
+    playback_get_audio_devices, playback_get_multi_output, playback_get_global_multi_output_shortcut_error, playback_set_multi_output_devices,
     playback_toggle_multi_output, playback_load, playback_next, playback_pause, playback_previous,
     playback_resume, playback_seek, playback_set_audio_device, playback_set_dsp_config,
     playback_set_speed, playback_set_system_default_device, playback_set_volume,
@@ -297,6 +297,7 @@ pub fn run() {
     builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_drag::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
@@ -311,8 +312,46 @@ pub fn run() {
         .manage(InitialFileState(std::sync::Mutex::new(initial_file_for_main)))
         .manage(InitialSynapseSendState(std::sync::Mutex::new(initial_synapse_send_file)))
         .manage(RenamerState::default())
+        .manage(app::commands::playback::GlobalMultiOutputShortcutStatus::default())
         .manage(std::sync::Arc::new(crate::infrastructure::media::passthru::PassthruService::new()))
         .setup(move |app| {
+            #[cfg(target_os = "windows")]
+            {
+                use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+                let held = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+                let registration = app.global_shortcut().on_shortcut("Ctrl+Shift+Alt+O", move |app, _shortcut, event| {
+                    if event.state() == ShortcutState::Released {
+                        held.store(false, std::sync::atomic::Ordering::Relaxed);
+                        return;
+                    }
+                    if held.swap(true, std::sync::atomic::Ordering::Relaxed) { return; }
+                    let app = app.clone();
+                    tauri::async_runtime::spawn_blocking(move || {
+                        let service = app.state::<std::sync::Arc<infrastructure::media::passthru::PassthruService>>();
+                        let enabled = !service.get_multi_output().enabled;
+                        match service.toggle_multi_output(enabled) {
+                            Ok(config) => {
+                                if enabled {
+                                    if let Err(error) = service.ensure_multi_output_running() {
+                                        let _ = service.toggle_multi_output(false);
+                                        let _ = app.emit("prisma://multi-output-shortcut-error", error);
+                                        return;
+                                    }
+                                }
+                                let _ = app.emit("prisma://multi-output-shortcut-toggled", config);
+                            }
+                            Err(error) => { let _ = app.emit("prisma://multi-output-shortcut-error", error); }
+                        }
+                    });
+                });
+                if let Err(error) = registration {
+                    let message = format!("Ctrl+Mayús+Alt+O no está disponible: {error}");
+                    eprintln!("[Prisma] {message}");
+                    if let Ok(mut status) = app.state::<app::commands::playback::GlobalMultiOutputShortcutStatus>().error.lock() {
+                        *status = Some(message);
+                    }
+                }
+            }
             let mut data_directory = app.path().app_data_dir()?;
             if is_dev_mode {
                 data_directory = data_directory.join("dev_profile");
@@ -610,6 +649,7 @@ pub fn run() {
             playback_set_dsp_config,
             playback_get_audio_devices,
             playback_get_multi_output,
+            playback_get_global_multi_output_shortcut_error,
             playback_set_multi_output_devices,
             playback_toggle_multi_output,
             playback_set_audio_device,

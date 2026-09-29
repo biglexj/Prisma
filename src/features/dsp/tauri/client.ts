@@ -22,6 +22,7 @@ export const dspClient = {
   globalPassthruSetVolume: (volume: number) =>
     invoke<void>("global_passthru_set_volume", { volume }),
   getMultiOutput: () => invoke<MultiOutputConfig>("playback_get_multi_output"),
+  getGlobalMultiOutputShortcutError: () => invoke<string | null>("playback_get_global_multi_output_shortcut_error"),
   setMultiOutputDevices: (devices: MultiOutputDevice[]) =>
     invoke<MultiOutputConfig>("playback_set_multi_output_devices", { devices }),
   toggleMultiOutput: (enabled: boolean) =>

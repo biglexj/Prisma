@@ -11,6 +11,7 @@
 - [x] T05 — Diseñar el selector compacto desplegable `MultiAudioOutputSelector.tsx` en el Ecualizador con casillas y ganancias por salida, sin desplazar el resto de la vista.
 - [x] T06 — Integrar el atajo `Ctrl+Mayús+O` y un aviso breve al conmutar en `App.tsx`.
 - [x] T07 — Añadir retardo manual por salida, también en la principal, con controles de 10 ms y actualización en caliente.
-- [ ] T08 — Completar validación funcional en dispositivos reales, chequeo de tipos TypeScript y tests unitarios de Rust.
+- [x] T08 — Registrar `Ctrl+Mayús+Alt+O` como segundo atajo global mediante Tauri, compartir el estado con el selector y avisar si el registro falla.
+- [ ] T09 — Completar validación funcional en dispositivos reales, chequeo de tipos TypeScript y tests unitarios de Rust.
 
 Las pruebas se documentan en `VALIDATION.md`.

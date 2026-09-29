@@ -819,6 +819,10 @@ function AppContent() {
       setIsVideoPlaying(false);
     });
 
+    const unlistenGlobalMultiOutputPromise = listen<{ enabled: boolean }>("prisma://multi-output-shortcut-toggled", (event) => {
+      showGlobalFavToast(event.payload.enabled ? "🔊 Salidas múltiples activadas" : "🔊 Salidas múltiples desactivadas");
+    });
+
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (
         e.target instanceof HTMLInputElement ||
@@ -1035,6 +1039,7 @@ function AppContent() {
       window.removeEventListener("prisma-send-to-supergallery", handleSendToSuperGallery);
       window.removeEventListener("contextmenu", handleGlobalContextMenu);
       unlistenCloseRequestedPromise.then((unlisten) => unlisten());
+      unlistenGlobalMultiOutputPromise.then((unlisten) => unlisten());
       unlistenPromise.then((unlisten) => unlisten());
       unlistenFileReceivedPromise.then((unlisten) => unlisten());
       unlistenSynapseSendPromise.then((unlisten) => unlisten());

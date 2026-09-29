@@ -39,7 +39,7 @@
 .multi-output-delay button { width: 1.4rem; height: 1.4rem; flex-shrink: 0; border: 0; border-radius: 6px; background: var(--surface-container); color: var(--on-surface); cursor: pointer; }
 .multi-output-delay button:disabled { opacity: .4; cursor: default; }
 .multi-output-delay output { min-width: 3.6rem; text-align: right; font-variant-numeric: tabular-nums; }
-.multi-output-footer { padding-top: .55rem; border-top: 1px solid var(--outline-variant); font-size: .72rem; color: var(--on-surface-variant); }
+.multi-output-footer { padding-top: .55rem; border-top: 1px solid var(--outline-variant); font-size: .72rem; color: var(--on-surface-variant); flex-wrap: wrap; }
 .multi-output-toggle { border: 0; border-radius: 999px; padding: .5rem .8rem; background: var(--primary-container); color: var(--on-primary-container); font-size: .76rem; font-weight: 700; cursor: pointer; }
 .multi-output-toggle.is-on { background: var(--secondary-container); color: var(--on-secondary-container); }
 .multi-output-toggle:disabled { cursor: default; opacity: .55; }

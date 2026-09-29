@@ -26,7 +26,7 @@ Implementar un sistema de enrutamiento y duplicación de audio multi-dispositivo
     - Casillas por dispositivo, indicador de señal común, volumen y retardo por dispositivo. El retardo avanza 10 ms con cada flecha o pulsación.
     - Estado de conexión visible en el selector y aviso breve al usar el atajo, sin indicador permanente sobre otras vistas.
   - **Atajo de Teclado**:
-    - Atajo de conmutación rápida `Ctrl+Mayús+O` para alternar la duplicación de audio hacia los dispositivos secundarios preconfigurados.
+    - Atajo local `Ctrl+Mayús+O` y segundo atajo global `Ctrl+Mayús+Alt+O` para alternar la duplicación aun con otra aplicación en primer plano.
 - No incluye:
   - Soporte ASIO exclusivo ni drivers propietarios de terceros (se utiliza WASAPI estándar compartido por máxima estabilidad y cero dependencias externas).
   - Calibración automática de latencia: requiere una medición fiable por dispositivo y queda como mejora posterior.
@@ -50,6 +50,7 @@ Implementar un sistema de enrutamiento y duplicación de audio multi-dispositivo
 - [ ] Control individual y maestro de volumen por salida en la UI del Ecualizador.
 - [ ] Ajuste de retardo por cada salida, incluida la principal, con pasos de 10 ms y comprobación audible.
 - [ ] Atajo de teclado funcional para alternar el modo multi-salida con aviso breve visible.
+- [ ] Segundo atajo global funcional con Prisma en segundo plano y aviso si otra aplicación ocupa la combinación.
 - [ ] `bun run check` (0 errores) y suite Rust (`cargo test --features mpv`) superados.
 
 ## Autorización

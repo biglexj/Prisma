@@ -143,6 +143,18 @@ pub fn playback_get_multi_output(
     passthru.get_multi_output()
 }
 
+#[derive(Default)]
+pub struct GlobalMultiOutputShortcutStatus {
+    pub error: std::sync::Mutex<Option<String>>,
+}
+
+#[tauri::command]
+pub fn playback_get_global_multi_output_shortcut_error(
+    status: State<'_, GlobalMultiOutputShortcutStatus>,
+) -> Option<String> {
+    status.error.lock().ok().and_then(|error| error.clone())
+}
+
 #[tauri::command]
 pub fn playback_set_multi_output_devices(
     devices: Vec<crate::infrastructure::media::passthru::MultiOutputDevice>,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import type { MultiOutputConfig, MultiOutputDevice } from "./model/types";
 import { dspClient } from "./tauri/client";
 
@@ -28,6 +29,7 @@ export function useMultiAudioOutput() {
   const configRef = useRef(config);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shortcutError, setShortcutError] = useState<string | null>(null);
   const gainTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const save = useCallback((next: MultiOutputConfig) => {
@@ -54,6 +56,26 @@ export function useMultiAudioOutput() {
     };
     void restore();
     return () => { disposed = true; };
+  }, [save]);
+
+  useEffect(() => {
+    let disposed = false;
+    const toggleListener = listen<MultiOutputConfig>("prisma://multi-output-shortcut-toggled", (event) => {
+      if (!disposed) save(event.payload);
+    });
+    const errorListener = listen<string>("prisma://multi-output-shortcut-error", (event) => {
+      if (!disposed) setError(event.payload);
+    });
+    void dspClient.getGlobalMultiOutputShortcutError().then((message) => {
+      if (!disposed) setShortcutError(message);
+    }).catch((cause) => {
+      if (!disposed) setShortcutError(`No se pudo comprobar el atajo global: ${String(cause)}`);
+    });
+    return () => {
+      disposed = true;
+      void toggleListener.then((unlisten) => unlisten());
+      void errorListener.then((unlisten) => unlisten());
+    };
   }, [save]);
 
   const setDevices = useCallback(async (devices: MultiOutputDevice[]) => {
@@ -96,5 +118,5 @@ export function useMultiAudioOutput() {
     finally { setBusy(false); }
   }, [config.enabled, save]);
 
-  return { config, busy, error, setDevices, setGain, setDelay, toggle };
+  return { config, busy, error, shortcutError, setDevices, setGain, setDelay, toggle };
 }

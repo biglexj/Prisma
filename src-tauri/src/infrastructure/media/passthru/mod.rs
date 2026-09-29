@@ -123,7 +123,11 @@ impl PassthruService {
         if config.devices.len() < 2 { config.enabled = false; }
         let result = config.clone();
         drop(config);
-        self.refresh_running_bridge()?;
+        if !result.enabled && !self.route_system_default.load(Ordering::Relaxed) {
+            self.stop()?;
+        } else {
+            self.refresh_running_bridge()?;
+        }
         Ok(result)
     }
 
@@ -135,8 +139,20 @@ impl PassthruService {
         config.enabled = enabled;
         let result = config.clone();
         drop(config);
-        self.refresh_running_bridge()?;
+        if !enabled && !self.route_system_default.load(Ordering::Relaxed) {
+            self.stop()?;
+        } else {
+            self.refresh_running_bridge()?;
+        }
         Ok(result)
+    }
+
+    pub fn ensure_multi_output_running(&self) -> Result<(), String> {
+        if self.is_running() { return Ok(()); }
+        let config = self.get_multi_output();
+        if !config.enabled { return Ok(()); }
+        let primary = config.devices.first().ok_or("No hay una salida principal seleccionada")?.id.clone();
+        self.start_with_routing(None, Some(primary), false)
     }
 
     fn refresh_running_bridge(&self) -> Result<(), String> {

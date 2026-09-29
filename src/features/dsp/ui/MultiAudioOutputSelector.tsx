@@ -5,7 +5,7 @@ import "./multi-audio-output.css";
 
 export function MultiAudioOutputSelector() {
   const dsp = useDsp();
-  const { config, busy, error, setDevices, setGain, setDelay, toggle } = dsp.multiOutput;
+  const { config, busy, error, shortcutError, setDevices, setGain, setDelay, toggle } = dsp.multiOutput;
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0, maxHeight: 420 });
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -134,8 +134,9 @@ export function MultiAudioOutputSelector() {
       </div>
       {!virtualAvailable && <p className="multi-output-message">Se necesita Prisma Audio Enhancer para duplicar el audio.</p>}
       {error && <p className="multi-output-message" role="alert">{error}</p>}
+      {shortcutError && <p className="multi-output-message" role="alert">{shortcutError}</p>}
       <div className="multi-output-footer">
-        <span>Atajo: Ctrl + Mayús + O</span>
+        <span>Prisma: Ctrl + Mayús + O<br />Global: Ctrl + Mayús + Alt + O</span>
         <button
           className={`multi-output-toggle ${config.enabled ? "is-on" : ""}`}
           type="button"
