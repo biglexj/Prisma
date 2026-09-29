@@ -183,3 +183,74 @@ pub fn flyout_is_visible(app: AppHandle) -> bool {
         .and_then(|w| w.is_visible().ok())
         .unwrap_or(false)
 }
+
+pub fn flyout_show_from_app(app: &AppHandle) -> Result<(), String> {
+    flyout_show(app.clone(), None, None, None)
+}
+
+#[cfg(windows)]
+pub fn get_system_master_volume() -> Option<(f32, bool)> {
+    use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
+    use windows::Win32::Media::Audio::{eMultimedia, eRender, IMMDeviceEnumerator, MMDeviceEnumerator};
+    use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED};
+
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok()?;
+        let device = enumerator.GetDefaultAudioEndpoint(eRender, eMultimedia).ok()?;
+        let endpoint_volume: IAudioEndpointVolume = device.Activate(CLSCTX_ALL, None).ok()?;
+        let vol = endpoint_volume.GetMasterVolumeLevelScalar().ok()?;
+        let muted = endpoint_volume.GetMute().ok()?.as_bool();
+        Some((vol, muted))
+    }
+}
+
+#[cfg(not(windows))]
+pub fn get_system_master_volume() -> Option<(f32, bool)> {
+    None
+}
+
+#[tauri::command]
+pub fn flyout_get_system_volume() -> Result<serde_json::Value, String> {
+    if let Some((vol, muted)) = get_system_master_volume() {
+        let vol_pct = (vol * 100.0).round() as u32;
+        Ok(serde_json::json!({
+            "volume": vol_pct,
+            "isMuted": muted
+        }))
+    } else {
+        Err("No se pudo obtener el volumen del sistema".to_string())
+    }
+}
+
+#[cfg(windows)]
+#[tauri::command]
+pub fn flyout_set_system_volume(volume: f32, muted: Option<bool>) -> Result<(), String> {
+    use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
+    use windows::Win32::Media::Audio::{eMultimedia, eRender, IMMDeviceEnumerator, MMDeviceEnumerator};
+    use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED};
+
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
+            .map_err(|e| e.to_string())?;
+        let device = enumerator.GetDefaultAudioEndpoint(eRender, eMultimedia)
+            .map_err(|e| e.to_string())?;
+        let endpoint_volume: IAudioEndpointVolume = device.Activate(CLSCTX_ALL, None)
+            .map_err(|e| e.to_string())?;
+        let clamped = (volume / 100.0).clamp(0.0, 1.0);
+        let _ = endpoint_volume.SetMasterVolumeLevelScalar(clamped, std::ptr::null());
+        if let Some(m) = muted {
+            use windows::Win32::Foundation::BOOL;
+            let _ = endpoint_volume.SetMute(BOOL(if m { 1 } else { 0 }), std::ptr::null());
+        }
+        Ok(())
+    }
+}
+
+#[cfg(not(windows))]
+#[tauri::command]
+pub fn flyout_set_system_volume(_volume: f32, _muted: Option<bool>) -> Result<(), String> {
+    Ok(())
+}
+

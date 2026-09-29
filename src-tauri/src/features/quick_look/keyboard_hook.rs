@@ -43,6 +43,7 @@ pub mod windows_hook {
         Close,
         Navigation,
         RestorePrisma,
+        VolumeKey,
     }
 
     static GLOBAL_CALLBACK: Mutex<Option<TriggerCallback>> = Mutex::new(None);
@@ -289,6 +290,17 @@ pub mod windows_hook {
                     }
                 }
             }
+        }
+
+        // Detección de teclas de volumen del sistema (VK_VOLUME_MUTE 0xAD, VK_VOLUME_DOWN 0xAE, VK_VOLUME_UP 0xAF)
+        let is_volume_key = vk_code == 0xAD || vk_code == 0xAE || vk_code == 0xAF;
+        if is_volume_key && (w_param.0 as u32 == WM_KEYDOWN || w_param.0 as u32 == WM_SYSKEYDOWN) {
+            if let Ok(guard) = GLOBAL_CALLBACK.lock() {
+                if let Some(ref cb) = *guard {
+                    cb(TriggerEvent::VolumeKey);
+                }
+            }
+            return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
 
         // Excepción crítica: Captura de pantalla (Impr Pant / PrintScreen, Win + Shift + S)
@@ -567,6 +579,7 @@ pub mod windows_hook {
         Close,
         Navigation,
         RestorePrisma,
+        VolumeKey,
     }
     pub fn set_shortcut_mode(_mode_str: &str) {}
     pub fn get_shortcut_mode() -> String { "space".to_string() }

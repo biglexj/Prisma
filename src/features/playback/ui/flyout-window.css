@@ -1,30 +1,39 @@
-/* ── Prisma Desktop Flyout & Mini Widget — Material 3 Expressive ── */
+/* ── Prisma Desktop Flyout & Mini Widget — Material 3 Expressive & Fluent ── */
 
-:root {
-  --flyout-bg: rgba(26, 27, 34, 0.82);
-  --flyout-surface: rgba(38, 40, 52, 0.72);
-  --flyout-surface-hover: rgba(52, 55, 72, 0.88);
-  --flyout-border: rgba(255, 255, 255, 0.12);
-  --flyout-primary: #a879e6;
-  --flyout-primary-container: #3d2b56;
-  --flyout-on-primary-container: #edd5ff;
-  --flyout-text-main: #f3f3f7;
-  --flyout-text-muted: #a3a6b8;
-  --flyout-radius: 16px;
-  --flyout-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.3);
+:root,
+[data-theme="light"] {
+  /* Modo Claro Fluent / Modern: Fondo sólido/acrílico claro, textos de máximo contraste */
+  --flyout-bg: rgba(255, 255, 255, 0.96);
+  --flyout-surface: #f1f2f6;
+  --flyout-surface-hover: #e2e4ee;
+  --flyout-border: rgba(0, 0, 0, 0.09);
+  --flyout-primary: #c90045;
+  --flyout-primary-container: #ffd9df;
+  --flyout-on-primary-container: #3f0012;
+  --flyout-text-main: #0f172a;        /* Slate 900: negro suave nítido */
+  --flyout-text-muted: #334155;       /* Slate 700: gris oscuro 100% legible */
+  --flyout-slider-track: #e2e8f0;     /* Slate 200 */
+  --flyout-slider-fill: #0067c0;      /* Azul Fluent o color de acento */
+  --flyout-radius: 14px;
+  --flyout-shadow: 0 14px 36px rgba(0, 0, 0, 0.14), 0 3px 10px rgba(0, 0, 0, 0.06);
 }
 
-[data-theme="light"] {
-  --flyout-bg: rgba(246, 246, 250, 0.88);
-  --flyout-surface: rgba(255, 255, 255, 0.78);
-  --flyout-surface-hover: rgba(255, 255, 255, 0.95);
-  --flyout-border: rgba(0, 0, 0, 0.08);
-  --flyout-primary: #7544b6;
-  --flyout-primary-container: #edd5ff;
-  --flyout-on-primary-container: #2c0954;
-  --flyout-text-main: #181920;
-  --flyout-text-muted: #646777;
-  --flyout-shadow: 0 12px 32px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08);
+.dark,
+[data-theme="dark"] {
+  /* Modo Oscuro Fluent / Modern: Fondo sólido/acrílico oscuro elegante, textos blancos */
+  --flyout-bg: rgba(28, 28, 34, 0.96);
+  --flyout-surface: #26262e;
+  --flyout-surface-hover: #343440;
+  --flyout-border: rgba(255, 255, 255, 0.09);
+  --flyout-primary: #ffb1c0;
+  --flyout-primary-container: #8f003a;
+  --flyout-on-primary-container: #ffd9df;
+  --flyout-text-main: #f8fafc;        /* Blanco nítido */
+  --flyout-text-muted: #cbd5e1;       /* Gris claro Slate 300 legible */
+  --flyout-slider-track: #334155;     /* Slate 700 */
+  --flyout-slider-fill: #38bdf8;      /* Cyan / celeste activo */
+  --flyout-radius: 14px;
+  --flyout-shadow: 0 16px 42px rgba(0, 0, 0, 0.55), 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 :root:has(.prisma-flyout-wrapper),
@@ -70,7 +79,11 @@ html.is-flyout #root,
 }
 
 .prisma-flyout-card:hover {
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.52), 0 6px 16px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.25), 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.dark .prisma-flyout-card:hover {
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65), 0 6px 18px rgba(0, 0, 0, 0.45);
 }
 
 /* ── 1. Cápsula de Volumen Superior ── */
@@ -87,7 +100,7 @@ html.is-flyout #root,
   border: none;
   color: var(--flyout-text-main);
   cursor: pointer;
-  padding: 4px;
+  padding: 5px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -97,7 +110,7 @@ html.is-flyout #root,
 
 .flyout-vol-btn:hover {
   background: var(--flyout-surface-hover);
-  color: var(--flyout-primary);
+  color: var(--flyout-slider-fill);
   transform: scale(1.08);
 }
 
@@ -118,7 +131,13 @@ html.is-flyout #root,
   appearance: none;
   height: 6px;
   border-radius: 4px;
-  background: var(--flyout-surface);
+  background: linear-gradient(
+    to right,
+    var(--flyout-slider-fill) 0%,
+    var(--flyout-slider-fill) var(--vol-pct, 50%),
+    var(--flyout-slider-track) var(--vol-pct, 50%),
+    var(--flyout-slider-track) 100%
+  );
   outline: none;
   cursor: pointer;
   margin: 0;
@@ -133,81 +152,35 @@ html.is-flyout #root,
 .flyout-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  background: var(--flyout-primary);
+  background: var(--flyout-slider-fill);
   border: 2px solid #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
   cursor: pointer;
-  margin-top: -5px;
+  margin-top: -4.5px;
   transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .flyout-slider:hover::-webkit-slider-thumb {
-  transform: scale(1.22);
+  transform: scale(1.25);
 }
 
 .flyout-vol-percent {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   min-width: 28px;
   text-align: right;
   font-variant-numeric: tabular-nums;
   color: var(--flyout-text-main);
 }
 
-.flyout-expand-btn {
-  background: var(--flyout-surface);
-  border: none;
-  color: var(--flyout-text-muted);
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+.flyout-top-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease, color 0.15s ease;
-}
-
-.flyout-expand-btn:hover {
-  background: var(--flyout-surface-hover);
-  color: var(--flyout-text-main);
-}
-
-.flyout-expand-btn.is-expanded {
-  transform: rotate(180deg);
-  color: var(--flyout-primary);
-}
-
-/* ── Desplegable Mezclador de Volumen ── */
-.flyout-mixer-panel {
-  padding: 10px 14px 12px;
-  border-top: 1px solid var(--flyout-border);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  animation: flyoutFadeIn 0.2s ease-out;
-}
-
-.flyout-mixer-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-}
-
-.flyout-mixer-app-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--flyout-surface-hover);
-  color: var(--flyout-primary);
-  flex-shrink: 0;
+  gap: 2px;
+  margin-left: 2px;
 }
 
 /* ── 2. Tarjeta de Medios Inferior ── */
@@ -230,8 +203,8 @@ html.is-flyout #root,
   border-radius: 12px;
   object-fit: cover;
   background: var(--flyout-surface);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--flyout-border);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -250,26 +223,28 @@ html.is-flyout #root,
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .flyout-media-title {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--flyout-text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
 }
 
 .flyout-media-artist {
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 500;
   color: var(--flyout-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.25;
 }
 
 /* ── Controles de Transporte Hápticos ── */
@@ -302,7 +277,7 @@ html.is-flyout #root,
 
 .flyout-ctrl-btn:hover {
   background: var(--flyout-surface-hover);
-  color: var(--flyout-primary);
+  color: var(--flyout-slider-fill);
   transform: scale(1.1);
 }
 
@@ -311,25 +286,24 @@ html.is-flyout #root,
 }
 
 .flyout-play-btn {
-  width: 40px;
-  height: 40px;
-  background: var(--flyout-primary-container);
-  color: var(--flyout-on-primary-container);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 14px;
+  width: 38px;
+  height: 38px;
+  background: var(--flyout-text-main);
+  color: var(--flyout-bg);
+  border: none;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease, box-shadow 0.15s ease;
 }
 
 .flyout-play-btn:hover {
   transform: scale(1.08);
-  background: var(--flyout-primary);
-  color: #ffffff;
-  box-shadow: 0 6px 16px rgba(168, 121, 230, 0.35);
+  opacity: 0.92;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
 }
 
 .flyout-play-btn:active {
@@ -347,7 +321,7 @@ html.is-flyout #root,
 
 .flyout-spectrum-bar {
   width: 3px;
-  background: var(--flyout-primary);
+  background: var(--flyout-slider-fill);
   border-radius: 2px;
   min-height: 3px;
   transition: height 0.08s ease;
@@ -413,15 +387,15 @@ html.is-flyout #root,
 .flyout-badge-icon {
   width: 12px;
   height: 12px;
-  color: var(--flyout-primary);
+  color: var(--flyout-slider-fill);
 }
 
 .flyout-icon-btn {
   background: transparent;
   border: none;
   color: var(--flyout-text-muted);
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -437,7 +411,7 @@ html.is-flyout #root,
 }
 
 .flyout-icon-btn.is-active {
-  color: var(--flyout-primary);
+  color: var(--flyout-slider-fill);
   background: var(--flyout-surface-hover);
 }
 
@@ -487,12 +461,13 @@ html.is-flyout #root,
 
 .flyout-zone-btn:hover {
   background: var(--flyout-surface-hover);
-  border-color: var(--flyout-primary);
+  border-color: var(--flyout-slider-fill);
   transform: scale(1.08);
 }
 
 .flyout-zone-btn.is-active {
-  background: var(--flyout-primary-container);
-  color: var(--flyout-on-primary-container);
-  border-color: var(--flyout-primary);
+  background: var(--flyout-surface-hover);
+  color: var(--flyout-slider-fill);
+  border-color: var(--flyout-slider-fill);
+  font-weight: 700;
 }

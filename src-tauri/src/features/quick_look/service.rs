@@ -98,6 +98,21 @@ impl QuickLookState {
                     ql_log!("Callback (async thread): RestorePrisma");
                     state.restore_prisma();
                 }
+                TriggerEvent::VolumeKey => {
+                    let app = state.app_handle.clone();
+                    std::thread::spawn(move || {
+                        // Pequeña espera para que Windows aplique el nuevo nivel de audio en el endpoint
+                        std::thread::sleep(std::time::Duration::from_millis(30));
+                        if let Some((vol, muted)) = crate::app::commands::flyout::get_system_master_volume() {
+                            let vol_pct = (vol * 100.0).round() as u32;
+                            let _ = app.emit("prisma://system-volume-changed", serde_json::json!({
+                                "volume": vol_pct,
+                                "isMuted": muted
+                            }));
+                        }
+                        let _ = crate::app::commands::flyout::flyout_show_from_app(&app);
+                    });
+                }
             });
         });
 

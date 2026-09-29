@@ -3,7 +3,8 @@ mod features;
 mod infrastructure;
 
 use app::commands::flyout::{
-    flyout_hide, flyout_is_visible, flyout_set_position, flyout_show,
+    flyout_get_system_volume, flyout_hide, flyout_is_visible, flyout_set_position,
+    flyout_set_system_volume, flyout_show,
 };
 use app::commands::favorites::{
     favorites_get_all, favorites_is_favorite, favorites_toggle,
@@ -665,6 +666,8 @@ pub fn run() {
             flyout_hide,
             flyout_set_position,
             flyout_is_visible,
+            flyout_get_system_volume,
+            flyout_set_system_volume,
             global_passthru_get_status,
             global_passthru_toggle,
             global_passthru_list_endpoints,
