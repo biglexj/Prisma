@@ -11,6 +11,7 @@ Mostrar primero los archivos incorporados recientemente, permitir su arrastre na
 - Conservar el recorte como operación no destructiva: Enter alterna entre marco y vista previa; el guardado usa el recorte vigente.
 - Activar el pincel al entrar en Dibujar y permitir trazos incluso si hay un recorte pendiente.
 - Situar el borde de la marca de agua al 1 % de cada esquina elegida y permitir moverla sobre la vista previa antes de guardar.
+- Calibrar el logotipo con una escala independiente del texto; ofrecer cinco composiciones entre ambos y usar el mismo cálculo para vista previa, guardado y conversión.
 - En desarrollo, reutilizar las DLL y herramientas copiadas al directorio de Cargo; conservar los recursos del instalador.
 
 ## Límite de validación

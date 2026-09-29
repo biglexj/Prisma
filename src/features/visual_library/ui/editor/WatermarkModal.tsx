@@ -2,7 +2,7 @@ import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../../../shared/ui/Icon";
 import { toSafeAssetUrl } from "../../../../shared/mediaTree";
-import type { WatermarkConfig, WatermarkPosition } from "../../model/watermark";
+import type { WatermarkConfig, WatermarkLogoPlacement, WatermarkPosition } from "../../model/watermark";
 
 interface WatermarkModalProps {
   config: WatermarkConfig;
@@ -22,6 +22,8 @@ export function WatermarkModal({
   const [includeDate, setIncludeDate] = useState(config.includeDate);
   const [logoPath, setLogoPath] = useState<string | null>(config.logoPath ?? null);
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(config.logoDataUrl ?? null);
+  const [logoScale, setLogoScale] = useState(config.logoScale ?? 0.45);
+  const [logoPlacement, setLogoPlacement] = useState<WatermarkLogoPlacement>(config.logoPlacement ?? "above");
   const [position, setPosition] = useState<WatermarkPosition>(config.position);
   const [scale, setScale] = useState(config.scale);
   const [opacity, setOpacity] = useState(config.opacity);
@@ -58,6 +60,8 @@ export function WatermarkModal({
       includeDate,
       logoPath,
       logoDataUrl,
+      logoScale,
+      logoPlacement,
       position,
       scale,
       opacity,
@@ -165,6 +169,47 @@ export function WatermarkModal({
                 <span>{logoPath ? "Cambiar logotipo..." : "Elegir logotipo..."}</span>
               </button>
             </div>
+            {logoDataUrl && (
+              <div className="watermark-logo-controls">
+                <div className="watermark-slider-header">
+                  <label className="watermark-label" htmlFor="watermark-logo-size">Tamaño del logotipo</label>
+                  <span>{Math.round(logoScale * 100)}%</span>
+                </div>
+                <input
+                  id="watermark-logo-size"
+                  type="range"
+                  min="0.1"
+                  max="1.5"
+                  step="0.05"
+                  value={logoScale}
+                  onChange={(e) => setLogoScale(parseFloat(e.target.value))}
+                  className="watermark-slider"
+                />
+                {(text.trim() || includeDate) && (
+                  <>
+                    <span className="watermark-label">Logo respecto al texto</span>
+                    <div className="watermark-logo-layout-grid">
+                      {([
+                        { id: "above", label: "Arriba" },
+                        { id: "below", label: "Abajo" },
+                        { id: "left", label: "Izquierda" },
+                        { id: "right", label: "Derecha" },
+                        { id: "overlay", label: "Texto encima" },
+                      ] as const).map((choice) => (
+                        <button
+                          key={choice.id}
+                          type="button"
+                          className={`watermark-pos-btn ${logoPlacement === choice.id ? "is-selected" : ""}`}
+                          onClick={() => setLogoPlacement(choice.id)}
+                        >
+                          {choice.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 5. Selector de Posición (Matriz visual de cuadrícula) */}
@@ -200,7 +245,7 @@ export function WatermarkModal({
           <div className="watermark-sliders-grid">
             <div className="watermark-field-group">
               <div className="watermark-slider-header">
-                <label className="watermark-label">Escala</label>
+                <label className="watermark-label">Tamaño del texto</label>
                 <span>{Math.round(scale * 100)}%</span>
               </div>
               <input

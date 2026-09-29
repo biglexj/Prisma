@@ -575,6 +575,15 @@
   flex-wrap: wrap;
 }
 
+.convert-logo-layout-controls {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.8rem;
+  border: 1px solid var(--outline-variant, rgba(207, 185, 188, 0.2));
+  border-radius: 12px;
+  background: var(--surface-container-high, #2b1f22);
+}
+
 .convert-watermark-checkbox-inline {
   display: inline-flex;
   align-items: center;

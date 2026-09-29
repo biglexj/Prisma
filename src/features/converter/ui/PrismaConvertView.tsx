@@ -2,7 +2,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import { CustomSelect, type CustomSelectOption } from "../../../shared/ui/CustomSelect";
 import { useMediaConverter } from "../hooks/useMediaConverter";
-import type { WatermarkPosition } from "../../visual_library/model/watermark";
+import type { WatermarkLogoPlacement, WatermarkPosition } from "../../visual_library/model/watermark";
 import type { ConversionMode } from "../model/types";
 import "./prisma-convert.css";
 
@@ -17,6 +17,14 @@ const WATERMARK_POSITIONS: { id: WatermarkPosition; label: string }[] = [
   { id: "center", label: "• Centro" },
   { id: "bottom-left", label: "↙ Inferior Izq" },
   { id: "bottom-right", label: "↘ Inferior Der" },
+];
+
+const WATERMARK_LOGO_PLACEMENTS: { id: WatermarkLogoPlacement; label: string }[] = [
+  { id: "above", label: "Arriba" },
+  { id: "below", label: "Abajo" },
+  { id: "left", label: "Izquierda" },
+  { id: "right", label: "Derecha" },
+  { id: "overlay", label: "Texto encima" },
 ];
 
 const AUDIO_BITRATE_OPTIONS: CustomSelectOption<string>[] = [
@@ -400,6 +408,49 @@ export function PrismaConvertView() {
                       </div>
                     </div>
 
+                    {watermarkConfig.logoPath && (
+                      <div className="convert-logo-layout-controls">
+                        <div className="convert-control-group">
+                          <div className="convert-slider-label">
+                            <label htmlFor="convert-watermark-logo-size">Tamaño del logotipo</label>
+                            <span className="convert-slider-val">{Math.round(watermarkConfig.logoScale * 100)}%</span>
+                          </div>
+                          <input
+                            id="convert-watermark-logo-size"
+                            type="range"
+                            min="0.1"
+                            max="1.5"
+                            step="0.05"
+                            value={watermarkConfig.logoScale}
+                            onChange={(event) => setWatermarkConfig((previous) => ({
+                              ...previous,
+                              logoScale: parseFloat(event.target.value),
+                            }))}
+                            disabled={isRunning}
+                            className="convert-slider"
+                          />
+                        </div>
+                        {(watermarkConfig.text.trim() || watermarkConfig.includeDate) && (
+                          <div className="convert-control-group">
+                            <label>Logo respecto al texto</label>
+                            <div className="convert-watermark-positions">
+                              {WATERMARK_LOGO_PLACEMENTS.map((choice) => (
+                                <button
+                                  key={choice.id}
+                                  type="button"
+                                  className={`convert-watermark-pos-btn ${watermarkConfig.logoPlacement === choice.id ? "is-selected" : ""}`}
+                                  onClick={() => setWatermarkConfig((previous) => ({ ...previous, logoPlacement: choice.id }))}
+                                  disabled={isRunning}
+                                >
+                                  {choice.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="convert-control-group">
                       <label>Posición en la imagen</label>
                       <div className="convert-watermark-positions">
@@ -424,7 +475,7 @@ export function PrismaConvertView() {
                     <div className="convert-controls-grid">
                       <div className="convert-control-group">
                         <div className="convert-slider-label">
-                          <label>Tamaño / Escala</label>
+                          <label>Tamaño del texto</label>
                           <span className="convert-slider-val">{watermarkConfig.scale.toFixed(1)}x</span>
                         </div>
                         <input
