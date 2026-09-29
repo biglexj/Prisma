@@ -8,6 +8,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [ ] **Salidas de Audio Múltiples Simultáneas (Multi-Device Audio Routing / Output)**: Enrutamiento simultáneo de la señal de reproducción hacia dos o más dispositivos de audio físicos o inalámbricos (altavoces principales, auriculares, altavoces Bluetooth, interfaces USB) al estilo Virtual DJ, con selector múltiple en el Ecualizador / DSP, volumen independiente/balance y atajo de teclado para alternar la duplicación de salida al instante.
 - [x] **Arrastre Nativo Universal hacia Apps Externas (Drag & Drop OS: DaVinci, Affinity, Krita, etc.)**: Soporte nativo del sistema operativo para mantener pulsado y arrastrar cualquier archivo (vídeos, fotos, música, documentos PDF, etc.) desde las cuadrículas o visores de Prisma directamente hacia aplicaciones externas como Affinity (Photo, Designer, Publisher), Krita, DaVinci Resolve, Photoshop o el Explorador de Windows mediante OLE `CF_HDROP`.
 - [x] **Marca de Agua Visual y Metadatos de Autoría (Individual y por Lotes)**: Estampado paramétrico de marca de agua (logo PNG y texto con fecha/autor, escala, opacidad y anclaje adaptativo a esquinas, bordes o centro, basado en el estándar de Super Galería) en el Editor de Imágenes y en el Convertidor Prisma, junto con inyección de metadatos de derechos y autoría.
 - [x] **Normalización de Volumen y ReplayGain Conmutable en DSP**: Nivelación acústica automática en el pipeline WASAPI con botón de encendido/apagado en el Ecualizador y atajo de teclado dedicado.
