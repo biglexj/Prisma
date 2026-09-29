@@ -22,6 +22,10 @@ interface VisualThumbnailProps {
   onLoadDimensions?: (width: number, height: number) => void;
 }
 
+export function getCachedImagePreview(path: string): string | null {
+  return previewCache.get(path)?.data ?? null;
+}
+
 export function VisualThumbnail({
   path,
   alt,
@@ -60,6 +64,7 @@ export function VisualThumbnail({
       {preview ? (
         <img
           alt={alt}
+          crossOrigin="anonymous"
           decoding="async"
           draggable={false}
           loading={eager ? "eager" : "lazy"}

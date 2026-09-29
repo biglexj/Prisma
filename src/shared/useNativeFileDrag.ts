@@ -89,7 +89,8 @@ export function handleNativeDragStart(
 
   // currentTarget deja de ser fiable al salir del evento React: capturar la vista antes de iniciar OLE.
   const fileList = Array.isArray(files) ? files : [files];
-  const icon = options?.icon ?? createNativeDragPreview(fileList[0] ?? "", options?.previewElement ?? e.currentTarget, fileList.length);
+  const targetElement = options?.previewElement ?? (e.currentTarget as Element | null) ?? (e.target as Element | null);
+  const icon = options?.icon ?? createNativeDragPreview(fileList[0] ?? "", targetElement, fileList.length);
   void startNativeFileDrag(files, { ...options, icon: icon ?? undefined });
 }
 

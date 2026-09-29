@@ -9,14 +9,22 @@ describe("vista previa del arrastre nativo", () => {
     expect(nativeDragPreviewKind("D:\\Docs\\texto.pdf")).toBe("file");
   });
 
-  test("elige cuadrado, 16:9 o 9:16 sin usar dimensiones inválidas", () => {
-    expect(nativeDragPreviewLayout(100, 100)).toEqual({ width: 176, height: 176 });
-    expect(nativeDragPreviewLayout(1920, 1080)).toEqual({ width: 208, height: 117 });
-    expect(nativeDragPreviewLayout(1080, 1920)).toEqual({ width: 117, height: 208 });
-    expect(nativeDragPreviewLayout(0, 0)).toEqual({ width: 176, height: 176 });
+  test("elige cuadrado para música y cuadrado, 16:9 o 9:16 para vídeo e imágenes", () => {
+    // Proporciones estándar
+    expect(nativeDragPreviewLayout(100, 100)).toEqual({ width: 184, height: 184 });
+    expect(nativeDragPreviewLayout(1920, 1080)).toEqual({ width: 224, height: 126 });
+    expect(nativeDragPreviewLayout(1080, 1920)).toEqual({ width: 126, height: 224 });
+    expect(nativeDragPreviewLayout(0, 0)).toEqual({ width: 184, height: 184 });
+
+    // Música siempre cuadrada
+    expect(nativeDragPreviewLayout(1920, 1080, "music")).toEqual({ width: 184, height: 184 });
+    expect(nativeDragPreviewLayout(1080, 1920, "music")).toEqual({ width: 184, height: 184 });
+
+    // Vídeo por omisión panorámico 16:9
+    expect(nativeDragPreviewLayout(0, 0, "video")).toEqual({ width: 224, height: 126 });
   });
 
-  test("usa la miniatura ya cargada y entrega un PNG acotado", () => {
+  test("usa la miniatura ya cargada y entrega un PNG acotado con escalado cover", () => {
     const originalDocument = globalThis.document;
     const originalImage = globalThis.HTMLImageElement;
     const originalVideo = globalThis.HTMLVideoElement;
@@ -28,7 +36,8 @@ describe("vista previa del arrastre nativo", () => {
     }
     class VideoElement {}
     const context = {
-      fillRect() {}, beginPath() {}, rect() {}, clip() {}, save() {}, restore() {},
+      fillRect() {}, beginPath() {}, rect() {}, clip() {}, save() {}, restore() {}, stroke() {},
+      arc() {}, fill() {}, moveTo() {}, lineTo() {}, closePath() {}, arcTo() {},
       drawImage(...args: unknown[]) { drawn.push(args); },
     };
     const canvases: Array<{ width: number; height: number }> = [];
@@ -56,14 +65,14 @@ describe("vista previa del arrastre nativo", () => {
         expect(createNativeDragPreview("retrato.png", image as unknown as Element)).toStartWith("data:image/png;base64,");
       }
       expect(canvases).toMatchObject([
-        { width: 208, height: 117 },
-        { width: 117, height: 208 },
-        { width: 176, height: 176 },
+        { width: 224, height: 126 },
+        { width: 126, height: 224 },
+        { width: 184, height: 184 },
       ]);
       expect(drawn.map((args) => args.slice(1))).toEqual([
-        [8, 10.5, 192, 96],
-        [10.5, 8, 96, 192],
-        [8, 8, 160, 160],
+        [-10, 2, 244, 122],
+        [2, -10, 122, 244],
+        [2, 2, 180, 180],
       ]);
       expect(drawn.map((args) => args[0])).toEqual([wide, tall, square]);
     } finally {
@@ -88,7 +97,9 @@ describe("vista previa del arrastre nativo", () => {
     class VideoElement {}
     let created = 0;
     const context = {
-      fillRect() {}, fillText() {}, beginPath() {}, rect() {}, clip() {}, save() {}, restore() {}, drawImage() {},
+      fillRect() {}, fillText() {}, beginPath() {}, rect() {}, clip() {}, save() {}, restore() {},
+      stroke() {}, arc() {}, fill() {}, moveTo() {}, lineTo() {}, closePath() {}, arcTo() {},
+      drawImage() {},
     };
     Object.assign(globalThis, {
       HTMLImageElement: LoadedImage,

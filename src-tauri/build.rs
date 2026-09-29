@@ -20,11 +20,19 @@ fn configure_libunwind() {
     }
 
     let out = std::path::PathBuf::from(std::env::var_os("OUT_DIR").unwrap());
-    let destination = out.ancestors().nth(3).unwrap().join("libunwind.dll");
-    if !destination.exists() {
-        std::fs::copy(&source, &destination)
-            .unwrap_or_else(|error| panic!("No se pudo copiar {}: {error}", source.display()));
+    let profile_dir = out.ancestors().nth(3).unwrap();
+    let destination = profile_dir.join("libunwind.dll");
+    let old_destination = profile_dir.join("libunwind.dll.old");
+
+    // En Windows (gnullvm), el ejecutable del build script puede tener cargada en memoria
+    // la libunwind.dll que se encuentra en target/{profile}. Windows no permite sobrescribir
+    // un binario cargado (os error 32), pero sí permite renombrarlo a .old para liberar la ruta.
+    let _ = std::fs::remove_file(&old_destination);
+    if destination.exists() {
+        let _ = std::fs::rename(&destination, &old_destination);
     }
+
+    let _ = std::fs::copy(&source, &destination);
 }
 
 fn configure_libmpv() {

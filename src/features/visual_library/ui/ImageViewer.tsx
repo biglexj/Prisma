@@ -1079,6 +1079,7 @@ export function ImageViewer({
               <img
                 alt={previousLayer.item.title}
                 className="image-viewer-media"
+                crossOrigin="anonymous"
                 draggable={false}
                 src={toSafeAssetUrl(previousLayer.item.path)}
               />
@@ -1098,6 +1099,7 @@ export function ImageViewer({
             <img
               alt={currentItem.title}
               className="image-viewer-media"
+              crossOrigin="anonymous"
               draggable={false}
               ref={imgRef}
               src={toSafeAssetUrl(currentItem.path)}

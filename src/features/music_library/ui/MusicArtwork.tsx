@@ -40,7 +40,9 @@ export function MusicArtwork({ path, alt, className = "", showFallback = false }
         <img
           alt={alt}
           className="music-artwork-img"
+          crossOrigin="anonymous"
           decoding="async"
+          draggable={false}
           loading="lazy"
           src={artwork}
         />

@@ -16,6 +16,11 @@ const pendingArtwork = new Map<string, Promise<string | null>>();
 export function isMusicArtworkCached(path: string | null): boolean {
   return path ? artworkCache.has(path) : false;
 }
+
+export function getCachedMusicArtwork(path: string | null): string | null {
+  if (!path) return null;
+  return artworkCache.get(path)?.data ?? null;
+}
 let totalEstimatedBytes = 0;
 
 let activeWorkers = 0;

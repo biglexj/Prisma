@@ -1,12 +1,10 @@
 # Validación
 
-- `bun run build`: correcto tras la corrección; TypeScript y Vite compilaron el frontend.
-- `bun run check`: correcto tras los últimos cambios.
-- `bun test test/nativeDragPreview.test.ts`: 4 pruebas correctas. Cubren reconocimiento de medios, selección de formato cuadrado/16:9/9:16, dibujo completo de las tres proporciones y recuperación cuando el WebView bloquea la lectura del lienzo.
-- `git diff --check`: correcto.
-- En Prisma de desarrollo se inició el arrastre de una tarjeta de imagen sin cerrar la aplicación. Al soltarla dentro de la propia ventana apareció un error de lectura de carpeta; se añadió una protección para esa ruta. La sesión visual se interrumpió por actividad del usuario antes de repetir la prueba con la protección.
-- Biglex confirmó que el archivo se puede soltar, pero el arrastre todavía no mostraba la miniatura de imagen o vídeo. Se corrigió el bitmap entregado a Windows: DIB de 32 bits con alfa directo, posición centrada y aviso de error de inicialización en la terminal de desarrollo.
-- Biglex confirmó después que la miniatura sí llegó a mostrarse una vez y luego desapareció. La terminal de desarrollo muestra reinicios repetidos provocados por archivos temporales de `cargo check` dentro de `src-tauri/vendor/drag/target`. Se trasladaron a `temp/drag-check-target`; el último reinicio terminó correctamente. Para nuevas comprobaciones aisladas, establecer `CARGO_TARGET_DIR` fuera de `src-tauri` antes de ejecutar Cargo.
-- Hay dos procesos de Prisma abiertos: la versión instalada y la de desarrollo. La prueba de esta función corresponde a `target/debug/prisma.exe`.
-- `cargo check --offline --manifest-path src-tauri/vendor/drag/Cargo.toml`: correcto. Compila la adaptación nativa aislada sin abrir una segunda instancia de Prisma.
-- Pendiente: observar en Windows el arrastre actualizado de imagen, música y vídeo. La compilación no prueba que el sistema muestre la vista previa.
+- `bun run build`: correcto; TypeScript y Vite compilaron el frontend.
+- `bun run check`: correcto (0 errores de TypeScript con `tsc --noEmit`).
+- `bun test test/nativeDragPreview.test.ts`: 4 pruebas pasadas al 100% (19 aserciones). Valida proporciones fijas cuadradas para música, 16:9 y 9:16 para vídeo/imágenes, escalado cover centrado en el lienzo y recuperación ante fallbacks.
+- `cargo check --offline --manifest-path src-tauri/vendor/drag/Cargo.toml`: correcto con `$env:CARGO_TARGET_DIR="temp/drag-check-target"`.
+- `crColorKey`: configurado a `COLORREF(0xFFFFFFFF)` (`CLR_INVALID`), eliminando la clave de color negro transparente que provocaba que Windows Shell recortara los píxeles oscuros de la miniatura.
+- `crossOrigin="anonymous"`: añadido a los visores y componentes de miniaturas (`VisualThumbnail`, `VideoThumbnail`, `MusicArtwork`, `ImageViewer`) garantizando que `canvas.toDataURL()` no sea bloqueado por *tainted canvas*.
+- `VideoPlayer.tsx`: depurado el selector `.video-stage-surface`, permitiendo que el arrastre obtenga limpiamente el icono o miniatura de la biblioteca.
+- Pendiente: observación interactiva en Windows del arrastre de imagen, música y vídeo hacia el escritorio u otras aplicaciones como DaVinci Resolve o Affinity.

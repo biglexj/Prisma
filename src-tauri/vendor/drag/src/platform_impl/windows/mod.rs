@@ -338,7 +338,6 @@ fn get_drag_image(image: Image) -> Option<SHDRAGIMAGE> {
         }).ok(),
     };
     hbitmap.map(|hbitmap| unsafe {
-        // get image size
         let mut bitmap: BITMAP = BITMAP::default();
         let (width, height) = if 0
             == GetObjectW(
@@ -348,7 +347,7 @@ fn get_drag_image(image: Image) -> Option<SHDRAGIMAGE> {
             ) {
             (128, 128)
         } else {
-            (bitmap.bmWidth, bitmap.bmHeight)
+            (bitmap.bmWidth, bitmap.bmHeight.abs())
         };
 
         SHDRAGIMAGE {
@@ -358,7 +357,7 @@ fn get_drag_image(image: Image) -> Option<SHDRAGIMAGE> {
             },
             ptOffset: POINT { x: width / 2, y: height / 2 },
             hbmpDragImage: hbitmap,
-            crColorKey: COLORREF(0x00000000),
+            crColorKey: COLORREF(0xFFFFFFFF),
         }
     })
 }

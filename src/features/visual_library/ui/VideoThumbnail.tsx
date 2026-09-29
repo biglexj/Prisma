@@ -17,6 +17,11 @@ const MAX_FALLBACK_CANVAS_DIM = 480;
 const MAX_VIDEO_CACHE = 300;
 const videoThumbCache = new Map<string, string>();
 
+/** Permite consultar síncronamente si ya existe una miniatura de vídeo en memoria para arrastre o previsualización. */
+export function getCachedVideoThumbnail(path: string): string | null {
+  return videoThumbCache.get(path) ?? null;
+}
+
 /**
  * Loads video thumbnails natively via Rust (Windows Shell API) for fast,
  * memory-efficient downscaled previews without decoding 4K video in WebView2.
@@ -176,6 +181,7 @@ export function VideoThumbnail({
         <img
           alt={title}
           className="video-thumbnail-media"
+          crossOrigin="anonymous"
           decoding="async"
           draggable={false}
           src={thumbSrc}
