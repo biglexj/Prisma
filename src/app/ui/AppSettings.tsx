@@ -19,7 +19,22 @@ import { Icon } from "../../shared/ui/Icon";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { getDefaultPicturesDir } from "../../shared/mediaOperations";
+import {
+  getFlyoutSettings,
+  saveFlyoutSettings,
+  type FlyoutSettings,
+  type FlyoutZone,
+} from "../../features/playback/services/flyoutSettings";
 import "./app-settings.css";
+
+const FLYOUT_ZONES: Array<{ id: FlyoutZone; label: string; desc: string; icon: string }> = [
+  { id: "bottom-left", label: "Abajo Izquierda", desc: "Clásico FluentFlyout", icon: "↙️" },
+  { id: "bottom-center", label: "Abajo Centro", desc: "Estilo Windows 11", icon: "⬇️" },
+  { id: "bottom-right", label: "Abajo Derecha", desc: "Junto al reloj", icon: "↘️" },
+  { id: "top-left", label: "Arriba Izquierda", desc: "Clásico OSD", icon: "↖️" },
+  { id: "top-center", label: "Arriba Centro", desc: "Dynamic Island", icon: "⬆️" },
+  { id: "top-right", label: "Arriba Derecha", desc: "Notificaciones", icon: "↗️" },
+];
 
 interface AppSettingsProps {
   music: ReturnType<typeof useMusicLibrary>;
@@ -167,6 +182,20 @@ export function AppSettings({
 
   const handleResetSnapshotFolder = () => {
     setVideoSnapshotFolder("");
+  };
+
+  const [flyoutSettings, setFlyoutSettingsState] = useState<FlyoutSettings>(() => getFlyoutSettings());
+
+  const handleUpdateFlyout = (patch: Partial<FlyoutSettings>) => {
+    const updated = saveFlyoutSettings(patch);
+    setFlyoutSettingsState(updated);
+    if (patch.zone) {
+      void invoke("flyout_set_position", { zone: patch.zone }).catch(() => {});
+    }
+  };
+
+  const handleTestFlyout = () => {
+    void invoke("flyout_show", { zone: flyoutSettings.zone }).catch(() => {});
   };
 
 
@@ -510,6 +539,98 @@ export function AppSettings({
                       </label>
                     </div>
                   </div>
+                </div>
+
+                {/* ── Flyout y Mini Widget de Escritorio ── */}
+                <div className="settings-card">
+                  <div className="settings-card-header-row">
+                    <div>
+                      <h3>Flyout y Mini Widget de Escritorio</h3>
+                      <p>
+                        Panel flotante nativo de volumen y reproducción multimedia con diseño Material 3 Expressive, visualizador de audio en vivo y fijación en pantalla (sin dependencias externas).
+                      </p>
+                    </div>
+                    <label className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={flyoutSettings.enabled}
+                        onChange={(e) => handleUpdateFlyout({ enabled: e.target.checked })}
+                        aria-label="Activar Flyout de Escritorio"
+                      />
+                      <span className="toggle-slider" />
+                    </label>
+                  </div>
+
+                  {flyoutSettings.enabled && (
+                    <div className="flyout-config-section" style={{ marginTop: 12 }}>
+                      <h4 className="settings-subheading">Posición en Pantalla (6 Cuadrantes)</h4>
+                      <div className="density-options-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+                        {FLYOUT_ZONES.map(({ id, label, desc, icon }) => (
+                          <button
+                            key={id}
+                            className={`density-card${flyoutSettings.zone === id ? " is-selected" : ""}`}
+                            onClick={() => handleUpdateFlyout({ zone: id })}
+                            type="button"
+                          >
+                            <div style={{ fontSize: 24, marginBottom: 4 }}>{icon}</div>
+                            <div className="density-card-info" style={{ textAlign: "center" }}>
+                              <strong>{label}</strong>
+                              <small>{desc}</small>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="system-toggles-list" style={{ marginTop: 14 }}>
+                        <div className="system-toggle-item">
+                          <div className="system-toggle-info">
+                            <strong>Visualizador de Audio Reactivo (Live Spectrum)</strong>
+                            <p>Anima barras de frecuencia sonoras en vivo al reproducir música o vídeos.</p>
+                          </div>
+                          <label className="toggle-switch">
+                            <input
+                              type="checkbox"
+                              checked={flyoutSettings.showSpectrum}
+                              onChange={(e) => handleUpdateFlyout({ showSpectrum: e.target.checked })}
+                              aria-label="Visualizador de Audio Reactivo"
+                            />
+                            <span className="toggle-slider" />
+                          </label>
+                        </div>
+
+                        <div className="system-toggle-item">
+                          <div className="system-toggle-info">
+                            <strong>Duración en Pantalla</strong>
+                            <p>Tiempo antes de ocultarse automáticamente (3 segundos recomendado).</p>
+                          </div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            {[1500, 3000, 5000].map((ms) => (
+                              <button
+                                key={ms}
+                                type="button"
+                                className={`snapshot-format-chip ${flyoutSettings.durationMs === ms ? "is-selected" : ""}`}
+                                onClick={() => handleUpdateFlyout({ durationMs: ms })}
+                                style={{ padding: "6px 12px" }}
+                              >
+                                {ms / 1000}s
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
+                        <button
+                          type="button"
+                          className="snapshot-action-btn primary"
+                          onClick={handleTestFlyout}
+                        >
+                          <Icon name="play" />
+                          <span>Probar Flyout en pantalla ahora</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Apariencia / Tema & Acentos ── */}

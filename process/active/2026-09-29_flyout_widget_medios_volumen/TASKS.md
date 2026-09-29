@@ -1,0 +1,26 @@
+# Tareas — Flyout & Widget de Escritorio para Medios y Volumen
+
+- [x] 1. **Configuración de Ventana en Tauri v2**:
+  - [x] Añadir la definición de ventana `flyout` en `src-tauri/tauri.conf.json` (`decorations: false`, `transparent: true`, `alwaysOnTop: true`, `skipTaskbar: true`, `visible: false`).
+  - [x] Actualizar `src/main.tsx` para enrutar el Webview hacia el componente `FlyoutWindow` si la ventana es `flyout`.
+- [x] 2. **Backend Rust — Posicionamiento y Control de Ventana**:
+  - [x] Implementar comando `show_flyout`, `hide_flyout` y `position_flyout(position_zone)` en Rust calculando el `work_area` del monitor primario/activo.
+  - [x] Añadir soporte para las 6 zonas de pantalla: `bottom-left`, `bottom-center`, `bottom-right`, `top-left`, `top-center`, `top-right`.
+  - [x] Exponer comandos en `src-tauri/src/app/commands/` y registrarlos en `lib.rs`.
+- [x] 3. **Frontend UI — Componente `FlyoutWindow` y Estilos**:
+  - [x] Crear `src/features/playback/ui/FlyoutWindow.tsx` con soporte para temas de acrílico/glassmorphism, animaciones elásticas y diseño Material 3 Expressive.
+  - [x] Crear `src/features/playback/ui/flyout-window.css` con estilos premium, micro-sombras tonales y estados hover.
+  - [x] Implementar la cápsula de volumen: deslizador interactivo, valor numérico, botón de silencio reactivo y toggle para mezclador.
+  - [x] Implementar la tarjeta de medios: carátula/fotograma HD, título, artista/subtítulo, controles de transporte (prev, play/pause, next) y badge oficial de Prisma.
+  - [x] Añadir visualizador de barras de espectro reactivas con micro-animaciones.
+  - [x] Añadir botón de anclaje (Pin) para alternar entre Flyout temporal y Mini Widget persistente de escritorio.
+- [x] 4. **Sincronización de Estado y Eventos**:
+  - [x] Emitir eventos globales de Tauri (`prisma://flyout-state-sync`) desde el reproductor de audio y vídeo cuando cambie de pista, cambie el estado de reproducción o cambie el volumen.
+  - [x] Sincronizar el timer de auto-ocultado (por defecto 3000 ms, configurable) que se pausa al pasar el cursor por encima (`onMouseEnter` / `onMouseLeave`).
+- [x] 5. **Panel de Ajustes en Prisma**:
+  - [x] Añadir controles en la configuración de Prisma para elegir la posición de pantalla (6 zonas), tiempo de permanencia y alternar visualizador o widget.
+- [ ] 6. **Validación y Pruebas**:
+  - [x] Comprobar compilación de frontend (`bun run build`).
+  - [ ] Comprobar compilación y ejecución de Tauri con la ventana flyout.
+  - [ ] Verificar reposicionamiento en las 6 zonas y ausencia de cortes o parpadeos.
+  - [ ] Comprobar funcionamiento tanto en música como en reproducción de vídeo.

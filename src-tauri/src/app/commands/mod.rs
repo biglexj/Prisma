@@ -1,5 +1,6 @@
 pub mod converter;
 pub mod custom_libraries;
+pub mod flyout;
 pub mod favorites;
 pub mod media;
 pub mod music_library;

@@ -57,6 +57,7 @@ import "../features/music_library/ui/music-library.css";
 import "../features/visual_library/ui/visual-library.css";
 import "../features/visual_library/ui/video-player.css";
 import { useMediaSessionSync } from "../features/playback/services/useMediaSessionSync";
+import { useFlyoutSync } from "../features/playback/services/useFlyoutSync";
 
 const VIEW_TITLES: Record<AppView, string> = {
   home: "Inicio",
@@ -169,6 +170,17 @@ function AppContent() {
     onPrevious: () => playback.previous(),
     onNext: () => playback.next(),
     onSeek: (seconds) => playback.seek(seconds),
+  });
+
+  useFlyoutSync({
+    playback,
+    isAudioPlaying,
+    isVideoPlaying,
+    isVideoActive,
+    currentAudioPath,
+    activeVideoPath,
+    currentArtwork,
+    onToggleVideoPlay: () => setIsVideoPlaying((p) => !p),
   });
 
   const navigateToView = useCallback(

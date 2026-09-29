@@ -2,6 +2,9 @@ mod app;
 mod features;
 mod infrastructure;
 
+use app::commands::flyout::{
+    flyout_hide, flyout_is_visible, flyout_set_position, flyout_show,
+};
 use app::commands::favorites::{
     favorites_get_all, favorites_is_favorite, favorites_toggle,
 };
@@ -658,6 +661,10 @@ pub fn run() {
             smtc_update_metadata,
             smtc_update_timeline,
             smtc_clear,
+            flyout_show,
+            flyout_hide,
+            flyout_set_position,
+            flyout_is_visible,
             global_passthru_get_status,
             global_passthru_toggle,
             global_passthru_list_endpoints,
