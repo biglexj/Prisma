@@ -584,6 +584,26 @@
   background: var(--surface-container-high, #2b1f22);
 }
 
+.convert-color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--on-surface-variant, #cfb9bc);
+  font-size: 0.84rem;
+}
+
+.convert-color-row label { margin-right: auto; }
+.convert-color-row input[type="color"] {
+  width: 40px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--outline-variant, rgba(207, 185, 188, 0.2));
+  border-radius: 8px;
+  background: var(--surface-container-high, #2b1f22);
+  cursor: pointer;
+}
+.convert-color-row span { min-width: 65px; font-variant-numeric: tabular-nums; }
+
 .convert-watermark-checkbox-inline {
   display: inline-flex;
   align-items: center;

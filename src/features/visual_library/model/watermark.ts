@@ -28,6 +28,9 @@ export interface WatermarkConfig {
   opacity: number; // 0.1 a 1.0
   color: string; // e.g. '#ffffff' o '#000000'
   withShadow: boolean;
+  withOutline: boolean;
+  outlineColor: string;
+  outlineWidth: number; // Porcentaje del tamaño de letra
 }
 
 export const DEFAULT_WATERMARK_CONFIG: WatermarkConfig = {
@@ -45,6 +48,9 @@ export const DEFAULT_WATERMARK_CONFIG: WatermarkConfig = {
   opacity: 0.85,
   color: "#ffffff",
   withShadow: true,
+  withOutline: false,
+  outlineColor: "#151014",
+  outlineWidth: 6,
 };
 
 const EDGE_MARGIN_RATIO = 0.01;
@@ -253,6 +259,30 @@ export function applyWatermarkToCanvas(
   ctx.globalAlpha = Math.max(0.05, Math.min(1.0, config.opacity));
 
   if (layout.logoWidth > 0 && logoImg) {
+    if (config.withOutline) {
+      const outlineSize = Math.max(1, Math.min(layout.logoWidth, layout.logoHeight) * Math.max(1, Math.min(12, config.outlineWidth ?? 6)) / 100);
+      const padding = Math.ceil(outlineSize) + 1;
+      const mask = document.createElement("canvas");
+      mask.width = Math.ceil(layout.logoWidth + padding * 2);
+      mask.height = Math.ceil(layout.logoHeight + padding * 2);
+      const maskCtx = mask.getContext("2d");
+      if (maskCtx) {
+        for (let step = 0; step < 16; step++) {
+          const angle = step * Math.PI / 8;
+          maskCtx.drawImage(
+            logoImg,
+            padding + Math.cos(angle) * outlineSize,
+            padding + Math.sin(angle) * outlineSize,
+            layout.logoWidth,
+            layout.logoHeight,
+          );
+        }
+        maskCtx.globalCompositeOperation = "source-in";
+        maskCtx.fillStyle = config.outlineColor || "#151014";
+        maskCtx.fillRect(0, 0, mask.width, mask.height);
+        ctx.drawImage(mask, layout.x + layout.logoX - padding, layout.y + layout.logoY - padding);
+      }
+    }
     if (config.withShadow) {
       ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
       ctx.shadowBlur = Math.round(6 * logoShadowScale);
@@ -285,6 +315,12 @@ export function applyWatermarkToCanvas(
     }
 
     ctx.fillStyle = config.color || "#ffffff";
+    if (config.withOutline) {
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = config.outlineColor || "#151014";
+      ctx.lineWidth = Math.max(1, layout.fontSize * Math.max(1, Math.min(12, config.outlineWidth ?? 6)) / 100);
+      ctx.strokeText(layout.text, layout.x + layout.textX, layout.y + layout.textY, layout.textWidth);
+    }
     ctx.fillText(
       layout.text,
       layout.x + layout.textX,

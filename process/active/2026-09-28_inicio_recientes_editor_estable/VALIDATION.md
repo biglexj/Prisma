@@ -7,10 +7,15 @@
 - [x] Comprobación geométrica de marca de agua en lienzo de 1000 × 600: esquina inferior derecha a 1 % de ambos bordes y superior izquierda a 1 %.
 - [x] `bun test test/watermarkLayout.test.ts`: seis pruebas de escala independiente, cinco disposiciones y margen del 1 %.
 - [x] `bun run build`: TypeScript y Vite correctos tras los controles de logotipo; persiste la advertencia existente sobre el tamaño de los chunks.
+- [x] `bun test test/watermarkLayout.test.ts`: ocho pruebas tras añadir contorno y colores; incluye silueta de logo transparente.
+- [x] `bun run build`: TypeScript y Vite correctos con el diálogo de dos columnas y los controles del conversor; persiste la advertencia de tamaño de chunks.
 - [x] `git diff --check`: sin errores de espacios.
 - [ ] Probar el arrastre desde cada tipo de tarjeta de Inicio a una aplicación externa.
 - [ ] Probar Enter, regreso a edición y guardado de un recorte.
 - [ ] Probar trazos continuos y puntos aislados, antes y después del recorte.
 - [ ] Probar marca de agua con texto, fecha y logo; arrastrar y exportar en varias proporciones de imagen.
+- [ ] Soltar un logotipo desde el Explorador en el recuadro del diálogo y comprobar que el archivo se acepta solo allí.
+- [ ] Comprobar el diálogo sin scroll en una ventana de escritorio y revisar el respaldo en ventanas pequeñas.
+- [ ] Comparar vista previa y exportación con contorno y colores personalizados.
 
 La observación de una ventana ejecutándose y la compilación no prueban por sí solas las interacciones manuales ni la salida visual exportada.

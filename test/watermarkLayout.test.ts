@@ -13,6 +13,7 @@ function mockCanvas() {
   let font = "600 32px sans-serif";
   let logo: Draw | null = null;
   let text: Draw | null = null;
+  let outline: { color: string; width: number } | null = null;
   const ctx = {
     save() {},
     restore() {},
@@ -27,8 +28,9 @@ function mockCanvas() {
     fillText(value: string, x: number, y: number, width: number) {
       text = { x, y, width, height: value ? parseFloat(font.match(/[\d.]+px/)?.[0] ?? "32") : 0 };
     },
+    strokeText() { outline = { color: this.strokeStyle, width: this.lineWidth }; },
   } as unknown as CanvasRenderingContext2D;
-  return { ctx, draws: () => ({ logo: logo as Draw | null, text: text as Draw | null }) };
+  return { ctx, draws: () => ({ logo: logo as Draw | null, text: text as Draw | null, outline }) };
 }
 
 const image = { naturalWidth: 200, naturalHeight: 200 } as HTMLImageElement;
@@ -70,3 +72,38 @@ test.each<WatermarkLogoPlacement>(["above", "below", "left", "right", "overlay"]
     }
   },
 );
+
+test("the chosen text color and outline are rendered", () => {
+  const { ctx, draws } = mockCanvas();
+  applyWatermarkToCanvas(ctx, 1000, 600, {
+    ...base, color: "#22aaff", withOutline: true, outlineColor: "#123456", outlineWidth: 8,
+  });
+  expect(draws().outline).toEqual({ color: "#123456", width: 2.56 });
+  expect(ctx.fillStyle).toBe("#22aaff");
+});
+
+test("the logo outline follows its transparent silhouette", () => {
+  const originalDocument = globalThis.document;
+  let silhouetteCopies = 0;
+  let maskColor = "";
+  const maskCtx = {
+    drawImage() { silhouetteCopies++; },
+    fillRect() { maskColor = this.fillStyle; },
+    globalCompositeOperation: "source-over",
+    fillStyle: "",
+  };
+  (globalThis as { document: Document }).document = {
+    createElement() { return { width: 0, height: 0, getContext() { return maskCtx; } }; },
+  } as unknown as Document;
+  try {
+    const { ctx, draws } = mockCanvas();
+    applyWatermarkToCanvas(ctx, 1000, 600, {
+      ...base, text: "", withOutline: true, outlineColor: "#aabbcc",
+    }, image);
+    expect(silhouetteCopies).toBe(16);
+    expect(maskColor).toBe("#aabbcc");
+    expect(draws().logo).not.toBeNull();
+  } finally {
+    (globalThis as { document: Document | undefined }).document = originalDocument;
+  }
+});

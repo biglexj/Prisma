@@ -12,6 +12,8 @@ Mostrar primero los archivos incorporados recientemente, permitir su arrastre na
 - Activar el pincel al entrar en Dibujar y permitir trazos incluso si hay un recorte pendiente.
 - Situar el borde de la marca de agua al 1 % de cada esquina elegida y permitir moverla sobre la vista previa antes de guardar.
 - Calibrar el logotipo con una escala independiente del texto; ofrecer cinco composiciones entre ambos y usar el mismo cálculo para vista previa, guardado y conversión.
+- Ampliar el diálogo de marca a dos columnas sin desplazamiento en pantallas de escritorio: contenido y logotipo a la izquierda, posición y estilo a la derecha; conservar una columna en ventanas estrechas.
+- Permitir soltar un archivo de logotipo desde el Explorador sobre su zona del diálogo, siguiendo el bus nativo del comparador; añadir color de texto y contorno configurable a la marca.
 - En desarrollo, reutilizar las DLL y herramientas copiadas al directorio de Cargo; conservar los recursos del instalador.
 
 ## Límite de validación

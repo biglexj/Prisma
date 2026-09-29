@@ -520,6 +520,34 @@ export function PrismaConvertView() {
                       </div>
                     </div>
 
+                    <div className="convert-logo-layout-controls">
+                      <div className="convert-color-row">
+                        <label htmlFor="convert-watermark-text-color">Color del texto</label>
+                        <input id="convert-watermark-text-color" type="color" value={watermarkConfig.color}
+                          onChange={(event) => setWatermarkConfig((previous) => ({ ...previous, color: event.target.value }))} disabled={isRunning} />
+                        <span>{watermarkConfig.color.toUpperCase()}</span>
+                      </div>
+                      <label className="convert-watermark-checkbox-inline">
+                        <input type="checkbox" checked={watermarkConfig.withOutline}
+                          onChange={(event) => setWatermarkConfig((previous) => ({ ...previous, withOutline: event.target.checked }))} disabled={isRunning} />
+                        <span>Contorno de texto y logo</span>
+                      </label>
+                      {watermarkConfig.withOutline && <>
+                        <div className="convert-color-row">
+                          <label htmlFor="convert-watermark-outline-color">Color del contorno</label>
+                          <input id="convert-watermark-outline-color" type="color" value={watermarkConfig.outlineColor}
+                            onChange={(event) => setWatermarkConfig((previous) => ({ ...previous, outlineColor: event.target.value }))} disabled={isRunning} />
+                          <span>{watermarkConfig.outlineColor.toUpperCase()}</span>
+                        </div>
+                        <div className="convert-control-group">
+                          <div className="convert-slider-label"><label htmlFor="convert-watermark-outline-width">Grosor del borde</label><span className="convert-slider-val">{watermarkConfig.outlineWidth}%</span></div>
+                          <input id="convert-watermark-outline-width" type="range" min="1" max="12" step="1" value={watermarkConfig.outlineWidth}
+                            onChange={(event) => setWatermarkConfig((previous) => ({ ...previous, outlineWidth: Number(event.target.value) }))}
+                            disabled={isRunning} className="convert-slider" />
+                        </div>
+                      </>}
+                    </div>
+
                     <label className="convert-watermark-checkbox-inline" style={{ marginTop: "0.25rem" }}>
                       <input
                         type="checkbox"
