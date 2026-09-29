@@ -2,6 +2,7 @@ import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { EQ_BAND_RANGES, EQ_FREQUENCIES, type DspEffectsConfig } from "../model/types";
 import { useDsp } from "../DspContext";
 import { Icon } from "../../../shared/ui/Icon";
+import { MultiAudioOutputSelector } from "./MultiAudioOutputSelector";
 import "./dsp-equalizer.css";
 
 const SPECTRUM_BAR_COUNT = 52;
@@ -510,6 +511,7 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
                 </div>
               )}
             </div>
+            <MultiAudioOutputSelector />
           </div>
 
           <div className="dsp-header-controls-right">

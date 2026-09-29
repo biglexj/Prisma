@@ -1,0 +1,100 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { MultiOutputConfig, MultiOutputDevice } from "./model/types";
+import { dspClient } from "./tauri/client";
+
+const STORAGE_KEY = "prisma_dsp_multi_output";
+
+function savedConfig(): MultiOutputConfig {
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (stored && typeof stored.enabled === "boolean" && Array.isArray(stored.devices)) {
+      return {
+        enabled: stored.enabled,
+        devices: stored.devices.filter((item: MultiOutputDevice) =>
+          typeof item?.id === "string" && typeof item?.gain === "number" && item.gain >= 0 && item.gain <= 1,
+        ).map((item: MultiOutputDevice) => ({
+          id: item.id,
+          gain: item.gain,
+          delayMs: Number.isFinite(item.delayMs) ? Math.max(0, Math.min(2_000, Math.round(item.delayMs / 10) * 10)) : 0,
+        })),
+      };
+    }
+  } catch { /* Preferir la configuración vacía ante datos locales corruptos. */ }
+  return { enabled: false, devices: [] };
+}
+
+export function useMultiAudioOutput() {
+  const [config, setConfig] = useState<MultiOutputConfig>(savedConfig);
+  const configRef = useRef(config);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const gainTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const save = useCallback((next: MultiOutputConfig) => {
+    configRef.current = next;
+    setConfig(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    setError(null);
+  }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    const restore = async () => {
+      try {
+        const stored = savedConfig();
+        await dspClient.setMultiOutputDevices(stored.devices);
+        const next = await dspClient.toggleMultiOutput(stored.enabled);
+        if (!disposed) save(next);
+      } catch (cause) {
+        if (!disposed) {
+          setError(`No se pudieron restaurar las salidas: ${String(cause)}`);
+          setConfig((previous) => ({ ...previous, enabled: false }));
+        }
+      }
+    };
+    void restore();
+    return () => { disposed = true; };
+  }, [save]);
+
+  const setDevices = useCallback(async (devices: MultiOutputDevice[]) => {
+    if (gainTimer.current) clearTimeout(gainTimer.current);
+    setBusy(true);
+    try {
+      if (config.enabled && devices.length < 2) await dspClient.toggleMultiOutput(false);
+      const next = await dspClient.setMultiOutputDevices(devices);
+      save(next);
+    } catch (cause) { setError(String(cause)); }
+    finally { setBusy(false); }
+  }, [config.enabled, save]);
+
+  const updateDevice = useCallback((id: string, values: Partial<MultiOutputDevice>) => {
+    const current = configRef.current;
+    const next = { ...current, devices: current.devices.map((device) =>
+      device.id === id ? { ...device, ...values } : device,
+    ) };
+    save(next);
+    if (gainTimer.current) clearTimeout(gainTimer.current);
+    gainTimer.current = setTimeout(() => {
+      void dspClient.setMultiOutputDevices(next.devices).catch((cause) => setError(String(cause)));
+    }, 80);
+  }, [save]);
+
+  const setGain = useCallback((id: string, gain: number) => {
+    updateDevice(id, { gain: Math.max(0, Math.min(1, gain)) });
+  }, [updateDevice]);
+
+  const setDelay = useCallback((id: string, delayMs: number) => {
+    updateDevice(id, { delayMs: Math.max(0, Math.min(2_000, Math.round(delayMs / 10) * 10)) });
+  }, [updateDevice]);
+
+  useEffect(() => () => { if (gainTimer.current) clearTimeout(gainTimer.current); }, []);
+
+  const toggle = useCallback(async () => {
+    setBusy(true);
+    try { save(await dspClient.toggleMultiOutput(!config.enabled)); return true; }
+    catch (cause) { setError(String(cause)); return false; }
+    finally { setBusy(false); }
+  }, [config.enabled, save]);
+
+  return { config, busy, error, setDevices, setGain, setDelay, toggle };
+}

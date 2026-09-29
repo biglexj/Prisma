@@ -32,6 +32,17 @@ export interface AudioEndpointInfo {
   isVirtual: boolean;
 }
 
+export interface MultiOutputDevice {
+  id: string;
+  gain: number;
+  delayMs: number;
+}
+
+export interface MultiOutputConfig {
+  enabled: boolean;
+  devices: MultiOutputDevice[];
+}
+
 export interface GlobalPassthruStatus {
   isRunning: boolean;
   hasSignal?: boolean;

@@ -48,7 +48,7 @@ import { DuplicatesScannerModal } from "../features/visual_library/ui/duplicates
 import { ImageComparisonModal, createVisualItemFromPath } from "../features/comparison";
 import { DspEqualizerView } from "../features/dsp/ui/DspEqualizerView";
 import { DspEqualizerModal } from "../features/dsp/ui/DspEqualizerModal";
-import { DspProvider } from "../features/dsp/DspContext";
+import { DspProvider, useDsp } from "../features/dsp/DspContext";
 import { useGlobalFileDrop } from "./hooks/useGlobalFileDrop";
 import { Icon, type IconName } from "../shared/ui/Icon";
 import { SeekOsd, useSeekOsd } from "../shared/ui/SeekOsd";
@@ -83,6 +83,7 @@ const VIEW_TITLES: Record<AppView, string> = {
 };
 
 function AppContent() {
+  const { multiOutput } = useDsp();
   const [activeView, setActiveView] = useState<AppView>("home");
   const [isEqualizerModalOpen, setIsEqualizerModalOpen] = useState(false);
   const [activeVideoPath, setActiveVideoPath] = useState<string | null>(null);
@@ -827,6 +828,15 @@ function AppContent() {
         return;
       }
 
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "o" && !e.altKey && !e.metaKey) {
+        e.preventDefault();
+        const activating = !multiOutput.config.enabled;
+        void multiOutput.toggle().then((success) => {
+          if (success) showGlobalFavToast(activating ? "🔊 Salidas múltiples activadas" : "🔊 Salidas múltiples desactivadas");
+        });
+        return;
+      }
+
       // Atajo dedicado para enviar Prisma a segundo plano ("escuchar de fondo sin pausar"):
       // H, Shift + H, Ctrl + H o Shift + B
       if (
@@ -1031,7 +1041,7 @@ function AppContent() {
       unlistenNavigatePromise.then((unlisten) => unlisten());
       unlistenRemotePromise.then((unlisten) => unlisten());
     };
-  }, [handleOpenFile, library, imageLibrary, videoLibrary, activeView, playback, videoReturnView]);
+  }, [handleOpenFile, library, imageLibrary, videoLibrary, activeView, playback, videoReturnView, multiOutput.toggle, multiOutput.config.enabled]);
 
   // ── Sincronización en tiempo real del estado de reproducción hacia Synapse (Mando a Distancia) ──
   useEffect(() => {

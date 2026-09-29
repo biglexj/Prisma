@@ -121,14 +121,42 @@ pub fn global_passthru_toggle(
     enabled: bool,
     capture_device_id: Option<String>,
     render_device_id: Option<String>,
+    route_system_default: Option<bool>,
     passthru: State<'_, std::sync::Arc<crate::infrastructure::media::passthru::PassthruService>>,
 ) -> Result<crate::infrastructure::media::passthru::GlobalPassthruStatus, String> {
     if enabled {
-        passthru.start(capture_device_id, render_device_id)?;
+        if route_system_default.unwrap_or(true) {
+            passthru.start(capture_device_id, render_device_id)?;
+        } else {
+            passthru.start_with_routing(capture_device_id, render_device_id, false)?;
+        }
     } else {
         passthru.stop()?;
     }
     Ok(passthru.get_status())
+}
+
+#[tauri::command]
+pub fn playback_get_multi_output(
+    passthru: State<'_, std::sync::Arc<crate::infrastructure::media::passthru::PassthruService>>,
+) -> crate::infrastructure::media::passthru::MultiOutputConfig {
+    passthru.get_multi_output()
+}
+
+#[tauri::command]
+pub fn playback_set_multi_output_devices(
+    devices: Vec<crate::infrastructure::media::passthru::MultiOutputDevice>,
+    passthru: State<'_, std::sync::Arc<crate::infrastructure::media::passthru::PassthruService>>,
+) -> Result<crate::infrastructure::media::passthru::MultiOutputConfig, String> {
+    passthru.set_multi_output(devices)
+}
+
+#[tauri::command]
+pub fn playback_toggle_multi_output(
+    enabled: bool,
+    passthru: State<'_, std::sync::Arc<crate::infrastructure::media::passthru::PassthruService>>,
+) -> Result<crate::infrastructure::media::passthru::MultiOutputConfig, String> {
+    passthru.toggle_multi_output(enabled)
 }
 
 #[tauri::command]

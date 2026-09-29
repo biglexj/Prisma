@@ -6,7 +6,7 @@ use std::time::Duration;
 use windows::core::PWSTR;
 use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
 use windows::Win32::Media::Audio::{
-    eConsole, eMultimedia, eRender, IAudioCaptureClient, IAudioClient, IAudioRenderClient,
+    eConsole, eMultimedia, eRender, IAudioCaptureClient, IAudioClient,
     IMMDevice, IMMDeviceEnumerator, MMDeviceEnumerator, AUDCLNT_BUFFERFLAGS_SILENT,
     AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK, DEVICE_STATE_ACTIVE,
     WAVEFORMATEX,
@@ -21,17 +21,20 @@ use windows::Win32::System::Threading::{
 use windows::Win32::UI::Shell::PropertiesSystem::IPropertyStore;
 
 use super::dsp_engine::{DspParameters, DspProcessor};
-use super::{AudioEndpointInfo, GlobalPassthruStatus};
+use super::{AudioEndpointInfo, GlobalPassthruStatus, MultiOutputDevice};
+use super::render_slot::RenderDeviceSlot;
 
 /// Representa el puente de procesamiento WASAPI en tiempo real entre la captura y la salida.
 pub struct WasapiBridge {
     pub capture_id: Option<String>,
     pub render_id: Option<String>,
+    pub output_ids: Vec<String>,
     running: Arc<AtomicBool>,
     worker_handle: Option<JoinHandle<()>>,
     params_shared: Arc<Mutex<DspParameters>>,
     status: Arc<Mutex<GlobalPassthruStatus>>,
     volume_req: Arc<AtomicI32>,
+    output_gains: Arc<Mutex<Vec<MultiOutputDevice>>>,
 }
 
 impl WasapiBridge {
@@ -40,7 +43,7 @@ impl WasapiBridge {
         self.running.load(Ordering::SeqCst)
     }
 
-    pub fn matches_devices(&self, req_capture: Option<&str>, req_render: Option<&str>) -> bool {
+    pub fn matches_devices(&self, req_capture: Option<&str>, req_render: Option<&str>, outputs: &[MultiOutputDevice]) -> bool {
         let same_capture = match (&self.capture_id, req_capture) {
             (None, None) => true,
             (Some(a), Some(b)) => a == b,
@@ -51,7 +54,7 @@ impl WasapiBridge {
             (Some(a), Some(b)) => a == b,
             _ => false,
         };
-        same_capture && same_render
+        same_capture && same_render && self.output_ids == outputs.iter().map(|output| output.id.clone()).collect::<Vec<_>>()
     }
 
     pub fn get_status(&self) -> GlobalPassthruStatus {
@@ -80,6 +83,10 @@ impl WasapiBridge {
         }
     }
 
+    pub fn update_output_gains(&self, outputs: Vec<MultiOutputDevice>) {
+        if let Ok(mut guard) = self.output_gains.lock() { *guard = outputs; }
+    }
+
     pub fn stop(&mut self) {
         self.running.store(false, Ordering::SeqCst);
         if let Some(handle) = self.worker_handle.take() {
@@ -93,6 +100,7 @@ impl WasapiBridge {
     pub fn start(
         capture_id: Option<String>,
         render_id: Option<String>,
+        outputs: Vec<MultiOutputDevice>,
         initial_params: DspParameters,
     ) -> Result<Self, String> {
         let (capture_device_name, render_device_name) = unsafe {
@@ -145,6 +153,7 @@ impl WasapiBridge {
         let running = Arc::new(AtomicBool::new(true));
         let params_shared = Arc::new(Mutex::new(initial_params));
         let volume_req = Arc::new(AtomicI32::new(-1));
+        let output_gains = Arc::new(Mutex::new(outputs.clone()));
         let status = Arc::new(Mutex::new(GlobalPassthruStatus {
             is_running: false,
             has_signal: false,
@@ -159,6 +168,7 @@ impl WasapiBridge {
         let thread_params = params_shared.clone();
         let thread_status = status.clone();
         let thread_volume_req = volume_req.clone();
+        let thread_output_gains = output_gains.clone();
 
         let loop_capture_id = capture_id.clone();
         let loop_render_id = render_id.clone();
@@ -174,10 +184,12 @@ impl WasapiBridge {
                 run_passthru_loop(
                     loop_capture_id,
                     loop_render_id,
+                    outputs,
                     thread_running.clone(),
                     thread_params,
                     thread_status.clone(),
                     thread_volume_req,
+                    thread_output_gains,
                 );
 
                 thread_running.store(false, Ordering::SeqCst);
@@ -195,11 +207,13 @@ impl WasapiBridge {
         Ok(Self {
             capture_id,
             render_id,
+            output_ids: output_gains.lock().map_or_else(|_| Vec::new(), |items| items.iter().map(|item| item.id.clone()).collect()),
             running,
             worker_handle: Some(worker_handle),
             params_shared,
             status,
             volume_req,
+            output_gains,
         })
     }
 }
@@ -208,10 +222,12 @@ impl WasapiBridge {
 fn run_passthru_loop(
     capture_id: Option<String>,
     render_id: Option<String>,
+    outputs: Vec<MultiOutputDevice>,
     running: Arc<AtomicBool>,
     params_shared: Arc<Mutex<DspParameters>>,
     status: Arc<Mutex<GlobalPassthruStatus>>,
     volume_req: Arc<AtomicI32>,
+    output_gains: Arc<Mutex<Vec<MultiOutputDevice>>>,
 ) {
     unsafe {
         let enumerator: IMMDeviceEnumerator = match CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) {
@@ -330,6 +346,14 @@ fn run_passthru_loop(
         let wfx = *pwfx_capture;
         let sample_rate = wfx.nSamplesPerSec as f32;
         let channels = wfx.nChannels as usize;
+        let capture_is_float = wfx.wFormatTag == 3 ||
+            (wfx.wFormatTag == 0xFFFE && wfx.cbSize >= 22 && *(pwfx_capture.cast::<u8>().add(24).cast::<u32>()) == 3);
+        if channels == 0 || !((capture_is_float && wfx.wBitsPerSample == 32)
+            || (!capture_is_float && matches!(wfx.wBitsPerSample, 16 | 24 | 32))) {
+            CoTaskMemFree(Some(pwfx_capture.cast()));
+            eprintln!("[Prisma Passthru] Formato de captura no compatible");
+            return;
+        }
 
         // Búfer solicitado de 40 ms para máxima estabilidad (evita underruns en Bluetooth / USB / Alto TS415)
         let requested_duration = 400_000i64; // 40 ms en unidades de 100ns (constante FxSound)
@@ -356,70 +380,44 @@ fn run_passthru_loop(
             }
         };
 
-        // 4. Inicializar Audio Client de Renderizado físico
-        let render_client: IAudioClient = match render_device.Activate(CLSCTX_ALL, None) {
-            Ok(r) => r,
+        // 4. Cada salida tiene su propio cliente, reloj y cola de muestras.
+        let primary_id = match render_device.GetId() {
+            Ok(p) => {
+                let id = p.to_string().unwrap_or_default();
+                CoTaskMemFree(Some(p.as_ptr() as *const _));
+                id
+            }
             Err(e) => {
-                eprintln!("[Prisma Passthru] Activate render falló: {:?}", e);
+                eprintln!("[Prisma Passthru] No se pudo leer el ID de salida: {e}");
                 return;
             }
         };
-
-        let pwfx_render: *mut WAVEFORMATEX = match render_client.GetMixFormat() {
-            Ok(p) if !p.is_null() => p,
-            _ => {
-                eprintln!("[Prisma Passthru] GetMixFormat render falló");
-                return;
+        let mut output_ids = vec![primary_id];
+        for output in &outputs {
+            if !output_ids.contains(&output.id) { output_ids.push(output.id.clone()); }
+        }
+        let mut render_slots = Vec::with_capacity(output_ids.len());
+        for id in &output_ids {
+            let delay_ms = outputs.iter().find(|output| output.id == *id).map_or(0, |output| output.delay_ms);
+            match RenderDeviceSlot::open(&enumerator, id, wfx.nSamplesPerSec, channels, delay_ms) {
+                Ok(mut slot) => {
+                    if let Some(output) = outputs.iter().find(|output| output.id == *id) {
+                        slot.gain = output.gain;
+                    }
+                    render_slots.push(slot);
+                }
+                Err(error) => {
+                    eprintln!("[Prisma Passthru] {error}");
+                    for slot in &render_slots { let _ = slot.client.Stop(); }
+                    return;
+                }
             }
-        };
-        let render_wfx = *pwfx_render;
-        let render_bits = render_wfx.wBitsPerSample;
-        let render_channels = render_wfx.nChannels as usize;
-        let render_sample_rate = render_wfx.nSamplesPerSec as f32;
-
-        let is_render_float = if render_wfx.wFormatTag == 3 /* WAVE_FORMAT_IEEE_FLOAT */ {
-            true
-        } else if render_wfx.wFormatTag == 0xFFFE /* WAVE_FORMAT_EXTENSIBLE */ {
-            let ext_ptr = pwfx_render as *const u8;
-            let subformat_first_u32 = *(ext_ptr.add(24) as *const u32);
-            subformat_first_u32 == 3 // KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
-        } else {
-            render_bits == 32
-        };
-
-        let init_render = render_client.Initialize(
-            AUDCLNT_SHAREMODE_SHARED,
-            0,
-            requested_duration,
-            0,
-            pwfx_render,
-            None,
-        );
-        CoTaskMemFree(Some(pwfx_render as *const _));
-
-        if let Err(e) = init_render {
-            eprintln!("[Prisma Passthru] Initialize render falló: {:?}", e);
-            return;
         }
 
-        let render_buf_frames = render_client.GetBufferSize().unwrap_or(0);
-
-        let render_service: IAudioRenderClient = match render_client.GetService() {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("[Prisma Passthru] GetService render falló: {:?}", e);
-                return;
-            }
-        };
-
-        // 5. Iniciar ambos streams
+        // 5. Iniciar la captura después de preparar todas las salidas.
         if let Err(e) = capture_client.Start() {
             eprintln!("[Prisma Passthru] capture_client.Start() falló: {:?}", e);
-            return;
-        }
-        if let Err(e) = render_client.Start() {
-            eprintln!("[Prisma Passthru] render_client.Start() falló: {:?}", e);
-            let _ = capture_client.Stop();
+            for slot in &render_slots { let _ = slot.client.Stop(); }
             return;
         }
 
@@ -428,15 +426,15 @@ fn run_passthru_loop(
         if let Ok(mut st) = status.lock() {
             st.is_running = true;
             st.sample_rate = wfx.nSamplesPerSec;
-            st.latency_ms = if sample_rate > 0.0 {
-                (render_buf_frames as f32 / sample_rate) * 1000.0
+            st.latency_ms = if render_slots[0].sample_rate > 0 {
+                (render_slots[0].buffer_frames as f32 / render_slots[0].sample_rate as f32) * 1000.0
             } else {
                 10.0
             };
         }
 
         let capture_vol: Option<IAudioEndpointVolume> = capture_device.Activate(CLSCTX_ALL, None).ok();
-        let render_vol: Option<IAudioEndpointVolume> = render_device.Activate(CLSCTX_ALL, None).ok();
+        let render_vol = render_slots[0].endpoint_volume.clone();
 
         let mut last_capture_vol = -1.0f32;
         let mut last_capture_mute = false;
@@ -462,13 +460,12 @@ fn run_passthru_loop(
 
         let mut dsp = DspProcessor::new(sample_rate);
         let mut local_interleaved: Vec<f32> = Vec::with_capacity(4096);
-        let mut resampled_interleaved: Vec<f32> = Vec::with_capacity(4096);
         let mut had_signal = false;
         let mut last_signal = std::time::Instant::now() - Duration::from_secs(1);
 
         // 6. Bucle de procesamiento en tiempo real
         while running.load(Ordering::Relaxed) {
-            if render_client.GetCurrentPadding().is_err() { break; }
+            if render_slots.iter().any(|slot| slot.client.GetCurrentPadding().is_err()) { break; }
             if last_signal.elapsed() > Duration::from_millis(350) {
                 if had_signal {
                     had_signal = false;
@@ -534,6 +531,14 @@ fn run_passthru_loop(
             };
 
             if packet_length == 0 {
+                for slot in &mut render_slots {
+                    if let Err(error) = slot.write_available(channels) {
+                        eprintln!("[Prisma Passthru] La salida {} dejó de responder: {error}", slot.id);
+                        running.store(false, Ordering::Relaxed);
+                        break;
+                    }
+                }
+                if !running.load(Ordering::Relaxed) { break; }
                 if last_signal.elapsed() > Duration::from_millis(350) {
                     if had_signal {
                         had_signal = false;
@@ -561,7 +566,7 @@ fn run_passthru_loop(
                     let is_silent = (flags & AUDCLNT_BUFFERFLAGS_SILENT.0 as u32) != 0;
                     if is_silent {
                         local_interleaved.resize(total_samples, 0.0);
-                    } else if wfx.wBitsPerSample == 32 {
+                    } else if capture_is_float {
                         let float_slice = std::slice::from_raw_parts(p_data as *const f32, total_samples);
                         local_interleaved.extend_from_slice(float_slice);
                     } else if wfx.wBitsPerSample == 16 {
@@ -569,6 +574,15 @@ fn run_passthru_loop(
                         for &s in i16_slice {
                             local_interleaved.push(s as f32 / 32768.0);
                         }
+                    } else if wfx.wBitsPerSample == 24 {
+                        let bytes = std::slice::from_raw_parts(p_data, total_samples * 3);
+                        for chunk in bytes.chunks_exact(3) {
+                            let sample = i32::from_le_bytes([chunk[0], chunk[1], chunk[2], if chunk[2] & 0x80 != 0 { 0xFF } else { 0 }]);
+                            local_interleaved.push(sample as f32 / 8_388_608.0);
+                        }
+                    } else {
+                        let samples = std::slice::from_raw_parts(p_data as *const i32, total_samples);
+                        for &sample in samples { local_interleaved.push(sample as f32 / 2_147_483_648.0); }
                     }
 
                     // Detección de señal de audio real (umbral audible de ~ -52 dB para descartar dither o ruido térmico)
@@ -604,93 +618,21 @@ fn run_passthru_loop(
                         dsp.process_interleaved(&mut local_interleaved);
                     }
 
-                    // Remuestreo en caso de diferencia entre frecuencia de captura y salida (ej. 44.1k vs 48k)
-                    let (render_frames_src, render_data_src) = if (sample_rate - render_sample_rate).abs() > 1.0 && num_frames_read > 1 {
-                        let ratio = render_sample_rate / sample_rate;
-                        let target_frames = ((num_frames_read as f32) * ratio).round() as usize;
-                        resampled_interleaved.clear();
-                        resampled_interleaved.reserve(target_frames * channels);
-                        for j in 0..target_frames {
-                            let pos = (j as f32) / ratio;
-                            let idx0 = (pos.floor() as usize).min((num_frames_read - 1) as usize);
-                            let idx1 = (idx0 + 1).min((num_frames_read - 1) as usize);
-                            let frac = pos - (idx0 as f32);
-                            for ch in 0..channels {
-                                let s0 = local_interleaved[idx0 * channels + ch];
-                                let s1 = local_interleaved[idx1 * channels + ch];
-                                resampled_interleaved.push(s0 * (1.0 - frac) + s1 * frac);
-                            }
+                    // Distribuir el mismo bloque DSP a las colas independientes de cada salida.
+                    if let Ok(gains) = output_gains.try_lock() {
+                        for slot in &mut render_slots {
+                            slot.gain = gains.iter().find(|output| output.id == slot.id)
+                                .map_or(1.0, |output| output.gain);
+                            slot.queue.set_delay_ms(gains.iter().find(|output| output.id == slot.id)
+                                .map_or(0, |output| output.delay_ms));
                         }
-                        (target_frames as u32, &resampled_interleaved[..])
-                    } else {
-                        (num_frames_read, &local_interleaved[..])
-                    };
-
-                    // Enviar al dispositivo de renderizado físico
-                    if let Ok(padding) = render_client.GetCurrentPadding() {
-                        let available_frames = render_buf_frames.saturating_sub(padding);
-                        let frames_to_write = render_frames_src.min(available_frames);
-
-                        if frames_to_write > 0 {
-                            if let Ok(p_render_data) = render_service.GetBuffer(frames_to_write) {
-                                if !p_render_data.is_null() {
-                                    let copy_frames = frames_to_write as usize;
-                                    if is_render_float {
-                                        let render_float = std::slice::from_raw_parts_mut(
-                                            p_render_data as *mut f32,
-                                            copy_frames * render_channels,
-                                        );
-                                        for f in 0..copy_frames {
-                                            for ch in 0..render_channels {
-                                                let src_idx = f * channels + (ch % channels);
-                                                render_float[f * render_channels + ch] = render_data_src[src_idx];
-                                            }
-                                        }
-                                    } else if render_bits == 16 {
-                                        let render_i16 = std::slice::from_raw_parts_mut(
-                                            p_render_data as *mut i16,
-                                            copy_frames * render_channels,
-                                        );
-                                        for f in 0..copy_frames {
-                                            for ch in 0..render_channels {
-                                                let src_idx = f * channels + (ch % channels);
-                                                let s = render_data_src[src_idx].clamp(-1.0, 1.0);
-                                                render_i16[f * render_channels + ch] = (s * 32767.0) as i16;
-                                            }
-                                        }
-                                    } else if render_bits == 24 {
-                                        let render_u8 = std::slice::from_raw_parts_mut(
-                                            p_render_data as *mut u8,
-                                            copy_frames * render_channels * 3,
-                                        );
-                                        for f in 0..copy_frames {
-                                            for ch in 0..render_channels {
-                                                let src_idx = f * channels + (ch % channels);
-                                                let s = render_data_src[src_idx].clamp(-1.0, 1.0);
-                                                let val = (s * 8388607.0) as i32;
-                                                let b = val.to_le_bytes();
-                                                let offset = (f * render_channels + ch) * 3;
-                                                render_u8[offset] = b[0];
-                                                render_u8[offset + 1] = b[1];
-                                                render_u8[offset + 2] = b[2];
-                                            }
-                                        }
-                                    } else if render_bits == 32 {
-                                        let render_i32 = std::slice::from_raw_parts_mut(
-                                            p_render_data as *mut i32,
-                                            copy_frames * render_channels,
-                                        );
-                                        for f in 0..copy_frames {
-                                            for ch in 0..render_channels {
-                                                let src_idx = f * channels + (ch % channels);
-                                                let s = render_data_src[src_idx].clamp(-1.0, 1.0);
-                                                render_i32[f * render_channels + ch] = (s * 2147483647.0) as i32;
-                                            }
-                                        }
-                                    }
-                                    let _ = render_service.ReleaseBuffer(frames_to_write, 0);
-                                }
-                            }
+                    }
+                    for slot in &mut render_slots {
+                        slot.queue.push(&local_interleaved);
+                        if let Err(error) = slot.write_available(channels) {
+                            eprintln!("[Prisma Passthru] La salida {} dejó de responder: {error}", slot.id);
+                            running.store(false, Ordering::Relaxed);
+                            break;
                         }
                     }
                 }
@@ -701,7 +643,7 @@ fn run_passthru_loop(
         }
 
         let _ = capture_client.Stop();
-        let _ = render_client.Stop();
+        for slot in &render_slots { let _ = slot.client.Stop(); }
     }
 }
 

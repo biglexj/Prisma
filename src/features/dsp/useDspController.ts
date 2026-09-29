@@ -12,6 +12,7 @@ import {
 import { selectAudioOutput } from "./selectAudioOutput";
 import { reconcileGlobalAudio } from "./reconcileGlobalAudio";
 import { dspClient } from "./tauri/client";
+import { useMultiAudioOutput } from "./useMultiAudioOutput";
 
 const STORAGE_KEY_ENABLED = "prisma_dsp_enabled";
 const STORAGE_KEY_CONFIG = "prisma_dsp_config";
@@ -116,6 +117,7 @@ export function useDspController() {
   });
   const [isGlobalLoading, setIsGlobalLoading] = useState<boolean>(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const multiOutput = useMultiAudioOutput();
 
   const allPresets: DspPreset[] = [...DEFAULT_PRESETS, ...customPresets];
   const syncTimeoutRef = useRef<number | null>(null);
@@ -346,9 +348,21 @@ export function useDspController() {
   }, [applyAudioEndpoints]);
 
   useEffect(() => {
-    const matching = devices.find((device) => device.description === selectedDevice);
+    const virtual = audioEndpoints.find((endpoint) => endpoint.isVirtual);
+    const matching = multiOutput.config.enabled && virtual && globalPassthruStatus?.isRunning
+      ? devices.find((device) => /prisma|fxsound/i.test(device.description))
+      : devices.find((device) => device.description === selectedDevice);
     if (matching) void dspClient.setAudioDevice(matching.name).catch((error) => console.warn("No se pudo sincronizar la salida del reproductor:", error));
-  }, [devices, selectedDevice]);
+    if (virtual && multiOutput.config.enabled && globalPassthruStatus?.isRunning) {
+      window.dispatchEvent(new CustomEvent("prisma-audio-sink-change", {
+        detail: { deviceName: virtual.name, deviceId: virtual.id },
+      }));
+    } else if (selectedRenderDeviceId) {
+      window.dispatchEvent(new CustomEvent("prisma-audio-sink-change", {
+        detail: { deviceName: selectedDevice, deviceId: selectedRenderDeviceId },
+      }));
+    }
+  }, [devices, selectedDevice, selectedRenderDeviceId, audioEndpoints, multiOutput.config.enabled, globalPassthruStatus?.isRunning]);
 
   // Sincronización automática periódica y por foco con Windows
   useEffect(() => {
@@ -393,8 +407,8 @@ export function useDspController() {
   }, [globalPassthruEnabled]);
 
   // Un único reconciliador mantiene la intención del usuario separada del estado real.
-  const desiredBridge = useRef({ enabled: globalPassthruEnabled, capture: selectedCaptureDeviceId, render: selectedRenderDeviceId });
-  desiredBridge.current = { enabled: globalPassthruEnabled, capture: selectedCaptureDeviceId, render: selectedRenderDeviceId };
+  const desiredBridge = useRef({ enabled: globalPassthruEnabled || multiOutput.config.enabled, capture: selectedCaptureDeviceId, render: selectedRenderDeviceId, routeSystemDefault: globalPassthruEnabled });
+  desiredBridge.current = { enabled: globalPassthruEnabled || multiOutput.config.enabled, capture: selectedCaptureDeviceId, render: selectedRenderDeviceId, routeSystemDefault: globalPassthruEnabled };
   useEffect(() => {
     let disposed = false;
     let timer: ReturnType<typeof setTimeout>;
@@ -436,6 +450,16 @@ export function useDspController() {
       localStorage.removeItem(STORAGE_KEY_RENDER_DEVICE);
     }
   }, []);
+
+  useEffect(() => {
+    if (!multiOutput.config.enabled || !selectedRenderDeviceId || audioEndpoints.length === 0) return;
+    const active = multiOutput.config.devices.filter((device) => audioEndpoints.some((endpoint) => endpoint.id === device.id && !endpoint.isVirtual));
+    if (active.length === multiOutput.config.devices.length && active.some((device) => device.id === selectedRenderDeviceId)) return;
+    const next = active.some((device) => device.id === selectedRenderDeviceId)
+      ? active
+      : [{ id: selectedRenderDeviceId, gain: 1, delayMs: 0 }, ...active];
+    void multiOutput.setDevices(next);
+  }, [multiOutput.config.enabled, multiOutput.config.devices, multiOutput.setDevices, selectedRenderDeviceId, audioEndpoints]);
 
   // Consultar endpoints y estado inicial de passthru global
   useEffect(() => {
@@ -489,5 +513,6 @@ export function useDspController() {
     refreshGlobalStatus,
     setCaptureDevice,
     setRenderDevice,
+    multiOutput,
   };
 }

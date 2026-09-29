@@ -1,9 +1,9 @@
 import type { GlobalPassthruStatus } from "./model/types";
 
-export interface AudioIntent { enabled: boolean; capture: string | null; render: string | null; }
+export interface AudioIntent { enabled: boolean; capture: string | null; render: string | null; routeSystemDefault?: boolean; }
 export interface AudioBridgeClient {
   globalPassthruGetStatus(): Promise<GlobalPassthruStatus>;
-  globalPassthruToggle(enabled: boolean, capture: string | null, render: string | null): Promise<GlobalPassthruStatus>;
+  globalPassthruToggle(enabled: boolean, capture: string | null, render: string | null, routeSystemDefault?: boolean): Promise<GlobalPassthruStatus>;
 }
 
 export async function reconcileGlobalAudio(client: AudioBridgeClient, getIntent: () => AudioIntent, isCancelled: () => boolean = () => false) {
@@ -12,7 +12,7 @@ export async function reconcileGlobalAudio(client: AudioBridgeClient, getIntent:
   if (isCancelled()) return status;
   const desired = getIntent();
   if (desired.enabled && desired.render) {
-    return client.globalPassthruToggle(true, desired.capture, desired.render);
+    return client.globalPassthruToggle(true, desired.capture, desired.render, desired.routeSystemDefault ?? true);
   }
   // Incluso un motor detenido puede conservar la ruta virtual de Windows.
   return client.globalPassthruToggle(false, null, null);

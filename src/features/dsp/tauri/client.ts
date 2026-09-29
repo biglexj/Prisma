@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AudioDeviceItem, AudioEndpointInfo, DspConfig, GlobalPassthruStatus } from "../model/types";
+import type { AudioDeviceItem, AudioEndpointInfo, DspConfig, GlobalPassthruStatus, MultiOutputConfig, MultiOutputDevice } from "../model/types";
 
 export const dspClient = {
   setDspConfig: (config: DspConfig) =>
@@ -10,16 +10,22 @@ export const dspClient = {
     invoke<void>("playback_set_audio_device", { deviceName }),
   globalPassthruGetStatus: () =>
     invoke<GlobalPassthruStatus>("global_passthru_get_status"),
-  globalPassthruToggle: (enabled: boolean, captureDeviceId?: string | null, renderDeviceId?: string | null) =>
+  globalPassthruToggle: (enabled: boolean, captureDeviceId?: string | null, renderDeviceId?: string | null, routeSystemDefault = true) =>
     invoke<GlobalPassthruStatus>("global_passthru_toggle", {
       enabled,
       captureDeviceId: captureDeviceId ?? null,
       renderDeviceId: renderDeviceId ?? null,
+      routeSystemDefault,
     }),
   globalPassthruListEndpoints: () =>
     invoke<AudioEndpointInfo[]>("global_passthru_list_endpoints"),
   globalPassthruSetVolume: (volume: number) =>
     invoke<void>("global_passthru_set_volume", { volume }),
+  getMultiOutput: () => invoke<MultiOutputConfig>("playback_get_multi_output"),
+  setMultiOutputDevices: (devices: MultiOutputDevice[]) =>
+    invoke<MultiOutputConfig>("playback_set_multi_output_devices", { devices }),
+  toggleMultiOutput: (enabled: boolean) =>
+    invoke<MultiOutputConfig>("playback_toggle_multi_output", { enabled }),
   setSystemDefaultDevice: (deviceId: string) =>
     invoke<void>("playback_set_system_default_device", { deviceId }),
 };
