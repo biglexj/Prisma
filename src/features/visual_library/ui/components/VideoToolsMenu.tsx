@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../../../shared/ui/Icon";
+import { DAVINCI_CLIP_COLORS } from "../../model/davinciColors";
+import type { ClipColor, TakeStatus, VideoTakeMarker } from "../../model/types";
 
 export interface VideoToolsMenuProps {
   onConvert: () => void;
@@ -8,6 +10,11 @@ export interface VideoToolsMenuProps {
   onCapture?: () => void;
   onCompare?: () => void;
   onOpenChange?: (isOpen: boolean) => void;
+  marker?: VideoTakeMarker;
+  onSelectStatus?: (status: TakeStatus) => void;
+  onSelectColor?: (color: ClipColor) => void;
+  onToggleHud?: () => void;
+  hudVisible?: boolean;
 }
 
 export function VideoToolsMenu({
@@ -17,6 +24,11 @@ export function VideoToolsMenu({
   onCapture,
   onCompare,
   onOpenChange,
+  marker,
+  onSelectStatus,
+  onSelectColor,
+  onToggleHud,
+  hudVisible,
 }: VideoToolsMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -142,6 +154,103 @@ export function VideoToolsMenu({
               </div>
             </button>
           </div>
+
+          {/* Sección: Workflow DaVinci / Clasificación de Tomas */}
+          {(onSelectStatus || onToggleHud) && (
+            <>
+              <div className="viewer-tools-divider" />
+              <div className="viewer-tools-section">
+                <div className="viewer-tools-section-title">Clasificación de Toma (DaVinci)</div>
+
+                {onSelectStatus && (
+                  <div className="viewer-tools-take-grid">
+                    <button
+                      type="button"
+                      className={`viewer-take-btn is-good ${marker?.status === "good_take" ? "is-selected" : ""}`}
+                      onClick={() => onSelectStatus(marker?.status === "good_take" ? "pending" : "good_take")}
+                      title="Marcar como Buena Toma (Atajo 1)"
+                    >
+                      <Icon name="check" width={12} height={12} />
+                      <span>Buena</span>
+                      <kbd>1</kbd>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`viewer-take-btn is-reject ${marker?.status === "reject" ? "is-selected" : ""}`}
+                      onClick={() => onSelectStatus(marker?.status === "reject" ? "pending" : "reject")}
+                      title="Marcar como Descarte (Atajo 2)"
+                    >
+                      <Icon name="close" width={12} height={12} />
+                      <span>Descarte</span>
+                      <kbd>2</kbd>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`viewer-take-btn is-broll ${marker?.status === "b_roll" ? "is-selected" : ""}`}
+                      onClick={() => onSelectStatus(marker?.status === "b_roll" ? "pending" : "b_roll")}
+                      title="Marcar como B-Roll (Atajo 3)"
+                    >
+                      <Icon name="film" width={12} height={12} />
+                      <span>B-Roll</span>
+                      <kbd>3</kbd>
+                    </button>
+
+                    {marker?.status && marker.status !== "pending" && (
+                      <button
+                        type="button"
+                        className="viewer-take-btn is-reset"
+                        onClick={() => onSelectStatus("pending")}
+                        title="Quitar marca (Atajo 0)"
+                      >
+                        <Icon name="rotate-ccw" width={12} height={12} />
+                        <kbd>0</kbd>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {onSelectColor && (
+                  <div className="viewer-tools-color-wrapper">
+                    <div className="viewer-tools-sublabel">Color de Clip DaVinci</div>
+                    <div className="viewer-tools-color-row">
+                      {DAVINCI_CLIP_COLORS.map((col) => {
+                        const isSelected = marker?.clip_color === col.id;
+                        return (
+                          <button
+                            key={col.id}
+                            type="button"
+                            className={`viewer-color-circle ${isSelected ? "is-selected" : ""}`}
+                            style={{ backgroundColor: col.hex }}
+                            onClick={() => onSelectColor(isSelected ? "none" : col.id)}
+                            title={col.label}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {onToggleHud && (
+                  <button
+                    className={`viewer-tools-item ${hudVisible ? "is-active" : ""}`}
+                    onClick={() => handleAction(onToggleHud)}
+                    role="menuitem"
+                  >
+                    <Icon name="info" />
+                    <div className="viewer-tools-item-content">
+                      <span className="viewer-tools-item-title">
+                        {hudVisible ? "Ocultar Ficha Técnica" : "Ficha Técnica · Telemetría"}
+                      </span>
+                      <span className="viewer-tools-item-desc">Códec, fps exactos, resolución y Log</span>
+                    </div>
+                    <kbd className="viewer-tools-shortcut">I</kbd>
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

@@ -2,12 +2,8 @@
 
 .video-technical-hud-container {
   position: absolute;
-  top: 16px;
+  top: 72px;
   left: 20px;
-  right: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   pointer-events: none;
   z-index: 40;
   transition: opacity 0.25s cubic-bezier(0.2, 0, 0, 1), transform 0.25s cubic-bezier(0.2, 0, 0, 1);
@@ -252,4 +248,123 @@
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
   z-index: 5;
   user-select: none;
+}
+
+/* Header Take Badge */
+.video-pill-badge.take-badge-good_take {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: #6ee7b7;
+}
+
+.video-pill-badge.take-badge-reject {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+}
+
+.video-pill-badge.take-badge-b_roll {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: rgba(59, 130, 246, 0.45);
+  color: #93c5fd;
+}
+
+/* Inside VideoToolsMenu dropdown */
+.viewer-tools-take-grid {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 6px;
+}
+
+.viewer-take-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.viewer-take-btn kbd {
+  font-size: 0.62rem;
+  padding: 1px 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  color: #94a3b8;
+}
+
+.viewer-take-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.viewer-take-btn.is-good.is-selected {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+  color: #6ee7b7;
+}
+
+.viewer-take-btn.is-reject.is-selected {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+.viewer-take-btn.is-broll.is-selected {
+  background: rgba(59, 130, 246, 0.25);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+.viewer-take-btn.is-reset {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+}
+
+.viewer-tools-color-wrapper {
+  padding: 4px 8px 8px;
+}
+
+.viewer-tools-sublabel {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.viewer-tools-color-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.viewer-color-circle {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.viewer-color-circle:hover {
+  transform: scale(1.25);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+.viewer-color-circle.is-selected {
+  outline: 2px solid #ffffff;
+  outline-offset: 1px;
+  transform: scale(1.18);
 }
