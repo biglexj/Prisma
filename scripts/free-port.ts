@@ -47,6 +47,19 @@ export function freePort(port: number | string): boolean {
     }
 }
 
+export function cleanupDevPrismaProcesses(): void {
+    if (process.platform !== "win32") return;
+    try {
+        const psCmd = `Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.ExecutablePath -like '*\\target\\debug\\prisma.exe' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`;
+        spawnSync("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", psCmd], {
+            stdio: "ignore",
+            windowsHide: true,
+        });
+    } catch {
+        // Silencio intencional
+    }
+}
+
 export function freePorts(ports: (number | string)[]): void {
     for (const p of ports) {
         freePort(p);
@@ -54,9 +67,11 @@ export function freePorts(ports: (number | string)[]): void {
 }
 
 if (import.meta.main) {
+    cleanupDevPrismaProcesses();
     const args = process.argv.slice(2);
     const targetPorts = args.length > 0 ? args : [1421];
     for (const port of targetPorts) {
         freePort(port);
     }
 }
+
