@@ -22,4 +22,9 @@
 
 ## Evidencia de Validación
 
-*(Se registrarán los resultados de compilación, capturas y pruebas de comportamiento durante la ejecución).*
+- **Compilación Frontend (`bun run build`)**: Exitosa en 3.69s (`tsc --noEmit && vite build`) sin errores.
+- **Compilación Rust (`cargo check`)**: Exitosa en 14.12s sin errores ni warnings.
+- **Intercepción Teclado**: Hook de teclado `WH_KEYBOARD_LL` actualizado para capturar `0xAD` (mute), `0xAE` (volumen abajo), `0xAF` (volumen arriba) y notificar al backend en 0 ms.
+- **Lectura/Escritura de Volumen de Windows**: Integración nativa mediante `IAudioEndpointVolume` (COM API) en [flyout.rs](file:///D:/Proyectos/biglexj/Prisma/src-tauri/src/app/commands/flyout.rs).
+- **Legibilidad y Contraste**: Sustitución de hiper-transparencia por acrílico Fluent de alta opacidad (96%) en [flyout-window.css](file:///D:/Proyectos/biglexj/Prisma/src/features/playback/ui/flyout-window.css) con textos en Slate 900 `#0f172a` y Slate 700 `#334155` en modo claro, garantizando máxima legibilidad.
+- **Commit de Resguardo**: `c6adb66` (*checkpoint: session 2026-09-29 - flyout teclado volumen nativo y contraste alto claro oscuro*).

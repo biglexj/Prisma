@@ -19,8 +19,16 @@
   - [x] Sincronizar el timer de auto-ocultado (por defecto 3000 ms, configurable) que se pausa al pasar el cursor por encima (`onMouseEnter` / `onMouseLeave`).
 - [x] 5. **Panel de Ajustes en Prisma**:
   - [x] Añadir controles en la configuración de Prisma para elegir la posición de pantalla (6 zonas), tiempo de permanencia y alternar visualizador o widget.
-- [ ] 6. **Validación y Pruebas**:
+- [x] 6. **Intercepción Nativa de Teclas de Volumen y Estilo Fluent de Alto Contraste**:
+  - [x] Interceptar `VK_VOLUME_UP` (0xAF), `VK_VOLUME_DOWN` (0xAE) y `VK_VOLUME_MUTE` (0xAD) en el hook global de Windows (`keyboard_hook.rs`).
+  - [x] Consultar volumen real del sistema en Windows vía `IAudioEndpointVolume` (`flyout_get_system_volume`, `flyout_set_system_volume`).
+  - [x] Disparar el flyout automáticamente con el nuevo volumen ante pulsaciones de teclas multimedia del teclado físico.
+  - [x] Sustituir el fondo hiper-translúcido por acrílico Fluent de alta opacidad (96%) en modo claro (`#ffffff`) y oscuro (`#1c1c22`).
+  - [x] Maximizar el contraste tipográfico (título en Slate 900 `#0f172a`, artista en Slate 700 `#334155` en modo claro; blanco y gris en modo oscuro) eliminando textos lavados.
+  - [x] Eliminar el desplegable innecesario del mezclador y el botón chevron para un diseño limpio e inmediato.
+- [ ] 7. **Validación y Pruebas**:
   - [x] Comprobar compilación de frontend (`bun run build`).
+  - [x] Comprobar compilación de Rust (`cargo check`).
   - [ ] Comprobar compilación y ejecución de Tauri con la ventana flyout.
   - [ ] Verificar reposicionamiento en las 6 zonas y ausencia de cortes o parpadeos.
   - [ ] Comprobar funcionamiento tanto en música como en reproducción de vídeo.
