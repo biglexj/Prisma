@@ -12,7 +12,7 @@ export function useMusicLibrary() {
   const [sourcesLoaded, setSourcesLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (retryCount = 0) => {
     setLoading(true);
     setError(null);
     try {
@@ -26,8 +26,15 @@ export function useMusicLibrary() {
       const nextItems = await scheduleLibraryScan(() => musicLibraryClient.listItems());
       setItems(nextItems);
     } catch (reason) {
+      const msg = String(reason);
+      if (msg.includes("state not managed") && retryCount < 4) {
+        setTimeout(() => {
+          void refresh(retryCount + 1);
+        }, 200);
+        return;
+      }
       setSourcesLoaded(true);
-      setError(String(reason));
+      setError(msg);
     } finally {
       setLoading(false);
     }

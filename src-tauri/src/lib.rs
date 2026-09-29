@@ -314,18 +314,7 @@ pub fn run() {
                 let _ = std::fs::create_dir_all(&data_directory);
             }
 
-            // ── Registro de esquema prisma:// y servicios de Aurora Synapse ──
-            features::synapse::register_windows_deep_link();
-            infrastructure::file_associations::register_file_associations();
-            let synapse_state = features::synapse::SynapseState::load(data_directory.clone());
-            app.manage(synapse_state);
-            let beacon_service = features::synapse::SynapseBeaconService::start();
-            app.manage(beacon_service);
-            let discovery_service = features::synapse::SynapseDiscoveryService::start();
-            app.manage(discovery_service);
-            let synapse_server = features::synapse::SynapseServer::start(app.handle().clone());
-            app.manage(synapse_server);
-
+            // 1. Gestión inmediata de estados de biblioteca (previene condiciones de carrera con el frontend)
             let library_state =
                 MusicLibraryState::load(data_directory.clone()).map_err(std::io::Error::other)?;
             app.manage(library_state);
@@ -336,9 +325,21 @@ pub fn run() {
                 FavoritesState::load(data_directory.clone()).map_err(std::io::Error::other)?;
             app.manage(favorites_state);
             let custom_libraries_state =
-                features::custom_libraries::CustomLibrariesState::load(data_directory)
+                features::custom_libraries::CustomLibrariesState::load(data_directory.clone())
                     .map_err(std::io::Error::other)?;
             app.manage(custom_libraries_state);
+            let synapse_state = features::synapse::SynapseState::load(data_directory);
+            app.manage(synapse_state);
+
+            // 2. Registro de esquema prisma:// y servicios de Aurora Synapse
+            features::synapse::register_windows_deep_link();
+            infrastructure::file_associations::register_file_associations();
+            let beacon_service = features::synapse::SynapseBeaconService::start();
+            app.manage(beacon_service);
+            let discovery_service = features::synapse::SynapseDiscoveryService::start();
+            app.manage(discovery_service);
+            let synapse_server = features::synapse::SynapseServer::start(app.handle().clone());
+            app.manage(synapse_server);
 
             let quick_look_state = QuickLookState::new(app.handle().clone());
             quick_look_state.init();

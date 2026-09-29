@@ -14,6 +14,7 @@ import {
   customLibrariesGetFolders,
   customLibrariesScanItems,
 } from "../../features/custom_libraries/tauri/client";
+import { formatFriendlyErrorMessage } from "../../shared/errorFormatters";
 import "./library-sources.css";
 
 interface MusicSourceState {
@@ -223,8 +224,8 @@ export function LibrarySources({
 
       {errors.map((error) => (
         <div className="error-banner" key={error} role="alert">
-          <strong>No se pudo actualizar una fuente</strong>
-          <span>{error}</span>
+          <strong>Aviso de biblioteca</strong>
+          <span>{formatFriendlyErrorMessage(error)}</span>
         </div>
       ))}
 

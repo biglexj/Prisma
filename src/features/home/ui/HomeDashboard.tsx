@@ -13,6 +13,7 @@ import { useHistory, type HistoryCategory } from "../../../shared/useHistory";
 import { usePlaylists } from "../../collections/usePlaylists";
 import type { PlaylistMeta } from "../../collections/model/types";
 import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
+import { formatFriendlyErrorMessage } from "../../../shared/errorFormatters";
 import "./home-dashboard.css";
 
 const HOME_ROW_ITEMS_LIMIT = 8;
@@ -262,7 +263,12 @@ export function HomeDashboard({
         <div className="home-orbit" aria-hidden="true"><i /><i /><i /><Icon name="layout" /></div>
       </header>
 
-      {error ? <div className="error-banner" role="alert"><strong>No se pudo completar la biblioteca</strong><span>{error}</span></div> : null}
+      {error ? (
+        <div className="error-banner" role="alert">
+          <strong>Aviso de biblioteca</strong>
+          <span>{formatFriendlyErrorMessage(error)}</span>
+        </div>
+      ) : null}
 
       <div className="home-stat-row" aria-busy={loading}>
         <button onClick={() => homeMusicItems[0] && onPlayMusic(homeMusicItems[0].path)}>
