@@ -148,22 +148,27 @@ pub fn flyout_show(
 
     let _ = position_window_inner(&win, &target_zone, w, h);
 
+    let _ = win.show();
+
     #[cfg(windows)]
     {
-        use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_SHOWNOACTIVATE};
+        use windows::Win32::UI::WindowsAndMessaging::{
+            SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_SHOWWINDOW,
+        };
         if let Ok(hwnd) = win.hwnd() {
             let win_hwnd = windows::Win32::Foundation::HWND(hwnd.0);
             unsafe {
-                let _ = ShowWindow(win_hwnd, SW_SHOWNOACTIVATE);
+                let _ = SetWindowPos(
+                    win_hwnd,
+                    HWND_TOPMOST,
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+                );
             }
-        } else {
-            let _ = win.show();
         }
-    }
-
-    #[cfg(not(windows))]
-    {
-        let _ = win.show();
     }
 
     Ok(())
@@ -252,5 +257,89 @@ pub fn flyout_set_system_volume(volume: f32, muted: Option<bool>) -> Result<(), 
 #[tauri::command]
 pub fn flyout_set_system_volume(_volume: f32, _muted: Option<bool>) -> Result<(), String> {
     Ok(())
+}
+
+#[cfg(windows)]
+use windows::core::implement;
+#[cfg(windows)]
+use windows::Win32::Media::Audio::Endpoints::{
+    IAudioEndpointVolume, IAudioEndpointVolumeCallback, IAudioEndpointVolumeCallback_Impl,
+};
+#[cfg(windows)]
+use windows::Win32::Media::Audio::{
+    eMultimedia, eRender, AUDIO_VOLUME_NOTIFICATION_DATA, IMMDeviceEnumerator, MMDeviceEnumerator,
+};
+#[cfg(windows)]
+use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED};
+use tauri::Emitter;
+
+#[cfg(windows)]
+#[implement(IAudioEndpointVolumeCallback)]
+struct NativeVolumeChangeCallback {
+    app: AppHandle,
+}
+
+#[cfg(windows)]
+#[allow(non_snake_case)]
+impl IAudioEndpointVolumeCallback_Impl for NativeVolumeChangeCallback_Impl {
+    fn OnNotify(&self, pnotify: *mut AUDIO_VOLUME_NOTIFICATION_DATA) -> windows::core::Result<()> {
+        if !pnotify.is_null() {
+            let (vol_pct, is_muted) = unsafe {
+                let data = &*pnotify;
+                (
+                    (data.fMasterVolume * 100.0).round() as u32,
+                    data.bMuted.as_bool(),
+                )
+            };
+            let app = self.app.clone();
+            std::thread::spawn(move || {
+                let _ = app.emit(
+                    "prisma://system-volume-changed",
+                    serde_json::json!({
+                        "volume": vol_pct,
+                        "isMuted": is_muted
+                    }),
+                );
+                let _ = flyout_show_from_app(&app);
+            });
+        }
+        Ok(())
+    }
+}
+
+pub fn init_system_volume_listener(app: AppHandle) {
+    #[cfg(windows)]
+    {
+        std::thread::Builder::new()
+            .name("prisma-volume-listener".to_string())
+            .spawn(move || {
+                unsafe {
+                    let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+                    let enumerator: Result<IMMDeviceEnumerator, _> =
+                        CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL);
+                    if let Ok(enum_dev) = enumerator {
+                        if let Ok(device) = enum_dev.GetDefaultAudioEndpoint(eRender, eMultimedia) {
+                            if let Ok(endpoint_volume) =
+                                device.Activate::<IAudioEndpointVolume>(CLSCTX_ALL, None)
+                            {
+                                let cb_impl: IAudioEndpointVolumeCallback =
+                                    NativeVolumeChangeCallback { app: app.clone() }.into();
+                                if endpoint_volume.RegisterControlChangeNotify(&cb_impl).is_ok() {
+                                    println!("[Flyout] Windows IAudioEndpointVolumeCallback registered successfully");
+                                    loop {
+                                        std::thread::park();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            })
+            .ok();
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+    }
 }
 

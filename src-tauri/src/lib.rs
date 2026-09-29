@@ -404,6 +404,9 @@ pub fn run() {
 
             app.manage(quick_look_state);
 
+            // Iniciar listener nativo de cambios de volumen del sistema operativo para el Flyout
+            crate::app::commands::flyout::init_system_volume_listener(app.handle().clone());
+
             let smtc_state: infrastructure::media::smtc::NativeSmtcState =
                 std::sync::Arc::new(std::sync::Mutex::new(None));
             app.manage(smtc_state.clone());
