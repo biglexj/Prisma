@@ -43,7 +43,11 @@ pub mod windows_hook {
         Close,
         Navigation,
         RestorePrisma,
-        VolumeKey,
+        VolumeUp,
+        VolumeDown,
+        VolumeMute,
+        MediaNext,
+        MediaPrevious,
     }
 
     static GLOBAL_CALLBACK: Mutex<Option<TriggerCallback>> = Mutex::new(None);
@@ -208,15 +212,32 @@ pub mod windows_hook {
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
 
+        let kbd_struct = unsafe { *(l_param.0 as *const KBDLLHOOKSTRUCT) };
+        let vk_code = kbd_struct.vkCode as u16;
         let msg_type = w_param.0 as u32;
         let is_key_down = msg_type == WM_KEYDOWN || msg_type == WM_SYSKEYDOWN;
+
+        // Intercepción y supresión 100% exclusiva de teclas de volumen de Windows:
+        // Consumimos tanto WM_KEYDOWN como WM_KEYUP para que Windows jamás despliegue su OSD nativo
+        if vk_code == 0xAF || vk_code == 0xAE || vk_code == 0xAD {
+            if is_key_down {
+                if let Ok(guard) = GLOBAL_CALLBACK.lock() {
+                    if let Some(ref cb) = *guard {
+                        match vk_code {
+                            0xAF => cb(TriggerEvent::VolumeUp),
+                            0xAE => cb(TriggerEvent::VolumeDown),
+                            0xAD => cb(TriggerEvent::VolumeMute),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            return LRESULT(1); // Suprimir completamente el evento de Windows en keydown y keyup
+        }
 
         if !is_key_down {
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
-
-        let kbd_struct = unsafe { *(l_param.0 as *const KBDLLHOOKSTRUCT) };
-        let vk_code = kbd_struct.vkCode as u16;
 
         ql_log!("Tecla pulsada: vk=0x{:02X} ({})", vk_code, vk_code);
 
@@ -292,12 +313,18 @@ pub mod windows_hook {
             }
         }
 
-        // Detección de teclas de volumen y navegación multimedia (0xAD Mute, 0xAE VolDown, 0xAF VolUp, 0xB0 Next, 0xB1 Prev)
-        let is_media_action_key = vk_code >= 0xAD && vk_code <= 0xB1;
-        if is_media_action_key && (w_param.0 as u32 == WM_KEYDOWN || w_param.0 as u32 == WM_SYSKEYDOWN) {
+        // Detección de teclas multimedia para mostrar Flyout de reproducción
+        if vk_code == 0xB0 { // VK_MEDIA_NEXT_TRACK
             if let Ok(guard) = GLOBAL_CALLBACK.lock() {
                 if let Some(ref cb) = *guard {
-                    cb(TriggerEvent::VolumeKey);
+                    cb(TriggerEvent::MediaNext);
+                }
+            }
+            return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
+        } else if vk_code == 0xB1 { // VK_MEDIA_PREV_TRACK
+            if let Ok(guard) = GLOBAL_CALLBACK.lock() {
+                if let Some(ref cb) = *guard {
+                    cb(TriggerEvent::MediaPrevious);
                 }
             }
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
@@ -579,7 +606,11 @@ pub mod windows_hook {
         Close,
         Navigation,
         RestorePrisma,
-        VolumeKey,
+        VolumeUp,
+        VolumeDown,
+        VolumeMute,
+        MediaNext,
+        MediaPrevious,
     }
     pub fn set_shortcut_mode(_mode_str: &str) {}
     pub fn get_shortcut_mode() -> String { "space".to_string() }

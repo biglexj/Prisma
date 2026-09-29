@@ -272,13 +272,13 @@
 
 /* 4. Verde Esmeralda */
 :root[data-accent="emerald"] {
-  --primary: #059669;
+  --primary: #047857;
   --on-primary: #ffffff;
   --primary-container: #d1fae5;
   --on-primary-container: #064e3b;
   --secondary-container: #ecfdf5;
   --shell-gradient: radial-gradient(circle at 100% 0%, rgb(209 250 229 / 46%), transparent 32rem);
-  --transport-play-hover: #047857;
+  --transport-play-hover: #065f46;
 }
 
 .dark[data-accent="emerald"],

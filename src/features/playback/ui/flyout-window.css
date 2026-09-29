@@ -2,11 +2,11 @@
 
 :root,
 [data-theme="light"] {
-  /* Modo Claro Fluent / Modern: Fondo sólido/acrílico claro, textos de máximo contraste */
-  --flyout-bg: rgba(255, 255, 255, 0.96);
+  /* Modo Claro Fluent / Modern: Fondo sólido blanco nítido, textos de máximo contraste */
+  --flyout-bg: #ffffff;
   --flyout-surface: #f1f2f6;
   --flyout-surface-hover: #e2e4ee;
-  --flyout-border: rgba(0, 0, 0, 0.09);
+  --flyout-border: rgba(0, 0, 0, 0.08);
   --flyout-primary: #c90045;
   --flyout-primary-container: #ffd9df;
   --flyout-on-primary-container: #3f0012;
@@ -14,17 +14,17 @@
   --flyout-text-muted: #334155;       /* Slate 700: gris oscuro 100% legible */
   --flyout-slider-track: #e2e8f0;     /* Slate 200 */
   --flyout-slider-fill: #0067c0;      /* Azul Fluent o color de acento */
-  --flyout-radius: 14px;
-  --flyout-shadow: 0 14px 36px rgba(0, 0, 0, 0.14), 0 3px 10px rgba(0, 0, 0, 0.06);
+  --flyout-radius: 12px;
+  --flyout-shadow: 0 4px 14px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .dark,
 [data-theme="dark"] {
-  /* Modo Oscuro Fluent / Modern: Fondo sólido/acrílico oscuro elegante, textos blancos */
-  --flyout-bg: rgba(28, 28, 34, 0.96);
-  --flyout-surface: #26262e;
-  --flyout-surface-hover: #343440;
-  --flyout-border: rgba(255, 255, 255, 0.09);
+  /* Modo Oscuro Fluent / Modern: Fondo sólido oscuro elegante, textos blancos */
+  --flyout-bg: #202024;
+  --flyout-surface: #2b2b32;
+  --flyout-surface-hover: #383842;
+  --flyout-border: rgba(255, 255, 255, 0.08);
   --flyout-primary: #ffb1c0;
   --flyout-primary-container: #8f003a;
   --flyout-on-primary-container: #ffd9df;
@@ -32,8 +32,8 @@
   --flyout-text-muted: #cbd5e1;       /* Gris claro Slate 300 legible */
   --flyout-slider-track: #334155;     /* Slate 700 */
   --flyout-slider-fill: #38bdf8;      /* Cyan / celeste activo */
-  --flyout-radius: 14px;
-  --flyout-shadow: 0 16px 42px rgba(0, 0, 0, 0.55), 0 4px 14px rgba(0, 0, 0, 0.35);
+  --flyout-radius: 12px;
+  --flyout-shadow: 0 4px 16px rgba(0, 0, 0, 0.40), 0 1px 4px rgba(0, 0, 0, 0.20);
 }
 
 :root:has(.prisma-flyout-wrapper),
@@ -55,7 +55,7 @@ html.is-flyout #root,
   width: max-content;
   height: max-content;
   box-sizing: border-box;
-  padding: 8px 10px;
+  padding: 12px 14px;
   display: inline-flex;
   flex-direction: column;
   gap: 8px;
@@ -68,23 +68,21 @@ html.is-flyout #root,
   width: 340px;
   pointer-events: auto;
   background: var(--flyout-bg);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
   border: 1px solid var(--flyout-border);
   border-radius: var(--flyout-radius);
   box-shadow: var(--flyout-shadow);
   color: var(--flyout-text-main);
   box-sizing: border-box;
   overflow: hidden;
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease;
 }
 
 .prisma-flyout-card:hover {
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.22), 0 6px 16px rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 0, 0, 0.14);
 }
 
 .dark .prisma-flyout-card:hover {
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65), 0 6px 18px rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 /* ── 1. Cápsula de Volumen Superior (Estilo Fluent / Windows 11) ── */

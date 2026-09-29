@@ -197,10 +197,10 @@ pub fn flyout_show_from_app(app: &AppHandle) -> Result<(), String> {
 pub fn get_system_master_volume() -> Option<(f32, bool)> {
     use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
     use windows::Win32::Media::Audio::{eMultimedia, eRender, IMMDeviceEnumerator, MMDeviceEnumerator};
-    use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED};
+    use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_ALL};
 
     unsafe {
-        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let _com = crate::infrastructure::windows_com::ComApartment::multithreaded().ok()?;
         let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok()?;
         let device = enumerator.GetDefaultAudioEndpoint(eRender, eMultimedia).ok()?;
         let endpoint_volume: IAudioEndpointVolume = device.Activate(CLSCTX_ALL, None).ok()?;
@@ -233,10 +233,11 @@ pub fn flyout_get_system_volume() -> Result<serde_json::Value, String> {
 pub fn flyout_set_system_volume(volume: f32, muted: Option<bool>) -> Result<(), String> {
     use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
     use windows::Win32::Media::Audio::{eMultimedia, eRender, IMMDeviceEnumerator, MMDeviceEnumerator};
-    use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED};
+    use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_ALL};
 
     unsafe {
-        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let _com = crate::infrastructure::windows_com::ComApartment::multithreaded()
+            .map_err(|e| e.to_string())?;
         let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
             .map_err(|e| e.to_string())?;
         let device = enumerator.GetDefaultAudioEndpoint(eRender, eMultimedia)
@@ -257,6 +258,67 @@ pub fn flyout_set_system_volume(volume: f32, muted: Option<bool>) -> Result<(), 
 #[tauri::command]
 pub fn flyout_set_system_volume(_volume: f32, _muted: Option<bool>) -> Result<(), String> {
     Ok(())
+}
+
+pub fn system_volume_step_up(app: &AppHandle) {
+    #[cfg(windows)]
+    {
+        if let Some((vol, muted)) = get_system_master_volume() {
+            let next_vol = if vol >= 0.99 { 1.0 } else { (vol + 0.02).min(1.0) };
+            let _ = flyout_set_system_volume(next_vol * 100.0, if muted { Some(false) } else { None });
+            let vol_pct = (next_vol * 100.0).round() as u32;
+            let _ = app.emit("prisma://system-volume-changed", serde_json::json!({
+                "volume": vol_pct,
+                "isMuted": false
+            }));
+            let _ = flyout_show_from_app(app);
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+    }
+}
+
+pub fn system_volume_step_down(app: &AppHandle) {
+    #[cfg(windows)]
+    {
+        if let Some((vol, _muted)) = get_system_master_volume() {
+            let next_vol = if vol <= 0.01 { 0.0 } else { (vol - 0.02).max(0.0) };
+            let is_muted = next_vol == 0.0;
+            let _ = flyout_set_system_volume(next_vol * 100.0, None);
+            let vol_pct = (next_vol * 100.0).round() as u32;
+            let _ = app.emit("prisma://system-volume-changed", serde_json::json!({
+                "volume": vol_pct,
+                "isMuted": is_muted
+            }));
+            let _ = flyout_show_from_app(app);
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+    }
+}
+
+pub fn system_volume_toggle_mute(app: &AppHandle) {
+    #[cfg(windows)]
+    {
+        if let Some((vol, muted)) = get_system_master_volume() {
+            let next_muted = !muted;
+            let _ = flyout_set_system_volume(vol * 100.0, Some(next_muted));
+            let vol_pct = (vol * 100.0).round() as u32;
+            let _ = app.emit("prisma://system-volume-changed", serde_json::json!({
+                "volume": vol_pct,
+                "isMuted": next_muted
+            }));
+            let _ = flyout_show_from_app(app);
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = app;
+    }
 }
 
 #[cfg(windows)]

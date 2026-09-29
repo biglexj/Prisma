@@ -100,8 +100,8 @@ export function FlyoutWindow() {
   const updateWindowGeometry = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const width = 360;
-    const height = Math.max(68, Math.ceil(rect.height) + 20);
+    const width = 368;
+    const height = Math.max(68, Math.ceil(rect.height) + 26);
 
     void invoke("flyout_set_position", {
       zone: settings.zone,

@@ -98,20 +98,27 @@ impl QuickLookState {
                     ql_log!("Callback (async thread): RestorePrisma");
                     state.restore_prisma();
                 }
-                TriggerEvent::VolumeKey => {
+                TriggerEvent::VolumeUp => {
                     let app = state.app_handle.clone();
                     std::thread::spawn(move || {
-                        // Pequeña espera para que Windows aplique el nuevo nivel de audio en el endpoint
-                        std::thread::sleep(std::time::Duration::from_millis(30));
-                        if let Some((vol, muted)) = crate::app::commands::flyout::get_system_master_volume() {
-                            let vol_pct = (vol * 100.0).round() as u32;
-                            let _ = app.emit("prisma://system-volume-changed", serde_json::json!({
-                                "volume": vol_pct,
-                                "isMuted": muted
-                            }));
-                        }
-                        let _ = crate::app::commands::flyout::flyout_show_from_app(&app);
+                        crate::app::commands::flyout::system_volume_step_up(&app);
                     });
+                }
+                TriggerEvent::VolumeDown => {
+                    let app = state.app_handle.clone();
+                    std::thread::spawn(move || {
+                        crate::app::commands::flyout::system_volume_step_down(&app);
+                    });
+                }
+                TriggerEvent::VolumeMute => {
+                    let app = state.app_handle.clone();
+                    std::thread::spawn(move || {
+                        crate::app::commands::flyout::system_volume_toggle_mute(&app);
+                    });
+                }
+                TriggerEvent::MediaNext | TriggerEvent::MediaPrevious => {
+                    let app = state.app_handle.clone();
+                    let _ = crate::app::commands::flyout::flyout_show_from_app(&app);
                 }
             });
         });
