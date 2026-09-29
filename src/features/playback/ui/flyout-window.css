@@ -27,10 +27,14 @@
   --flyout-shadow: 0 12px 32px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
+:root:has(.prisma-flyout-wrapper),
 html.is-flyout,
 body.is-flyout,
+html.is-flyout body,
+html.is-flyout #root,
 #root:has(.prisma-flyout-wrapper) {
   background: transparent !important;
+  background-color: transparent !important;
   margin: 0 !important;
   padding: 0 !important;
   overflow: hidden !important;
@@ -39,11 +43,11 @@ body.is-flyout,
 }
 
 .prisma-flyout-wrapper {
-  width: 100vw;
-  height: 100vh;
+  width: max-content;
+  height: max-content;
   box-sizing: border-box;
-  padding: 10px;
-  display: flex;
+  padding: 6px;
+  display: inline-flex;
   flex-direction: column;
   gap: 8px;
   pointer-events: none;
@@ -52,6 +56,7 @@ body.is-flyout,
 
 /* El contenido del flyout es interactivo */
 .prisma-flyout-card {
+  width: 340px;
   pointer-events: auto;
   background: var(--flyout-bg);
   backdrop-filter: blur(28px) saturate(180%);
@@ -445,4 +450,49 @@ body.is-flyout,
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ── Selector Rápido de Posición (Pop-over) ── */
+.flyout-zone-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: var(--flyout-bg);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--flyout-border);
+  border-radius: 12px;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  box-shadow: var(--flyout-shadow);
+  z-index: 999;
+  animation: flyoutFadeIn 0.15s ease-out;
+}
+
+.flyout-zone-btn {
+  background: var(--flyout-surface);
+  border: 1px solid transparent;
+  color: var(--flyout-text-main);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.flyout-zone-btn:hover {
+  background: var(--flyout-surface-hover);
+  border-color: var(--flyout-primary);
+  transform: scale(1.08);
+}
+
+.flyout-zone-btn.is-active {
+  background: var(--flyout-primary-container);
+  color: var(--flyout-on-primary-container);
+  border-color: var(--flyout-primary);
 }

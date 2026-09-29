@@ -135,12 +135,8 @@ export function useFlyoutSync({
       zone: settings.zone,
     });
 
-    // Desplegar automáticamente si cambió la pista activa
     if (currentMediaId && currentMediaId !== lastActiveMediaRef.current) {
       lastActiveMediaRef.current = currentMediaId;
-      void invoke("flyout_show", {
-        zone: settings.zone,
-      }).catch(() => {});
     }
   }, [
     isVideoActive,
@@ -158,9 +154,17 @@ export function useFlyoutSync({
     playback.queue.currentItem?.artist,
   ]);
 
-  // 3. Notificar cambios de volumen al flyout y mostrarlo si está habilitado
+  // 3. Notificar cambios de volumen al flyout y mostrarlo ÚNICAMENTE al alterar el volumen
   const lastVolRef = useRef<number>(playback.snapshot.volume);
+  const isFirstMountRef = useRef<boolean>(true);
+
   useEffect(() => {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      lastVolRef.current = playback.snapshot.volume;
+      return;
+    }
+
     const currentVol = playback.snapshot.volume;
     if (currentVol !== lastVolRef.current) {
       lastVolRef.current = currentVol;

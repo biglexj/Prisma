@@ -421,7 +421,10 @@ body,
 
 html.is-quicklook,
 html.is-quicklook body,
-html.is-quicklook #root {
+html.is-quicklook #root,
+html.is-flyout,
+html.is-flyout body,
+html.is-flyout #root {
   background: transparent !important;
   background-color: transparent !important;
 }

@@ -37,6 +37,7 @@ export function FlyoutWindow() {
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [showZonePicker, setShowZonePicker] = useState(false);
   const hideTimerRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -56,12 +57,17 @@ export function FlyoutWindow() {
     }, settings.durationMs || 3000);
   }, [settings.isPinned, settings.durationMs, isHovered]);
 
-  // Actualizar tamaño de ventana en Rust según el contenido renderizado
+  // Iniciar temporizador al montar por si la ventana se abrió
+  useEffect(() => {
+    resetHideTimer();
+  }, [resetHideTimer]);
+
+  // Actualizar tamaño de ventana en Rust según el contenido renderizado (compacto 356px)
   const updateWindowGeometry = useCallback(() => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const width = Math.max(340, Math.ceil(rect.width) + 20);
-    const height = Math.max(120, Math.ceil(rect.height) + 20);
+    const width = 356;
+    const height = Math.max(90, Math.ceil(rect.height) + 16);
 
     void invoke("flyout_set_position", {
       zone: settings.zone,
@@ -69,6 +75,14 @@ export function FlyoutWindow() {
       height,
     }).catch(() => {});
   }, [settings.zone]);
+
+  const handleSelectZone = (newZone: FlyoutZone) => {
+    const updated = saveFlyoutSettings({ zone: newZone });
+    setSettings(updated);
+    setShowZonePicker(false);
+    void invoke("flyout_set_position", { zone: newZone }).catch(() => {});
+    resetHideTimer();
+  };
 
   // Escuchar sincronización de estado desde la ventana principal de Prisma
   useEffect(() => {
@@ -384,8 +398,8 @@ export function FlyoutWindow() {
               </div>
             )}
 
-            {/* Acciones de Badge & Pin */}
-            <div className="flyout-aux-actions">
+            {/* Acciones de Badge, Selector de Posición, Pin & Cerrar */}
+            <div className="flyout-aux-actions" style={{ position: "relative" }}>
               <span className="flyout-app-badge">
                 <svg
                   className="flyout-badge-icon"
@@ -397,6 +411,70 @@ export function FlyoutWindow() {
                 </svg>
                 Prisma
               </span>
+
+              {/* Botón Selector de Posición Rápido */}
+              <button
+                className={`flyout-icon-btn ${showZonePicker ? "is-active" : ""}`}
+                onClick={() => setShowZonePicker((p) => !p)}
+                title="Cambiar posición en pantalla (6 cuadrantes)"
+                type="button"
+              >
+                <Icon name="grid" style={{ width: 14, height: 14 }} />
+              </button>
+
+              {/* Popover con las 6 zonas de pantalla */}
+              {showZonePicker && (
+                <div className="flyout-zone-popover">
+                  <button
+                    className={`flyout-zone-btn ${settings.zone === "top-left" ? "is-active" : ""}`}
+                    onClick={() => handleSelectZone("top-left")}
+                    title="Arriba Izquierda"
+                    type="button"
+                  >
+                    ↖️
+                  </button>
+                  <button
+                    className={`flyout-zone-btn ${settings.zone === "top-center" ? "is-active" : ""}`}
+                    onClick={() => handleSelectZone("top-center")}
+                    title="Arriba Centro"
+                    type="button"
+                  >
+                    ⬆️
+                  </button>
+                  <button
+                    className={`flyout-zone-btn ${settings.zone === "top-right" ? "is-active" : ""}`}
+                    onClick={() => handleSelectZone("top-right")}
+                    title="Arriba Derecha"
+                    type="button"
+                  >
+                    ↗️
+                  </button>
+                  <button
+                    className={`flyout-zone-btn ${settings.zone === "bottom-left" ? "is-active" : ""}`}
+                    onClick={() => handleSelectZone("bottom-left")}
+                    title="Abajo Izquierda (Predeterminado)"
+                    type="button"
+                  >
+                    ↙️
+                  </button>
+                  <button
+                    className={`flyout-zone-btn ${settings.zone === "bottom-center" ? "is-active" : ""}`}
+                    onClick={() => handleSelectZone("bottom-center")}
+                    title="Abajo Centro"
+                    type="button"
+                  >
+                    ⬇️
+                  </button>
+                  <button
+                    className={`flyout-zone-btn ${settings.zone === "bottom-right" ? "is-active" : ""}`}
+                    onClick={() => handleSelectZone("bottom-right")}
+                    title="Abajo Derecha"
+                    type="button"
+                  >
+                    ↘️
+                  </button>
+                </div>
+              )}
 
               <button
                 className={`flyout-icon-btn ${settings.isPinned ? "is-active" : ""}`}
