@@ -15,7 +15,9 @@ import { useFavorites } from "../../../shared/useFavorites";
 import { useMediaDelete } from "../../../shared/useMediaDelete";
 import { useMediaRename } from "../../../shared/useMediaRename";
 import { RenameMediaDialog } from "../../../shared/ui/RenameMediaDialog";
-import type { VisualFolderSource, VisualLibraryItem, VisualMediaKind } from "../model/types";
+import type { VisualFolderSource, VisualLibraryItem, VisualMediaKind, VideoTakeMarker } from "../model/types";
+import { useVideoTakes } from "../hooks/useVideoTakes";
+import { getClipColorHex } from "../model/davinciColors";
 import { VisualThumbnail } from "./VisualThumbnail";
 import { VideoThumbnail } from "./VideoThumbnail";
 import { ImageViewer } from "./ImageViewer";
@@ -98,6 +100,8 @@ export function VisualLibrary({
   const [sortDirection, setSortDirection] = useState<VisualSortDirection>(() => sessionVisualState[kind].sortDirection);
   const [randomSeed, setRandomSeed] = useState(1);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [takeFilter, setTakeFilter] = useState<"all" | "good_take" | "reject" | "b_roll">("all");
+  const { getMarkerForPath } = useVideoTakes();
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
@@ -181,7 +185,14 @@ export function VisualLibrary({
     return it.title.toLowerCase().includes(q) || it.relativeFolder.toLowerCase().includes(q);
   });
 
-  const nonExcludedItems = allMatchingItems.filter((it) => !it.isExcluded);
+  const nonExcludedItems = allMatchingItems.filter((it) => {
+    if (it.isExcluded) return false;
+    if (!isImage && takeFilter !== "all") {
+      const m = getMarkerForPath(it.path);
+      return m?.status === takeFilter;
+    }
+    return true;
+  });
 
   // Hash determinista para ordenación aleatoria pero estable
   const hashString = (str: string, seed: number) => {
@@ -626,6 +637,50 @@ export function VisualLibrary({
           </span>
         </div>
 
+        {/* Filtros de Clasificación de Tomas DaVinci Workflow (solo vídeos) */}
+        {!isImage && (
+          <div className="visual-take-filters" style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <button
+              type="button"
+              className={`take-pill-btn ${takeFilter === "all" ? "active-good" : ""}`}
+              style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+              onClick={() => setTakeFilter("all")}
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              className={`take-pill-btn ${takeFilter === "good_take" ? "active-good" : ""}`}
+              style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+              onClick={() => setTakeFilter(takeFilter === "good_take" ? "all" : "good_take")}
+              title="Filtrar solo Buenas Tomas (Good Takes)"
+            >
+              <Icon name="check" width={12} height={12} />
+              <span>Buenas Tomas</span>
+            </button>
+            <button
+              type="button"
+              className={`take-pill-btn ${takeFilter === "reject" ? "active-reject" : ""}`}
+              style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+              onClick={() => setTakeFilter(takeFilter === "reject" ? "all" : "reject")}
+              title="Filtrar solo Descartes"
+            >
+              <Icon name="close" width={12} height={12} />
+              <span>Descartes</span>
+            </button>
+            <button
+              type="button"
+              className={`take-pill-btn ${takeFilter === "b_roll" ? "active-broll" : ""}`}
+              style={{ padding: "4px 10px", fontSize: "0.74rem" }}
+              onClick={() => setTakeFilter(takeFilter === "b_roll" ? "all" : "b_roll")}
+              title="Filtrar solo B-Roll"
+            >
+              <Icon name="film" width={12} height={12} />
+              <span>B-Roll</span>
+            </button>
+          </div>
+        )}
+
         <div className="visual-controls-right">
           {/* Botón de Recargar compacto (solo icono) al lado del filtro */}
           <button
@@ -811,6 +866,7 @@ export function VisualLibrary({
                     isFavorite={favorites.isFavorite(item.path)}
                     isImage={isImage}
                     item={item}
+                    marker={!isImage ? getMarkerForPath(item.path) : undefined}
                     key={item.path}
                     onClick={() => {
                       if (!isImage) {
@@ -1025,6 +1081,7 @@ interface VisualCardProps {
   isImage: boolean;
   isFavorite: boolean;
   isActivating?: boolean;
+  marker?: VideoTakeMarker;
   onClick: () => void;
   onContextMenu?: (event: React.MouseEvent) => void;
   onDeleteRequest?: () => void;
@@ -1037,6 +1094,7 @@ function VisualCard({
   isImage,
   isFavorite,
   isActivating,
+  marker,
   onClick,
   onContextMenu,
   onDeleteRequest,
@@ -1105,6 +1163,43 @@ function VisualCard({
             <i className="visual-play">
               <Icon name="play" />
             </i>
+          ) : null}
+          {!isImage && marker && marker.status !== "pending" ? (
+            <span
+              className="video-take-grid-badge"
+              style={{
+                backgroundColor:
+                  marker.status === "good_take"
+                    ? "rgba(34, 197, 94, 0.88)"
+                    : marker.status === "reject"
+                    ? "rgba(239, 68, 68, 0.88)"
+                    : "rgba(249, 115, 22, 0.88)",
+                color: "#ffffff",
+              }}
+            >
+              {marker.status === "good_take"
+                ? "Good Take"
+                : marker.status === "reject"
+                ? "Descarte"
+                : "B-Roll"}
+            </span>
+          ) : null}
+          {!isImage && marker && marker.clip_color && marker.clip_color !== "none" ? (
+            <span
+              style={{
+                position: "absolute",
+                bottom: 8,
+                right: 8,
+                width: 11,
+                height: 11,
+                borderRadius: "50%",
+                backgroundColor: getClipColorHex(marker.clip_color),
+                border: "2px solid rgba(255, 255, 255, 0.9)",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.5)",
+                zIndex: 4,
+              }}
+              title={`Color DaVinci: ${marker.clip_color}`}
+            />
           ) : null}
         </span>
         <span className="visual-card-caption">

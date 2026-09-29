@@ -83,3 +83,63 @@ export interface DuplicateScanOptions {
   targetFolder?: string;
   preferHigherResolution?: boolean;
 }
+
+export type TakeStatus = "good_take" | "reject" | "b_roll" | "pending";
+
+export type ClipColor =
+  | "orange"
+  | "apricot"
+  | "yellow"
+  | "lime"
+  | "olive"
+  | "green"
+  | "teal"
+  | "cyan"
+  | "blue"
+  | "purple"
+  | "violet"
+  | "pink"
+  | "tan"
+  | "beige"
+  | "brown"
+  | "chocolate"
+  | "none";
+
+export interface VideoTakeMarker {
+  path: string;
+  status: TakeStatus;
+  clip_color: ClipColor;
+  rating?: number | null;
+  note?: string | null;
+  updated_at: number;
+}
+
+export interface VideoTechnicalMetadata {
+  path: string;
+  width: number;
+  height: number;
+  aspect_ratio: string;
+  codec: string;
+  codec_display: string;
+  profile?: string | null;
+  pixel_format: string;
+  bit_depth: number;
+  fps: number;
+  fps_fraction: string;
+  duration_secs: number;
+  bitrate_bps?: number | null;
+  bitrate_display: string;
+  color_space?: string | null;
+  color_transfer?: string | null;
+  color_primaries?: string | null;
+  color_range?: string | null;
+  is_hdr: boolean;
+  log_curve?: string | null;
+  camera_make?: string | null;
+  camera_model?: string | null;
+  creation_time?: string | null;
+  audio_codec?: string | null;
+  audio_channels: number;
+  audio_sample_rate: number;
+}
+

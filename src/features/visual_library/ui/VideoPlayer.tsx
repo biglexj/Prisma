@@ -20,6 +20,10 @@ import { ImageComparisonModal } from "../../comparison";
 import { VolumeOsd, useVolumeOsd } from "../../../shared/ui/VolumeOsd";
 import { SeekOsd, useSeekOsd } from "../../../shared/ui/SeekOsd";
 import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
+import { VideoTechnicalHud } from "./components/VideoTechnicalHud";
+import { VideoTakeClassificationBar } from "./components/VideoTakeClassificationBar";
+import { useVideoTakes, useVideoTechnicalMetadata } from "../hooks/useVideoTakes";
+import type { TakeStatus, ClipColor } from "../model/types";
 import "./video-player.css";
 
 interface VideoPlayerProps {
@@ -131,6 +135,13 @@ export function VideoPlayer({
   const [playbackSource, setPlaybackSource] = useState<VideoPlaybackSource | null>(null);
   const [isResolvingSource, setIsResolvingSource] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
+
+  // Ficha Técnica HUD & Marcado de Tomas DaVinci
+  const [showTechnicalHud, setShowTechnicalHud] = useState(false);
+  const { getMarkerForPath, setTakeMarker } = useVideoTakes();
+  const currentMarker = getMarkerForPath(path);
+  const currentVideoPathForMeta = playbackSource?.playback_path || path;
+  const { metadata: technicalMeta, loading: technicalLoading } = useVideoTechnicalMetadata(currentVideoPathForMeta);
 
   // Filtrado reactivo de la cola de reproducción
   const filteredVideoItems = useMemo(() => {
@@ -1389,6 +1400,45 @@ export function VideoPlayer({
             setTimeout(() => setShuffleToastText(null), 1800);
           }
           break;
+        case "1":
+          e.preventDefault();
+          if (path) {
+            const nextStatus: TakeStatus = currentMarker?.status === "good_take" ? "pending" : "good_take";
+            void setTakeMarker(path, nextStatus, currentMarker?.clip_color);
+            setShuffleToastText(nextStatus === "good_take" ? "🟢 Marcado: Buena Toma" : "⚪ Marca desmarcada");
+            setTimeout(() => setShuffleToastText(null), 1800);
+          }
+          break;
+        case "2":
+          e.preventDefault();
+          if (path) {
+            const nextStatus: TakeStatus = currentMarker?.status === "reject" ? "pending" : "reject";
+            void setTakeMarker(path, nextStatus, currentMarker?.clip_color);
+            setShuffleToastText(nextStatus === "reject" ? "🔴 Marcado: Descarte" : "⚪ Marca desmarcada");
+            setTimeout(() => setShuffleToastText(null), 1800);
+          }
+          break;
+        case "3":
+          e.preventDefault();
+          if (path) {
+            const nextStatus: TakeStatus = currentMarker?.status === "b_roll" ? "pending" : "b_roll";
+            void setTakeMarker(path, nextStatus, currentMarker?.clip_color);
+            setShuffleToastText(nextStatus === "b_roll" ? "🟠 Marcado: B-Roll" : "⚪ Marca desmarcada");
+            setTimeout(() => setShuffleToastText(null), 1800);
+          }
+          break;
+        case "0":
+          e.preventDefault();
+          if (path) {
+            void setTakeMarker(path, "pending", currentMarker?.clip_color);
+            setShuffleToastText("⚪ Marca de toma restablecida");
+            setTimeout(() => setShuffleToastText(null), 1800);
+          }
+          break;
+        case "i":
+          e.preventDefault();
+          setShowTechnicalHud((prev) => !prev);
+          break;
         case "escape":
           e.preventDefault();
           if (mediaDelete.menu) {
@@ -1679,6 +1729,46 @@ export function VideoPlayer({
 
       {/* Escenario de Vídeo */}
       <div className="video-stage-wrapper">
+        {/* Ficha Técnica HUD & Marcado de Tomas (DaVinci Workflow) */}
+        <div
+          className="video-technical-hud-container"
+          style={{
+            opacity: showControls || showTechnicalHud ? 1 : 0,
+            transform: showControls || showTechnicalHud ? "translateY(0)" : "translateY(-10px)",
+            pointerEvents: showControls || showTechnicalHud ? "auto" : "none",
+          }}
+        >
+          <VideoTechnicalHud
+            metadata={technicalMeta}
+            loading={technicalLoading}
+            visible={showTechnicalHud}
+            onClose={() => setShowTechnicalHud(false)}
+          />
+          <VideoTakeClassificationBar
+            marker={currentMarker}
+            onSelectStatus={(status) => {
+              if (path) {
+                void setTakeMarker(path, status, currentMarker?.clip_color);
+                setShuffleToastText(
+                  status === "good_take"
+                    ? "🟢 Marcado: Buena Toma"
+                    : status === "reject"
+                    ? "🔴 Marcado: Descarte"
+                    : status === "b_roll"
+                    ? "🟠 Marcado: B-Roll"
+                    : "⚪ Marca desmarcada"
+                );
+                setTimeout(() => setShuffleToastText(null), 1800);
+              }
+            }}
+            onSelectColor={(color) => {
+              if (path) void setTakeMarker(path, currentMarker?.status || "pending", color);
+            }}
+            onToggleHud={() => setShowTechnicalHud((prev) => !prev)}
+            hudVisible={showTechnicalHud}
+          />
+        </div>
+
         <div
           className="video-stage"
           onContextMenu={handleContextMenu}
