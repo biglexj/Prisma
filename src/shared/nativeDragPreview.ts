@@ -77,29 +77,31 @@ function drawRoundedRect(
 }
 
 function readyMedia(element: Element | null, path?: string): HTMLImageElement | HTMLVideoElement | null {
-  if (element) {
-    const candidates = [element, ...element.querySelectorAll("img, video")];
-    for (const candidate of candidates) {
-      if (candidate instanceof HTMLImageElement && candidate.complete && candidate.naturalWidth > 0) return candidate;
-      if (candidate instanceof HTMLVideoElement && candidate.readyState >= 2 && candidate.videoWidth > 0) return candidate;
+  try {
+    if (element && typeof (element as Element).querySelectorAll === "function") {
+      const candidates = [element, ...element.querySelectorAll("img, video")];
+      for (const candidate of candidates) {
+        if (candidate instanceof HTMLImageElement && candidate.complete && candidate.naturalWidth > 0) return candidate;
+        if (candidate instanceof HTMLVideoElement && candidate.readyState >= 2 && candidate.videoWidth > 0) return candidate;
+      }
     }
-  }
 
-  // Si no se encontró en el elemento directo, intentar ubicar una miniatura cargada en el DOM por nombre de archivo
-  if (typeof document !== "undefined" && path) {
-    const normalized = path.replace(/\\/g, "/");
-    const fileName = normalized.split("/").pop();
-    if (fileName && fileName.length > 2) {
-      const allImgs = document.querySelectorAll("img");
-      for (const img of allImgs) {
-        if (img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0) {
-          if (img.src.includes(encodeURIComponent(fileName)) || img.alt === fileName) {
-            return img;
+    // Si no se encontró en el elemento directo, intentar ubicar una miniatura cargada en el DOM por nombre de archivo
+    if (typeof document !== "undefined" && path) {
+      const normalized = path.replace(/\\/g, "/");
+      const fileName = normalized.split("/").pop();
+      if (fileName && fileName.length > 2) {
+        const allImgs = document.querySelectorAll("img");
+        for (const img of allImgs) {
+          if (img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0) {
+            if (img.src.includes(encodeURIComponent(fileName)) || img.alt === fileName) {
+              return img;
+            }
           }
         }
       }
     }
-  }
+  } catch {}
 
   return null;
 }

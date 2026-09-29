@@ -81,19 +81,24 @@ export function handleNativeDragStart(
   files: string | string[],
   options?: NativeDragOptions
 ): void {
-  // Prevenir que Chromium/WebView2 tome el control del drag OLE del sistema con datos HTML5 planos,
-  // permitiendo que tauri-plugin-drag inicialice de inmediato DoDragDrop con CF_HDROP nativo hacia el SO.
-  if (e.preventDefault) {
-    e.preventDefault();
-  }
-  if (e.stopPropagation) {
-    e.stopPropagation();
+  try {
+    if (e.preventDefault) {
+      e.preventDefault();
+    }
+    if (e.stopPropagation) {
+      e.stopPropagation();
+    }
+  } catch {}
+
+  let icon: string | null = null;
+  try {
+    const fileList = Array.isArray(files) ? files : [files];
+    const targetElement = options?.previewElement ?? (e.currentTarget as Element | null) ?? (e.target as Element | null);
+    icon = options?.icon ?? createNativeDragPreview(fileList[0] ?? "", targetElement, fileList.length);
+  } catch (err) {
+    console.warn("[handleNativeDragStart] Error generando vista previa:", err);
   }
 
-  // currentTarget deja de ser fiable al salir del evento React: capturar la vista antes de iniciar OLE.
-  const fileList = Array.isArray(files) ? files : [files];
-  const targetElement = options?.previewElement ?? (e.currentTarget as Element | null) ?? (e.target as Element | null);
-  const icon = options?.icon ?? createNativeDragPreview(fileList[0] ?? "", targetElement, fileList.length);
   void startNativeFileDrag(files, { ...options, icon: icon ?? undefined });
 }
 
