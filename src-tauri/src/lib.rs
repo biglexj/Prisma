@@ -5,6 +5,7 @@ mod infrastructure;
 use app::commands::flyout::{
     flyout_get_system_volume, flyout_hide, flyout_is_visible, flyout_set_position,
     flyout_set_system_volume, flyout_show, flyout_configure, flyout_get_audio_peak,
+    flyout_get_system_media, flyout_system_media_action, flyout_open_media_app,
 };
 use app::commands::favorites::{
     favorites_get_all, favorites_is_favorite, favorites_toggle,
@@ -674,6 +675,9 @@ pub fn run() {
             flyout_set_system_volume,
             flyout_configure,
             flyout_get_audio_peak,
+            flyout_get_system_media,
+            flyout_system_media_action,
+            flyout_open_media_app,
             global_passthru_get_status,
             global_passthru_toggle,
             global_passthru_list_endpoints,

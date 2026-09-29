@@ -492,6 +492,11 @@ html.is-flyout #root,
 
 /* Badge al final de la fila: Logo colorido de Prisma + texto "Prisma" */
 .flyout-app-badge {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  max-width: 120px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -507,6 +512,23 @@ html.is-flyout #root,
 .flyout-app-badge:hover {
   background: var(--flyout-surface-hover);
   color: var(--flyout-text-main);
+}
+
+.flyout-app-badge span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.flyout-app-badge:focus-visible {
+  outline: 2px solid var(--flyout-slider-fill);
+  outline-offset: 2px;
+}
+
+.flyout-ctrl-btn:disabled, .flyout-play-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  transform: none;
 }
 
 .flyout-badge-logo {

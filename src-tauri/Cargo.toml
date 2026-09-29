@@ -39,8 +39,11 @@ tauri-plugin-global-shortcut = "2"
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = [
     "implement",
+    "ApplicationModel",
     "Foundation",
+    "Foundation_Collections",
     "Media",
+    "Media_Control",
     "Storage",
     "Storage_Streams",
     "Win32_Foundation",

@@ -8,16 +8,12 @@ import {
 import { createSystemVolumeWriter, type SystemVolumeState } from "../services/systemVolumeWriter";
 import { createFlyoutAutoHide } from "../services/flyoutAutoHide";
 import { FLYOUT_THEME_EVENT, type FlyoutTheme } from "../services/flyoutTheme";
+import { flyoutAppTarget, selectFlyoutMedia, type FlyoutMediaState } from "../services/flyoutMedia";
+import { useSystemMedia } from "../services/useSystemMedia";
 import { Icon } from "../../../shared/ui/Icon";
 import "./flyout-window.css";
 
-export interface FlyoutSyncState {
-  isPlaying: boolean;
-  title: string;
-  artist: string;
-  artworkUrl: string | null;
-  mediaType: "audio" | "video";
-}
+export type FlyoutSyncState = FlyoutMediaState;
 
 function PlaybackIndicator({ active }: { active: boolean }) {
   return (
@@ -36,6 +32,9 @@ export function FlyoutWindow() {
   const [systemVolume, setSystemVolume] = useState<SystemVolumeState | null>(null);
   const [volumeError, setVolumeError] = useState(false);
   const [visible, setVisible] = useState(false);
+  const systemMedia = useSystemMedia(visible && !(mediaState.isPlaying && Boolean(mediaState.title.trim())));
+  const activeMedia = selectFlyoutMedia(mediaState, systemMedia);
+  const displayMedia = activeMedia ?? mediaState;
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const mode = localStorage.getItem("prisma_theme");
     return mode === "dark" || (mode !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches)
@@ -151,7 +150,7 @@ export function FlyoutWindow() {
     };
   }, []);
 
-  const hasActiveMedia = mediaState.isPlaying && Boolean(mediaState.title);
+  const hasActiveMedia = activeMedia !== null;
   useEffect(() => { updateWindowGeometry(); }, [hasActiveMedia, showOptions, settings.showSpectrum, updateWindowGeometry]);
   useEffect(() => { resetHideTimer(); }, [settings.isPinned, settings.durationMs, resetHideTimer]);
 
@@ -162,8 +161,16 @@ export function FlyoutWindow() {
   };
   const handleTogglePin = () => setSettings(saveFlyoutSettings({ isPinned: !settings.isPinned }));
   const transport = (action: string) => {
-    void emit("prisma://flyout-action", { action });
+    if (activeMedia?.sourceAppId) {
+      void invoke("flyout_system_media_action", { sourceAppId: activeMedia.sourceAppId, action }).catch(console.error);
+    } else {
+      void emit("prisma://flyout-action", { action });
+    }
     resetHideTimer();
+  };
+  const handleOpenApp = () => {
+    resetHideTimer();
+    void invoke("flyout_open_media_app", { sourceAppId: flyoutAppTarget(activeMedia) }).catch(console.error);
   };
   const handleTogglePlay = () => transport("play-pause");
   const handleNext = () => transport("next");
@@ -340,15 +347,15 @@ export function FlyoutWindow() {
           <div className="prisma-flyout-card flyout-media-capsule">
             {/* Carátula / Miniatura a la izquierda */}
             <div className="flyout-media-art">
-              {mediaState.artworkUrl ? (
+              {displayMedia.artworkUrl ? (
                 <img
-                  alt={mediaState.title}
+                  alt={displayMedia.title}
                   crossOrigin="anonymous"
-                  src={mediaState.artworkUrl}
+                  src={displayMedia.artworkUrl}
                 />
               ) : (
                 <Icon
-                  name={mediaState.mediaType === "video" ? "film" : "disc"}
+                  name={displayMedia.mediaType === "video" ? "film" : "disc"}
                   style={{ width: 28, height: 28, color: "var(--flyout-text-muted)" }}
                 />
               )}
@@ -358,13 +365,13 @@ export function FlyoutWindow() {
             <div className="flyout-media-body">
               <div className="flyout-media-info">
                 <div className="flyout-media-heading">
-                  <span className="flyout-media-title" title={mediaState.title}>
-                    {mediaState.title}
+                  <span className="flyout-media-title" title={displayMedia.title}>
+                    {displayMedia.title}
                   </span>
                   {settings.showSpectrum && <PlaybackIndicator active={visible && hasActiveMedia} />}
                 </div>
-                <span className="flyout-media-artist" title={mediaState.artist}>
-                  {mediaState.artist}
+                <span className="flyout-media-artist" title={displayMedia.artist}>
+                  {displayMedia.artist}
                 </span>
               </div>
 
@@ -374,6 +381,7 @@ export function FlyoutWindow() {
                   <button
                     className="flyout-ctrl-btn"
                     onClick={handlePrevious}
+                    disabled={!activeMedia?.canPrevious}
                     title="Pista anterior"
                     type="button"
                   >
@@ -390,10 +398,11 @@ export function FlyoutWindow() {
                   <button
                     className="flyout-play-btn"
                     onClick={handleTogglePlay}
-                    title={mediaState.isPlaying ? "Pausar" : "Reproducir"}
+                    disabled={!activeMedia?.canToggle}
+                    title={displayMedia.isPlaying ? "Pausar" : "Reproducir"}
                     type="button"
                   >
-                    {mediaState.isPlaying ? (
+                    {displayMedia.isPlaying ? (
                       <svg
                         fill="currentColor"
                         height="18"
@@ -417,6 +426,7 @@ export function FlyoutWindow() {
                   <button
                     className="flyout-ctrl-btn"
                     onClick={handleNext}
+                    disabled={!activeMedia?.canNext}
                     title="Siguiente pista"
                     type="button"
                   >
@@ -431,15 +441,13 @@ export function FlyoutWindow() {
                   </button>
                 </div>
 
-                {/* Badge al final a la derecha: logo oficial colorido de Prisma + texto "Prisma" */}
-                <div className="flyout-app-badge" title="Prisma">
-                  <img
-                    alt="Prisma"
-                    className="flyout-badge-logo"
-                    src="/icon/icon.png"
-                  />
-                  <span>Prisma</span>
-                </div>
+                <button className="flyout-app-badge" type="button" onClick={handleOpenApp}
+                  title={`Abrir ${activeMedia?.appName ?? "Prisma"}`} aria-label={`Abrir ${activeMedia?.appName ?? "Prisma"}`}>
+                  {activeMedia?.appIconUrl
+                    ? <img alt="" className="flyout-badge-logo" src={activeMedia.appIconUrl} />
+                    : <Icon name="layout" className="flyout-badge-logo" />}
+                  <span>{activeMedia?.appName ?? "Prisma"}</span>
+                </button>
               </div>
             </div>
           </div>

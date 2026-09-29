@@ -4,6 +4,7 @@ mod unavailable;
 pub mod passthru;
 pub mod smtc;
 pub mod system_volume;
+pub mod system_media;
 
 use crate::features::playback::backend::PlaybackBackend;
 

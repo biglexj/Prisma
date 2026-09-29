@@ -6,6 +6,34 @@ static LAST_SIZE: Mutex<(f64, f64)> = Mutex::new((380.0, 160.0));
 static ENABLED: AtomicBool = AtomicBool::new(false);
 static VOLUME_WORKER_READY: AtomicBool = AtomicBool::new(false);
 
+#[tauri::command]
+pub async fn flyout_get_system_media() -> Result<Option<crate::infrastructure::media::system_media::SystemMedia>, String> {
+    tauri::async_runtime::spawn_blocking(crate::infrastructure::media::system_media::read)
+        .await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn flyout_system_media_action(source_app_id: String, action: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || crate::infrastructure::media::system_media::transport(&source_app_id, &action))
+        .await.map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn flyout_open_media_app(app: AppHandle, source_app_id: Option<String>) -> Result<(), String> {
+    let target = match source_app_id {
+        Some(source) => tauri::async_runtime::spawn_blocking(move || crate::infrastructure::media::system_media::resolve_app(&source))
+            .await.map_err(|error| error.to_string())?,
+        None => None,
+    };
+    app.clone().run_on_main_thread(move || {
+        let opened = target.is_some_and(crate::infrastructure::media::system_media::activate_app);
+        if !opened {
+            let _ = super::quick_look::window_restore_from_background(app);
+        }
+    }).map_err(|error| error.to_string())?;
+    Ok(())
+}
+
 #[cfg(windows)]
 fn get_work_area_for_cursor() -> (i32, i32, i32, i32, f64) {
     use windows::Win32::Foundation::POINT;
