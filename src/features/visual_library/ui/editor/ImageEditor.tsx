@@ -7,6 +7,7 @@ import { ImageCropOverlay } from "./ImageCropOverlay";
 import { brushWidthInImage, fitCropToAspect, previewPointToImage } from "./cropGeometry";
 import { ImageEditorToolbar } from "./ImageEditorToolbar";
 import { SaveImageDialog } from "./SaveImageDialog";
+import { mimeForImageFormat } from "./saveImageFormat";
 import { WatermarkModal } from "./WatermarkModal";
 import {
   type WatermarkConfig,
@@ -501,6 +502,12 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
       const finalCtx = finalCanvas.getContext("2d");
       if (!finalCtx) throw new Error("No se pudo generar la imagen final recortada");
 
+      const mime = mimeForImageFormat(options.format);
+      if (options.format === "jpeg") {
+        finalCtx.fillStyle = "#ffffff";
+        finalCtx.fillRect(0, 0, cropPxW, cropPxH);
+      }
+
       finalCtx.drawImage(
         intermediateCanvas,
         cropPxX,
@@ -518,16 +525,10 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
         applyWatermarkToCanvas(finalCtx, cropPxW, cropPxH, watermark, logoImageElement);
       }
 
-      // Determinar formato de exportación
-      const origExt = item.path.split(".").pop()?.toLowerCase();
-      const mime =
-        origExt === "jpg" || origExt === "jpeg"
-          ? "image/jpeg"
-          : origExt === "webp"
-          ? "image/webp"
-          : "image/png";
-
       const base64Data = finalCanvas.toDataURL(mime, 0.95);
+      if (!base64Data.startsWith(`data:${mime};base64,`)) {
+        throw new Error("No se pudo codificar la imagen en el formato elegido.");
+      }
 
       const result = await saveEditedImage(
         item.path,
@@ -705,7 +706,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
       {/* Diálogo de guardar */}
       {showSaveDialog && (
         <SaveImageDialog
-          originalFileName={item.title}
+          originalFileName={cleanPath(item.path).split(/[\\/]/).pop() || item.title}
           onConfirm={handleSaveConfirmed}
           onCancel={() => setShowSaveDialog(false)}
           isSaving={isSaving}

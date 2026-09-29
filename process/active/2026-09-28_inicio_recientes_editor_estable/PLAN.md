@@ -17,6 +17,7 @@ Mostrar primero los archivos incorporados recientemente, permitir su arrastre na
 - Ampliar el diálogo de marca a dos columnas sin desplazamiento en pantallas de escritorio: contenido y logotipo a la izquierda, posición y estilo a la derecha; conservar una columna en ventanas estrechas.
 - Permitir soltar un archivo de logotipo desde el Explorador sobre su zona del diálogo, siguiendo el bus nativo del comparador; añadir color de texto y contorno configurable a la marca.
 - En desarrollo, reutilizar las DLL y herramientas copiadas al directorio de Cargo; conservar los recursos del instalador.
+- Al guardar una copia editada, ofrecer PNG, JPEG y WebP junto al nombre, tomando el formato inicial de la extensión real del archivo. Seleccionar todo el nombre al pulsar el campo. Mantener la extensión y codificación originales al sobrescribir y reservar PNG para originales cuyo formato no pueda sobrescribirse de forma segura.
 
 ## Límite de validación
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Icon } from "../../../../shared/ui/Icon";
-import type { ImageEditorSaveOptions } from "./editorTypes";
+import type { ImageEditorOutputFormat, ImageEditorSaveOptions } from "./editorTypes";
+import { extensionForImageFormat, originalImageFormat } from "./saveImageFormat";
 
 interface SaveImageDialogProps {
   originalFileName: string;
@@ -15,17 +16,18 @@ export function SaveImageDialog({
   onCancel,
   isSaving,
 }: SaveImageDialogProps) {
-  const lastDot = originalFileName.lastIndexOf(".");
-  const stem = lastDot > 0 ? originalFileName.substring(0, lastDot) : originalFileName;
-  const ext = lastDot > 0 ? originalFileName.substring(lastDot) : ".png";
+  const original = originalImageFormat(originalFileName);
 
   const [overwrite, setOverwrite] = useState(false);
-  const [copyName, setCopyName] = useState(`${stem}_editado`);
+  const [copyName, setCopyName] = useState(`${original.stem}_editado`);
+  const [format, setFormat] = useState<ImageEditorOutputFormat>(original.format);
+  const copyExtension = extensionForImageFormat(format, original.extension);
 
   const handleSave = () => {
     onConfirm({
       overwrite,
-      customFileName: overwrite ? originalFileName : `${copyName.trim() || `${stem}_editado`}${ext}`,
+      customFileName: overwrite ? originalFileName : `${copyName.trim() || `${original.stem}_editado`}${copyExtension}`,
+      format: overwrite ? original.format : format,
     });
   };
 
@@ -71,29 +73,43 @@ export function SaveImageDialog({
                   className="media-rename-input"
                   value={copyName}
                   onChange={(e) => setCopyName(e.target.value)}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onClick={(e) => e.currentTarget.select()}
                   placeholder="Nombre de la copia"
                   disabled={isSaving}
                 />
-                <span className="media-rename-ext-badge">{ext}</span>
+                <select
+                  aria-label="Formato de la copia"
+                  className="editor-save-format-select"
+                  value={format}
+                  onChange={(e) => setFormat(e.target.value as ImageEditorOutputFormat)}
+                  disabled={isSaving}
+                  title="Formato de la imagen nueva"
+                >
+                  <option value="png">PNG (.png)</option>
+                  <option value="jpeg">JPEG ({original.extension === ".jpeg" ? ".jpeg" : ".jpg"})</option>
+                  <option value="webp">WebP (.webp)</option>
+                </select>
               </div>
             </div>
           )}
 
           <label
-            className={`editor-save-option-card is-overwrite ${overwrite ? "is-selected" : ""}`}
-            onClick={() => setOverwrite(true)}
+            className={`editor-save-option-card is-overwrite ${overwrite ? "is-selected" : ""} ${!original.canOverwrite ? "is-disabled" : ""}`}
+            onClick={() => { if (original.canOverwrite) setOverwrite(true); }}
           >
             <input
               type="radio"
               name="save_mode"
               checked={overwrite}
+              disabled={!original.canOverwrite || isSaving}
               onChange={() => setOverwrite(true)}
             />
             <div className="editor-save-option-text">
               <strong>Sobrescribir archivo original</strong>
-              <span className="editor-save-warning-text">
-                Reemplazará directamente el archivo "{originalFileName}".
-              </span>
+              <span className="editor-save-warning-text">{original.canOverwrite
+                ? `Reemplazará directamente "${originalFileName}" y conservará su formato.`
+                : "Este formato original no puede sobrescribirse; guarda una copia en PNG, JPEG o WebP."}</span>
             </div>
           </label>
         </div>

@@ -13,4 +13,6 @@
 - [x] Añadir color de texto y contorno configurable a la vista previa y exportación.
 - [x] Dejar contorno y sombra desactivados en la configuración inicial del editor y del conversor.
 - [x] Aceptar un logotipo soltado en el diálogo desde el Explorador de Windows.
+- [x] Elegir PNG, JPEG o WebP al guardar una copia y seleccionar todo el nombre con un clic.
+- [x] Comprobar correspondencia entre el formato codificado y la extensión, y proteger la sobrescritura de formatos no compatibles.
 - [ ] Probar manualmente arrastre, recorte, dibujo, marca y exportación en Prisma de desarrollo.

@@ -13,6 +13,9 @@
 - [x] `bun test test/cropGeometry.test.ts test/watermarkLayout.test.ts`: 15 pruebas correctas; cinco relaciones fijas llenan el eje limitante y las coordenadas y el grosor del pincel se transforman al recorte.
 - [x] `bun run build`: TypeScript y Vite correctos tras conservar la vista previa en Dibujar; persiste la advertencia existente sobre el tamaño de chunks.
 - [x] `git diff --check`: sin errores de espacios.
+- [x] `bun test test/saveImageFormat.test.ts`: dos pruebas correctas de formato inicial, extensión, MIME y bloqueo de sobrescritura incompatible.
+- [x] `bun run build`: TypeScript y Vite correctos tras el selector de formato y la selección del nombre; persiste la advertencia existente sobre el tamaño de los chunks.
+- [ ] Probar visualmente el selector y guardar una copia en PNG, JPEG y WebP desde Prisma de desarrollo; comprobar que cada archivo abre correctamente y conserva la extensión elegida.
 - [ ] Probar el arrastre desde cada tipo de tarjeta de Inicio a una aplicación externa.
 - [ ] Probar Enter, regreso a edición y guardado de un recorte.
 - [ ] Probar en la aplicación el cambio de relación, la vista previa al entrar en Dibujar y el grosor y ubicación del trazo exportado.

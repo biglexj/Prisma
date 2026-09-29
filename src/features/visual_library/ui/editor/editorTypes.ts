@@ -45,7 +45,10 @@ export interface CropRect {
   height: number; // 0..1 normalizado
 }
 
+export type ImageEditorOutputFormat = "png" | "jpeg" | "webp";
+
 export interface ImageEditorSaveOptions {
   overwrite: boolean;
   customFileName: string;
+  format: ImageEditorOutputFormat;
 }

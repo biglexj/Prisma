@@ -708,6 +708,11 @@
   background: #361720;
 }
 
+.editor-save-option-card.is-disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
 .editor-save-option-card input[type="radio"] {
   margin-top: 3px;
   accent-color: #e60050;
@@ -745,4 +750,28 @@
   font-size: 0.78rem;
   font-weight: 700;
   color: #ffffff;
+}
+
+.editor-save-filename-field .media-rename-input {
+  min-width: 0;
+}
+
+.editor-save-format-select {
+  flex: none;
+  max-width: 118px;
+  margin-right: 7px;
+  padding: 6px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: #39242d;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.editor-save-format-select:focus-visible {
+  outline: 2px solid #ffb4c8;
+  outline-offset: 2px;
 }
