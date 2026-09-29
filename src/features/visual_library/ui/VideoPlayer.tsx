@@ -19,7 +19,7 @@ import { useSystemSettings } from "../../../app/useSystemSettings";
 import { ImageComparisonModal } from "../../comparison";
 import { VolumeOsd, useVolumeOsd } from "../../../shared/ui/VolumeOsd";
 import { SeekOsd, useSeekOsd } from "../../../shared/ui/SeekOsd";
-import { handleNativeDragStart, startNativeFileDrag } from "../../../shared/useNativeFileDrag";
+import { handleNativeDragPointerDown, startNativeFileDrag } from "../../../shared/useNativeFileDrag";
 import { VideoTechnicalHud } from "./components/VideoTechnicalHud";
 import { getClipColorHex } from "../model/davinciColors";
 import { useVideoTakes, useVideoTechnicalMetadata } from "../hooks/useVideoTakes";
@@ -1635,10 +1635,11 @@ export function VideoPlayer({
         <div className="video-header-center">
           <h2
             className="video-player-title"
-            draggable={Boolean(path)}
-            onDragStart={(e) => {
+            draggable={false}
+            onDragStart={(event) => event.preventDefault()}
+            onPointerDown={(e) => {
               if (path) {
-                handleNativeDragStart(e, path);
+                handleNativeDragPointerDown(e, path);
               }
             }}
             style={{ cursor: path ? "grab" : "default" }}
@@ -1650,8 +1651,9 @@ export function VideoPlayer({
             <button
               type="button"
               className="video-drag-handle-pill"
-              draggable={true}
-              onDragStart={(e) => handleNativeDragStart(e, path)}
+              draggable={false}
+              onDragStart={(event) => event.preventDefault()}
+              onPointerDown={(e) => handleNativeDragPointerDown(e, path)}
               title="Mantén presionado y arrastra hacia DaVinci Resolve, Premiere, Explorer, etc."
             >
               <Icon name="film" />

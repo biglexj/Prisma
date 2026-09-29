@@ -3,7 +3,7 @@ import type { MusicFolderSource, MusicLibraryItem } from "../model/types";
 import { Icon } from "../../../shared/ui/Icon";
 import { cleanPath } from "../../../shared/mediaTree";
 import { MusicArtwork } from "./MusicArtwork";
-import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
+import { handleNativeDragPointerDown } from "../../../shared/useNativeFileDrag";
 
 const VISIBLE_TRACK_LIMIT = 160;
 
@@ -204,8 +204,9 @@ export function FolderManager({
               <button
                 className="track-row"
                 key={item.path}
-                draggable={true}
-                onDragStart={(e) => handleNativeDragStart(e, item.path)}
+                draggable={false}
+                onDragStart={(event) => event.preventDefault()}
+                onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
                 onClick={() => onPlay(item.path)}
               >
                 <span className="track-play">

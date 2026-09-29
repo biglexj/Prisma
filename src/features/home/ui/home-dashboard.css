@@ -171,7 +171,7 @@
   user-select: none;
 }
 
-.home-media-card[draggable="true"] > * {
+.home-media-card > * {
   pointer-events: none;
 }
 

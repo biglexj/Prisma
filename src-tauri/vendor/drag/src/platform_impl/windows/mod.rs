@@ -11,7 +11,6 @@ use std::{
     iter::once,
     os::windows::ffi::OsStrExt,
     path::{Path, PathBuf},
-    sync::Once,
 };
 use windows::{
     core::*,
@@ -20,7 +19,7 @@ use windows::{
         Graphics::Gdi::{GetObjectW, BITMAP},
         System::Com::*,
         System::Memory::*,
-        System::Ole::{DoDragDrop, OleInitialize},
+        System::Ole::{DoDragDrop, OleInitialize, OleUninitialize},
         System::Ole::{
             IDropSource, IDropSource_Impl, CF_HDROP, DROPEFFECT, DROPEFFECT_COPY, DROPEFFECT_MOVE,
         },
@@ -37,16 +36,14 @@ use windows::{
 
 mod image;
 
-static mut OLE_RESULT: Result<()> = Ok(());
-static OLE_UNINITIALIZE: Once = Once::new();
-fn init_ole() {
-    OLE_UNINITIALIZE.call_once(|| {
-        unsafe {
-            OLE_RESULT = OleInitialize(Some(std::ptr::null_mut()));
-        }
-        // I guess we never deinitialize for now?
-        // OleUninitialize
-    });
+struct OleGuard;
+fn init_ole() -> Result<OleGuard> {
+    unsafe { OleInitialize(None)?; }
+    Ok(OleGuard)
+}
+
+impl Drop for OleGuard {
+    fn drop(&mut self) { unsafe { OleUninitialize() }; }
 }
 
 #[implement(IDataObject)]
@@ -222,13 +219,7 @@ pub fn start_drag<W: HasWindowHandle, F: Fn(DragResult, CursorPosition) + Send +
     if let Ok(RawWindowHandle::Win32(_w)) = handle.window_handle().map(|h| h.as_raw()) {
         match item {
             DragItem::Files(files) => {
-                init_ole();
-                unsafe {
-                    #[allow(static_mut_refs)]
-                    if let Err(e) = &OLE_RESULT {
-                        return Err(e.clone().into());
-                    }
-                }
+                let _ole = init_ole()?;
 
                 let mut paths = Vec::new();
                 for f in files {
@@ -285,13 +276,7 @@ pub fn start_drag<W: HasWindowHandle, F: Fn(DragResult, CursorPosition) + Send +
                 }
             }
             DragItem::Data { .. } => {
-                init_ole();
-                unsafe {
-                    #[allow(static_mut_refs)]
-                    if let Err(e) = &OLE_RESULT {
-                        return Err(e.clone().into());
-                    }
-                }
+                let _ole = init_ole()?;
 
                 let paths = vec![dunce::canonicalize("./")?];
 

@@ -17,3 +17,11 @@
 - [x] Actualizar pruebas unitarias en `test/nativeDragPreview.test.ts` (4 pruebas, 19 aserciones superadas).
 - [x] Verificar tipado con `bun run check` (0 errores).
 - [ ] Verificar visualmente el arrastre real de imagen, música y vídeo hacia Windows u otra aplicación.
+- [x] Diagnosticar la regresión sin basarse solo en compilación: el gesto y el PNG llegaban al plugin, que fallaba con `RPC_E_CHANGED_MODE (0x80010106)`.
+- [x] Corregir inicialización y liberación COM en las consultas síncronas de audio; conservar el STA/OLE de la interfaz.
+- [x] Sustituir el resultado OLE global por una inicialización acotada a cada llamada y al mismo hilo.
+- [x] Detectar el gesto con el puntero, mantener los clics normales y excluir botones internos.
+- [x] Crear un DIB BGRA sin premultiplicar y comprobar píxeles, transparencia y orden de filas en Windows.
+- [x] Usar `IDropTargetHelper` en los eventos del receptor nativo.
+- [x] Reproducir un gesto real y observar la llegada a `DoDragDrop`, sin el error COM anterior.
+- [ ] Confirmar la recepción externa efectiva (`DROPEFFECT_COPY/MOVE` y archivo abierto en Paint).

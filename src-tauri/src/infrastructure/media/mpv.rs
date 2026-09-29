@@ -227,14 +227,14 @@ fn enumerate_windows_audio_endpoints() -> Vec<(String, String)> {
         eRender, DEVICE_STATE_ACTIVE, IMMDeviceEnumerator, MMDeviceEnumerator,
     };
     use windows::Win32::System::Com::{
-        CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_ALL, COINIT_MULTITHREADED, STGM_READ,
+        CoCreateInstance, CLSCTX_ALL, STGM_READ,
     };
     use windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY;
 
     let mut list = Vec::new();
 
     unsafe {
-        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let Ok(_com) = crate::infrastructure::windows_com::ComApartment::multithreaded() else { return list; };
         if let Ok(enumerator) = CoCreateInstance::<_, IMMDeviceEnumerator>(&MMDeviceEnumerator, None, CLSCTX_ALL) {
             if let Ok(collection) = enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE) {
                 if let Ok(count) = collection.GetCount() {
@@ -260,7 +260,6 @@ fn enumerate_windows_audio_endpoints() -> Vec<(String, String)> {
                 }
             }
         }
-        CoUninitialize();
     }
 
     list

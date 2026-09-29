@@ -12,3 +12,5 @@ pub mod playlists;
 pub mod tags;
 pub mod video_takes;
 pub mod windows_file_drop;
+#[cfg(windows)]
+pub mod windows_com;

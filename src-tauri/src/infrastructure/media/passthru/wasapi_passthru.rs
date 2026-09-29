@@ -104,7 +104,8 @@ impl WasapiBridge {
         initial_params: DspParameters,
     ) -> Result<Self, String> {
         let (capture_device_name, render_device_name) = unsafe {
-            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+            let _com = crate::infrastructure::windows_com::ComApartment::multithreaded()
+                .map_err(|e| e.to_string())?;
             let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
                 .map_err(|e| format!("Error al enumerar dispositivos de audio: {}", e))?;
 
@@ -146,7 +147,6 @@ impl WasapiBridge {
                     .and_then(|s| get_device_friendly_name(&s).ok())
             }).unwrap_or_else(|| "Altavoces / Auriculares".to_string());
 
-            CoUninitialize();
             (capture_name, render_name)
         };
 
@@ -748,7 +748,8 @@ unsafe fn get_device_friendly_name(store: &IPropertyStore) -> Result<String, ()>
 /// Enumera todos los endpoints de audio activos en Windows.
 pub fn list_audio_endpoints() -> Result<Vec<AudioEndpointInfo>, String> {
     unsafe {
-        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let _com = crate::infrastructure::windows_com::ComApartment::multithreaded()
+            .map_err(|e| e.to_string())?;
         let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
             .map_err(|e| format!("CoCreateInstance falló: {}", e))?;
 
@@ -805,7 +806,6 @@ pub fn list_audio_endpoints() -> Result<Vec<AudioEndpointInfo>, String> {
             }
         }
 
-        CoUninitialize();
         Ok(results)
     }
 }
@@ -814,7 +814,6 @@ pub fn list_audio_endpoints() -> Result<Vec<AudioEndpointInfo>, String> {
 pub fn set_system_default_audio_endpoint(device_id: &str) -> Result<(), String> {
     use std::ffi::c_void;
     use windows::core::{GUID, HRESULT, PCWSTR};
-    use windows::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_MULTITHREADED};
 
     #[link(name = "ole32")]
     unsafe extern "system" {
@@ -843,8 +842,8 @@ pub fn set_system_default_audio_endpoint(device_id: &str) -> Result<(), String> 
     }
 
     unsafe {
-        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
-
+        let _com = crate::infrastructure::windows_com::ComApartment::multithreaded()
+            .map_err(|e| e.to_string())?;
         let clsid = GUID::from_u128(0x870af99c_171d_4f9e_af0d_e63df40c2bc9);
         // Win 10/11 IID
         let iid_win10 = GUID::from_u128(0xf8679f50_850a_41cf_9c72_430f290290c8);
@@ -872,7 +871,6 @@ pub fn set_system_default_audio_endpoint(device_id: &str) -> Result<(), String> 
                 &mut fallback,
             );
             if hr2.is_err() || fallback.is_null() {
-                CoUninitialize();
                 return Err("No se pudo inicializar la interfaz de configuración de audio de Windows".to_string());
             }
             fallback
@@ -890,8 +888,6 @@ pub fn set_system_default_audio_endpoint(device_id: &str) -> Result<(), String> 
         let _ = (vtbl.set_default_endpoint)(policy_config, pcwstr, 2);
 
         let _ = (vtbl.release)(policy_config);
-        CoUninitialize();
-
         Ok(())
     }
 }

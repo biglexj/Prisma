@@ -12,7 +12,7 @@ import { useScrollRestoration } from "../../../shared/useScrollRestoration";
 import { useHistory } from "../../../shared/useHistory";
 import { usePlaylists } from "../../collections/usePlaylists";
 import type { PlaylistMeta } from "../../collections/model/types";
-import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
+import { handleNativeDragPointerDown } from "../../../shared/useNativeFileDrag";
 import { formatFriendlyErrorMessage } from "../../../shared/errorFormatters";
 import "./home-dashboard.css";
 
@@ -229,8 +229,9 @@ export function HomeDashboard({
                       <button
                         className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
                         key={item.path}
-                        draggable={true}
-                        onDragStart={(e) => handleNativeDragStart(e, item.path)}
+                        draggable={false}
+                        onDragStart={(event) => event.preventDefault()}
+                        onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
                         onClick={() => handlePlayMusicWithFeedback(item.path, homeMusicItems, "Inicio")}
                         title={artist ? `${artist} — ${title}` : title}
                       >
@@ -272,8 +273,9 @@ export function HomeDashboard({
                     <button
                       className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
                       key={item.path}
-                      draggable={true}
-                      onDragStart={(e) => handleNativeDragStart(e, item.path)}
+                      draggable={false}
+                      onDragStart={(event) => event.preventDefault()}
+                      onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
                       onClick={() => handlePlayVideoWithFeedback(item.path, homeVideoItems)}
                       title={item.title}
                     >
@@ -313,8 +315,9 @@ export function HomeDashboard({
                     <button
                       className="home-media-card"
                       key={item.path}
-                      draggable={true}
-                      onDragStart={(e) => handleNativeDragStart(e, item.path)}
+                      draggable={false}
+                      onDragStart={(event) => event.preventDefault()}
+                      onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
                       onClick={() => {
                         if (onOpenImage) {
                           onOpenImage(item.path, homeImageItems);

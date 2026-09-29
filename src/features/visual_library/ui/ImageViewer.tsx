@@ -17,7 +17,7 @@ import { quickLookClient } from "../../quick_look/tauri/client";
 import { ViewerToolsMenu } from "./components/ViewerToolsMenu";
 import { ImageInfoDrawer } from "./components/ImageInfoDrawer";
 import { copyImageToClipboard } from "../services/imageClipboard";
-import { handleNativeDragStart } from "../../../shared/useNativeFileDrag";
+import { handleNativeDragPointerDown } from "../../../shared/useNativeFileDrag";
 import "./visual-library.css";
 import "./image-viewer.css";
 
@@ -904,8 +904,9 @@ export function ImageViewer({
         <div className="image-viewer-top-center">
           <h2
             className="image-viewer-title"
-            draggable={true}
-            onDragStart={(e) => handleNativeDragStart(e, currentItem.path, { previewElement: imgRef.current })}
+            draggable={false}
+            onDragStart={(event) => event.preventDefault()}
+            onPointerDown={(e) => handleNativeDragPointerDown(e, currentItem.path, { previewElement: imgRef.current })}
             title={`${currentItem.title} · Arrastrar hacia apps externas (Affinity, Photoshop, Krita, DaVinci, Explorer)`}
           >
             {currentItem.title}
@@ -913,8 +914,9 @@ export function ImageViewer({
           <button
             type="button"
             className="image-viewer-drag-pill"
-            draggable={true}
-            onDragStart={(e) => handleNativeDragStart(e, currentItem.path, { previewElement: imgRef.current })}
+            draggable={false}
+            onDragStart={(event) => event.preventDefault()}
+            onPointerDown={(e) => handleNativeDragPointerDown(e, currentItem.path, { previewElement: imgRef.current })}
             title="Mantén presionado y arrastra hacia Affinity, Photoshop, Krita, DaVinci, Explorer..."
           >
             <Icon name="image" />

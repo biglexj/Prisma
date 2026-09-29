@@ -14,6 +14,11 @@ Mostrar la miniatura visible del medio al arrastrarlo desde Prisma hacia otra ap
 - Presentar la miniatura completa en una de tres siluetas según sus dimensiones: cuadrada, 16:9 o 9:16.
 - Mantener los archivos temporales de comprobación nativa fuera de `src-tauri` para que el modo de desarrollo no reinicie Prisma durante la prueba.
 - Ignorar una soltada del archivo de Prisma sobre la misma ventana para que no se intente importar como carpeta.
+- Iniciar el gesto con el puntero tras un desplazamiento mínimo, conservando clics y controles internos.
+- Preservar el apartamento COM de la interfaz al consultar audio: desinicializar solo llamadas propias que tuvieron éxito.
+- Inicializar y liberar OLE en el hilo de cada arrastre, sin guardar un fallo global permanentemente.
+- Entregar a Shell un DIB de 32 bits con BGRA sin premultiplicar; el helper realiza su propia multiplicación alfa.
+- Notificar `IDropTargetHelper` en la superficie receptora de Prisma para que también muestre la imagen flotante.
 
 ## Validación
 

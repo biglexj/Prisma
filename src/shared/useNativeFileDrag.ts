@@ -1,7 +1,8 @@
-import type { DragEvent as ReactDragEvent } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { toPlatformPath } from "./mediaTree";
 import { createNativeDragPreview } from "./nativeDragPreview";
+import { armNativeDragGesture } from "./nativeDragGesture";
 
 /**
  * Icono de arrastre universal compacto (32x32 PNG en base64).
@@ -76,30 +77,21 @@ export async function startNativeFileDrag(
   }
 }
 
-export function handleNativeDragStart(
-  e: ReactDragEvent,
+export function handleNativeDragPointerDown(
+  e: ReactPointerEvent,
   files: string | string[],
   options?: NativeDragOptions
 ): void {
-  try {
-    if (e.preventDefault) {
-      e.preventDefault();
-    }
-    if (e.stopPropagation) {
-      e.stopPropagation();
-    }
-  } catch {}
-
-  let icon: string | null = null;
-  try {
-    const fileList = Array.isArray(files) ? files : [files];
-    const targetElement = options?.previewElement ?? (e.currentTarget as Element | null) ?? (e.target as Element | null);
-    icon = options?.icon ?? createNativeDragPreview(fileList[0] ?? "", targetElement, fileList.length);
-  } catch (err) {
-    console.warn("[handleNativeDragStart] Error generando vista previa:", err);
-  }
-
-  void startNativeFileDrag(files, { ...options, icon: icon ?? undefined });
+  if (e.defaultPrevented) return;
+  const element = e.currentTarget;
+  const control = e.target instanceof Element
+    ? e.target.closest("button, input, select, textarea, a, [contenteditable='true'], [role='slider']")
+    : null;
+  if (control && control !== element && element.contains(control)) return;
+  if (armNativeDragGesture(e, element, () => startNativeFileDrag(files, {
+    ...options,
+    previewElement: options?.previewElement ?? element,
+  }))) e.stopPropagation();
 }
 
 /**
@@ -108,6 +100,6 @@ export function handleNativeDragStart(
 export function useNativeFileDrag() {
   return {
     startNativeFileDrag,
-    handleNativeDragStart,
+    handleNativeDragPointerDown,
   };
 }

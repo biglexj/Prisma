@@ -8,9 +8,9 @@ use windows::core::PCWSTR;
 use windows::Win32::Foundation::*;
 use windows::Win32::{
     Graphics::{
-        Gdi::{CreateBitmap, HBITMAP},
+        Gdi::{CreateDIBSection, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, HBITMAP, HDC},
         Imaging::{
-            CLSID_WICImagingFactory, GUID_WICPixelFormat32bppPBGRA, IWICBitmapDecoder,
+            CLSID_WICImagingFactory, GUID_WICPixelFormat32bppBGRA, IWICBitmapDecoder,
             IWICImagingFactory, WICConvertBitmapSource, WICDecodeMetadataCacheOnDemand,
         },
     },
@@ -66,19 +66,56 @@ fn decoder_to_hbitmap(decoder: IWICBitmapDecoder) -> Result<HBITMAP> {
 
         let mut pixel_buf: Vec<u8> = vec![0; (width * height * 4) as usize];
         let pixel_format = frame.GetPixelFormat()?;
-        if pixel_format != GUID_WICPixelFormat32bppPBGRA {
-            let bitmap_source = WICConvertBitmapSource(&GUID_WICPixelFormat32bppPBGRA, &frame)?;
+        // IDragSourceHelper multiplies RGB by alpha itself. Passing PBGRA would multiply twice.
+        if pixel_format != GUID_WICPixelFormat32bppBGRA {
+            let bitmap_source = WICConvertBitmapSource(&GUID_WICPixelFormat32bppBGRA, &frame)?;
             bitmap_source.CopyPixels(std::ptr::null(), width * 4, &mut pixel_buf)?;
         } else {
             frame.CopyPixels(std::ptr::null(), width * 4, &mut pixel_buf)?;
         }
 
-        Ok(CreateBitmap(
-            width as i32,
-            height as i32,
-            1,
-            32,
-            Some(pixel_buf.as_ptr() as *const c_void),
-        ))
+        pixels_to_hbitmap(width, height, &pixel_buf)
+    }
+}
+
+fn pixels_to_hbitmap(width: u32, height: u32, pixels: &[u8]) -> Result<HBITMAP> {
+    let info = BITMAPINFO {
+        bmiHeader: BITMAPINFOHEADER {
+            biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32,
+            biWidth: width as i32,
+            biHeight: -(height as i32), // WIC supplies rows from top to bottom.
+            biPlanes: 1,
+            biBitCount: 32,
+            biCompression: BI_RGB.0,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let mut bits: *mut c_void = std::ptr::null_mut();
+    unsafe {
+        let bitmap = CreateDIBSection(HDC::default(), &info, DIB_RGB_COLORS, &mut bits, HANDLE::default(), 0)?;
+        std::ptr::copy_nonoverlapping(pixels.as_ptr(), bits.cast::<u8>(), pixels.len());
+        Ok(bitmap)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use windows::Win32::Graphics::Gdi::{DeleteObject, GetObjectW, DIBSECTION};
+
+    #[test]
+    fn native_bitmap_keeps_color_alpha_and_top_down_rows() {
+        // Two rows with opaque, translucent and transparent pixels, in unpremultiplied BGRA.
+        let pixels = [10, 20, 200, 255, 40, 80, 160, 128, 0, 0, 0, 0, 90, 30, 10, 255];
+        let bitmap = pixels_to_hbitmap(2, 2, &pixels).unwrap();
+        unsafe {
+            let mut dib = DIBSECTION::default();
+            assert_eq!(GetObjectW(bitmap, std::mem::size_of::<DIBSECTION>() as i32, Some((&mut dib as *mut DIBSECTION).cast())), std::mem::size_of::<DIBSECTION>() as i32);
+            assert_eq!(dib.dsBm.bmBitsPixel, 32);
+            assert_eq!(dib.dsBmih.biHeight.abs(), 2);
+            assert_eq!(std::slice::from_raw_parts(dib.dsBm.bmBits.cast::<u8>(), pixels.len()), pixels);
+            DeleteObject(bitmap).ok().unwrap();
+        }
     }
 }

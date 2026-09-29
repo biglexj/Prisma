@@ -16,7 +16,7 @@ mod imp {
             Foundation::{BOOL, HWND, LPARAM, POINT, POINTL},
             Graphics::Gdi::ScreenToClient,
             System::{
-                Com::{IDataObject, DVASPECT_CONTENT, FORMATETC, TYMED_HGLOBAL},
+                Com::{CoCreateInstance, CLSCTX_INPROC_SERVER, IDataObject, DVASPECT_CONTENT, FORMATETC, TYMED_HGLOBAL},
                 Ole::{
                     IDropTarget, IDropTarget_Impl, RegisterDragDrop, ReleaseStgMedium,
                     RevokeDragDrop, CF_HDROP, DROPEFFECT, DROPEFFECT_COPY, DROPEFFECT_NONE,
@@ -24,7 +24,7 @@ mod imp {
                 SystemServices::MODIFIERKEYS_FLAGS,
             },
             UI::{
-                Shell::{DragQueryFileW, HDROP},
+                Shell::{DragQueryFileW, HDROP, CLSID_DragDropHelper, IDropTargetHelper},
                 WindowsAndMessaging::EnumChildWindows,
             },
         },
@@ -140,6 +140,7 @@ mod imp {
     struct NativeFileDropTarget {
         hwnd: HWND,
         app: AppHandle,
+        drag_image_helper: Option<IDropTargetHelper>,
         cursor_effect: UnsafeCell<DROPEFFECT>,
         enter_is_valid: UnsafeCell<bool>,
         entered_paths: RefCell<Rc<Vec<String>>>,
@@ -150,6 +151,9 @@ mod imp {
             Self {
                 hwnd,
                 app,
+                drag_image_helper: unsafe {
+                    CoCreateInstance(&CLSID_DragDropHelper, None, CLSCTX_INPROC_SERVER).ok()
+                },
                 cursor_effect: DROPEFFECT_NONE.into(),
                 enter_is_valid: false.into(),
                 entered_paths: RefCell::new(Rc::new(Vec::new())),
@@ -227,6 +231,11 @@ mod imp {
                 *effect = cursor_effect;
             }
 
+            if let Some(helper) = &self.drag_image_helper {
+                let position = POINT { x: point.x, y: point.y };
+                let _ = unsafe { helper.DragEnter(self.hwnd, data_object, &position, cursor_effect) };
+            }
+
             if is_valid {
                 *self.entered_paths.borrow_mut() = Rc::new(paths.clone());
                 self.emit("prisma://native-drag-enter", paths, self.client_position(point));
@@ -244,6 +253,10 @@ mod imp {
             unsafe {
                 *effect = *self.cursor_effect.get();
             }
+            if let Some(helper) = &self.drag_image_helper {
+                let position = POINT { x: point.x, y: point.y };
+                let _ = unsafe { helper.DragOver(&position, *effect) };
+            }
             if is_valid {
                 self.emit(
                     "prisma://native-drag-over",
@@ -255,6 +268,9 @@ mod imp {
         }
 
         fn DragLeave(&self) -> windows::core::Result<()> {
+            if let Some(helper) = &self.drag_image_helper {
+                let _ = unsafe { helper.DragLeave() };
+            }
             if unsafe { *self.enter_is_valid.get() } {
                 self.emit(
                     "prisma://native-drag-leave",
@@ -290,6 +306,10 @@ mod imp {
             }
             *self.entered_paths.borrow_mut() = Rc::new(Vec::new());
 
+            if let Some(helper) = &self.drag_image_helper {
+                let position = POINT { x: point.x, y: point.y };
+                let _ = unsafe { helper.Drop(data_object, &position, *effect) };
+            }
             if is_valid {
                 self.emit("prisma://native-drag-drop", paths, self.client_position(point));
             }

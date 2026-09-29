@@ -20,7 +20,7 @@ import { PlaybackSettingsModal } from "./PlaybackSettingsModal";
 import "./album-adaptive.css";
 import "./playback-queue.css";
 import { cleanPath, formatSession, formatTime, mediaTitle } from "../formatters";
-import { handleNativeDragStart } from "../../../../shared/useNativeFileDrag";
+import { handleNativeDragPointerDown } from "../../../../shared/useNativeFileDrag";
 
 const WAVE_BARS = Array.from({ length: 18 }, (_, index) => <i key={index} />);
 
@@ -307,10 +307,11 @@ export function PlaybackPreview({
         ) : (
           <div
             className={`preview-artwork ${hasEffectiveMedia ? "has-media" : "is-empty"} ${isVideo ? "is-video-surface" : ""} ${isAudio ? "is-interactive" : ""}`}
-            draggable={Boolean(effectivePath)}
-            onDragStart={(e) => {
+            draggable={false}
+            onDragStart={(event) => event.preventDefault()}
+            onPointerDown={(e) => {
               if (effectivePath) {
-                handleNativeDragStart(e, effectivePath);
+                handleNativeDragPointerDown(e, effectivePath);
               }
             }}
             onClick={isAudio && hasEffectiveMedia ? () => setViewMode("lyrics") : undefined}
@@ -339,10 +340,11 @@ export function PlaybackPreview({
             <div>
               <span>{hasMedia ? "REPRODUCIENDO" : "LISTO PARA REPRODUCIR"}</span>
               <h2
-                draggable={Boolean(effectivePath)}
-                onDragStart={(e) => {
+                draggable={false}
+                onDragStart={(event) => event.preventDefault()}
+                onPointerDown={(e) => {
                   if (effectivePath) {
-                    handleNativeDragStart(e, effectivePath, { previewElement: document.querySelector(".preview-artwork img") });
+                    handleNativeDragPointerDown(e, effectivePath, { previewElement: document.querySelector(".preview-artwork img") });
                   }
                 }}
                 style={{ cursor: effectivePath ? "grab" : "default" }}
