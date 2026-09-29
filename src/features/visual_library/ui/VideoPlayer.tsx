@@ -1789,7 +1789,7 @@ export function VideoPlayer({
       <div className="video-stage-wrapper">
         {/* Ficha Técnica HUD flotante (activable con atajo I o desde Herramientas) */}
         <div
-          className="video-technical-hud-container"
+          className={`video-technical-hud-container ${!showControls ? "is-controls-hidden" : ""}`}
           style={{
             opacity: showTechnicalHud ? 1 : 0,
             transform: showTechnicalHud ? "translateY(0)" : "translateY(-10px)",
