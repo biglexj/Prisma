@@ -496,34 +496,58 @@
   font-size: 0.82rem;
   font-weight: 900;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   border: 1px solid var(--outline-variant);
+  box-shadow: none;
 }
 
 .dsp-power-btn.on {
-  background: linear-gradient(135deg, var(--primary), #e91e63);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 0 20px rgba(233, 30, 99, 0.45);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface-container));
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--outline-variant));
+  box-shadow: inset 0 0 8px color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.dsp-power-btn.on:hover {
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-container));
 }
 
 .dsp-power-btn.off {
   background: var(--surface-container-high);
   color: var(--on-surface-variant);
-  opacity: 0.7;
+}
+
+.dsp-power-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .dsp-power-indicator {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #4caf50;
-  box-shadow: 0 0 8px #4caf50;
+  flex-shrink: 0;
+  background: currentColor;
+  box-shadow: none;
+}
+
+.dsp-power-btn.on .dsp-power-indicator {
+  animation: dsp-power-breathe 2.4s ease-in-out infinite;
 }
 
 .dsp-power-btn.off .dsp-power-indicator {
-  background: #757575;
-  box-shadow: none;
+  opacity: 0.45;
+}
+
+@keyframes dsp-power-breathe {
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dsp-power-btn.on .dsp-power-indicator {
+    animation: none;
+  }
 }
 
 .dsp-modal-close-btn {

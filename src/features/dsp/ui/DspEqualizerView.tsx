@@ -550,11 +550,12 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
             {/* Botón Power Maestro (Bypass) */}
             <button
               className={`dsp-power-btn ${dsp.enabled ? "on" : "off"}`}
+              aria-pressed={dsp.enabled}
               onClick={dsp.toggleEnabled}
               title={dsp.enabled ? "Desactivar DSP (Bypass)" : "Activar DSP"}
               type="button"
             >
-              <span className="dsp-power-indicator" />
+              <span className="dsp-power-indicator" aria-hidden="true" />
               <span>{dsp.enabled ? "POWER ON" : "BYPASS"}</span>
             </button>
 
