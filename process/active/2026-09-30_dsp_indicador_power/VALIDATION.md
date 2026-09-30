@@ -7,3 +7,4 @@
 - `bun run build`: TypeScript y Vite correctos, 277 módulos; advertencia preexistente sobre tamaño del bundle.
 - `git diff --check`: sin errores de espacios. Diff limitado al aspecto del botón y su estado accesible.
 - Confirmación visual en la aplicación pendiente.
+- Refinamiento posterior: la mezcla verdosa en el extremo izquierdo también procedía del degradado `var(--primary)` / `#e91e63`. Se conserva el rosa intenso uniforme y se limita el verde al círculo: 10 px en lugar de 8 px, sin sombra ni animación de opacidad. No cambia su alineación dentro del botón.
