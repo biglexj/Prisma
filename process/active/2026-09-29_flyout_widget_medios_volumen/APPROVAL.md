@@ -26,3 +26,8 @@ Implementación del sistema nativo de Flyout y Mini Widget multimedia de escrito
 
 - Cambio autorizado directamente por Biglex: aumentar de uno a dos segundos para ocultarse.
 - Implementado y comprobado técnicamente; confirmación visual del nuevo plazo pendiente.
+
+## Apertura por comandos explícitos — 2026-09-30
+
+- Biglex solicita que los pasos automáticos de música y vídeo no muestren el panel; aclara que sí debe aparecer por volumen y por F6/F7/F8 para anterior, play/pausa y siguiente.
+- Implementado localmente; pruebas y compilación web correctas. Confirmación en la aplicación pendiente.

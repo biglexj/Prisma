@@ -94,3 +94,13 @@
 - `bun test tests/flyout-auto-hide.test.ts tests/flyout-media.test.ts tests/system-volume-writer.test.ts`: 17 pruebas correctas, 50 aserciones; incluye plazo de dos segundos desde la última interacción.
 - `bun run build`: TypeScript y Vite correctos, 277 módulos. Advertencia preexistente de tamaño del bundle.
 - Comprobación visual del nuevo plazo pendiente. Esta compilación web no actualiza el ejecutable instalado.
+
+## Apertura por comandos explícitos — 2026-09-30
+
+- Causa confirmada en código: `useFlyoutSync` invocaba `flyout_show` cada vez que el archivo activo cambiaba después del inicial, tanto en música como en vídeo. Eliminada esa apertura y su referencia de seguimiento.
+- La sincronización de título, artista, carátula y estado continúa mediante `flyout-state-sync`, cuyo receptor no abre el panel ni renueva el plazo.
+- Apertura explícita por F6/F7/F8 (anterior, reproducir/pausar, siguiente) o teclas multimedia equivalentes: se espera al siguiente turno de eventos para comprobar que el reproductor aceptó el atajo con `preventDefault`. También se atienden comandos SMTC play/pause/next/previous. Se respeta la opción de desactivar el panel.
+- La vía nativa de teclas multimedia anterior/siguiente y la de volumen conservan su funcionamiento. La vista previa de Configuración sigue disponible.
+- `bun test tests/flyout-triggers.test.ts tests/flyout-auto-hide.test.ts tests/flyout-media.test.ts tests/system-volume-writer.test.ts`: 20 pruebas correctas, 71 aserciones.
+- `bun run build`: TypeScript y Vite correctos, 278 módulos; advertencia preexistente de tamaño del bundle.
+- Comportamiento real pendiente de confirmación: avance automático oculto, avance manual y play/pausa por atajos, y apertura por volumen en música y vídeo.

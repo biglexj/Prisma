@@ -5,6 +5,7 @@ import { parseTrackInfo } from "../../music_library/model/trackInfo";
 import { mediaTitle } from "../ui/formatters";
 import { FLYOUT_SETTINGS_EVENT, getFlyoutSettings, type FlyoutSettings } from "./flyoutSettings";
 import type { usePlaybackController } from "../usePlaybackController";
+import { isFlyoutMediaShortcut } from "./flyoutTriggers";
 
 interface UseFlyoutSyncParams {
   playback: ReturnType<typeof usePlaybackController>;
@@ -31,8 +32,31 @@ export function useFlyoutSync({
   onNextVideo,
   onPrevVideo,
 }: UseFlyoutSyncParams) {
-  const lastActiveMediaRef = useRef<string | null>(null);
   const lastStateRef = useRef<Record<string, unknown> | null>(null);
+
+  // Manual transport commands present the panel; metadata updates only sync it.
+  useEffect(() => {
+    let disposed = false;
+    const show = () => {
+      if (disposed) return;
+      const settings = getFlyoutSettings();
+      if (settings.enabled) void invoke("flyout_show", { zone: settings.zone }).catch(() => {});
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isFlyoutMediaShortcut(event)) return;
+      // Wait for the music/video handler to confirm it accepted the shortcut.
+      window.setTimeout(() => { if (event.defaultPrevented) show(); }, 0);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    const subscription = listen<string>("prisma://smtc-action", ({ payload }) => {
+      if (["play", "pause", "next", "previous"].includes(payload)) show();
+    });
+    return () => {
+      disposed = true;
+      window.removeEventListener("keydown", onKeyDown);
+      void subscription.then((unlisten) => unlisten());
+    };
+  }, []);
 
   useEffect(() => {
     const subscription = listen("prisma://flyout-request-state", () => {
@@ -110,7 +134,6 @@ export function useFlyoutSync({
     let artworkUrl: string | null = null;
     let isPlaying = false;
     let mediaType: "audio" | "video" = "audio";
-    const currentMediaId = isVideoActive ? activeVideoPath : currentAudioPath;
 
     if (isVideoActive && activeVideoPath) {
       mediaType = "video";
@@ -139,15 +162,6 @@ export function useFlyoutSync({
     lastStateRef.current = state;
     void emit("prisma://flyout-state-sync", state);
 
-    if (currentMediaId && currentMediaId !== lastActiveMediaRef.current) {
-      const isInitial = lastActiveMediaRef.current === null;
-      lastActiveMediaRef.current = currentMediaId;
-      if (!isInitial && settings.enabled) {
-        void invoke("flyout_show", {
-          zone: settings.zone,
-        }).catch(() => {});
-      }
-    }
   }, [
     isVideoActive,
     activeVideoPath,

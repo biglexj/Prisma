@@ -68,3 +68,11 @@
 - [x] Migrar una vez la duración guardada e incluir 2 s en Configuración.
 - [x] Verificar el vencimiento dos segundos después de la última interacción, las pruebas relacionadas y la compilación web.
 - [ ] Confirmar visualmente el nuevo plazo; la captura de teclas en 0 % y 100 % sigue en revisión.
+
+## Apertura por comandos explícitos — 2026-09-30
+
+- [x] Eliminar la apertura automática al cambiar `currentAudioPath` o `activeVideoPath`.
+- [x] Conservar la sincronización de metadatos sin abrir ni extender el temporizador.
+- [x] Abrir por F6/F7/F8 y teclas multimedia cuando el reproductor acepta la pulsación, y por comandos SMTC explícitos.
+- [x] Verificar clasificación de teclas, compilación web y pruebas relacionadas.
+- [ ] Confirmar en Prisma cambio automático sin aparición, atajos multimedia y volumen en música y vídeo.
