@@ -1,9 +1,11 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import { CustomSelect, type CustomSelectOption } from "../../../shared/ui/CustomSelect";
 import { useMediaConverter } from "../hooks/useMediaConverter";
 import type { WatermarkLogoPlacement, WatermarkPosition } from "../../visual_library/model/watermark";
 import type { ConversionMode } from "../model/types";
+import { quickLookClient } from "../../quick_look/tauri/client";
 import "./prisma-convert.css";
 
 const IMAGE_FORMATS = ["webp", "jpg", "png", "avif", "bmp", "tiff", "gif"];
@@ -91,6 +93,20 @@ const AUDIO_TRANSCODE_BITRATE_OPTIONS: CustomSelectOption<string>[] = [
 ];
 
 export function PrismaConvertView() {
+  const [openingOutput, setOpeningOutput] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const previewOutput = async (path: string) => {
+    setOpeningOutput(path);
+    setPreviewError(null);
+    try {
+      const opened = await quickLookClient.showFile(path);
+      if (!opened) setPreviewError("No se pudo abrir el archivo convertido. Comprueba que siga en la ruta de salida.");
+    } catch {
+      setPreviewError("No se pudo abrir la vista previa del archivo convertido. Inténtalo de nuevo.");
+    } finally {
+      setOpeningOutput(null);
+    }
+  };
   const {
     inputError,
     status,
@@ -195,6 +211,7 @@ export function PrismaConvertView() {
       </header>
 
       {inputError && <p role="alert" style={{ whiteSpace: "pre-line" }}>{inputError}</p>}
+      {previewError && <p role="alert">{previewError}</p>}
       <nav className="convert-mode-tabs" aria-label="Modo de conversión">
         <button
           className={`convert-mode-btn ${mode === "image" ? "is-active" : ""}`}
@@ -965,16 +982,30 @@ export function PrismaConvertView() {
                       ) : null}
                     </td>
                     <td style={{ textAlign: "right" }}>
-                      <button
-                        className="convert-btn is-danger"
-                        disabled={isRunning}
-                        onClick={() => removeItem(item.id)}
-                        style={{ padding: "0.3rem 0.5rem" }}
-                        title="Eliminar de la cola"
-                        type="button"
-                      >
-                        <Icon name="trash" />
-                      </button>
+                      <div className="convert-result-actions">
+                        {item.status === "completed" && item.outputPath ? (
+                          <button
+                            className="convert-btn is-primary convert-preview-btn"
+                            disabled={openingOutput !== null}
+                            onClick={() => void previewOutput(item.outputPath)}
+                            title={`${IMAGE_FORMATS.includes(item.targetFormat.toLowerCase()) ? "Ver imagen convertida" : "Reproducir archivo convertido"}: ${item.outputPath}`}
+                            type="button"
+                          >
+                            <Icon name={IMAGE_FORMATS.includes(item.targetFormat.toLowerCase()) ? "image" : "play"} />
+                            <span>{openingOutput === item.outputPath ? "Abriendo…" : IMAGE_FORMATS.includes(item.targetFormat.toLowerCase()) ? "Ver imagen" : "Reproducir"}</span>
+                          </button>
+                        ) : null}
+                        <button
+                          className="convert-btn is-danger"
+                          disabled={isRunning}
+                          onClick={() => removeItem(item.id)}
+                          style={{ padding: "0.3rem 0.5rem" }}
+                          title="Eliminar de la cola"
+                          type="button"
+                        >
+                          <Icon name="trash" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

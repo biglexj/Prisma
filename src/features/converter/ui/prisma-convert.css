@@ -250,6 +250,19 @@
   align-items: center;
 }
 
+.convert-result-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.convert-result-actions .convert-preview-btn {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
 .convert-btn {
   display: inline-flex;
   align-items: center;

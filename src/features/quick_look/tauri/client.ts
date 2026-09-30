@@ -2,6 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import type { QuickLookPayload } from "../model/types";
 
 export const quickLookClient = {
+  showFile(path: string): Promise<boolean> {
+    return invoke("quick_look_show_file", { path });
+  },
+
   hide(): Promise<void> {
     return invoke("quick_look_hide");
   },
