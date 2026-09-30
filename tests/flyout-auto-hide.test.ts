@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { createFlyoutAutoHide } from "../src/features/playback/services/flyoutAutoHide";
 
-function fixture() {
+function fixture(durationMs = 1000) {
   let now = 0;
   let sequence = 0;
   let held = false;
   let hidden = 0;
   const timers = new Map<number, { at: number; callback: () => void }>();
   const flyout = createFlyoutAutoHide({
-    duration: () => 1000,
+    duration: () => durationMs,
     isHeld: () => held,
     hide: () => { hidden++; },
     schedule: (callback, delay) => {
@@ -33,6 +33,18 @@ function fixture() {
 }
 
 describe("flyout auto hide", () => {
+  test("two-second duration expires two seconds after the last interaction", () => {
+    const f = fixture(2000);
+    f.flyout.shown();
+    f.advance(1500);
+    expect(f.hidden()).toBe(0);
+    f.flyout.activity();
+    f.advance(1999);
+    expect(f.hidden()).toBe(0);
+    f.advance(1);
+    expect(f.hidden()).toBe(1);
+  });
+
   test("hides exactly one second after presentation", () => {
     const f = fixture();
     f.flyout.shown();

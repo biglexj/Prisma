@@ -601,10 +601,10 @@ export function AppSettings({
                         <div className="system-toggle-item">
                           <div className="system-toggle-info">
                             <strong>Duración en Pantalla</strong>
-                            <p>Tiempo antes de ocultarse automáticamente (1 segundo predeterminado).</p>
+                            <p>Tiempo antes de ocultarse automáticamente (2 segundos predeterminados).</p>
                           </div>
                           <div style={{ display: "flex", gap: 8 }}>
-                            {[1000, 1500, 3000, 5000].map((ms) => (
+                            {[1000, 1500, 2000, 3000, 5000].map((ms) => (
                               <button
                                 key={ms}
                                 type="button"

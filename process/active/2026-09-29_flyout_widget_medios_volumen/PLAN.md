@@ -62,7 +62,7 @@ Biglex solicita reemplazar el indicador de volumen de Windows con el de Prisma: 
 
 ## Refinamiento solicitado durante las pruebas
 
-- Autoocultar ambas tarjetas tras un segundo sin interacción; las notificaciones de sincronización y la reproducción no prolongan el plazo.
+- Autoocultar ambas tarjetas tras dos segundos sin interacción (ajuste solicitado el 2026-09-30); las notificaciones de sincronización y la reproducción no prolongan el plazo.
 - Radio exterior de 10 px, reducido a petición de Biglex.
 - Sustituir el historial de amplitud por tres barras animadas junto al título. Es un indicador decorativo de reproducción solicitado por Biglex, no un análisis de frecuencias ni una medición de audio.
 - Desactivar una sola vez el anclaje guardado por versiones anteriores. El botón Fijar sigue permitiendo activar explícitamente el modo persistente.

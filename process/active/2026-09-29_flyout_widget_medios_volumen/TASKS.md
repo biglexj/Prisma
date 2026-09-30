@@ -61,3 +61,10 @@
 - [x] Ampliar a cinco barras desfasadas dentro del mismo espacio y conservar colores dinámicos.
 - [x] Verificar compilaciones web/nativa y 16 pruebas del flyout.
 - [ ] Confirmar físicamente reacción y autoocultado en ambos límites, con reproducción y sin ella.
+
+## Duración de dos segundos — 2026-09-30
+
+- [x] Cambiar la duración predeterminada y de recuperación a 2000 ms para ambas tarjetas.
+- [x] Migrar una vez la duración guardada e incluir 2 s en Configuración.
+- [x] Verificar el vencimiento dos segundos después de la última interacción, las pruebas relacionadas y la compilación web.
+- [ ] Confirmar visualmente el nuevo plazo; la captura de teclas en 0 % y 100 % sigue en revisión.

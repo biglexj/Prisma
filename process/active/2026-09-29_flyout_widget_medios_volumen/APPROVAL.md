@@ -22,3 +22,7 @@ Implementación del sistema nativo de Flyout y Mini Widget multimedia de escrito
 - Aceptación visual y prueba de teclas físicas pendientes. El proceso sigue `EN CURSO`; la compilación no acredita ausencia de indicadores duplicados ni continuidad de audio.
 - Biglex solicitó después autoocultado de un segundo, esquinas menos redondeadas y tres barras animadas junto al título. Cambios implementados y pruebas técnicas registradas; aceptación del comportamiento real pendiente.
 - Reporte posterior de persistencia al 100 %: autorizada la corrección del ciclo nativo de visibilidad y ampliación del indicador a entre tres y cinco barras. Implementadas cinco barras, reacción en límites y cierre nativo coherente; compilaciones y 16 pruebas correctas. Comprobación física solicitada, aún pendiente.
+## Duración de dos segundos — 2026-09-30
+
+- Cambio autorizado directamente por Biglex: aumentar de uno a dos segundos para ocultarse.
+- Implementado y comprobado técnicamente; confirmación visual del nuevo plazo pendiente.

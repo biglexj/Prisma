@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import {
-  FLYOUT_SETTINGS_EVENT, getFlyoutSettings, saveFlyoutSettings,
+  DEFAULT_FLYOUT_SETTINGS, FLYOUT_SETTINGS_EVENT, getFlyoutSettings, saveFlyoutSettings,
   type FlyoutSettings, type FlyoutZone,
 } from "../services/flyoutSettings";
 import { createSystemVolumeWriter, type SystemVolumeState } from "../services/systemVolumeWriter";
@@ -76,7 +76,7 @@ export function FlyoutWindow() {
     let disposed = false;
     let presentationReceived = false;
     const autoHide = createFlyoutAutoHide({
-      duration: () => settingsRef.current.durationMs || 1000,
+      duration: () => settingsRef.current.durationMs || DEFAULT_FLYOUT_SETTINGS.durationMs,
       isHeld: () => settingsRef.current.isPinned || Boolean(containerRef.current?.querySelector(".prisma-flyout-card:hover")),
       hide: () => { void invoke("flyout_hide").catch(console.error); },
       schedule: (callback, delay) => window.setTimeout(callback, delay),

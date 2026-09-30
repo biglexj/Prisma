@@ -24,7 +24,7 @@ const STORAGE_KEY = "prisma:flyout_settings";
 export const DEFAULT_FLYOUT_SETTINGS: FlyoutSettings = {
   enabled: true,
   zone: "bottom-left",
-  durationMs: 1000,
+  durationMs: 2000,
   stackVolumeOnTop: true,
   showSpectrum: true,
   isPinned: false,
@@ -37,9 +37,9 @@ export function getFlyoutSettings(): FlyoutSettings {
     if (!raw) return DEFAULT_FLYOUT_SETTINGS;
     const saved = JSON.parse(raw);
     let migrated = false;
-    if (saved.durationVersion !== 2) {
-      saved.durationMs = 1000;
-      saved.durationVersion = 2;
+    if (saved.durationVersion !== 3) {
+      saved.durationMs = DEFAULT_FLYOUT_SETTINGS.durationMs;
+      saved.durationVersion = 3;
       migrated = true;
     }
     if (saved.autoHideVersion !== 1) {
@@ -58,7 +58,7 @@ export function saveFlyoutSettings(settings: Partial<FlyoutSettings>): FlyoutSet
   const current = getFlyoutSettings();
   const next = { ...current, ...settings };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...next, durationVersion: 2, autoHideVersion: 1 }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...next, durationVersion: 3, autoHideVersion: 1 }));
   } catch (err) {
     console.error("Error guardando flyout settings:", err);
   }

@@ -86,3 +86,11 @@
 - `bun test tests/flyout-auto-hide.test.ts tests/flyout-media.test.ts tests/system-volume-writer.test.ts`: 16/16, 47 comprobaciones. Incluye nuevas presentaciones repetidas sin cambio de volumen y expiración tras la última pulsación.
 - Watcher nativo existente: compilación correcta en 12,57 s y ejecución de `target/debug/prisma.exe`. No se inició otra instancia de Prisma.
 - `git diff --check`: correcto. Aceptación física de autoocultado y animación pendiente; se pidió comprobar la tecla soltada y el ratón fuera del panel. El anclaje o mantener el ratón sobre el contenido siguen suspendiendo el autoocultado según el comportamiento vigente.
+# Ajuste de duración — 2026-09-30
+
+- Biglex confirmó que ambos paneles ya se ocultan y solicitó ampliar el plazo de 1 a 2 segundos.
+- Duración predeterminada: 2000 ms. Migración `durationVersion: 3` para actualizar la configuración anterior una sola vez; las elecciones posteriores se conservan.
+- La tarjeta de volumen y la multimedia comparten el temporizador. Se mantienen el anclaje explícito y la retención mientras se interactúa con el panel.
+- `bun test tests/flyout-auto-hide.test.ts tests/flyout-media.test.ts tests/system-volume-writer.test.ts`: 17 pruebas correctas, 50 aserciones; incluye plazo de dos segundos desde la última interacción.
+- `bun run build`: TypeScript y Vite correctos, 277 módulos. Advertencia preexistente de tamaño del bundle.
+- Comprobación visual del nuevo plazo pendiente. Esta compilación web no actualiza el ejecutable instalado.
