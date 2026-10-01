@@ -23,7 +23,7 @@ if ($package.version -ne $Version -or $tauri.version -ne $Version -or $cargoVers
 if ($ReleaseNotes) { throw 'Use RELEASE_MESSAGE.md as the canonical public message.' }
 $notesPath = Join-Path $root 'RELEASE_MESSAGE.md'
 $notes = [IO.File]::ReadAllText($notesPath, [Text.Encoding]::UTF8)
-if (-not $notes.Contains("Prisma $Version") -or $notes -match '(?i)[a-z]:[\\/]') { throw 'Invalid public release message.' }
+if (-not $notes.Contains("Prisma $Version") -or $notes -match '(?i)(?<![a-z])[a-z]:[\\/]') { throw 'Invalid public release message.' }
 $tag = "v$Version"
 $installer = Join-Path $root "release/Prisma_$($Version)_x64-setup.exe"
 $assetName = Split-Path $installer -Leaf
