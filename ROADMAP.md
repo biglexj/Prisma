@@ -21,6 +21,16 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🟡 Intermedio (Prioridad Media/Baja)
 
+Ideas de evolución registradas el 1 de octubre de 2026 para el uso personal de Biglex. Se evaluarán según necesidades reales; no tienen fecha comprometida ni carácter urgente.
+
+- [ ] **Conversión de Imágenes a PDF y de PDF a Imágenes**: Crear un PDF a partir de una o varias imágenes con orden de páginas configurable; exportar todas las páginas o una selección de un PDF como imágenes, con formato y resolución de salida ajustables.
+- [ ] **Colecciones por Proyecto**: Reunir vídeos, imágenes, música y referencias de un trabajo mediante vínculos a sus archivos originales, sin moverlos. Añadir notas y estados como «Seleccionado», «Revisar» o «Listo».
+- [ ] **Búsqueda y Filtros Ampliados**: Complementar la búsqueda existente con etiquetas y datos técnicos como cámara, resolución, fps, códec, duración y fecha. Permitir guardar búsquedas como colecciones que se actualicen según esos criterios.
+- [ ] **Comparación de Resultados del Conversor**: Revisar original y resultado lado a lado; para vídeo, sincronizar el instante de reproducción. Mostrar diferencias de tamaño de archivo, resolución y parámetros de salida para valorar el resultado.
+- [ ] **Preparación de Material para DaVinci Resolve**: Ampliar el marcado de tomas existente con selección de fragmentos, notas y preparación de material para edición; contemplar proxies vinculados a los originales y exportación de la selección con sus referencias.
+- [ ] **Vista de Color para Cámaras**: Aplicar una LUT de previsualización y alternar original/transformado sin modificar el archivo. Evaluar después perfiles de cámara y exportación con transformación de color, validando el espacio de entrada y salida.
+- [ ] **Presets Opcionales del Conversor**: Considerar ajustes guardados por Biglex para tareas recurrentes y, si llega a existir demanda de otros usuarios, perfiles prácticos de edición o envío. Idea de menor interés actual; conservar el acceso a los controles manuales.
+
 - [ ] **Atajos de teclado configurables**: Personalización interactiva de atajos de teclado desde la vista de Configuración.
 ---
 
