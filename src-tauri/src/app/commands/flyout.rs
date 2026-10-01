@@ -321,7 +321,7 @@ enum VolumeCommand {
 #[cfg(windows)]
 static VOLUME_KEYS: std::sync::OnceLock<std::sync::mpsc::Sender<VolumeCommand>> = std::sync::OnceLock::new();
 
-// Called inside WH_KEYBOARD_LL. Never perform COM or window operations here.
+// Called inside the dedicated WH_KEYBOARD_LL. No COM or window operations here.
 pub fn handle_volume_key(key: u16, pressed: bool) -> bool {
     if !ENABLED.load(Ordering::Relaxed) || !VOLUME_WORKER_READY.load(Ordering::Relaxed) { return false; }
     #[cfg(windows)]
@@ -402,6 +402,8 @@ pub fn init_system_volume_listener(app: AppHandle) {
                 }
                 match receiver.recv_timeout(std::time::Duration::from_millis(100)) {
                     Ok(VolumeCommand::Key(key)) => {
+                        #[cfg(debug_assertions)]
+                        eprintln!("[Flyout] Pulsación capturada: {key:?}");
                         if let Ok(current) = native::read() {
                             let next = next_volume(current, key);
                             let at_limit = matches!(key, VolumeKey::Up) && current.volume >= 100.0
@@ -428,6 +430,7 @@ pub fn init_system_volume_listener(app: AppHandle) {
                 }
             }
         });
+        crate::infrastructure::media::volume_keys::start(handle_volume_key);
     }
     #[cfg(not(windows))]
     { let _ = app; }

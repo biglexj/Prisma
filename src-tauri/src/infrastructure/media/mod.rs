@@ -5,6 +5,8 @@ pub mod passthru;
 pub mod smtc;
 pub mod system_volume;
 pub mod system_media;
+#[cfg(windows)]
+pub mod volume_keys;
 
 use crate::features::playback::backend::PlaybackBackend;
 

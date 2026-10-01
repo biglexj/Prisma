@@ -214,12 +214,9 @@ pub mod windows_hook {
         let msg_type = w_param.0 as u32;
         let is_key_down = msg_type == WM_KEYDOWN || msg_type == WM_SYSKEYDOWN;
 
-        // Consume only when the enabled flyout has accepted the event. COM and
-        // UI operations run on its serial worker, outside this low-level hook.
+        // Volume has its own lightweight hook. This thread also serves Explorer
+        // queries and must not own or duplicate volume-key interception.
         if vk_code == 0xAF || vk_code == 0xAE || vk_code == 0xAD {
-            if crate::app::commands::flyout::handle_volume_key(vk_code, is_key_down) {
-                return LRESULT(1);
-            }
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
         }
 
