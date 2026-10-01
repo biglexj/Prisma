@@ -21,3 +21,13 @@ Las pruebas físicas pendientes del ciclo anterior se mantienen: reconexión de 
 
 ## Publicación posterior
 El script de publicación existente contiene operaciones forzadas de Git. La preparación usa exclusivamente `-LocalOnly`, que sale antes de esa rama. Para publicar, primero reconciliar el snapshot, verificar de nuevo la versión remota y usar un flujo sin reetiquetado ni push forzado. La autorización de publicación sigue pendiente.
+
+## Lanzamiento autorizado — 2026-10-01
+
+- Se sustituye el flujo antiguo por preflight, push atómico sin forzado, etiquetas inmutables, comprobación del asset y sincronización mediante POST /api/admin/developer-app-releases.
+- Preflight remoto correcto: 1.1.7 libre; Aurora identificada mediante su API pública; código siguiente 10107; acceso administrativo verificado sin exponer credenciales.
+- Se incorporan los tres cambios concurrentes de SMTC que ya formaban parte del instalador preparado. Se mantiene pendiente su validación física y no se afirma que SMTC esté habilitado.
+- La reutilización del instalador fue rechazada por diferencia de checksum y tamaño frente al manifiesto. Se recompila el snapshot revisado antes de publicar; el manifiesto se actualizará exclusivamente con el resultado de esa compilación.
+- Pruebas repetidas tras reconciliar el snapshot: 41 correctas, 0 fallos, 111 aserciones, 8 archivos.
+- El ejecutable local no tiene firma Authenticode; no hay certificado de firma configurado en el empaquetado vigente.
+- Recompilación de lanzamiento terminada correctamente (TypeScript, Vite, Rust y NSIS). SHA-256: 4bca056371a7b9135a6e126b89d8c196b9ad0ba1f69c2bfd9c2c2273c3d86c50; bytes: 164294760. Bundle nativo y copia coinciden. CSS final index-D4pAbZSo.css.

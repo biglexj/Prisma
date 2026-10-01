@@ -93,6 +93,7 @@ if (-not $LocalOnly) {
     }
 }
 if (-not $SkipBuild -and -not $SyncAuroraOnly) {
+    Invoke-CheckedNative bun @('test','tests')
     Invoke-CheckedNative bun @('run','tauri','build')
     Invoke-CheckedNative bun @('scripts/copy-build-releases.ts')
 }
@@ -121,11 +122,13 @@ if ($SkipBuild -and -not $SyncAuroraOnly) {
     Write-Host 'Prepared installer and source snapshot verified.'
 }
 [IO.File]::WriteAllText("$installer.sha256", "$hash  $assetName" + [Environment]::NewLine, (New-Object Text.UTF8Encoding($false)))
+$sumsFile = Join-Path (Split-Path $installer -Parent) 'SHA256SUMS.txt'
+[IO.File]::WriteAllText($sumsFile, "$hash  $assetName" + [Environment]::NewLine, (New-Object Text.UTF8Encoding($false)))
 if ($LocalOnly) { Write-Host "Local installer verified: $assetName ($hash)"; exit 0 }
 if (-not $SyncAuroraOnly) {
     Invoke-CheckedNative git @('tag','-a',$tag,'-m',"Prisma $Version")
     Invoke-CheckedNative git @('push','--atomic','origin','HEAD:refs/heads/preview','HEAD:refs/heads/main',"refs/tags/$tag")
-    Invoke-CheckedNative gh @('release','create',$tag,$installer,"$installer.sha256",'--repo',$repo,'--verify-tag','--latest','--title',"Prisma $Version",'--notes-file',$notesPath)
+    Invoke-CheckedNative gh @('release','create',$tag,$installer,"$installer.sha256",$sumsFile,'--repo',$repo,'--verify-tag','--latest','--title',"Prisma $Version",'--notes-file',$notesPath)
 }
 $published = Get-GitHubRelease
 if ($published.draft -or $published.prerelease -or $published.tag_name -ne $tag -or $published.body.Trim() -ne $notes.Trim()) { throw 'GitHub release readback differs from the prepared release.' }
