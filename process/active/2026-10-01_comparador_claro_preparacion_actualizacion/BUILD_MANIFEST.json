@@ -1,0 +1,20 @@
+{
+  "version": "1.1.7",
+  "platform": "windows",
+  "architecture": "x64",
+  "format": "nsis exe",
+  "file": "Prisma_1.1.7_x64-setup.exe",
+  "bytes": 164302387,
+  "sha256": "3f722c6cb589ce5e87a4384f55cc910170527f4cbfe28bcad5ff52aea852271b",
+  "builtAt": "2026-10-01T09:19:14.4103358-05:00",
+  "sourceCommit": "636ee5fcd90fc432d4084fd739430f5e599b695d",
+  "uncommittedSourceHashes": {
+    "src-tauri/src/infrastructure/media/smtc.rs": "9CD7A769CBBD3A3E66420EA2416CD40DCC44AA85A3F4A663DA41F4D368A18AC3",
+    "src/features/playback/services/useMediaSessionSync.ts": "9317D83C4E3305B1019E69BC2342FDB0679B3090F56517BF81CD178D3D6A794B",
+    "src/features/visual_library/ui/VideoPlayer.tsx": "810587558410612E4DE7C4474159DAA259AB571AE412356A26154A5D89DBF53F"
+  },
+  "published": false,
+  "installedTested": false,
+  "automatedTests": 41,
+  "productionCss": "index-D4pAbZSo.css"
+}

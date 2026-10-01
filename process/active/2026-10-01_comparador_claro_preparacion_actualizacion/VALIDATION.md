@@ -10,7 +10,9 @@ El comparador sobrescribía los roles del tema con una paleta oscura fija, inclu
 - Capturas en `temp/comparador-claro.png`, `temp/comparador-oscuro.png`, `temp/selector-comparador-claro.png` y `temp/selector-comparador-oscuro.png`.
 - `bun test tests`: 41 pruebas correctas, 0 fallos, 111 aserciones, 8 archivos.
 - `git diff --check`: correcto.
-- Primera compilación de escritorio correcta, Tauri release + NSIS. Recompilación final necesaria para incluir un ajuste de filtros realizado después de la lectura del CSS durante la primera compilación.
+- Primera compilación de escritorio correcta, Tauri release + NSIS. La recompilación final también terminó correctamente y contiene el ajuste posterior de filtros (`index-D4pAbZSo.css`, comprobada la presencia de `.img-compare-kind-pills`). TypeScript, Vite y Rust correctos. Advertencia preexistente de tamaño del bundle web; no bloquea el empaquetado.
+- Instalador final: `release/Prisma_1.1.7_x64-setup.exe`. Se verificó su coincidencia SHA-256 con el bundle nativo y la estabilidad de los tres archivos concurrentes durante la compilación. Tamaño, fecha, checksum y fuentes exactas registrados en `BUILD_MANIFEST.json`; archivo `.sha256` junto al instalador.
+- Checkpoints locales: `2511cd1` (comparador/notas/proceso) y `636ee5f` (captura dedicada de volumen). Los tres cambios concurrentes de SMTC permanecen sin alterar ni incluir en esos commits.
 
 ## Límites de la evidencia
 La revisión del navegador prueba la presentación con los componentes reales. No prueba la apertura nativa, el arrastre a otra aplicación ni la reproducción de archivos: esas operaciones requieren el entorno Tauri. No se ha instalado esta actualización ni se ha publicado.

@@ -1,3 +1,6 @@
 # Autorización
 
 Biglex solicita crear el modo claro del comparador y compilar/preparar la actualización. Se autoriza esta preparación local. Publicación pendiente de indicación expresa; no se crean etiquetas ni se sube el instalador.
+
+## Resultado
+Implementación, revisión visual, pruebas existentes y compilación de escritorio completas. Instalador y notas preparados localmente para revisión. El proceso permanece activo hasta la decisión del usuario y las comprobaciones reales pendientes; no se declara aprobada ni publicada la versión.
