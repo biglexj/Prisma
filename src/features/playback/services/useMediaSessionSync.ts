@@ -6,6 +6,7 @@ import type { PlaybackSnapshot } from "../model/types";
 import type { MusicQueueItem } from "../model/queue";
 import { parseTrackInfo } from "../../music_library/model/trackInfo";
 import { mediaTitle } from "../ui/formatters";
+import { getFlyoutSettings } from "./flyoutSettings";
 
 export const SILENT_AUDIO_URI = "";
 
@@ -109,6 +110,13 @@ export function useMediaSessionSync({
     if (isVideoActive) {
       return;
     }
+    const flyoutSettings = getFlyoutSettings();
+    if (flyoutSettings.enabled) {
+      // Cuando el Flyout integrado de Prisma está habilitado, mantenemos el SMTC nativo cerrado
+      // para evitar que Windows despliegue su overlay duplicado del sistema.
+      void invoke("smtc_clear").catch(() => {});
+      return;
+    }
     if (!effectivePath) {
       void invoke("smtc_clear").catch(() => {});
       return;
@@ -140,6 +148,11 @@ export function useMediaSessionSync({
   // 4. Sincronización del estado de reproducción (Playing / Paused) con SMTC nativo
   useEffect(() => {
     if (isVideoActive || !effectivePath) {
+      return;
+    }
+    const flyoutSettings = getFlyoutSettings();
+    if (flyoutSettings.enabled) {
+      void invoke("smtc_clear").catch(() => {});
       return;
     }
 

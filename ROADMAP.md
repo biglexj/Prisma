@@ -11,7 +11,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 - [ ] **Flyout & Mini Widget de Escritorio para Medios y Volumen**: Overlay nativo y autónomo de escritorio en Tauri v2 sin dependencias externas (como FluentFlyout), con tarjeta de reproducción multimedia (carátulas HD, fotogramas de vídeo, metadata y transporte), cápsula de volumen interactiva, posicionamiento paramétrico en 6 zonas de pantalla respetando el área de trabajo de Windows, visualizador de audio reactivo integrado y modo anclado (Pin) para operar como widget de escritorio continuo.
 - [ ] **Miniaturas al arrastrar archivos fuera de Prisma**: Mostrar portada, miniatura o fotograma en el cursor de arrastre para imágenes, música y vídeos; queda pendiente la revisión visual y la entrega real en Windows.
 - [ ] **Inicio con archivos recientes y editor de imagen estable**: Implementados estantes por fecha de creación o modificación, arrastre nativo desde Inicio, vista previa de recorte con Enter, pincel directo, marca de agua desplazable, selector PNG/JPEG/WebP al guardar una copia y ocultación de avisos de audio en el visor de fotos. Pendiente prueba manual del arrastre hacia otra aplicación y del flujo completo de edición/guardado en Prisma de desarrollo.
-- [X] **Salidas de Audio Múltiples Simultáneas (Multi-Device Audio Routing / Output)**: Enrutamiento simultáneo de la señal de reproducción hacia dos o más dispositivos de audio físicos o inalámbricos (altavoces principales, auriculares, altavoces Bluetooth, interfaces USB) al estilo Virtual DJ, con selector múltiple en el Ecualizador / DSP, volumen independiente, retardo manual por salida en pasos de 10 ms, atajo local `Ctrl+Mayús+O` y segundo atajo global `Ctrl+Mayús+Alt+O`. La calibración automática de latencia queda como mejora posterior, sujeta a medición fiable por dispositivo.
+- [X] **Salidas de Audio Múltiples Simultáneas (Multi-Device Audio Routing / Output)**: Enrutamiento simultáneo de la señal de reproducción hacia dos o más dispositivos de audio físicos o inalámbricos (altavoces principales, auriculares, altavoces Bluetooth, interfaces USB) al estilo Virtual DJ, con selector múltiple en el Ecualizador / DSP, volumen independiente, retardo manual por salida en pasos de 10 ms, atajo local `Ctrl+Mayús+O` y segundo atajo global `Ctrl+Mayús+Alt+P`. La calibración automática de latencia queda como mejora posterior, sujeta a medición fiable por dispositivo.
 - [x] **Arrastre Nativo Universal hacia Apps Externas (Drag & Drop OS: DaVinci, Affinity, Krita, etc.)**: Soporte nativo del sistema operativo para mantener pulsado y arrastrar cualquier archivo (vídeos, fotos, música, documentos PDF, etc.) desde las cuadrículas o visores de Prisma directamente hacia aplicaciones externas como Affinity (Photo, Designer, Publisher), Krita, DaVinci Resolve, Photoshop o el Explorador de Windows mediante OLE `CF_HDROP`.
 - [x] **Marca de Agua Visual y Metadatos de Autoría (Individual y por Lotes)**: Estampado paramétrico de marca de agua (logo PNG y texto con fecha/autor, escala, opacidad y anclaje adaptativo a esquinas, bordes o centro, basado en el estándar de Super Galería) en el Editor de Imágenes y en el Convertidor Prisma, junto con inyección de metadatos de derechos y autoría.
 - [x] **Normalización de Volumen y ReplayGain Conmutable en DSP**: Nivelación acústica automática en el pipeline WASAPI con botón de encendido/apagado en el Ecualizador y atajo de teclado dedicado.
@@ -44,15 +44,12 @@ Ideas de evolución registradas el 1 de octubre de 2026 para el uso personal de 
 
 ## 🟢 Completado
 
-- [x] **v1.1.7**
-  - **Identidad SMTC Nativa para Vídeo y Miniaturas Reales**:
-    - Extensión en Rust de `NativeSmtcManager` con `MediaPlaybackType::Video` y propiedades nativas de vídeo.
-    - Extracción de fotogramas de vídeo en JPEG para alimentar la miniatura del flyout multimedia en Windows 10/11.
-    - Inactivación de sesiones secundarias y genéricas de WebView2 (`--disable-features=HardwareMediaKeyHandling`).
-    - Recepción de controles de transporte físico de hardware (`prisma://smtc-action`) en el reproductor de vídeo.
-  - **OSD de Volumen Global Material 3 Expressive**:
-    - Indicador flotante superior fijo a nivel de aplicación (`App.tsx`) con acento tonal, micro-animaciones elásticas y memoria de volumen al silenciar.
-    - Despliegue unificado al ajustar ganancia con atajos de teclado (`↑` / `↓`, `+` / `-`, `M`), deslizadores de previsualización o mandos remotos.
+- [x] **v1.1.7 — 1 de octubre de 2026**
+  - Comparador multimedia integrado con modo claro, modo oscuro y colores dinámicos del tema.
+  - Flyout de volumen global con ocultación tras dos segundos, visualizador y acceso a la aplicación multimedia.
+  - Continuidad al pasar de la última cola a la primera, información musical y disposición estable del reproductor.
+  - Vista previa del resultado del conversor, arrastre con miniaturas y ajustes del editor de imágenes.
+  - Recuperación de salidas de audio disponibles y atajo global `Ctrl+Mayús+Alt+P`.
   - **Transferencias en Segundo Plano a Super Galería (Móvil)**:
     - Envíos por red local desacoplados de la interfaz: capacidad de ocultar el modal con una píldora flotante animada de progreso en tiempo real.
     - Alternancia inteligente y segura entre botones «Ocultar» y «Cancelar».

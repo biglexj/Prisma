@@ -38,7 +38,8 @@ pub mod windows_impl {
                     .map_err(|e| format!("Error en GetForWindow: {e}"))?
             };
 
-            let _ = controls.SetIsEnabled(true);
+            // SMTC se mantiene deshabilitado para evitar que Windows 11 despliegue su OSD duplicado
+            let _ = controls.SetIsEnabled(false);
             let _ = controls.SetIsPlayEnabled(true);
             let _ = controls.SetIsPauseEnabled(true);
             let _ = controls.SetIsStopEnabled(true);
@@ -83,7 +84,7 @@ pub mod windows_impl {
         }
 
         pub fn set_playback_status(&self, is_playing: bool) {
-            let _ = self.controls.SetIsEnabled(true);
+            let _ = self.controls.SetIsEnabled(false);
             let status = if is_playing {
                 MediaPlaybackStatus::Playing
             } else {
@@ -104,7 +105,7 @@ pub mod windows_impl {
                 return;
             };
 
-            let _ = self.controls.SetIsEnabled(true);
+            let _ = self.controls.SetIsEnabled(false);
             let _ = self.controls.SetIsPlayEnabled(true);
             let _ = self.controls.SetIsPauseEnabled(true);
             let _ = self.controls.SetIsStopEnabled(true);

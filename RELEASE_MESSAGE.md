@@ -10,7 +10,7 @@ Una actualización centrada en el comparador, el control de volumen y la comodid
 
 ## 📦 Windows x64
 
-[Descargar Prisma 1.1.7](https://github.com/biglexj/Prisma/releases/download/v1.1.7/Prisma_1.1.7_x64-setup.exe)
+[Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.7/Prisma_1.1.7_x64-setup.exe)
 
 ## 💖 Apoya el desarrollo
 

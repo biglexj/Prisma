@@ -3,6 +3,7 @@ import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { formatTime, mediaTitle } from "../../playback/ui/formatters";
+import { getFlyoutSettings } from "../../playback/services/flyoutSettings";
 import { Icon } from "../../../shared/ui/Icon";
 import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
 import { ContextMenu } from "../../../shared/ui/ContextMenu";
