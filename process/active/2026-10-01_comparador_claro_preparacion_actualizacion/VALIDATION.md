@@ -1,0 +1,21 @@
+# Validación
+
+## Estado inicial
+El comparador sobrescribía los roles del tema con una paleta oscura fija, incluso en modo claro. La corrección hereda los roles existentes sin añadir un selector de tema independiente.
+
+## Comprobaciones realizadas
+- `gh release list`: última publicación 1.1.6. `git ls-remote --tags origin 'refs/tags/v1.1.7*'`: sin etiqueta. Se conserva 1.1.7.
+- Revisión del frontend real en el navegador integrado: modo claro y oscuro, paleta verde y fondo azul, vista vacía a dos columnas, cuadrícula vacía y selector de biblioteca con filtros temáticos. Cortinilla y Alternar A/B solicitan primero dos elementos, como en la lógica existente.
+- Claro: fondo del área `rgb(238, 242, 251)`, texto oscuro y botones con pares de contraste del tema. Oscuro: área `rgb(26, 27, 38)` y texto `rgb(192, 202, 245)`.
+- Capturas en `temp/comparador-claro.png`, `temp/comparador-oscuro.png`, `temp/selector-comparador-claro.png` y `temp/selector-comparador-oscuro.png`.
+- `bun test tests`: 41 pruebas correctas, 0 fallos, 111 aserciones, 8 archivos.
+- `git diff --check`: correcto.
+- Primera compilación de escritorio correcta, Tauri release + NSIS. Recompilación final necesaria para incluir un ajuste de filtros realizado después de la lectura del CSS durante la primera compilación.
+
+## Límites de la evidencia
+La revisión del navegador prueba la presentación con los componentes reales. No prueba la apertura nativa, el arrastre a otra aplicación ni la reproducción de archivos: esas operaciones requieren el entorno Tauri. No se ha instalado esta actualización ni se ha publicado.
+
+Las pruebas físicas pendientes del ciclo anterior se mantienen: reconexión de salida secundaria, respuesta repetida del volumen en 0/100 y controles multimedia del sistema. Los cambios concurrentes de SMTC en Rust y React se conservan en el árbol de trabajo y se incluyen en la compilación local; su validación física y su checkpoint siguen pendientes. El backend concurrente mantiene SMTC deshabilitado; no se afirma que los controles multimedia nativos estén revalidados.
+
+## Publicación posterior
+El script de publicación existente contiene operaciones forzadas de Git. La preparación usa exclusivamente `-LocalOnly`, que sale antes de esa rama. Para publicar, primero reconciliar el snapshot, verificar de nuevo la versión remota y usar un flujo sin reetiquetado ni push forzado. La autorización de publicación sigue pendiente.

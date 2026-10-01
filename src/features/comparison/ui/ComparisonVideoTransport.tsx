@@ -84,7 +84,7 @@ export const ComparisonVideoTransport: React.FC<ComparisonVideoTransportProps> =
               onChange={handleSliderChange}
               className="img-compare-transport-slider"
               style={{
-                background: `linear-gradient(to right, var(--color-primary, #d0bcff) ${progressPercent}%, rgba(255, 255, 255, 0.15) ${progressPercent}%)`,
+                background: `linear-gradient(to right, var(--primary) ${progressPercent}%, var(--outline-variant) ${progressPercent}%)`,
               }}
               title="Mover barra temporal sincronizada"
             />
