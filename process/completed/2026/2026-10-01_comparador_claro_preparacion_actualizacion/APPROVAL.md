@@ -8,3 +8,7 @@ Implementación, revisión visual, pruebas existentes y compilación de escritor
 ## Autorización de lanzamiento — 2026-10-01
 
 Biglex indica expresamente «lanzar la actualización» y acepta revisar posibles errores después. Autoriza publicar Prisma 1.1.7 en GitHub, avanzar main y sincronizar los metadatos de Aurora. Las pruebas físicas pendientes de reconexión de dispositivos y controles multimedia permanecen documentadas y no bloquean este lanzamiento por decisión del usuario.
+
+## Cierre — 2026-10-01
+
+Publicación autorizada y completada: GitHub release estable v1.1.7 con instalador público verificado; Aurora sincronizada y página final comprobada. Se cierra este proceso de comparador, compilación y lanzamiento. Las comprobaciones físicas pendientes conservan su condición de pendientes y no se presentan como aprobadas.

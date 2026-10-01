@@ -44,7 +44,7 @@ Ideas de evolución registradas el 1 de octubre de 2026 para el uso personal de 
 
 ## 🟢 Completado
 
-- [x] **v1.1.7 — 1 de octubre de 2026**
+- [x] **v1.1.7 — 2026-10-01**
   - Comparador multimedia integrado con modo claro, modo oscuro y colores dinámicos del tema.
   - Flyout de volumen global con ocultación tras dos segundos, visualizador y acceso a la aplicación multimedia.
   - Continuidad al pasar de la última cola a la primera, información musical y disposición estable del reproductor.

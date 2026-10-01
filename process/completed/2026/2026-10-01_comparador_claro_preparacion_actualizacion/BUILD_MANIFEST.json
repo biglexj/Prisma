@@ -13,8 +13,11 @@
     "src/features/playback/services/useMediaSessionSync.ts": "9317D83C4E3305B1019E69BC2342FDB0679B3090F56517BF81CD178D3D6A794B",
     "src/features/visual_library/ui/VideoPlayer.tsx": "810587558410612E4DE7C4474159DAA259AB571AE412356A26154A5D89DBF53F"
   },
-  "published": false,
+  "published": true,
   "installedTested": false,
   "automatedTests": 41,
-  "productionCss": "index-D4pAbZSo.css"
+  "productionCss": "index-D4pAbZSo.css",
+  "releaseCommit": "e9740f00530df35050c63cde95904a1e5a48ae0f",
+  "releaseUrl": "https://github.com/biglexj/Prisma/releases/tag/v1.1.7",
+  "versionCode": 10107
 }

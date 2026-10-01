@@ -30,4 +30,14 @@ El script de publicación existente contiene operaciones forzadas de Git. La pre
 - La reutilización del instalador fue rechazada por diferencia de checksum y tamaño frente al manifiesto. Se recompila el snapshot revisado antes de publicar; el manifiesto se actualizará exclusivamente con el resultado de esa compilación.
 - Pruebas repetidas tras reconciliar el snapshot: 41 correctas, 0 fallos, 111 aserciones, 8 archivos.
 - El ejecutable local no tiene firma Authenticode; no hay certificado de firma configurado en el empaquetado vigente.
+
+## Publicación confirmada — 2026-10-01
+
+- Release estable: https://github.com/biglexj/Prisma/releases/tag/v1.1.7. Publicada a las 20:01:12 UTC; draft=false y prerelease=false.
+- Etiqueta y ramas main/preview inicialmente apuntan al commit e9740f00530df35050c63cde95904a1e5a48ae0f. Push atómico sin forzado; no se reemplazó ninguna release previa.
+- EXE público de 164294760 bytes, estado uploaded y digest GitHub SHA-256 4bca056371a7b9135a6e126b89d8c196b9ad0ba1f69c2bfd9c2c2273c3d86c50, igual al instalador local. HEAD de la URL pública: HTTP 200.
+- Assets adicionales: Prisma_1.1.7_x64-setup.exe.sha256 y SHA256SUMS.txt.
+- Aurora confirmó por API administrativa y pública versionName=1.1.7, versionCode=10107, status=published, URL del asset y checksum idénticos. El Markdown coincide íntegramente con RELEASE_MESSAGE.md y el cuerpo de GitHub.
+- Página final https://www.biglexj.com/desarrollo/prisma verificada en el navegador real: versión v1.1.7, notas renderizadas, CTA Descargar EXE, instalador x64 y archivos de checksum. Captura temp/prisma-1.1.7-publicada.png.
+- No se instaló el EXE ni se ejecutaron pruebas físicas de hardware en esta publicación. Se cierran preparación y lanzamiento con esos límites aceptados expresamente por Biglex; permanecen en los procesos de diagnóstico previos.
 - Recompilación de lanzamiento terminada correctamente (TypeScript, Vite, Rust y NSIS). SHA-256: 4bca056371a7b9135a6e126b89d8c196b9ad0ba1f69c2bfd9c2c2273c3d86c50; bytes: 164294760. Bundle nativo y copia coinciden. CSS final index-D4pAbZSo.css.
