@@ -1035,9 +1035,8 @@ export function VisualLibrary({
         <ImageEditor
           item={editingImageItem}
           onClose={() => setEditingImageItem(null)}
-          onSaveSuccess={async (savedPath, isOverwrite) => {
+          onSaveSuccess={(savedPath, isOverwrite) => {
             invalidateImagePreview(savedPath);
-            await onRefresh();
             setEditingImageItem(null);
             const fileName = savedPath.replace(/\\/g, "/").split("/").pop() || "imagen.png";
             const updatedItem: VisualLibraryItem = {
@@ -1047,6 +1046,7 @@ export function VisualLibrary({
               modifiedAtMillis: Date.now(),
             };
             setSelectedImage(updatedItem);
+            void onRefresh();
           }}
         />
       )}

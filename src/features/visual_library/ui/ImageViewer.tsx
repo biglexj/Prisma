@@ -150,11 +150,10 @@ export function ImageViewer({
     },
   });
 
-  const handleSaveSuccess = async (savedPath: string, isOverwrite: boolean) => {
+  const handleSaveSuccess = (savedPath: string, isOverwrite: boolean) => {
     invalidateImagePreview(savedPath);
     const rev = Date.now();
     setImageRevision(rev);
-    await onRefresh();
     setIsEditing(false);
     resetImageTransform();
     if (!isOverwrite) {
@@ -170,6 +169,7 @@ export function ImageViewer({
     } else {
       setCurrentItem({ ...currentItem, modifiedAtMillis: rev });
     }
+    void onRefresh();
   };
 
   const showZoomToast = (scale: number) => {

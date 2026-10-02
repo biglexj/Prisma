@@ -11,4 +11,5 @@
 - [x] T05 — Ajustar `VisualCard` en `VisualLibrary.tsx` para reiniciar `dimensions` ante cambios en `modifiedAtMillis`, recalculando la clase bento (horizontal/vertical/cuadrado) automáticamente.
 - [x] T06 — Añadir soporte de revisión de caché en `ImageViewer.tsx` para forzar la recarga del recurso tras sobreescrituras en WebView2.
 - [x] T07 — Verificar la compilación del proyecto (`bun run build` / `tsc`).
-- [x] T08 — Preparar la validación y evidencias en `VALIDATION.md`.
+- [x] T08 — Desacoplar el cierre del editor del escaneo de carpetas en background (evitando que el editor quede visible 2-3s tras guardar) y desplegar overlay de guardado central en el lienzo.
+- [x] T09 — Preparar la validación y evidencias en `VALIDATION.md`.

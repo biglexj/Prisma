@@ -429,6 +429,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
   const handleSaveConfirmed = async (options: ImageEditorSaveOptions) => {
     if (!imageElement) return;
     setIsSaving(true);
+    setShowSaveDialog(false);
     setSaveError(null);
 
     // Ceder el ciclo de ejecución al navegador para que pinte de inmediato la animación de guardado
@@ -541,10 +542,10 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
       );
 
       setIsSaving(false);
-      setShowSaveDialog(false);
       onSaveSuccess(result.savedPath, result.overwrite);
     } catch (err: any) {
       setIsSaving(false);
+      setShowSaveDialog(true);
       setSaveError(err?.message || String(err) || "Error al procesar y guardar la imagen");
     }
   };
@@ -706,6 +707,17 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
             if (newConfig.enabled && isCropActive) setIsCropPreview(true);
           }}
         />
+      )}
+
+      {/* Overlay central de procesamiento y guardado */}
+      {isSaving && (
+        <div className="image-editor-saving-backdrop" role="status" aria-live="polite">
+          <div className="image-editor-saving-card">
+            <Icon name="refresh" className="spinning-icon" />
+            <h3>Guardando cambios</h3>
+            <p>Procesando lienzo en alta resolución y actualizando en disco...</p>
+          </div>
+        </div>
       )}
 
       {/* Diálogo de guardar */}
