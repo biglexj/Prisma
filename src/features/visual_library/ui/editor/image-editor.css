@@ -775,3 +775,119 @@
   outline: 2px solid #ffb4c8;
   outline-offset: 2px;
 }
+
+/* ── Banners y estados de guardado en el diálogo ── */
+.editor-save-progress-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(230, 0, 80, 0.12);
+  border: 1px solid rgba(230, 0, 80, 0.35);
+  color: #ffb4c8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  animation: editor-save-fade-in 180ms ease-out;
+}
+
+.editor-save-progress-banner svg {
+  width: 17px;
+  height: 17px;
+  stroke: #ff7597;
+  flex-shrink: 0;
+}
+
+.editor-save-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(186, 26, 26, 0.18);
+  border: 1px solid rgba(255, 180, 171, 0.35);
+  color: #ffb4ab;
+  font-size: 0.82rem;
+  font-weight: 600;
+  animation: editor-save-fade-in 180ms ease-out;
+}
+
+.editor-save-error-banner svg {
+  width: 17px;
+  height: 17px;
+  stroke: #ffb4ab;
+  flex-shrink: 0;
+}
+
+.media-dialog-confirm.is-saving {
+  cursor: wait !important;
+  opacity: 0.85;
+}
+
+.editor-header-save-btn.is-saving {
+  cursor: wait !important;
+  opacity: 0.85;
+  filter: brightness(0.9);
+}
+
+.image-editor-saving-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 10, 13, 0.72);
+  backdrop-filter: blur(8px);
+  animation: editor-save-fade-in 200ms ease-out;
+}
+
+.image-editor-saving-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 28px 36px;
+  border-radius: 20px;
+  background: #25181c;
+  border: 1px solid rgba(230, 0, 80, 0.3);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+
+.image-editor-saving-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.image-editor-saving-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #d6bfc2;
+}
+
+.spinning-icon {
+  animation: editor-spin 0.85s linear infinite;
+}
+
+@keyframes editor-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes editor-save-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

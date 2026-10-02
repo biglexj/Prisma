@@ -18,8 +18,8 @@ import { RenameMediaDialog } from "../../../shared/ui/RenameMediaDialog";
 import type { VisualFolderSource, VisualLibraryItem, VisualMediaKind, VideoTakeMarker } from "../model/types";
 import { useVideoTakes } from "../hooks/useVideoTakes";
 import { getClipColorHex } from "../model/davinciColors";
-import { VisualThumbnail } from "./VisualThumbnail";
-import { VideoThumbnail } from "./VideoThumbnail";
+import { VisualThumbnail, invalidateImagePreview } from "./VisualThumbnail";
+import { VideoThumbnail, invalidateVideoThumbnail } from "./VideoThumbnail";
 import { ImageViewer } from "./ImageViewer";
 import { ImageEditor } from "./editor/ImageEditor";
 import { ExifDetailsModal } from "./components/ExifDetailsModal";
@@ -149,6 +149,8 @@ export function VisualLibrary({
     if (isRefreshing || loading) return;
     setIsRefreshing(true);
     try {
+      invalidateImagePreview();
+      invalidateVideoThumbnail();
       await onRefresh();
     } finally {
       setTimeout(() => {
@@ -1034,16 +1036,17 @@ export function VisualLibrary({
           item={editingImageItem}
           onClose={() => setEditingImageItem(null)}
           onSaveSuccess={async (savedPath, isOverwrite) => {
+            invalidateImagePreview(savedPath);
             await onRefresh();
             setEditingImageItem(null);
-            if (!isOverwrite) {
-              const fileName = savedPath.replace(/\\/g, "/").split("/").pop() || "imagen.png";
-              setSelectedImage({
-                ...editingImageItem,
-                path: savedPath,
-                title: fileName,
-              });
-            }
+            const fileName = savedPath.replace(/\\/g, "/").split("/").pop() || "imagen.png";
+            const updatedItem: VisualLibraryItem = {
+              ...editingImageItem,
+              path: savedPath,
+              title: fileName,
+              modifiedAtMillis: Date.now(),
+            };
+            setSelectedImage(updatedItem);
           }}
         />
       )}
@@ -1102,6 +1105,11 @@ function VisualCard({
 }: VisualCardProps) {
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
+  // Reiniciar dimensiones cuando el archivo o su timestamp de modificación cambian
+  useEffect(() => {
+    setDimensions(null);
+  }, [item.path, item.modifiedAtMillis]);
+
   // Bento adaptativo determinista
   let layoutClass = "";
   if (isImage) {
@@ -1157,6 +1165,7 @@ function VisualCard({
             <VisualThumbnail
               alt={item.title}
               className="visual-thumbnail"
+              modified={item.modifiedAtMillis}
               onLoadDimensions={(w, h) => setDimensions({ width: w, height: h })}
               path={item.path}
             />
@@ -1274,6 +1283,7 @@ function VisualFolderCard({
             <VisualThumbnail
               alt={folder.displayName}
               className="folder-cover-thumbnail"
+              modified={firstItem.modifiedAtMillis}
               path={firstItem.path}
             />
           ) : (

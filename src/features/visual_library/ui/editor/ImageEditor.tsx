@@ -431,6 +431,9 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
     setIsSaving(true);
     setSaveError(null);
 
+    // Ceder el ciclo de ejecución al navegador para que pinte de inmediato la animación de guardado
+    await new Promise((resolve) => setTimeout(resolve, 60));
+
     try {
       // Crear canvas de alta resolución con las dimensiones naturales de la imagen
       const isQuarterRotated = Math.abs(rotationDegrees % 180) === 90;
@@ -558,6 +561,7 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
         <button
           className="editor-header-btn is-icon-only"
           onClick={onClose}
+          disabled={isSaving}
           title="Cerrar editor (Esc)"
         >
           <Icon name="arrow-left" />
@@ -570,12 +574,13 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
 
         <div className="editor-header-actions">
           <button
-            className="editor-header-save-btn"
-            onClick={() => setShowSaveDialog(true)}
-            title="Guardar cambios (Ctrl+S)"
+            className={`editor-header-save-btn ${isSaving ? "is-saving" : ""}`}
+            onClick={() => !isSaving && setShowSaveDialog(true)}
+            disabled={isSaving}
+            title={isSaving ? "Guardando cambios..." : "Guardar cambios (Ctrl+S)"}
           >
-            <Icon name="save" />
-            <span>Guardar</span>
+            <Icon name={isSaving ? "refresh" : "save"} className={isSaving ? "spinning-icon" : ""} />
+            <span>{isSaving ? "Guardando..." : "Guardar"}</span>
           </button>
         </div>
       </div>
@@ -708,8 +713,9 @@ export function ImageEditor({ item, onClose, onSaveSuccess }: ImageEditorProps) 
         <SaveImageDialog
           originalFileName={cleanPath(item.path).split(/[\\/]/).pop() || item.title}
           onConfirm={handleSaveConfirmed}
-          onCancel={() => setShowSaveDialog(false)}
+          onCancel={() => !isSaving && setShowSaveDialog(false)}
           isSaving={isSaving}
+          saveError={saveError}
         />
       )}
     </div>

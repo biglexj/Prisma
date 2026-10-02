@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { cleanPath, normalizePathSeparators } from "../../../shared/mediaTree";
 import { visualLibraryClient } from "../tauri/client";
 
 const MAX_CACHE_ITEMS = 400;
@@ -7,11 +8,51 @@ const MAX_CACHE_BYTES = 32 * 1024 * 1024;
 interface PreviewCacheEntry {
   data: string | null;
   bytes: number;
+  modified?: number;
 }
 
 const previewCache = new Map<string, PreviewCacheEntry>();
 const pendingPreviews = new Map<string, Promise<string | null>>();
 let totalEstimatedCacheBytes = 0;
+
+function normalizeCacheKey(path: string): string {
+  return normalizePathSeparators(path).toLowerCase();
+}
+
+/**
+ * Invalida la caché de miniaturas de imagen en memoria.
+ * Si se especifica una ruta, invalida esa imagen y notifica a los componentes activos.
+ * Si no se especifica, purga toda la caché y fuerza la recarga global desde disco.
+ */
+export function invalidateImagePreview(path?: string): void {
+  if (path) {
+    const key = normalizeCacheKey(path);
+    const prev = previewCache.get(key);
+    if (prev) totalEstimatedCacheBytes -= prev.bytes;
+    previewCache.delete(key);
+    pendingPreviews.delete(key);
+
+    const rawPrev = previewCache.get(path);
+    if (rawPrev) totalEstimatedCacheBytes -= rawPrev.bytes;
+    previewCache.delete(path);
+    pendingPreviews.delete(path);
+
+    window.dispatchEvent(
+      new CustomEvent("prisma-visual-thumbnail-invalidated", {
+        detail: { path: cleanPath(path) },
+      }),
+    );
+  } else {
+    previewCache.clear();
+    pendingPreviews.clear();
+    totalEstimatedCacheBytes = 0;
+    window.dispatchEvent(
+      new CustomEvent("prisma-visual-thumbnail-invalidated", {
+        detail: { all: true },
+      }),
+    );
+  }
+}
 
 interface VisualThumbnailProps {
   path: string;
@@ -19,11 +60,13 @@ interface VisualThumbnailProps {
   className?: string;
   eager?: boolean;
   fit?: "cover" | "contain";
+  modified?: number;
   onLoadDimensions?: (width: number, height: number) => void;
 }
 
 export function getCachedImagePreview(path: string): string | null {
-  return previewCache.get(path)?.data ?? null;
+  const key = normalizeCacheKey(path);
+  return previewCache.get(key)?.data ?? previewCache.get(path)?.data ?? null;
 }
 
 export function VisualThumbnail({
@@ -32,12 +75,14 @@ export function VisualThumbnail({
   className,
   eager = false,
   fit = "cover",
+  modified,
   onLoadDimensions,
 }: VisualThumbnailProps) {
   const containerRef = useRef<HTMLSpanElement>(null);
-  const isCached = path ? previewCache.has(path) : false;
+  const cacheKey = path ? normalizeCacheKey(path) : null;
+  const isCached = cacheKey ? previewCache.has(cacheKey) : false;
   const [visible, setVisible] = useState(eager || isCached);
-  const preview = useImagePreview(path, visible);
+  const preview = useImagePreview(path, visible, modified);
 
   useEffect(() => {
     if (eager) return;
@@ -82,56 +127,105 @@ export function VisualThumbnail({
   );
 }
 
-export function useImagePreview(path: string | null, enabled = true) {
-  const [preview, setPreview] = useState<string | null | undefined>(() =>
-    path ? previewCache.get(path)?.data : null,
-  );
+export function useImagePreview(path: string | null, enabled = true, modified?: number) {
+  const cacheKey = path ? normalizeCacheKey(path) : null;
+
+  const [preview, setPreview] = useState<string | null | undefined>(() => {
+    if (!cacheKey) return null;
+    const entry = previewCache.get(cacheKey);
+    if (!entry) return null;
+    if (modified !== undefined && entry.modified !== undefined && entry.modified !== modified) {
+      return null;
+    }
+    return entry.data;
+  });
+
+  // Escuchar eventos de invalidación globales reactivos
+  useEffect(() => {
+    if (!path) return;
+    const targetClean = cleanPath(path);
+
+    const onInvalidate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.all || (detail?.path && cleanPath(detail.path) === targetClean)) {
+        if (enabled) {
+          requestPreview(path, modified, true).then((dataUrl) => {
+            setPreview(dataUrl);
+          });
+        } else {
+          setPreview(undefined);
+        }
+      }
+    };
+
+    window.addEventListener("prisma-visual-thumbnail-invalidated", onInvalidate);
+    return () => {
+      window.removeEventListener("prisma-visual-thumbnail-invalidated", onInvalidate);
+    };
+  }, [enabled, modified, path]);
 
   useEffect(() => {
-    if (!path) {
+    if (!path || !cacheKey) {
       setPreview(null);
       return;
     }
-    const cached = previewCache.get(path);
+    const cached = previewCache.get(cacheKey);
     if (cached !== undefined) {
-      previewCache.delete(path);
-      previewCache.set(path, cached);
-      setPreview(cached.data);
-      return;
+      if (modified === undefined || cached.modified === undefined || cached.modified === modified) {
+        previewCache.delete(cacheKey);
+        previewCache.set(cacheKey, cached);
+        setPreview(cached.data);
+        return;
+      }
+      // Entrada desactualizada por cambio de fecha/modificación
+      totalEstimatedCacheBytes -= cached.bytes;
+      previewCache.delete(cacheKey);
     }
     setPreview(undefined);
     if (!enabled) return;
     let cancelled = false;
-    requestPreview(path).then((dataUrl) => {
+    requestPreview(path, modified).then((dataUrl) => {
       if (!cancelled) setPreview(dataUrl);
     });
     return () => {
       cancelled = true;
     };
-  }, [enabled, path]);
+  }, [cacheKey, enabled, modified, path]);
 
   return preview ?? null;
 }
 
-function requestPreview(path: string): Promise<string | null> {
-  const cached = previewCache.get(path);
-  if (cached !== undefined) {
-    previewCache.delete(path);
-    previewCache.set(path, cached);
-    return Promise.resolve(cached.data);
+function requestPreview(path: string, modified?: number, force = false): Promise<string | null> {
+  const cacheKey = normalizeCacheKey(path);
+  if (!force) {
+    const cached = previewCache.get(cacheKey);
+    if (cached !== undefined) {
+      if (modified === undefined || cached.modified === undefined || cached.modified === modified) {
+        previewCache.delete(cacheKey);
+        previewCache.set(cacheKey, cached);
+        return Promise.resolve(cached.data);
+      }
+    }
+  } else {
+    const previous = previewCache.get(cacheKey);
+    if (previous) totalEstimatedCacheBytes -= previous.bytes;
+    previewCache.delete(cacheKey);
+    pendingPreviews.delete(cacheKey);
   }
-  const pending = pendingPreviews.get(path);
-  if (pending) return pending;
+
+  const pending = pendingPreviews.get(cacheKey);
+  if (pending && !force) return pending;
+
   const request = visualLibraryClient
     .imagePreview(path)
     .catch(() => null)
     .then((dataUrl) => {
-      const previous = previewCache.get(path);
+      const previous = previewCache.get(cacheKey);
       if (previous) totalEstimatedCacheBytes -= previous.bytes;
-      previewCache.delete(path);
+      previewCache.delete(cacheKey);
 
       const bytes = dataUrl ? dataUrl.length * 2 : 64;
-      previewCache.set(path, { data: dataUrl, bytes });
+      previewCache.set(cacheKey, { data: dataUrl, bytes, modified });
       totalEstimatedCacheBytes += bytes;
 
       while (
@@ -146,7 +240,8 @@ function requestPreview(path: string): Promise<string | null> {
       }
       return dataUrl;
     })
-    .finally(() => pendingPreviews.delete(path));
-  pendingPreviews.set(path, request);
+    .finally(() => pendingPreviews.delete(cacheKey));
+
+  pendingPreviews.set(cacheKey, request);
   return request;
 }

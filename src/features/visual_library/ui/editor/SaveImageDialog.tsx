@@ -8,6 +8,7 @@ interface SaveImageDialogProps {
   onConfirm: (options: ImageEditorSaveOptions) => void;
   onCancel: () => void;
   isSaving: boolean;
+  saveError?: string | null;
 }
 
 export function SaveImageDialog({
@@ -15,6 +16,7 @@ export function SaveImageDialog({
   onConfirm,
   onCancel,
   isSaving,
+  saveError,
 }: SaveImageDialogProps) {
   const original = originalImageFormat(originalFileName);
 
@@ -40,22 +42,25 @@ export function SaveImageDialog({
         aria-modal="true"
       >
         <span className="media-dialog-icon">
-          <Icon name="save" />
+          <Icon name={isSaving ? "refresh" : "save"} className={isSaving ? "spinning-icon" : ""} />
         </span>
-        <h3>Guardar imagen editada</h3>
+        <h3>{isSaving ? "Guardando cambios..." : "Guardar imagen editada"}</h3>
         <p className="media-dialog-message">
-          Elige cómo deseas almacenar los cambios en tu disco:
+          {isSaving
+            ? "Generando archivo en alta resolución y actualizando en disco..."
+            : "Elige cómo deseas almacenar los cambios en tu disco:"}
         </p>
 
         <div className="editor-save-options">
           <label
-            className={`editor-save-option-card ${!overwrite ? "is-selected" : ""}`}
-            onClick={() => setOverwrite(false)}
+            className={`editor-save-option-card ${!overwrite ? "is-selected" : ""} ${isSaving ? "is-disabled" : ""}`}
+            onClick={() => !isSaving && setOverwrite(false)}
           >
             <input
               type="radio"
               name="save_mode"
               checked={!overwrite}
+              disabled={isSaving}
               onChange={() => setOverwrite(false)}
             />
             <div className="editor-save-option-text">
@@ -95,8 +100,8 @@ export function SaveImageDialog({
           )}
 
           <label
-            className={`editor-save-option-card is-overwrite ${overwrite ? "is-selected" : ""} ${!original.canOverwrite ? "is-disabled" : ""}`}
-            onClick={() => { if (original.canOverwrite) setOverwrite(true); }}
+            className={`editor-save-option-card is-overwrite ${overwrite ? "is-selected" : ""} ${!original.canOverwrite || isSaving ? "is-disabled" : ""}`}
+            onClick={() => { if (original.canOverwrite && !isSaving) setOverwrite(true); }}
           >
             <input
               type="radio"
@@ -114,6 +119,20 @@ export function SaveImageDialog({
           </label>
         </div>
 
+        {saveError && (
+          <div className="editor-save-error-banner" role="alert">
+            <Icon name="info" />
+            <span>{saveError}</span>
+          </div>
+        )}
+
+        {isSaving && (
+          <div className="editor-save-progress-banner" role="status">
+            <Icon name="refresh" className="spinning-icon" />
+            <span>Procesando imagen y escribiendo cambios en el disco...</span>
+          </div>
+        )}
+
         <div className="media-dialog-actions">
           <button
             type="button"
@@ -125,11 +144,21 @@ export function SaveImageDialog({
           </button>
           <button
             type="button"
-            className="media-dialog-confirm"
+            className={`media-dialog-confirm ${isSaving ? "is-saving" : ""}`}
             onClick={handleSave}
             disabled={isSaving}
           >
-            {isSaving ? "Guardando..." : "Guardar"}
+            {isSaving ? (
+              <>
+                <Icon name="refresh" className="spinning-icon" />
+                <span>Guardando...</span>
+              </>
+            ) : (
+              <>
+                <Icon name="save" />
+                <span>Guardar</span>
+              </>
+            )}
           </button>
         </div>
       </div>

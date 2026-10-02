@@ -12,6 +12,7 @@ import { RenameMediaDialog } from "../../../shared/ui/RenameMediaDialog";
 import { addToHistory } from "../../../shared/useHistory";
 import type { VisualLibraryItem } from "../model/types";
 import { ImageEditor } from "./editor/ImageEditor";
+import { invalidateImagePreview } from "./VisualThumbnail";
 import { ImageComparisonModal } from "../../comparison";
 import { quickLookClient } from "../../quick_look/tauri/client";
 import { ViewerToolsMenu } from "./components/ViewerToolsMenu";
@@ -41,6 +42,7 @@ export function ImageViewer({
   onRefresh,
 }: ImageViewerProps) {
   const [currentItem, setCurrentItem] = useState<VisualLibraryItem>(item);
+  const [imageRevision, setImageRevision] = useState<number>(() => item.modifiedAtMillis || Date.now());
   const [isSlideshowActive, setIsSlideshowActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showInfoDrawer, setShowInfoDrawer] = useState(false);
@@ -149,19 +151,24 @@ export function ImageViewer({
   });
 
   const handleSaveSuccess = async (savedPath: string, isOverwrite: boolean) => {
+    invalidateImagePreview(savedPath);
+    const rev = Date.now();
+    setImageRevision(rev);
     await onRefresh();
     setIsEditing(false);
+    resetImageTransform();
     if (!isOverwrite) {
       const fileName = savedPath.replace(/\\/g, "/").split("/").pop() || "imagen.png";
       const newItem: VisualLibraryItem = {
         ...currentItem,
         path: savedPath,
         title: fileName,
+        modifiedAtMillis: rev,
       };
       setCurrentItem(newItem);
       onSelectImage?.(newItem);
     } else {
-      setCurrentItem({ ...currentItem });
+      setCurrentItem({ ...currentItem, modifiedAtMillis: rev });
     }
   };
 
@@ -1104,7 +1111,7 @@ export function ImageViewer({
               crossOrigin="anonymous"
               draggable={false}
               ref={imgRef}
-              src={toSafeAssetUrl(currentItem.path)}
+              src={`${toSafeAssetUrl(currentItem.path)}?v=${imageRevision}`}
               onError={() => setIsEntering(true)}
               onLoad={(e) => {
                 const img = e.currentTarget;

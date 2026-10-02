@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
-import { toSafeAssetUrl } from "../../../shared/mediaTree";
+import { cleanPath, toSafeAssetUrl } from "../../../shared/mediaTree";
 import { visualLibraryClient } from "../tauri/client";
 import "./video-thumbnail.css";
 
@@ -20,6 +20,27 @@ const videoThumbCache = new Map<string, string>();
 /** Permite consultar síncronamente si ya existe una miniatura de vídeo en memoria para arrastre o previsualización. */
 export function getCachedVideoThumbnail(path: string): string | null {
   return videoThumbCache.get(path) ?? null;
+}
+
+/** Invalida la caché de miniaturas de vídeo en memoria para una ruta o globalmente. */
+export function invalidateVideoThumbnail(path?: string): void {
+  if (path) {
+    const cleaned = cleanPath(path);
+    videoThumbCache.delete(cleaned);
+    videoThumbCache.delete(path);
+    window.dispatchEvent(
+      new CustomEvent("prisma-video-thumbnail-invalidated", {
+        detail: { path: cleaned },
+      }),
+    );
+  } else {
+    videoThumbCache.clear();
+    window.dispatchEvent(
+      new CustomEvent("prisma-video-thumbnail-invalidated", {
+        detail: { all: true },
+      }),
+    );
+  }
 }
 
 /**
@@ -43,6 +64,25 @@ export function VideoThumbnail({
   const onLoadDimsRef = useRef(onLoadDimensions);
   onLoadDimsRef.current = onLoadDimensions;
   const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (!path) return;
+    const targetClean = cleanPath(path);
+
+    const onInvalidate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.all || (detail?.path && cleanPath(detail.path) === targetClean)) {
+        startedRef.current = false;
+        setThumbSrc(null);
+        setFailed(false);
+      }
+    };
+
+    window.addEventListener("prisma-video-thumbnail-invalidated", onInvalidate);
+    return () => {
+      window.removeEventListener("prisma-video-thumbnail-invalidated", onInvalidate);
+    };
+  }, [path]);
 
   useEffect(() => {
     if (!path) return;
