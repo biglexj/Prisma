@@ -17,6 +17,42 @@ interface PrismaUpscalerViewProps {
 
 const MODELS: AIModel[] = [
   {
+    id: "fsr1",
+    engine: "fsr1",
+    name: "AMD FidelityFX FSR 1",
+    description: "Escalado de bordes EASU y enfoque RCAS de AMD. Compatible con NVIDIA, AMD e Intel; máxima velocidad en cualquier GPU.",
+    scales: [1, 2, 3, 4],
+    category: "general",
+    arch: "FSR 1 · GPU",
+  },
+  {
+    id: "nis",
+    engine: "nis",
+    name: "NVIDIA Image Scaling",
+    description: "Escalado espacial y enfoque direccional con shaders integrados. Compatible con NVIDIA, AMD e Intel.",
+    scales: [1, 2, 3, 4],
+    category: "general",
+    arch: "NIS · GPU",
+  },
+  {
+    id: "rtx-video",
+    engine: "rtx-video",
+    name: "RTX Video Super Resolution",
+    description: "Escalado con IA mediante Tensor Cores en GPUs NVIDIA RTX en Windows (requiere Visual Enhancer).",
+    scales: [1, 2, 3, 4],
+    category: "general",
+    arch: "Visual Enhancer · RTX",
+  },
+  {
+    id: "dlss-nr",
+    engine: "dlss-nr",
+    name: "DLSS Neural Rendering (Experimental)",
+    description: "Reconstrucción neural y eliminación de ruido sin modificar dimensiones (1x) en GPUs NVIDIA RTX.",
+    scales: [1],
+    category: "general",
+    arch: "Visual Enhancer · RTX",
+  },
+  {
     id: "realesrgan-x4plus-anime",
     name: "RealESRGAN Anime (Arte Digital)",
     description: "Ideal para ilustraciones digitales, anime, manga y líneas nítidas sin artefactos de compresión.",
@@ -36,7 +72,7 @@ const MODELS: AIModel[] = [
     id: "ultrasharp",
     name: "UltraSharp",
     description: "Acentuación agresiva de nitidez y micro-detalles en bordes de alta frecuencia y texturas.",
-    scales: [4],
+    scales: [2, 3, 4],
     category: "sharp",
     arch: "RRDBNet",
   },
@@ -44,7 +80,7 @@ const MODELS: AIModel[] = [
     id: "remacri",
     name: "Remacri",
     description: "Restaura texturas y grano con ultra-alta fidelidad en imágenes comprimidas o degradadas.",
-    scales: [4],
+    scales: [2, 3, 4],
     category: "restore",
     arch: "RRDBNet",
   },
@@ -52,7 +88,7 @@ const MODELS: AIModel[] = [
     id: "ultramix_balanced",
     name: "UltraMix Balanced",
     description: "Equilibrio suave entre eliminación de ruido y retención de detalles finos sin sobre-enfocar.",
-    scales: [4],
+    scales: [2, 3, 4],
     category: "photo",
     arch: "RRDBNet",
   },
@@ -437,6 +473,9 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
   };
 
   const getModelIcon = (id: string): import("../../../shared/ui/Icon").IconName => {
+    if (id === "fsr1" || id === "nis") return "sparkles";
+    if (id === "rtx-video") return "film";
+    if (id === "dlss-nr") return "sliders";
     if (id.includes("anime") || id.includes("art") || id.includes("siax")) return "brush";
     if (id.includes("sharp")) return "sparkles";
     if (id.includes("remacri") || id.includes("restore") || id.includes("ultramix")) return "sliders";
@@ -604,13 +643,13 @@ export function PrismaUpscalerView({ onNavigate: _onNavigate }: PrismaUpscalerVi
               </span>
             </button>
 
-            {/* Selector de Escala (2x, 3x, 4x) */}
+            {/* Selector de Escala (1x, 2x, 3x, 4x) */}
             <div className="upscaler-scale-row">
               <span className="scale-label">
                 <Icon name="fit-screen" /> Escala:
               </span>
               <div className="scale-pills-group">
-                {([2, 3, 4] as const).map((s) => {
+                {([1, 2, 3, 4] as const).map((s) => {
                   const isAvailable = currentModel.scales.includes(s);
                   return (
                     <button

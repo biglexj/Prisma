@@ -29,6 +29,7 @@ pub struct QuickLookState {
     app_handle: AppHandle,
     current_path: Arc<Mutex<Option<String>>>,
     preview_revision: Arc<AtomicU32>,
+    follows_shell_selection: Arc<AtomicBool>,
     last_shown: Arc<Mutex<Option<Instant>>>,
     detached_payloads: Arc<Mutex<HashMap<String, QuickLookPayload>>>,
     detached_counter: Arc<AtomicU32>,
@@ -44,6 +45,7 @@ impl QuickLookState {
             app_handle,
             current_path: Arc::new(Mutex::new(None)),
             preview_revision: Arc::new(AtomicU32::new(0)),
+            follows_shell_selection: Arc::new(AtomicBool::new(false)),
             last_shown: Arc::new(Mutex::new(None)),
             detached_payloads: Arc::new(Mutex::new(HashMap::new())),
             detached_counter: Arc::new(AtomicU32::new(0)),
@@ -85,6 +87,11 @@ impl QuickLookState {
                 TriggerEvent::Close => {
                     ql_log!("Callback (async thread): Close");
                     state.hide();
+                }
+                TriggerEvent::DismissOutside => {
+                    if state.can_hide_on_unfocus() {
+                        state.hide();
+                    }
                 }
                 TriggerEvent::Toggle => {
                     ql_log!("Callback (async thread): Toggle");
@@ -182,6 +189,7 @@ impl QuickLookState {
         path: &Path,
         selection_index: Option<usize>,
         selection_total: Option<usize>,
+        follows_shell_selection: bool,
     ) -> bool {
         ql_log!("show_file_path llamado con: {:?}", path);
         if !path.exists() {
@@ -195,6 +203,7 @@ impl QuickLookState {
         };
 
         self.preview_revision.fetch_add(1, Ordering::SeqCst);
+        self.follows_shell_selection.store(follows_shell_selection, Ordering::SeqCst);
         let path_str = path.to_string_lossy().to_string();
 
         {
@@ -268,7 +277,12 @@ impl QuickLookState {
             }
 
             set_preview_open(true);
-            self.start_selection_watcher();
+            if follows_shell_selection {
+                self.start_selection_watcher();
+            } else {
+                // Las vistas abiertas desde Prisma permanecen hasta que el usuario las cierre.
+                let _ = window.set_focus();
+            }
             true
         } else {
             ql_log!("ERROR: No se encontró la ventana quicklook en Tauri");
@@ -283,13 +297,13 @@ impl QuickLookState {
             let total = folder_info.total;
             *self.current_selection.lock().unwrap() = Some(folder_info);
             if total > 1 {
-                self.show_file_path_with_selection(&primary, Some(idx), Some(total))
+                self.show_file_path_with_selection(&primary, Some(idx), Some(total), false)
             } else {
-                self.show_file_path_with_selection(&primary, None, None)
+                self.show_file_path_with_selection(&primary, None, None, false)
             }
         } else {
             *self.current_selection.lock().unwrap() = None;
-            self.show_file_path_with_selection(path, None, None)
+            self.show_file_path_with_selection(path, None, None, false)
         }
     }
 
@@ -301,6 +315,13 @@ impl QuickLookState {
             let mut outside_count: u32 = 0;
             while is_preview_open() && state.preview_revision.load(Ordering::SeqCst) == revision {
                 std::thread::sleep(std::time::Duration::from_millis(80));
+
+                if !selection_watch_is_current(
+                    is_preview_open(), revision, state.preview_revision.load(Ordering::SeqCst),
+                    state.follows_shell_selection.load(Ordering::SeqCst),
+                ) {
+                    break;
+                }
 
                 if !state.can_hide_on_unfocus() {
                     continue;
@@ -421,7 +442,7 @@ impl QuickLookState {
     }
 
     pub fn refresh_selection_from_foreground(&self, revision: u32) {
-        if !is_preview_open() || self.preview_revision.load(Ordering::SeqCst) != revision { return; }
+        if !selection_watch_is_current(is_preview_open(), revision, self.preview_revision.load(Ordering::SeqCst), self.follows_shell_selection.load(Ordering::SeqCst)) { return; }
         let source = foreground_selection_source();
         if let Some(info) = get_foreground_selection_info() {
             self.handle_selection_update(revision, source, info);
@@ -447,9 +468,9 @@ impl QuickLookState {
                 *sel = Some(final_info);
             }
             if total > 1 {
-                self.show_file_path_with_selection(&primary, Some(idx), Some(total));
+                self.show_file_path_with_selection(&primary, Some(idx), Some(total), true);
             } else {
-                self.show_file_path_with_selection(&primary, None, None);
+                self.show_file_path_with_selection(&primary, None, None, true);
             }
         }
     }
@@ -484,7 +505,7 @@ impl QuickLookState {
             (path, new_idx, total)
         };
 
-        self.show_file_path_with_selection(&next_path, Some(next_idx), Some(total))
+        self.show_file_path_with_selection(&next_path, Some(next_idx), Some(total), self.follows_shell_selection.load(Ordering::SeqCst))
     }
 
     pub fn handle_navigation(&self) {
@@ -495,7 +516,7 @@ impl QuickLookState {
     }
 
     pub fn can_hide_on_unfocus(&self) -> bool {
-        if !is_preview_open() {
+        if !is_preview_open() || !self.follows_shell_selection.load(Ordering::SeqCst) {
             return false;
         }
 
@@ -548,6 +569,7 @@ impl QuickLookState {
         self.is_comparing.store(false, Ordering::SeqCst);
         self.preview_revision.fetch_add(1, Ordering::SeqCst);
         set_preview_open(false);
+        self.follows_shell_selection.store(false, Ordering::SeqCst);
         *self.current_selection.lock().unwrap() = None;
         crate::app::commands::quick_look::reset_maximize_state();
         {
@@ -878,9 +900,21 @@ fn selection_update_is_current(open: bool, requested: u32, current: u32, source:
     open && requested == current && source.is_some() && source == foreground
 }
 
+fn selection_watch_is_current(open: bool, requested: u32, current: u32, follows_shell_selection: bool) -> bool {
+    open && requested == current && follows_shell_selection
+}
+
 #[cfg(test)]
 mod selection_watch_tests {
-    use super::selection_update_is_current;
+    use super::{selection_update_is_current, selection_watch_is_current};
+    #[test]
+    fn shell_watcher_does_not_close_or_replace_app_previews() {
+        assert!(selection_watch_is_current(true, 1, 1, true));
+        assert!(!selection_watch_is_current(true, 1, 1, false));
+        assert!(!selection_watch_is_current(true, 1, 2, false));
+        assert!(!selection_watch_is_current(true, 1, 2, true));
+        assert!(!selection_watch_is_current(false, 1, 1, true));
+    }
     #[test]
     fn only_the_same_foreground_explorer_can_update_preview() {
         assert!(selection_update_is_current(true, 1, 1, Some(10), Some(10)));

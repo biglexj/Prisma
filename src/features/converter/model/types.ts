@@ -4,6 +4,12 @@ export type ConversionMode =
   | "video_transcode"
   | "audio_transcode";
 
+export interface ConverterOpenRequest {
+  path?: string;
+  paths?: string[];
+  mode?: ConversionMode;
+}
+
 export interface FFmpegStatus {
   is_available: boolean;
   ffmpeg_path: string | null;

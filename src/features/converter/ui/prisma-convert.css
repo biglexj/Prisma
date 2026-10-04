@@ -348,12 +348,19 @@
 
 .convert-status-badge {
   display: inline-flex;
+  white-space: nowrap;
   align-items: center;
   gap: 0.35rem;
   padding: 0.25rem 0.55rem;
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 700;
+}
+
+.convert-status-badge svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
 }
 
 .convert-status-badge.status-pending {

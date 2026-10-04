@@ -126,6 +126,7 @@ export function ViewerToolsMenu({
                 <span className="viewer-tools-item-title">Convertidor</span>
                 <span className="viewer-tools-item-desc">Convertir formato en Convertidor Prisma</span>
               </div>
+              <kbd className="viewer-tools-shortcut">V</kbd>
             </button>
 
             <button

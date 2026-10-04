@@ -14,6 +14,7 @@ import type {
   AudioTranscodeOptions,
   BatchRenameRules,
   ConversionMode,
+  ConverterOpenRequest,
   ConversionQueueItem,
   FFmpegStatus,
   ImageConvertOptions,
@@ -22,7 +23,7 @@ import type {
 } from "../model/types";
 import { converterClient } from "../tauri/client";
 
-export function useMediaConverter() {
+export function useMediaConverter(incomingRequest?: ConverterOpenRequest | null, onRequestConsumed?: () => void) {
   const [inputError, setInputError] = useState<string | null>(null);
   const runningRef = useRef(false);
   const [status, setStatus] = useState<FFmpegStatus | null>(null);
@@ -261,6 +262,21 @@ export function useMediaConverter() {
 
   const incomingRef = useRef(handleIncomingPaths);
   incomingRef.current = handleIncomingPaths;
+
+  const consumedRequestRef = useRef<ConverterOpenRequest | null>(null);
+  useEffect(() => {
+    if (!incomingRequest || consumedRequestRef.current === incomingRequest) return;
+    consumedRequestRef.current = incomingRequest;
+    if (runningRef.current) {
+      setInputError("Espera a que termine la conversión actual para añadir archivos desde el visor.");
+    } else {
+      const targetMode = incomingRequest.mode ?? mode;
+      if (targetMode !== mode) { setQueue([]); setMode(targetMode); }
+      const paths = incomingRequest.paths ?? (incomingRequest.path ? [incomingRequest.path] : []);
+      void incomingRef.current(paths, targetMode);
+    }
+    onRequestConsumed?.();
+  }, [incomingRequest, mode, onRequestConsumed]);
 
   // Escucha nativa dual (evento propio de Prisma y onDragDropEvent) para carpetas y archivos
   useEffect(() => {

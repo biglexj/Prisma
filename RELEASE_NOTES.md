@@ -2,6 +2,16 @@
 
 Registro de cambios y versiones de Prisma.
 
+## [1.1.8] - 2026-10-04
+
+Al guardar o sobrescribir cambios en el editor de imágenes, la interfaz despliega una animación visual de carga fluida tanto en el botón como en un panel superpuesto en el lienzo, cediendo tiempo al renderizado de alta resolución antes del procesamiento intensivo. El guardado desacopla las comprobaciones secundarias en segundo plano, cerrando el editor al instante y abriendo la vista previa cinematográfica del archivo resultante (sea una copia nueva o una imagen sobrescrita) sin pausas involuntarias.
+
+La galería y las colecciones visuales actualizan automáticamente las miniaturas de imágenes y vídeos editados en caliente. El sistema detecta la nueva fecha de modificación y purga la memoria previa, recalculando de inmediato la proporción de la tarjeta en la cuadrícula bento (adaptándose con naturalidad entre formatos panorámicos y verticales). Además, el botón de recarga manual renueva por completo la memoria de previsualización y el visor garantiza la carga fresca de archivos sobrescritos.
+
+El visor de imágenes añade un acceso directo para enviar la fotografía actual al conversor multimedia mediante el atajo de teclado «V», así como a través del menú de herramientas y el menú contextual. La transición se realiza de forma ordenada tras el cierre del visor sin pérdida del archivo en curso, complementándose con la posibilidad de revisar y reproducir al instante imágenes, pistas de audio o vídeos completados desde la propia cola de conversión.
+
+La suite integrada de Prisma Upscaler incorpora compatibilidad multi-vendor para procesar imágenes con aceleración de GPU sin depender de descargas pesadas de modelos. Ahora se integran los motores espaciales AMD FidelityFX FSR 1 (con escalado EASU y enfoque RCAS) y NVIDIA Image Scaling (NIS), logrando procesamientos ultrarrápidos en GPUs AMD, NVIDIA o Intel con soporte para escalas de 1x a 4x. Asimismo, se habilitan adaptadores para RTX Video Super Resolution y DLSS Neural Rendering (1x) en equipos con tarjetas NVIDIA RTX en Windows, conservando intacta la suite de modelos neuronales de alta fidelidad.
+
 ## [1.1.7] - 2026-10-01
 
 Prisma 1.1.7 incorpora un comparador multimedia que se adapta al modo claro, al modo oscuro y a los colores del tema. Las tarjetas, los selectores y los controles mantienen una apariencia coherente con el resto de la aplicación. El arrastre de archivos incorpora vistas previas para imágenes, vídeos y música.

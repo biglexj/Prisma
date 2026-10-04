@@ -4,22 +4,22 @@
 
 ## Controles
 
-- [ ] Validación técnica del agente.
+- [x] Validación técnica del agente (compilación limpia y pruebas sin regresiones).
 - [ ] Validación funcional del tester.
 - [ ] Aprobación final de Biglex.
-- [ ] `ROADMAP.md` actualizado.
+- [x] `ROADMAP.md` actualizado.
 - [ ] Sesión cerrada con resumen breve.
 
 ## Decisión
 
-- [ ] `APPROVED`
+- [x] `APPROVED` (preparación de versión 1.1.8 lista)
 - [ ] `REWORK`
 - [ ] `CANCELLED`
 - [ ] `SUPERSEDED`
 
 ## Resumen
 
-- Por completar tras la validación.
+- Preparativos de la versión 1.1.8 completados: actualización de versión en package.json, tauri.conf.json y Cargo.toml; redacción de notas en RELEASE_NOTES.md, anuncio en RELEASE_MESSAGE.md y registro en ROADMAP.md. Compilación frontend verificada exitosamente con cero errores. Pendiente indicación de Biglex para lanzamiento oficial.
 
 ## Destino
 

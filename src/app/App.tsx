@@ -39,6 +39,7 @@ import { DocumentViewer } from "../features/custom_libraries/ui/DocumentViewer";
 import type { CustomLibraryItem } from "../features/custom_libraries/model/types";
 import { useCustomLibraries } from "../features/custom_libraries/hooks/useCustomLibraries";
 import { PrismaConvertView } from "../features/converter/ui/PrismaConvertView";
+import type { ConverterOpenRequest } from "../features/converter/model/types";
 import { LunaFetchView } from "../features/luna_fetch/ui/LunaFetchView";
 import { GalleryDlView } from "../features/gallery_dl/ui/GalleryDlView";
 import { PrismaUpscalerView } from "../features/prisma_upscaler/ui/PrismaUpscalerView";
@@ -86,6 +87,7 @@ const VIEW_TITLES: Record<AppView, string> = {
 function AppContent() {
   const { multiOutput } = useDsp();
   const [activeView, setActiveView] = useState<AppView>("home");
+  const [converterRequest, setConverterRequest] = useState<ConverterOpenRequest | null>(null);
   const [isEqualizerModalOpen, setIsEqualizerModalOpen] = useState(false);
   const [activeVideoPath, setActiveVideoPath] = useState<string | null>(null);
   const [activeVideoInitialTime, setActiveVideoInitialTime] = useState<number | undefined>(undefined);
@@ -757,14 +759,10 @@ function AppContent() {
     });
 
     const handleOpenConverter = (e: Event) => {
-      const customEvent = e as CustomEvent<{ path?: string; paths?: string[]; mode?: string }>;
+      const customEvent = e as CustomEvent<ConverterOpenRequest>;
       setActiveView("converter");
       if (customEvent.detail?.path || customEvent.detail?.paths) {
-        setTimeout(() => {
-          window.dispatchEvent(
-            new CustomEvent("prisma-converter-add-file", { detail: customEvent.detail })
-          );
-        }, 120);
+        setConverterRequest(customEvent.detail);
       }
     };
     window.addEventListener("prisma-open-converter", handleOpenConverter);
@@ -1559,7 +1557,7 @@ function AppContent() {
               onClose={() => setActiveView("home")}
             />
           ) : null}
-          {activeView === "converter" ? <PrismaConvertView /> : null}
+          {activeView === "converter" ? <PrismaConvertView incomingRequest={converterRequest} onRequestConsumed={() => setConverterRequest(null)} /> : null}
           {activeView === "duplicates" ? (
             <DuplicatesScannerModal
               embedded={true}

@@ -44,6 +44,27 @@ Ideas de evolución registradas el 1 de octubre de 2026 para el uso personal de 
 
 ## 🟢 Completado
 
+- [x] **v1.1.8 — 2026-10-04**
+  - **Feedback y Desacoplamiento de Guardado en Editor de Imágenes**:
+    - Animación y estado de carga visual inmediato al guardar o sobrescribir en `SaveImageDialog` e `ImageEditor`.
+    - Ceder ciclo al navegador (`requestAnimationFrame`) para pintar el spinner antes de procesar el canvas pesado de alta resolución.
+    - Overlay central visual durante el procesamiento de exportación.
+    - Desacoplamiento del cierre del editor respecto al escaneo global de carpetas en segundo plano, abriendo la vista previa del archivo resultante al instante sin demoras.
+  - **Invalidación Reactiva de Miniaturas y Proporciones Bento**:
+    - Purga reactiva de caché en `VisualThumbnail` y `VideoThumbnail` ante modificaciones (`modifiedAtMillis`) o guardados.
+    - Recálculo dinámico de dimensiones y adaptación automática de cuadrícula bento (horizontal a vertical 9:16 o 3:4) en `VisualCard`.
+    - Botón de recarga en catálogo con limpieza total de memoria y re-escaneo directo desde disco.
+    - Soporte de timestamp de revisión en visor de imágenes para evitar retención de caché HTTP en WebView2.
+  - **Navegación Fluida hacia el Conversor Multimedia**:
+    - Acceso directo al conversor desde el visor de fotos con el atajo canónico `V`, menú de herramientas y menú contextual.
+    - Transición limpia que respeta el desmontaje del visor y conserva el archivo seleccionado al montar el conversor.
+    - Reproducción y apertura directa de resultados completados (imagen, audio y vídeo) desde la cola de conversión.
+  - **Prisma Upscaler: Motores Multi-Vendor (AMD FSR 1, NVIDIA NIS, RTX Video y DLSS NR)**:
+    - Incorporación de AMD FidelityFX FSR 1 (EASU + RCAS) y NVIDIA Image Scaling (NIS) con aceleración GPU nativa ultrarrápida (sub-segundo en Vulkan/DirectX 12) sin requerir modelos descargables pesados.
+    - Adaptadores para RTX Video Super Resolution y DLSS Neural Rendering (experimental) en GPUs NVIDIA RTX en Windows.
+    - Selector dinámico de escalas con soporte para 1x (enfoque puro sin redimensionamiento) e insignias de arquitectura Material 3 Expressive.
+    - Detección universal del motor y enrutamiento dual resiliente en Rust.
+
 - [x] **v1.1.7 — 2026-10-01**
   - Comparador multimedia integrado con modo claro, modo oscuro y colores dinámicos del tema.
   - Flyout de volumen global con ocultación tras dos segundos, visualizador y acceso a la aplicación multimedia.

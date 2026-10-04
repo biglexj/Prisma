@@ -4,7 +4,7 @@ import { Icon } from "../../../shared/ui/Icon";
 import { CustomSelect, type CustomSelectOption } from "../../../shared/ui/CustomSelect";
 import { useMediaConverter } from "../hooks/useMediaConverter";
 import type { WatermarkLogoPlacement, WatermarkPosition } from "../../visual_library/model/watermark";
-import type { ConversionMode } from "../model/types";
+import type { ConversionMode, ConverterOpenRequest } from "../model/types";
 import { quickLookClient } from "../../quick_look/tauri/client";
 import "./prisma-convert.css";
 
@@ -92,7 +92,10 @@ const AUDIO_TRANSCODE_BITRATE_OPTIONS: CustomSelectOption<string>[] = [
   { value: "128k", label: "128 kbps (Estándar)", description: "Archivo liviano" },
 ];
 
-export function PrismaConvertView() {
+export function PrismaConvertView({ incomingRequest, onRequestConsumed }: {
+  incomingRequest?: ConverterOpenRequest | null;
+  onRequestConsumed?: () => void;
+}) {
   const [openingOutput, setOpeningOutput] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const previewOutput = async (path: string) => {
@@ -142,7 +145,7 @@ export function PrismaConvertView() {
     completedCount,
     errorCount,
     progressPercent,
-  } = useMediaConverter();
+  } = useMediaConverter(incomingRequest, onRequestConsumed);
 
   const isVideoToAudioFlac = videoToAudioOptions.target_format === "flac";
   const isVideoToAudioWav = videoToAudioOptions.target_format === "wav";
@@ -972,7 +975,7 @@ export function PrismaConvertView() {
                       <span className={`convert-status-badge status-${item.status}`}>
                         {item.status === "pending" ? "En espera" : null}
                         {item.status === "processing" ? "Convirtiendo..." : null}
-                        {item.status === "completed" ? "✓ Completado" : null}
+                        {item.status === "completed" ? <><Icon name="check" /><span>Completado</span></> : null}
                         {item.status === "error" ? `✕ Error` : null}
                       </span>
                       {item.errorMessage ? (

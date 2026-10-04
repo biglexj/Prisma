@@ -352,6 +352,14 @@ export function ImageViewer({
     onClose();
   };
 
+  const openConverter = (path: string) => {
+    // Cerrar primero: onClose puede restaurar Inicio u otra pantalla de origen.
+    closeViewer();
+    window.dispatchEvent(new CustomEvent("prisma-open-converter", {
+      detail: { path, mode: "image" },
+    }));
+  };
+
   const toggleFullscreen = () => {
     const viewerElement = document.querySelector(".image-viewer");
     if (!viewerElement) return;
@@ -640,12 +648,7 @@ export function ImageViewer({
         label: "Convertir formato",
         icon: "refresh" as const,
         onSelect: () => {
-          window.dispatchEvent(
-            new CustomEvent("prisma-open-converter", {
-              detail: { path: target.item.path, mode: "image" },
-            })
-          );
-          closeViewer();
+          openConverter(target.item.path);
         },
       },
       {
@@ -688,6 +691,15 @@ export function ImageViewer({
   const handleKeyDown = useCallback(
     (event: KeyboardEvent | React.KeyboardEvent) => {
       if (mediaDelete.pendingDelete || mediaRename.pendingRename || isEditing) return;
+      if (event.key.toLowerCase() === "v" && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+        const target = event.target;
+        if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable="true"]')) return;
+        if (isComparing) return;
+        event.preventDefault();
+        event.stopPropagation();
+        openConverter(currentItem.path);
+        return;
+      }
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
@@ -797,6 +809,7 @@ export function ImageViewer({
     },
     [
       isEditing,
+      isComparing,
       mediaDelete,
       mediaRename,
       currentItem.path,
@@ -973,12 +986,7 @@ export function ImageViewer({
               void invoke("launch_prisma_upscaler", { filePath: currentItem.path }).catch(() => { });
             }}
             onConvert={() => {
-              window.dispatchEvent(
-                new CustomEvent("prisma-open-converter", {
-                  detail: { path: currentItem.path, mode: "image" },
-                })
-              );
-              closeViewer();
+              openConverter(currentItem.path);
             }}
             onRename={() =>
               mediaRename.requestRename({

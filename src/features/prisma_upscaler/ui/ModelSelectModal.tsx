@@ -3,11 +3,12 @@ import { Icon } from "../../../shared/ui/Icon";
 import "./model-select-modal.css";
 
 export interface AIModel {
+  engine?: "ncnn" | "nis" | "fsr1" | "dlss-nr" | "rtx-video";
   id: string;
   name: string;
   description: string;
   scales: number[];
-  category?: "photo" | "anime" | "restore" | "sharp" | "compact";
+  category?: "photo" | "anime" | "restore" | "sharp" | "compact" | "general";
   arch?: string;
 }
 
@@ -84,6 +85,9 @@ export function ModelSelectModal({
   if (!isOpen) return null;
 
   const getModelIcon = (id: string): import("../../../shared/ui/Icon").IconName => {
+    if (id === "fsr1" || id === "nis") return "sparkles";
+    if (id === "rtx-video") return "film";
+    if (id === "dlss-nr") return "sliders";
     if (id.includes("anime") || id.includes("art") || id.includes("siax")) return "brush";
     if (id.includes("sharp")) return "sparkles";
     if (id.includes("remacri") || id.includes("restore") || id.includes("ultramix")) return "sliders";
@@ -103,8 +107,9 @@ export function ModelSelectModal({
         return { text: "Restauración Fiel", color: "#10b981" };
       case "compact":
         return { text: "Ultra Rápido / Baja VRAM", color: "#06b6d4" };
+      case "general":
       default:
-        return { text: "Propósito General", color: "#8b5cf6" };
+        return { text: "Aceleración GPU / Espacial", color: "#8b5cf6" };
     }
   };
 

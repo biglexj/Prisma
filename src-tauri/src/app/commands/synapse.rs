@@ -323,6 +323,46 @@ pub struct NativeUpscaleResult {
     pub error: Option<String>,
 }
 
+pub fn find_prisma_upscaler_cli() -> Option<std::path::PathBuf> {
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+
+    // 1. Directorios de desarrollo del monorepo / proyectos biglexj
+    candidates.push(std::path::PathBuf::from(r"D:\Proyectos\biglexj\prisma-upscaler\release\prisma-upscaler-cli.exe"));
+    candidates.push(std::path::PathBuf::from(r"D:\Proyectos\biglexj\prisma-upscaler\target\release\prisma-upscaler-cli.exe"));
+    candidates.push(std::path::PathBuf::from(r"D:\Proyectos\biglexj\prisma-upscaler\cli\target\release\prisma-upscaler-cli.exe"));
+
+    // 2. AppData canónico en Windows
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        candidates.push(std::path::PathBuf::from(&local_app_data).join("PrismaUpscaler").join("prisma-upscaler-cli.exe"));
+        candidates.push(std::path::PathBuf::from(&local_app_data).join("Programs").join("PrismaUpscaler").join("prisma-upscaler-cli.exe"));
+        candidates.push(std::path::PathBuf::from(&local_app_data).join("Programs").join("prisma-upscaler").join("prisma-upscaler-cli.exe"));
+        candidates.push(std::path::PathBuf::from(&local_app_data).join("prisma-upscaler").join("prisma-upscaler-cli.exe"));
+    }
+
+    // 3. ProgramFiles
+    if let Ok(prog_files) = std::env::var("ProgramFiles") {
+        candidates.push(std::path::PathBuf::from(&prog_files).join("PrismaUpscaler").join("prisma-upscaler-cli.exe"));
+        candidates.push(std::path::PathBuf::from(&prog_files).join("Prisma Upscaler").join("prisma-upscaler-cli.exe"));
+        candidates.push(std::path::PathBuf::from(&prog_files).join("prisma-upscaler").join("prisma-upscaler-cli.exe"));
+    }
+
+    // 4. Junto al ejecutable de Prisma
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            candidates.push(parent.join("prisma-upscaler-cli.exe"));
+            candidates.push(parent.join("..").join("..").join("prisma-upscaler").join("release").join("prisma-upscaler-cli.exe"));
+            candidates.push(parent.join("..").join("..").join("prisma-upscaler").join("target").join("release").join("prisma-upscaler-cli.exe"));
+        }
+    }
+
+    for path in candidates {
+        if path.exists() {
+            return Some(path);
+        }
+    }
+    None
+}
+
 pub fn find_prisma_upscaler_engine() -> Option<(std::path::PathBuf, std::path::PathBuf)> {
     let mut candidates: Vec<std::path::PathBuf> = Vec::new();
 
@@ -366,7 +406,7 @@ pub fn find_prisma_upscaler_engine() -> Option<(std::path::PathBuf, std::path::P
 
 #[tauri::command]
 pub fn check_prisma_upscaler_engine() -> bool {
-    find_prisma_upscaler_engine().is_some()
+    find_prisma_upscaler_engine().is_some() || find_prisma_upscaler_cli().is_some()
 }
 
 #[tauri::command]
@@ -377,6 +417,108 @@ pub async fn upscale_image_native(
     custom_output_dir: Option<String>,
 ) -> Result<NativeUpscaleResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
+        let in_path = std::path::PathBuf::from(&input_path);
+        if !in_path.exists() {
+            return Err("El archivo de imagen no existe.".to_string());
+        }
+
+        let start_time = std::time::Instant::now();
+        let file_stem = in_path.file_stem().and_then(|s| s.to_str()).unwrap_or("imagen");
+
+        let out_dir = if let Some(ref custom) = custom_output_dir {
+            let p = std::path::PathBuf::from(custom);
+            if !p.as_os_str().is_empty() {
+                p
+            } else {
+                in_path.parent().unwrap_or_else(|| std::path::Path::new(".")).to_path_buf()
+            }
+        } else {
+            in_path.parent().unwrap_or_else(|| std::path::Path::new(".")).to_path_buf()
+        };
+
+        if !out_dir.exists() {
+            let _ = std::fs::create_dir_all(&out_dir);
+        }
+
+        let norm_lower = model.trim().to_lowercase();
+        let is_spatial_or_ext = matches!(norm_lower.as_str(), "fsr1" | "nis" | "dlss-nr" | "rtx-video");
+
+        // Ruta de motores multi-vendor (AMD FidelityFX FSR 1, NVIDIA NIS, RTX Video, DLSS-NR)
+        if is_spatial_or_ext {
+            let cli_path = match find_prisma_upscaler_cli() {
+                Some(p) => p,
+                None => {
+                    return Ok(NativeUpscaleResult {
+                        success: false,
+                        output_path: String::new(),
+                        duration_secs: 0.0,
+                        error: Some(format!(
+                            "El motor multi-vendor para '{}' no se encuentra disponible (prisma-upscaler-cli no instalado).",
+                            norm_lower
+                        )),
+                    });
+                }
+            };
+
+            let out_file_name = format!("{}_upscaled_{}_{}x.png", file_stem, norm_lower, scale);
+            let final_output_path = out_dir.join(&out_file_name);
+
+            // La CLI rechaza sobrescribir archivos existentes; si ya existe, se limpia previamente
+            if final_output_path.exists() {
+                let _ = std::fs::remove_file(&final_output_path);
+            }
+
+            let mut cmd = std::process::Command::new(&cli_path);
+            #[cfg(target_os = "windows")]
+            {
+                use std::os::windows::process::CommandExt;
+                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+            }
+
+            cmd.arg(&input_path)
+                .arg("--local")
+                .arg("--engine")
+                .arg(&norm_lower)
+                .arg("--scale")
+                .arg(scale.to_string())
+                .arg("--sharpness")
+                .arg("0.5")
+                .arg("--output")
+                .arg(&final_output_path);
+
+            match cmd.output() {
+                Ok(output) => {
+                    if output.status.success() && final_output_path.exists() {
+                        let duration_secs = start_time.elapsed().as_secs_f64();
+                        return Ok(NativeUpscaleResult {
+                            success: true,
+                            output_path: final_output_path.to_string_lossy().to_string(),
+                            duration_secs,
+                            error: None,
+                        });
+                    }
+                    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                    let err = if !stderr.trim().is_empty() { stderr } else { stdout };
+                    return Ok(NativeUpscaleResult {
+                        success: false,
+                        output_path: String::new(),
+                        duration_secs: start_time.elapsed().as_secs_f64(),
+                        error: Some(format!("Error en motor '{}': {}", norm_lower, err.trim())),
+                    });
+                }
+                Err(e) => {
+                    return Ok(NativeUpscaleResult {
+                        success: false,
+                        output_path: String::new(),
+                        duration_secs: start_time.elapsed().as_secs_f64(),
+                        error: Some(format!("Error ejecutando Prisma Upscaler CLI: {e}")),
+                    });
+                }
+            }
+        }
+
+        // Ruta de inferencia neuronal NCNN tradicional (RealESRGAN, UltraSharp, Remacri, etc.)
         let (bin_path, models_dir) = match find_prisma_upscaler_engine() {
             Some(res) => res,
             None => {
@@ -396,32 +538,8 @@ pub async fn upscale_image_native(
             }
         };
 
-        let in_path = std::path::PathBuf::from(&input_path);
-        if !in_path.exists() {
-            return Err("El archivo de imagen no existe.".to_string());
-        }
-
-        let start_time = std::time::Instant::now();
-
-        let file_stem = in_path.file_stem().and_then(|s| s.to_str()).unwrap_or("imagen");
         let ext = in_path.extension().and_then(|e| e.to_str()).unwrap_or("png");
         let out_file_name = format!("{}_upscaled_{}x.{}", file_stem, scale, ext);
-
-        let out_dir = if let Some(ref custom) = custom_output_dir {
-            let p = std::path::PathBuf::from(custom);
-            if !p.as_os_str().is_empty() {
-                p
-            } else {
-                in_path.parent().unwrap_or_else(|| std::path::Path::new(".")).to_path_buf()
-            }
-        } else {
-            in_path.parent().unwrap_or_else(|| std::path::Path::new(".")).to_path_buf()
-        };
-
-        if !out_dir.exists() {
-            let _ = std::fs::create_dir_all(&out_dir);
-        }
-
         let final_output_path = out_dir.join(&out_file_name);
 
         let normalized_model = match model.trim().to_lowercase().as_str() {

@@ -41,6 +41,7 @@ pub mod windows_hook {
     pub enum TriggerEvent {
         Toggle,
         Close,
+        DismissOutside,
         Navigation,
         RestorePrisma,
         MediaNext,
@@ -355,10 +356,10 @@ pub mod windows_hook {
             && !alt_down
             && vk_code != VK_SPACE.0
         {
-            ql_log!("Tecla fuera de QuickLook pulsada (vk=0x{:02X}), cerrando vista previa", vk_code);
+            ql_log!("Tecla fuera de QuickLook pulsada (vk=0x{:02X}), solicitando cierre por foco", vk_code);
             if let Ok(guard) = GLOBAL_CALLBACK.lock() {
                 if let Some(ref cb) = *guard {
-                    cb(TriggerEvent::Close);
+                    cb(TriggerEvent::DismissOutside);
                 }
             }
             return unsafe { CallNextHookEx(None, n_code, w_param, l_param) };
@@ -589,6 +590,7 @@ pub mod windows_hook {
     pub enum TriggerEvent {
         Toggle,
         Close,
+        DismissOutside,
         Navigation,
         RestorePrisma,
         MediaNext,

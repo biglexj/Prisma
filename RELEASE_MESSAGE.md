@@ -1,16 +1,18 @@
-# ✨ Prisma 1.1.7
+# ✨ Prisma 1.1.8
 
-Una actualización centrada en el comparador, el control de volumen y la comodidad al trabajar con tus archivos multimedia.
+Una actualización que agiliza el guardado en el editor de imágenes, incorpora aceleración GPU multi-vendor (AMD FSR 1 y NVIDIA NIS) en Prisma Upscaler y optimiza la navegación hacia el conversor.
 
-- Comparador con modo claro, modo oscuro y colores del tema.
-- Panel de volumen global con controles multimedia y ocultación tras dos segundos.
-- Mejor continuidad entre colas de música y ajustes de salidas de audio.
-- Vista previa de los resultados del conversor y mejoras al guardar imágenes.
-- Miniaturas al arrastrar archivos y transferencias móviles en segundo plano.
+- Animación y estado visual de carga al guardar o sobrescribir en el editor de imágenes.
+- Cierre inmediato del editor y apertura de la vista previa del archivo guardado sin esperas.
+- Invalidación de caché y adaptación bento automática en miniaturas tras cambios de aspecto.
+- Prisma Upscaler multi-vendor: AMD FidelityFX FSR 1, NVIDIA Image Scaling, RTX Video y DLSS NR.
+- Soporte para escala 1x (enfoque puro sin cambiar dimensiones) en motores espaciales.
+- Acceso directo al Conversor Multimedia desde el visor de imágenes con el atajo «V».
+- Revisión y reproducción de imágenes, audio y vídeo directamente desde los resultados del conversor.
 
 ## 📦 Windows x64
 
-[Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.7/Prisma_1.1.7_x64-setup.exe)
+[Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v1.1.8/Prisma_1.1.8_x64-setup.exe)
 
 ## 💖 Apoya el desarrollo
 
