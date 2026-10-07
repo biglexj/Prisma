@@ -97,6 +97,7 @@ impl AudioRelayService {
         self.toggle()
     }
     pub fn configure(&self, volume: f32, capture_id: Option<String>) -> Result<RelayStatus, String> {
+        let _transition = self.transition.lock().unwrap();
         if !volume.is_finite() { return Err("Volumen inválido".into()); }
         let changed_source;
         { let mut config = self.config.lock().unwrap(); changed_source = config.capture_device_id != capture_id;
@@ -119,6 +120,7 @@ impl AudioRelayService {
         self.emit(); Ok(self.status())
     }
     pub fn set_shortcut(&self, shortcut: String) -> Result<RelayStatus, String> {
+        let _transition = self.transition.lock().unwrap();
         use tauri_plugin_global_shortcut::GlobalShortcutExt;
         if !shortcut.is_empty() && (!shortcut.starts_with("Ctrl+Shift+Alt+") || shortcut.len() > 40) {
             return Err("Usa Ctrl+Shift+Alt y una tecla, o desactiva el atajo".into());
@@ -187,14 +189,20 @@ impl AudioRelayService {
         if response["stopped"] == true { return Err(StreamError::Stopped); }
         if response["busy"] == true { return Err(StreamError::Retry("El receptor aún está cerrando la sesión anterior".into())); }
         if response["ok"] != true { return Err(StreamError::Auth); }
-        // A DHCP address change must not make the remembered phone look like a new device.
-        { let mut config = self.config.lock().unwrap();
-            if let Some(saved) = config.device.as_mut().filter(|saved| saved.fingerprint == device.fingerprint) {
-                saved.address = device.address.clone();
+        // Do not overwrite a new selection with an old connection finishing in the background.
+        {
+            let _transition = self.transition.lock().unwrap();
+            if generation != self.generation.load(Ordering::SeqCst) || !self.enabled.load(Ordering::SeqCst) { return Ok(()); }
+            let mut changed_address = false;
+            { let mut config = self.config.lock().unwrap();
+                if let Some(saved) = config.device.as_mut().filter(|saved| saved.fingerprint == device.fingerprint) {
+                    changed_address = saved.address != device.address;
+                    saved.address = device.address.clone();
+                }
             }
+            self.status.lock().unwrap().device = Some(device);
+            if changed_address { let _ = self.save(); }
         }
-        self.status.lock().unwrap().device = Some(device);
-        let _ = self.save();
         self.phase(generation, "connected", None, 0);
         let (sender, receiver) = std::sync::mpsc::sync_channel::<capture::AudioBlock>(8);
         capture::set_tap(Some(sender));
