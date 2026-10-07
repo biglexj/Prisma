@@ -77,7 +77,7 @@ impl AudioRelayService {
             let phones = self.app.state::<crate::features::synapse::SynapseDiscoveryService>().get_devices()
                 .into_iter().filter(|d| d.capabilities.iter().any(|c| c == CAPABILITY)).collect::<Vec<_>>();
             if phones.len() > 1 { return Err("Hay varios teléfonos. Elige uno en el Ecualizador.".into()); }
-            let phone = phones.first().ok_or("No hay un teléfono disponible. Abre Super Gallery con Synapse activo en la misma red.")?;
+            let phone = phones.first().ok_or("No hay un teléfono disponible. Abre Super Galería con Synapse activo en la misma red.")?;
             self.remember_synapse(&phone.ip_address)?;
         }
         let was_enabled = self.enabled.swap(enabled, Ordering::SeqCst);
@@ -154,7 +154,7 @@ impl AudioRelayService {
             if generation != self.generation.load(Ordering::SeqCst) { continue; }
             match result {
                 Err(StreamError::Stopped) => { let _ = self.set_enabled(false); }
-                Err(StreamError::Auth) => { let _ = self.set_enabled(false); self.status.lock().unwrap().error = Some("Super Gallery no aceptó el audio. Comprueba que Synapse y el altavoz estén disponibles.".into()); self.emit(); }
+                Err(StreamError::Auth) => { let _ = self.set_enabled(false); self.status.lock().unwrap().error = Some("Super Galería no aceptó el audio. Comprueba que Synapse y el altavoz estén disponibles.".into()); self.emit(); }
                 Err(StreamError::Retry(message)) => self.phase(generation, "reconnecting", Some(message), 0),
                 Ok(()) => (),
             }
@@ -275,7 +275,7 @@ fn local_tcp(address: &str) -> Result<TcpStream, String> {
     let ip: IpAddr = address.parse().map_err(|_| "Dirección Synapse inválida")?;
     let local = match ip { IpAddr::V4(ip) => ip.is_private() || ip.is_loopback() || ip.is_link_local(), IpAddr::V6(ip) => ip.is_loopback() || ip.is_unique_local() || ip.is_unicast_link_local() };
     if !local { return Err("El teléfono debe estar en la red local".into()); }
-    let tcp = TcpStream::connect_timeout(&SocketAddr::new(ip, PORT), Duration::from_secs(2)).map_err(|_| "Super Gallery no está disponible en Synapse".to_string())?;
+    let tcp = TcpStream::connect_timeout(&SocketAddr::new(ip, PORT), Duration::from_secs(2)).map_err(|_| "Super Galería no está disponible en Synapse".to_string())?;
     tcp.set_nodelay(true).ok(); tcp.set_read_timeout(Some(Duration::from_secs(4))).ok(); tcp.set_write_timeout(Some(Duration::from_secs(4))).ok();
     Ok(tcp)
 }
@@ -298,7 +298,7 @@ pub fn synapse_phone(address: &str) -> Result<MobileAudioDevice, String> {
     let mut body=vec![0;length]; tcp.read_exact(&mut body).map_err(|_| "Estado Synapse incompleto")?;
     let value: Value=serde_json::from_slice(&body).map_err(|_| "Estado Synapse inválido")?;
     if value["success"] != true || value["target_app"] != "supergallery" || value["audio_available"] != true || value["audio_protocol"] != 1 {
-        return Err("Abre Super Gallery y activa su disponibilidad como altavoz de Synapse".into());
+        return Err("Abre Super Galería y activa su disponibilidad como altavoz de Synapse".into());
     }
     let fingerprint=value["audio_fingerprint"].as_str().filter(|v|v.len()==64 && v.bytes().all(|b|b.is_ascii_hexdigit())).ok_or("Identidad Synapse incompleta")?.to_ascii_lowercase();
     Ok(MobileAudioDevice { id:fingerprint.clone(), fingerprint, name:value["device_name"].as_str().unwrap_or("Teléfono").chars().take(80).collect(), address:address.into() })
@@ -307,7 +307,7 @@ fn connect(address: &str, fingerprint: Option<&str>) -> Result<TlsStream<TcpStre
     let mut tcp = local_tcp(address)?;
     tcp.write_all(format!("POST /api/v1/synapse/audio HTTP/1.1\r\nHost: {address}\r\nConnection: Upgrade\r\nUpgrade: prisma-audio-tls-pcm-v1\r\nContent-Length: 0\r\n\r\n").as_bytes()).map_err(|_| "Synapse no respondió")?;
     let headers=http_headers(&mut tcp)?;
-    if !headers.lines().next().is_some_and(|line|line.contains(" 101 ")) { return Err("El altavoz de Super Gallery está apagado o Synapse está en pausa".into()); }
+    if !headers.lines().next().is_some_and(|line|line.contains(" 101 ")) { return Err("El altavoz de Super Galería está apagado o Synapse está en pausa".into()); }
     // First use inherits Synapse's existing trusted-LAN model. Retain that phone's public identity
     // automatically, and verify it on later TLS connections; there is no second pairing workflow.
     let connector = TlsConnector::builder().min_protocol_version(Some(native_tls::Protocol::Tlsv12))

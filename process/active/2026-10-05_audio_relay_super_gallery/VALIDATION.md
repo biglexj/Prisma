@@ -66,3 +66,9 @@ Biglex confirmó primero «Se escuchó con cortes». Se agruparon las respuestas
 - Siguen pendientes la aceptación de 60 minutos, silencio de 10 minutos, pantalla apagada 15 minutos, latencia acústica mediana/p95 y cambios reales desde notificaciones/Bluetooth. Atajo escrito y compilado; su interacción con otra app delante requiere prueba nativa.
 
 La vista del navegador ahora indica «Disponible en Prisma de escritorio» y deshabilita controles nativos; no muestra un fallo de conexión causado por ausencia del runtime Tauri. Para probar el ejecutable debug, cerrar la instancia instalada de Prisma: el descubrimiento Synapse existente reserva el puerto UDP 49289 y su fallback no recibe los beacons Android emitidos solo a 49289. No se cerró ni reemplazó la instancia instalada durante estas pruebas.
+
+### Nombre localizado y regresión del teléfono — 2026-10-07
+
+Panel usa el nombre según idioma del documento: español Super Galería; inglés Super Gallery; correspondencias de francés, alemán, italiano y portugués tomadas de app_name Android. Errores del backend actual, cuya interfaz es española, usan Super Galería. `bunx tauri build --debug --no-bundle` aprobado tras estos cambios.
+
+Las pruebas Android por instrumentación forzaron el cierre del paquete de uso diario y dejaron fondos sin motor y widget sin RemoteViews. Se conservaban vídeos y preferencias. Instrumentación retirada; APK de recuperación instalado, 119 pruebas unitarias aprobadas, ambos motores de fondo reconectados y widget con bitmap/acción de configuración registrados. Confirmación visual pendiente; Biglex se retira con el teléfono. No repetir instrumentación sobre el paquete personal. [Evidencia de recuperación](../../../../Lienzo--Gallery/process/active/2026-10-07_widget_y_fondo_tras_pruebas/VALIDATION.md).

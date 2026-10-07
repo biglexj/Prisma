@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { useDsp } from "../DspContext";
+import { superGalleryName } from "../../../shared/superGalleryName";
 import "./mobile-audio-output.css";
 
 const LABELS = { off: "Desactivado", connecting: "Conectando…", connected: "Conectado", reconnecting: "Reconectando…" };
@@ -10,6 +11,7 @@ interface SynapsePhone { deviceName: string; ipAddress: string; capabilities: st
 export function MobileAudioOutputSelector() {
   const dsp = useDsp();
   const mobile = dsp.mobileAudioOutput;
+  const galleryName = superGalleryName();
   const { status, busy, error } = mobile;
   const [open, setOpen] = useState(false);
   const [phones, setPhones] = useState<SynapsePhone[]>([]);
@@ -55,7 +57,7 @@ export function MobileAudioOutputSelector() {
     {open && createPortal(<div ref={panel} className="mobile-audio-panel" role="dialog" aria-label="Usar el teléfono como altavoz"
       style={{ ...position, maxHeight: `calc(100dvh - ${position.top + 12}px)` }}>
       <div className="mobile-audio-heading"><strong>Usar el teléfono como altavoz</strong><button type="button" aria-label="Cerrar" onClick={() => setOpen(false)}>×</button></div>
-      <p>Se conecta con Super Gallery a través de Synapse y sigue activo hasta que lo desactives.</p>
+      <p>Se conecta con {galleryName} a través de Synapse y sigue activo hasta que lo desactives.</p>
       {(phones.length > 1 || (status.device && phones.length > 0 && !rememberedIsVisible)) && <label>Teléfono
         <select value={rememberedIsVisible ? status.device?.address ?? "" : ""} disabled={busy}
           onChange={event => { if (event.target.value) void mobile.selectPhone(event.target.value); }}>
@@ -64,12 +66,12 @@ export function MobileAudioOutputSelector() {
         </select>
       </label>}
       <div className="mobile-audio-device">
-        <div><strong>{status.device?.name ?? automaticPhone?.deviceName ?? "Super Gallery"}</strong>
+        <div><strong>{status.device?.name ?? automaticPhone?.deviceName ?? galleryName}</strong>
           <span role="status">{!mobile.desktopAvailable ? "Disponible en Prisma de escritorio" : status.enabled ? LABELS[status.connection] : status.device || automaticPhone ? "Listo para conectar" : phones.length > 1 ? "Elige un teléfono" : "Buscando en Synapse…"}</span></div>
         <button type="button" role="switch" aria-checked={status.enabled} disabled={busy || !mobile.desktopAvailable}
           onClick={() => void mobile.toggle()}>{status.enabled ? "Desactivar" : "Activar"}</button>
       </div>
-      {!mobile.desktopAvailable ? <p>Abre Prisma de escritorio para utilizar el teléfono como altavoz.</p> : !status.device && phones.length === 0 && <p>Abre Super Gallery con Synapse activo en la misma red.</p>}
+      {!mobile.desktopAvailable ? <p>Abre Prisma de escritorio para utilizar el teléfono como altavoz.</p> : !status.device && phones.length === 0 && <p>Abre {galleryName} con Synapse activo en la misma red.</p>}
       <label>Volumen del teléfono · {gain} %
         <input aria-label="Volumen enviado al teléfono" type="range" min="0" max="100" value={gain} disabled={busy || !mobile.desktopAvailable}
           onChange={event => setGain(Number(event.target.value))}
