@@ -1,0 +1,17 @@
+.mobile-audio-trigger.is-on { color: var(--md-sys-color-primary, #b8a7ff); background: color-mix(in srgb, var(--md-sys-color-primary, #b8a7ff) 16%, transparent); }
+.mobile-audio-panel { position: fixed; z-index: 100020; width: min(368px, calc(100vw - 24px)); max-height: calc(100vh - 140px); overflow: auto; padding: 18px; border-radius: 22px; background: var(--md-sys-color-surface-container-high, #252330); color: var(--md-sys-color-on-surface, #eee9f5); border: 1px solid color-mix(in srgb, currentColor 16%, transparent); box-shadow: 0 14px 48px #0006; box-sizing: border-box; }
+.mobile-audio-heading, .mobile-audio-device { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mobile-audio-heading > button { font-size: 22px; padding: 0 9px; }
+.mobile-audio-panel p { font-size: 12px; line-height: 1.5; opacity: .8; margin: 10px 0; }
+.mobile-audio-panel label { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; font-size: 12px; }
+.mobile-audio-panel select, .mobile-audio-panel input:not([type=checkbox]):not([type=range]) { box-sizing: border-box; width: 100%; min-height: 36px; padding: 8px; border-radius: 10px; color: inherit; background: color-mix(in srgb, currentColor 7%, transparent); border: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
+.mobile-audio-panel select option { background: #252330; color: #eee9f5; }
+.mobile-audio-panel button { border: 0; border-radius: 12px; background: color-mix(in srgb, var(--md-sys-color-primary, #b8a7ff) 22%, transparent); color: inherit; padding: 8px 12px; cursor: pointer; }
+.mobile-audio-panel button:disabled { opacity: .45; cursor: default; }
+.mobile-audio-device { padding: 12px; background: color-mix(in srgb, currentColor 6%, transparent); border-radius: 14px; }
+.mobile-audio-device > div { display: flex; flex-direction: column; gap: 4px; }
+.mobile-audio-device span { font-size: 12px; opacity: .8; }
+.mobile-audio-panel details { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); padding-top: 12px; margin-top: 12px; }
+.mobile-audio-panel summary { cursor: pointer; font-size: 13px; }
+.mobile-audio-panel .mobile-audio-error { color: var(--md-sys-color-error, #ffb4ab); opacity: 1; }
+@media (max-width: 600px) { .mobile-audio-panel { left: 12px !important; max-height: calc(100dvh - 140px); } }

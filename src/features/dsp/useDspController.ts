@@ -13,6 +13,7 @@ import { selectAudioOutput } from "./selectAudioOutput";
 import { reconcileGlobalAudio } from "./reconcileGlobalAudio";
 import { dspClient } from "./tauri/client";
 import { useMultiAudioOutput } from "./useMultiAudioOutput";
+import { useMobileAudioOutput } from "./useMobileAudioOutput";
 
 const STORAGE_KEY_ENABLED = "prisma_dsp_enabled";
 const STORAGE_KEY_CONFIG = "prisma_dsp_config";
@@ -26,6 +27,7 @@ const STORAGE_KEY_NORMALIZATION = "prisma_dsp_volume_normalization";
 const PRISMA_PRESET = DEFAULT_PRESETS[0];
 
 export function useDspController() {
+  const mobileAudioOutput = useMobileAudioOutput();
   const [enabled, setEnabled] = useState<boolean>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_ENABLED);
     return saved !== null ? saved === "true" : true;
@@ -466,6 +468,7 @@ export function useDspController() {
   }, []);
 
   return {
+    mobileAudioOutput,
     enabled,
     toggleEnabled,
     volumeNormalization,

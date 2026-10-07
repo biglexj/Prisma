@@ -620,6 +620,7 @@ fn run_passthru_loop(
                     }
 
                     // Distribuir el mismo bloque DSP a las colas independientes de cada salida.
+                    crate::features::audio_relay::capture::publish(wfx.nSamplesPerSec, channels, &local_interleaved);
                     if let Ok(gains) = output_gains.try_lock() {
                         for slot in &mut render_slots {
                             slot.gain = gains.iter().find(|output| output.id == slot.id)

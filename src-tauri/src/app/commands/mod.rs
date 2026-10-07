@@ -1,4 +1,5 @@
 pub mod converter;
+pub mod audio_relay;
 pub mod custom_libraries;
 pub mod flyout;
 pub mod favorites;

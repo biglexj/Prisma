@@ -382,6 +382,8 @@ pub fn run() {
                 infrastructure::video_takes::VideoTakesState::load(data_directory.clone())
                     .map_err(std::io::Error::other)?;
             app.manage(video_takes_state);
+            let audio_relay = features::audio_relay::AudioRelayService::start(app.handle().clone(), data_directory.clone());
+            app.manage(audio_relay);
             let synapse_state = features::synapse::SynapseState::load(data_directory);
             app.manage(synapse_state);
 
@@ -657,6 +659,11 @@ pub fn run() {
             playback_snapshot,
             playback_set_dsp_config,
             playback_get_audio_devices,
+            app::commands::audio_relay::mobile_audio_status,
+            app::commands::audio_relay::mobile_audio_select_phone,
+            app::commands::audio_relay::mobile_audio_set_enabled,
+            app::commands::audio_relay::mobile_audio_configure,
+            app::commands::audio_relay::mobile_audio_set_shortcut,
             playback_get_multi_output,
             playback_get_global_multi_output_shortcut_error,
             playback_set_multi_output_devices,
@@ -788,6 +795,7 @@ pub fn run() {
             .expect("Prisma no pudo iniciar el runtime de Tauri")
         .run(|app, event| {
             if matches!(event, tauri::RunEvent::Exit) {
+                if let Some(relay) = app.try_state::<std::sync::Arc<features::audio_relay::AudioRelayService>>() { relay.shutdown(); }
                 let service = app.state::<std::sync::Arc<infrastructure::media::passthru::PassthruService>>();
                 let _ = service.stop();
             }

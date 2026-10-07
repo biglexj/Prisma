@@ -3,6 +3,7 @@ import { EQ_BAND_RANGES, EQ_FREQUENCIES, type DspEffectsConfig } from "../model/
 import { useDsp } from "../DspContext";
 import { Icon } from "../../../shared/ui/Icon";
 import { MultiAudioOutputSelector } from "./MultiAudioOutputSelector";
+import { MobileAudioOutputSelector } from "./MobileAudioOutputSelector";
 import "./dsp-equalizer.css";
 
 const SPECTRUM_BAR_COUNT = 52;
@@ -512,6 +513,7 @@ export function DspEqualizerView({ isModal = false, onClose, isPlaying = false }
               )}
             </div>
             <MultiAudioOutputSelector />
+            <MobileAudioOutputSelector />
           </div>
 
           <div className="dsp-header-controls-right">

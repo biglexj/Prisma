@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Icon, type IconName } from "../../shared/ui/Icon";
 import type { QuickLookShortcutMode } from "../useSystemSettings";
+import { useDsp } from "../../features/dsp/DspContext";
 
 interface ShortcutsSettingsPanelProps {
   quickLookShortcut: QuickLookShortcutMode;
@@ -23,6 +24,8 @@ interface ShortcutCategory {
 }
 
 export function ShortcutsSettingsPanel({ quickLookShortcut }: ShortcutsSettingsPanelProps) {
+  const { mobileAudioOutput } = useDsp();
+  const mobileShortcut = mobileAudioOutput.status.shortcut;
   const [selectedCategory, setSelectedCategory] = useState<ShortcutCategoryKey>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -55,6 +58,7 @@ export function ShortcutsSettingsPanel({ quickLookShortcut }: ShortcutsSettingsP
           { id: "close_win", label: "Cerrar ventana (pausa vídeo)", keys: ["Ctrl + W", "Alt + F4"] },
           { id: "play_pause_global", label: "Reproducir / Pausar", keys: ["Espacio"] },
           { id: "quick_look", label: "Previsualización (Quick Look)", keys: [quickLookBadge] },
+          { id: "mobile_speaker", label: "Teléfono como altavoz (configurable en Ecualizador)", keys: [mobileShortcut ? mobileShortcut.replaceAll("+", " + ").replace("Shift", "Mayús") : "Desactivado"] },
         ],
       },
       {
@@ -130,7 +134,7 @@ export function ShortcutsSettingsPanel({ quickLookShortcut }: ShortcutsSettingsP
         ],
       },
     ];
-  }, [quickLookBadge]);
+  }, [quickLookBadge, mobileShortcut]);
 
   const totalShortcutsCount = useMemo(() => {
     return categories.reduce((acc, cat) => acc + cat.items.length, 0);

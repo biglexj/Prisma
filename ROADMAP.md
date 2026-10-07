@@ -8,6 +8,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [ ] **Teléfono como altavoz de Prisma y salidas Android respetuosas**: PC → teléfono continuo implementado; controles en Ecualizador y atajo global. Aceptación física, duración y latencia en curso. [Proceso activo](process/active/2026-10-05_audio_relay_super_gallery/PLAN.md).
+
 - [ ] **Flyout & Mini Widget de Escritorio para Medios y Volumen**: Overlay nativo y autónomo de escritorio en Tauri v2 sin dependencias externas (como FluentFlyout), con tarjeta de reproducción multimedia (carátulas HD, fotogramas de vídeo, metadata y transporte), cápsula de volumen interactiva, posicionamiento paramétrico en 6 zonas de pantalla respetando el área de trabajo de Windows, visualizador de audio reactivo integrado y modo anclado (Pin) para operar como widget de escritorio continuo.
 - [ ] **Miniaturas al arrastrar archivos fuera de Prisma**: Mostrar portada, miniatura o fotograma en el cursor de arrastre para imágenes, música y vídeos; queda pendiente la revisión visual y la entrega real en Windows.
 - [ ] **Inicio con archivos recientes y editor de imagen estable**: Implementados estantes por fecha de creación o modificación, arrastre nativo desde Inicio, vista previa de recorte con Enter, pincel directo, marca de agua desplazable, selector PNG/JPEG/WebP al guardar una copia y ocultación de avisos de audio en el visor de fotos. Pendiente prueba manual del arrastre hacia otra aplicación y del flujo completo de edición/guardado en Prisma de desarrollo.

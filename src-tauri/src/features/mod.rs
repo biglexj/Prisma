@@ -1,4 +1,5 @@
 pub mod custom_libraries;
+pub mod audio_relay;
 pub mod folder_session;
 pub mod music_library;
 pub mod playback;

@@ -85,7 +85,7 @@ const VIEW_TITLES: Record<AppView, string> = {
 };
 
 function AppContent() {
-  const { multiOutput } = useDsp();
+  const { multiOutput, mobileAudioOutput } = useDsp();
   const [activeView, setActiveView] = useState<AppView>("home");
   const [converterRequest, setConverterRequest] = useState<ConverterOpenRequest | null>(null);
   const [isEqualizerModalOpen, setIsEqualizerModalOpen] = useState(false);
@@ -140,6 +140,18 @@ function AppContent() {
     setGlobalFavToast(text);
     globalFavToastTimerRef.current = window.setTimeout(() => setGlobalFavToast(null), 1800);
   }, []);
+
+  const mobileEnabledRef = useRef(mobileAudioOutput.status.enabled);
+  useEffect(() => {
+    const enabled = mobileAudioOutput.status.enabled;
+    if (mobileEnabledRef.current !== enabled) {
+      mobileEnabledRef.current = enabled;
+      showGlobalFavToast(enabled ? "🔊 Teléfono como altavoz activado" : "🔊 Audio al teléfono desactivado");
+    }
+  }, [mobileAudioOutput.status.enabled, showGlobalFavToast]);
+  useEffect(() => {
+    if (mobileAudioOutput.error) showGlobalFavToast(mobileAudioOutput.error);
+  }, [mobileAudioOutput.error, showGlobalFavToast]);
 
   useGlobalFileDrop({
     activeView, onAddMusicFolder: library.addFolder, onAddImageFolder: imageLibrary.addFolder, onAddVideoFolder: videoLibrary.addFolder,
