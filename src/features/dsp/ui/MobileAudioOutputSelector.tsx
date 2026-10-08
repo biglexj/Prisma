@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { useDsp } from "../DspContext";
 import { superGalleryName } from "../../../shared/superGalleryName";
+import { CustomSelect } from "../../../shared/ui/CustomSelect";
 import "./mobile-audio-output.css";
 
 const LABELS = { off: "Desactivado", connecting: "Conectando…", connected: "Conectado", reconnecting: "Reconectando…" };
@@ -25,8 +26,9 @@ export function MobileAudioOutputSelector() {
     let disposed = false;
     const update = () => {
       const rect = trigger.current?.getBoundingClientRect();
+      const height = Math.min(panel.current?.scrollHeight ?? 420, window.innerHeight - 24);
       if (rect) setPosition({ left: Math.max(12, Math.min(rect.left, window.innerWidth - 392)),
-        top: Math.max(12, Math.min(rect.bottom + 8, window.innerHeight - 420)) });
+        top: Math.max(12, Math.min(rect.bottom + 8, window.innerHeight - height - 12)) });
     };
     const discover = () => {
       void invoke<SynapsePhone[]>("synapse_get_discovered_devices").then(devices => {
@@ -38,11 +40,18 @@ export function MobileAudioOutputSelector() {
     };
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { setOpen(false); trigger.current?.focus(); } };
     update(); if (mobile.desktopAvailable) discover();
+    const resize = new ResizeObserver(update);
+    const mutations = new MutationObserver(update);
+    if (panel.current) {
+      resize.observe(panel.current);
+      mutations.observe(panel.current, { childList: true, subtree: true, attributes: true, attributeFilter: ["open"] });
+    }
     const timer = mobile.desktopAvailable ? window.setInterval(discover, 3000) : undefined;
     window.addEventListener("resize", update); window.addEventListener("scroll", update, true);
     document.addEventListener("pointerdown", outside); document.addEventListener("keydown", onKey);
     return () => {
       disposed = true; clearInterval(timer);
+      resize.disconnect(); mutations.disconnect();
       window.removeEventListener("resize", update); window.removeEventListener("scroll", update, true);
       document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", onKey);
     };
@@ -59,11 +68,10 @@ export function MobileAudioOutputSelector() {
       <div className="mobile-audio-heading"><strong>Usar el teléfono como altavoz</strong><button type="button" aria-label="Cerrar" onClick={() => setOpen(false)}>×</button></div>
       <p>Recibe el audio de Windows en tu teléfono.</p>
       {(phones.length > 1 || (status.device && phones.length > 0 && !rememberedIsVisible)) && <label>Teléfono
-        <select value={rememberedIsVisible ? status.device?.address ?? "" : ""} disabled={busy}
-          onChange={event => { if (event.target.value) void mobile.selectPhone(event.target.value); }}>
-          <option value="">Elige un teléfono disponible</option>
-          {phones.map(phone => <option key={phone.ipAddress} value={phone.ipAddress}>{phone.deviceName}</option>)}
-        </select>
+        <CustomSelect value={rememberedIsVisible ? status.device?.address ?? "" : ""} disabled={busy}
+          aria-label="Teléfono" placeholder="Elige un teléfono disponible"
+          options={phones.map(phone => ({ value: phone.ipAddress, label: phone.deviceName }))}
+          onChange={address => { if (address) void mobile.selectPhone(address); }} />
       </label>}
       <div className="mobile-audio-device">
         <div><strong>{status.device?.name ?? automaticPhone?.deviceName ?? galleryName}</strong>
@@ -79,25 +87,14 @@ export function MobileAudioOutputSelector() {
           onKeyUp={() => void mobile.configure(gain / 100, status.captureDeviceId)} />
       </label>
       <details>
-        <summary>Fuente de audio y atajo</summary>
+        <summary>Fuente de audio</summary>
         <label>Audio que se enviará
-          <select value={status.captureDeviceId ?? ""} disabled={busy || !mobile.desktopAvailable || dsp.globalPassthruEnabled}
-            onChange={event => void mobile.configure(status.volume, event.target.value || null)}>
-            <option value="">Salida predeterminada de Windows</option>
-            {dsp.audioEndpoints.map(endpoint => <option key={endpoint.id} value={endpoint.id}>{endpoint.name}</option>)}
-          </select>
-        </label>
-        {dsp.globalPassthruEnabled && <p>Utiliza la señal procesada del DSP global.</p>}
-        <label>Atajo global
-          <select value={status.shortcut} disabled={busy || !mobile.desktopAvailable} onChange={event => void mobile.setShortcut(event.target.value)}>
-            <option value="Ctrl+Shift+Alt+M">Ctrl + Mayús + Alt + M</option>
-            <option value="Ctrl+Shift+Alt+T">Ctrl + Mayús + Alt + T</option>
-            <option value="Ctrl+Shift+Alt+U">Ctrl + Mayús + Alt + U</option>
-            <option value="">Sin atajo</option>
-          </select>
+          <CustomSelect value={status.captureDeviceId ?? ""} disabled={busy || !mobile.desktopAvailable || dsp.globalPassthruEnabled}
+            aria-label="Audio que se enviará"
+            options={[{ value: "", label: "Salida predeterminada de Windows" }, ...dsp.audioEndpoints.map(endpoint => ({ value: endpoint.id, label: endpoint.name }))]}
+            onChange={id => void mobile.configure(status.volume, id || null)} />
         </label>
       </details>
-      {status.shortcutError && <p role="alert" className="mobile-audio-error">{status.shortcutError}</p>}
       {(error || status.error) && <p className="mobile-audio-error" role="alert">{error || status.error}</p>}
     </div>, document.body)}
   </>;

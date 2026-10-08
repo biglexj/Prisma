@@ -1,4 +1,5 @@
 pub mod capture;
+mod metadata;
 use std::io::{Read, Write};
 use std::net::{IpAddr, Shutdown, SocketAddr, TcpStream};
 use std::path::PathBuf;
@@ -23,7 +24,7 @@ pub struct MobileAudioDevice { pub id: String, pub name: String, pub address: St
 #[serde(rename_all = "camelCase")]
 pub struct RelayStatus {
     pub enabled: bool, pub connection: String, pub device: Option<MobileAudioDevice>, pub volume: f32,
-    pub capture_device_id: Option<String>, pub shortcut: String, pub shortcut_error: Option<String>,
+    pub capture_device_id: Option<String>, pub shortcut: String, pub default_shortcut: String, pub shortcut_error: Option<String>,
     pub error: Option<String>, pub sample_rate: u32,
 }
 #[derive(Clone, Deserialize, Serialize)]
@@ -42,17 +43,34 @@ pub struct AudioRelayService {
     transition: Mutex<()>, saving: Mutex<()>, last_shortcut: Mutex<Option<Instant>>,
 }
 impl AudioRelayService {
-    pub fn start(app: AppHandle, directory: PathBuf) -> Arc<Self> {
+    pub fn start(app: AppHandle, directory: PathBuf, development: bool) -> Arc<Self> {
         let path = directory.join("mobile-audio.json");
         let mut config: SavedConfig = std::fs::read(&path).ok().and_then(|bytes| serde_json::from_slice(&bytes).ok()).unwrap_or_default();
+        // M belongs to the installed app; dev uses T, including profiles created
+        // before the two instances had separate shortcut defaults.
+        let default_shortcut = if development { "Ctrl+Shift+Alt+T" } else { DEFAULT_SHORTCUT };
+        if !config.shortcut.is_empty() { config.shortcut = default_shortcut.into(); }
         config.volume = if config.volume.is_finite() { config.volume.clamp(0.0, 1.0) } else { 1.0 };
         let status = RelayStatus { enabled: false, connection: "off".into(), device: config.device.clone(), volume: config.volume,
-            capture_device_id: config.capture_device_id.clone(), shortcut: config.shortcut.clone(), shortcut_error: None,
+            capture_device_id: config.capture_device_id.clone(), shortcut: config.shortcut.clone(), default_shortcut: default_shortcut.into(), shortcut_error: None,
             error: None, sample_rate: 0 };
         let service = Arc::new(Self { config: Mutex::new(config), status: Mutex::new(status), path,
             enabled: AtomicBool::new(false), quitting: AtomicBool::new(false), generation: AtomicU64::new(0),
             socket: Mutex::new(None), transition: Mutex::new(()), saving: Mutex::new(()), last_shortcut: Mutex::new(None), app });
         service.register_shortcut();
+        let retry = service.clone();
+        std::thread::spawn(move || {
+            while !retry.quitting.load(Ordering::SeqCst) {
+                std::thread::sleep(Duration::from_secs(2));
+                if retry.quitting.load(Ordering::SeqCst) { break; }
+                if retry.status().shortcut_error.is_some() {
+                    let _transition = retry.transition.lock().unwrap();
+                    let previous = retry.status().shortcut_error;
+                    retry.register_shortcut();
+                    if previous != retry.status().shortcut_error { retry.emit(); }
+                }
+            }
+        });
         let worker = service.clone();
         std::thread::spawn(move || worker.run());
         service
@@ -122,11 +140,14 @@ impl AudioRelayService {
     pub fn set_shortcut(&self, shortcut: String) -> Result<RelayStatus, String> {
         let _transition = self.transition.lock().unwrap();
         use tauri_plugin_global_shortcut::GlobalShortcutExt;
-        if !shortcut.is_empty() && (!shortcut.starts_with("Ctrl+Shift+Alt+") || shortcut.len() > 40) {
-            return Err("Usa Ctrl+Shift+Alt y una tecla, o desactiva el atajo".into());
+        if !shortcut.is_empty() && shortcut != self.status.lock().unwrap().default_shortcut {
+            return Err("El atajo del altavoz se controla desde Configuración → Atajos".into());
         }
         let old = self.config.lock().unwrap().shortcut.clone();
-        if old == shortcut { return Ok(self.status()); }
+        if old == shortcut {
+            if self.status.lock().unwrap().shortcut_error.is_some() { self.register_shortcut(); self.emit(); }
+            return Ok(self.status());
+        }
         // Register first; failure preserves the previous working shortcut.
         if !shortcut.is_empty() { register(&self.app, &shortcut)?; }
         if !old.is_empty() { let _ = self.app.global_shortcut().unregister(old.as_str()); }
@@ -137,7 +158,8 @@ impl AudioRelayService {
     fn register_shortcut(&self) {
         let shortcut = self.config.lock().unwrap().shortcut.clone();
         if !shortcut.is_empty() {
-            if register(&self.app, &shortcut).is_err() { self.status.lock().unwrap().shortcut_error = Some("Atajo ocupado. Elige otra combinación en el Ecualizador.".into()); }
+            self.status.lock().unwrap().shortcut_error = register(&self.app, &shortcut).err()
+                .map(|_| "El atajo global está ocupado. Shift + T sigue disponible dentro de Prisma.".into());
         }
     }
     pub fn shutdown(&self) { self.quitting.store(true, Ordering::SeqCst); let _ = self.set_enabled(false); }
@@ -207,6 +229,8 @@ impl AudioRelayService {
         let (sender, receiver) = std::sync::mpsc::sync_channel::<capture::AudioBlock>(8);
         capture::set_tap(Some(sender));
         let running = Arc::new(AtomicBool::new(true));
+        // Older receivers keep using PCM unchanged; metadata requires explicit support.
+        let metadata = (response["metadata"] == true).then(|| metadata::start(self.app.clone(), running.clone()));
         let capture_running = running.clone();
         let passthru = self.app.state::<Arc<PassthruService>>().inner().clone();
         let endpoint = config.capture_device_id;
@@ -217,6 +241,12 @@ impl AudioRelayService {
         let mut current_rate = 0;
         let result = (|| {
             while self.enabled.load(Ordering::SeqCst) && generation == self.generation.load(Ordering::SeqCst) {
+                if let Some(bytes) = metadata.as_ref().and_then(|receiver| receiver.try_recv().ok()) {
+                    let mut packet = Vec::with_capacity(bytes.len() + 5);
+                    packet.extend_from_slice(&((bytes.len() + 1) as u32).to_be_bytes());
+                    packet.push(3); packet.extend_from_slice(&bytes);
+                    tls.write_all(&packet).map_err(|_| StreamError::Retry("Se interrumpió el envío de la carátula".into()))?;
+                }
                 if let Ok(block) = receiver.recv_timeout(Duration::from_millis(30)) {
                     if block.captured.elapsed() < Duration::from_millis(100) {
                         let volume = self.status.lock().unwrap().volume;
@@ -260,8 +290,10 @@ enum StreamError { Stopped, Auth, Retry(String) }
 fn register(app: &AppHandle, shortcut: &str) -> Result<(), String> {
     use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
     if matches!(shortcut.to_ascii_lowercase().as_str(), "ctrl+shift+alt+p" | "ctrl+shift+alt+o") { return Err("Esa combinación ya está reservada".into()); }
-    app.global_shortcut().on_shortcut(shortcut, |app, _, event| {
-        if event.state() == ShortcutState::Pressed {
+    let held = Arc::new(AtomicBool::new(false));
+    app.global_shortcut().on_shortcut(shortcut, move |app, _, event| {
+        if event.state() == ShortcutState::Released { held.store(false, Ordering::Relaxed); return; }
+        if event.state() == ShortcutState::Pressed && !held.swap(true, Ordering::Relaxed) {
             let app = app.clone();
             std::thread::spawn(move || {
                 if let Some(service) = app.try_state::<Arc<AudioRelayService>>() {
@@ -361,7 +393,64 @@ mod tests {
         let pcm=encode_pcm(&block,1.0);
         assert_eq!(&pcm[0..2],&pcm[2..4]); assert_eq!(&pcm[4..8],&[0,0,0,0]);
     }
-    /// Physical LAN probe. Run only with the Android instrumentation armed on an owned device.
+    /// Physical LAN probe against the normally running Android app; never use instrumentation
+    /// on the personal installation (it force-stops wallpaper and widget services).
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "requires a free physical phone receiver; displays a temporary artwork notification"]
+    fn real_phone_receives_artwork_metadata() {
+        use base64::{Engine as _, engine::general_purpose::STANDARD};
+        let address = std::env::var("PRISMA_AUDIO_PROBE_ADDRESS").unwrap();
+        let peer = synapse_phone(&address).unwrap();
+        let mut tls = connect(&address, Some(&peer.fingerprint)).unwrap();
+        write_json(&mut tls, &json!({"op":"start", "streamId":format!("{:032x}", SystemTimeForProbe::seed())})).unwrap();
+        let response = read_json(&mut tls).unwrap();
+        assert!(response["ok"] == true && response["metadata"] == true, "Existing session left untouched: {response}");
+        let image = image::RgbImage::from_fn(256, 256, |x, y| image::Rgb([x as u8, 90, y as u8]));
+        let mut jpeg = Vec::new();
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut jpeg, 80).encode_image(&image).unwrap();
+        let bytes = serde_json::to_vec(&json!({"title":"Prueba de carátula", "artist":"Prisma", "artwork":STANDARD.encode(jpeg)})).unwrap();
+        tls.write_all(&((bytes.len()+1) as u32).to_be_bytes()).unwrap();
+        tls.write_all(&[3]).unwrap(); tls.write_all(&bytes).unwrap();
+        // One silent stereo block activates MediaSession without playing a tone.
+        tls.write_all(&(3845u32).to_be_bytes()).unwrap(); tls.write_all(&[1]).unwrap();
+        tls.write_all(&48000u32.to_be_bytes()).unwrap(); tls.write_all(&[0;3840]).unwrap();
+        for _ in 0..30 {
+            tls.write_all(&[0,0,0,1,0]).unwrap(); tls.flush().unwrap();
+            assert!(read_json(&mut tls).unwrap()["ok"] == true);
+            std::thread::sleep(Duration::from_secs(1));
+        }
+        tls.get_ref().shutdown(Shutdown::Both).unwrap();
+    }
+
+    #[cfg(windows)]
+    #[test]
+    #[ignore = "requires a free physical phone receiver on Synapse"]
+    fn disabling_sender_releases_phone_for_another_instance() {
+        let address = std::env::var("PRISMA_AUDIO_PROBE_ADDRESS").unwrap();
+        let peer = synapse_phone(&address).unwrap();
+        let mut first = connect(&address, Some(&peer.fingerprint)).unwrap();
+        let seed = SystemTimeForProbe::seed();
+        write_json(&mut first, &json!({"op":"start", "streamId":format!("{seed:032x}")})).unwrap();
+        let response = read_json(&mut first).unwrap();
+        assert!(response["ok"] == true, "Existing session left untouched: {response}");
+        // This is exactly what disabling the PC sender does, independently of DSP.
+        first.get_ref().shutdown(Shutdown::Both).unwrap();
+        drop(first);
+        let started = Instant::now();
+        loop {
+            let mut second = connect(&address, Some(&peer.fingerprint)).unwrap();
+            write_json(&mut second, &json!({"op":"start", "streamId":format!("{:032x}", seed ^ 1)})).unwrap();
+            let reply = read_json(&mut second).unwrap();
+            if reply["ok"] == true {
+                second.get_ref().shutdown(Shutdown::Both).unwrap();
+                break;
+            }
+            assert!(reply["busy"] == true && started.elapsed() < Duration::from_secs(3), "Receiver was not released: {reply}");
+            std::thread::sleep(Duration::from_millis(100));
+        }
+    }
+
     #[cfg(windows)]
     #[test]
     #[ignore = "requires an available physical Android device on Synapse"]
@@ -374,7 +463,7 @@ mod tests {
             let mut tls = connect(&address, Some(&fingerprint)).unwrap();
             write_json(&mut tls, &json!({"op":"start", "streamId":stream_id})).unwrap();
             let response = read_json(&mut tls).unwrap();
-            assert!(response["ok"] == true, "Session start rejected");
+            assert!(response["ok"] == true, "Session start rejected: {response}");
             tls
         };
         let mut tls = begin();
@@ -384,7 +473,20 @@ mod tests {
         let worker_running = running.clone();
         let capture_error = Arc::new(Mutex::new(None));
         let worker_error = capture_error.clone();
-        let worker = std::thread::spawn(move || capture::standalone(worker_running, Arc::new(PassthruService::new()), None, worker_error));
+        let internal_file = std::env::var("PRISMA_AUDIO_PROBE_INTERNAL_FILE").ok();
+        let endpoint = if internal_file.is_some() {
+            PassthruService::list_endpoints().unwrap().into_iter().find(|ep| ep.is_virtual)
+                .map(|ep| ep.id).expect("Internal playback probe requires a virtual endpoint")
+        } else { String::new() };
+        let capture_endpoint = if endpoint.is_empty() { None } else { Some(endpoint.clone()) };
+        let worker = std::thread::spawn(move || capture::standalone(worker_running, Arc::new(PassthruService::new()), capture_endpoint, worker_error));
+        let mut internal_player = internal_file.as_ref().map(|file| {
+            let mut player = crate::infrastructure::media::create_playback_backend();
+            player.set_audio_device(&format!("wasapi/{endpoint}")).unwrap();
+            player.set_volume(20.0).unwrap();
+            player.load(file).unwrap();
+            player
+        });
         let started = Instant::now();
         let mut last_heartbeat = Instant::now();
         let mut frames = 0u64;
@@ -427,6 +529,7 @@ mod tests {
             assert!(capture_error.lock().unwrap().is_none(), "Windows capture failed");
             eprintln!("Physical probe: {frames} stereo frames, {nonzero} nonzero samples, {heartbeats} heartbeats; ten-second silence and reconnect passed.");
         }));
+        if let Some(player) = internal_player.as_mut() { let _ = player.pause(); }
         running.store(false, Ordering::SeqCst); capture::set_tap(None); worker.join().unwrap();
         if let Err(error) = result { std::panic::resume_unwind(error); }
     }

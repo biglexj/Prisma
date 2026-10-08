@@ -21,6 +21,7 @@ tauri-build = { version = "2", features = [] }
 base64 = "0.22"
 native-tls = "0.2"
 sha2 = "0.10"
+socket2 = "0.6"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 libmpv2 = { version = "6", optional = true }
 lofty = "=0.24.0"

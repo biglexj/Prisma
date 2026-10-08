@@ -104,9 +104,10 @@ pub fn playback_get_audio_devices(
 #[tauri::command]
 pub fn playback_set_audio_device(
     device_name: String,
+    through_global_dsp: Option<bool>,
     state: State<'_, PlaybackProbeState>,
 ) -> Result<(), String> {
-    state.set_audio_device(&device_name)
+    state.set_audio_route(&device_name, through_global_dsp.unwrap_or(false))
 }
 
 #[tauri::command]

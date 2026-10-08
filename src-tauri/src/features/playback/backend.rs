@@ -13,4 +13,5 @@ pub trait PlaybackBackend: Send {
     fn set_dsp_config(&mut self, config: &DspConfig) -> Result<(), String>;
     fn get_audio_devices(&self) -> Result<Vec<AudioDeviceItem>, String>;
     fn set_audio_device(&mut self, device_name: &str) -> Result<(), String>;
+    fn set_dsp_bypass(&mut self, _bypass: bool) -> Result<(), String> { Ok(()) }
 }

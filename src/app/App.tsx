@@ -863,11 +863,14 @@ function AppContent() {
         return;
       }
 
-      // Atajo dedicado para enviar Prisma a segundo plano ("escuchar de fondo sin pausar"):
-      // H, Shift + H, Ctrl + H o Shift + B
+      if (e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        if (!e.repeat) void mobileAudioOutput.toggle();
+        return;
+      }
+
+      // Segundo plano sin pausar: H o Shift + H.
       if (
-        (e.shiftKey && (e.key.toLowerCase() === "b" || e.key.toLowerCase() === "h")) ||
-        (e.ctrlKey && e.key.toLowerCase() === "h") ||
         (e.key.toLowerCase() === "h" && !e.ctrlKey && !e.altKey && !e.metaKey)
       ) {
         e.preventDefault();
@@ -1069,7 +1072,7 @@ function AppContent() {
       unlistenNavigatePromise.then((unlisten) => unlisten());
       unlistenRemotePromise.then((unlisten) => unlisten());
     };
-  }, [handleOpenFile, library, imageLibrary, videoLibrary, activeView, playback, videoReturnView, multiOutput.toggle, multiOutput.config.enabled]);
+  }, [handleOpenFile, library, imageLibrary, videoLibrary, activeView, playback, videoReturnView, multiOutput.toggle, multiOutput.config.enabled, mobileAudioOutput.toggle]);
 
   // ── Sincronización en tiempo real del estado de reproducción hacia Synapse (Mando a Distancia) ──
   useEffect(() => {

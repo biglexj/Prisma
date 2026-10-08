@@ -6,10 +6,10 @@ export interface MobileAudioDevice { id: string; name: string; address: string; 
 export interface MobileAudioStatus {
   enabled: boolean; connection: "off" | "connecting" | "connected" | "reconnecting";
   device: MobileAudioDevice | null; volume: number; captureDeviceId: string | null;
-  shortcut: string; shortcutError: string | null; error: string | null; sampleRate: number;
+  shortcut: string; defaultShortcut: string; shortcutError: string | null; error: string | null; sampleRate: number;
 }
 const INITIAL: MobileAudioStatus = { enabled: false, connection: "off", device: null, volume: 1,
-  captureDeviceId: null, shortcut: "Ctrl+Shift+Alt+M", shortcutError: null, error: null, sampleRate: 0 };
+  captureDeviceId: null, shortcut: "Ctrl+Shift+Alt+M", defaultShortcut: "Ctrl+Shift+Alt+M", shortcutError: null, error: null, sampleRate: 0 };
 
 export function useMobileAudioOutput() {
   const desktopAvailable = isTauri();
@@ -46,9 +46,10 @@ export function useMobileAudioOutput() {
       return false;
     } finally { busyRef.current = false; if (mounted.current) setBusy(false); }
   }, []);
+  const toggle = useCallback(() => action("mobile_audio_set_enabled", { enabled: !statusRef.current.enabled }), [action]);
   return {
     status, busy, error, desktopAvailable,
-    toggle: () => action("mobile_audio_set_enabled", { enabled: !statusRef.current.enabled }),
+    toggle,
     configure: (volume: number, captureDeviceId: string | null) => action("mobile_audio_configure", { volume, captureDeviceId }),
     setShortcut: (shortcut: string) => action("mobile_audio_set_shortcut", { shortcut }),
     selectPhone: (address: string) => action("mobile_audio_select_phone", { address }),

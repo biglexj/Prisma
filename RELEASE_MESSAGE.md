@@ -13,8 +13,11 @@ Una actualización que agiliza el guardado en el editor de imágenes, incorpora 
 - Revisión y reproducción de imágenes, audio y vídeo directamente desde los resultados del conversor.
 - «Usar el teléfono como altavoz» mediante Synapse, sin PIN, QR ni IP manual.
 - Audio de Windows continuo en Super Galería, con reconexión, silencio y cambio de fuente conservados.
-- Activación desde el Ecualizador y atajo global configurable.
+- Activación desde el Ecualizador, Shift + T dentro de Prisma y un atajo global predefinido.
 - Nombre de Super Galería localizado según el idioma de Prisma.
+- Música de Prisma enviada por la misma ruta que el audio del sistema, sin duplicar el DSP.
+- Carátula, título y artista en la notificación del teléfono, cuando la fuente los proporciona.
+- Panel del altavoz adaptado al tema y al espacio disponible; atajos reunidos en Configuración.
 
 ## 📦 Windows x64
 

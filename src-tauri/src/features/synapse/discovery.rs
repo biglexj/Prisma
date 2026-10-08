@@ -1,13 +1,51 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpStream, UdpSocket};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter};
 
 use super::model::SynapseBeaconPayload;
+
+fn beacon_socket(port: u16) -> std::io::Result<UdpSocket> {
+    let socket = socket2::Socket::new(socket2::Domain::IPV4, socket2::Type::DGRAM, Some(socket2::Protocol::UDP))?;
+    // Synapse uses broadcast beacons. All cooperating instances listen on the
+    // same destination; choosing another port loses those announcements.
+    socket.set_reuse_address(true)?;
+    socket.bind(&std::net::SocketAddrV4::new(std::net::Ipv4Addr::UNSPECIFIED, port).into())?;
+    socket.set_read_timeout(Some(Duration::from_millis(1500)))?;
+    Ok(socket.into())
+}
+
+fn refresh_known_phones(configs: &[PathBuf], devices: &Mutex<Vec<SynapseDiscoveredDevice>>) {
+    let mut addresses = Vec::new();
+    for path in configs {
+        let address = std::fs::read(path).ok()
+            .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+            .and_then(|value| value["device"]["address"].as_str().map(str::to_owned));
+        if let Some(address) = address {
+            if !addresses.contains(&address) { addresses.push(address); }
+        }
+    }
+    for address in addresses {
+        if let Ok(phone) = crate::features::audio_relay::synapse_phone(&address) {
+            let node = SynapseDiscoveredDevice {
+                device_id: phone.id, device_name: phone.name, device_type: "phone".into(),
+                ip_address: address, port: crate::features::audio_relay::PORT,
+                os: "Android".into(), target_app: "supergallery".into(),
+                capabilities: vec![crate::features::audio_relay::CAPABILITY.into()],
+                last_seen_ms: SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64,
+            };
+            if let Ok(mut list) = devices.lock() {
+                if let Some(existing) = list.iter_mut().find(|d| d.ip_address == node.ip_address && d.target_app == node.target_app) {
+                    *existing = node;
+                } else { list.push(node); }
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,7 +69,7 @@ pub struct SynapseDiscoveryService {
 }
 
 impl SynapseDiscoveryService {
-    pub fn start() -> Self {
+    pub fn start(known_phone_configs: Vec<PathBuf>) -> Self {
         let devices: Arc<Mutex<Vec<SynapseDiscoveredDevice>>> = Arc::new(Mutex::new(Vec::new()));
         let devices_clone = devices.clone();
         let running = Arc::new(AtomicBool::new(true));
@@ -40,35 +78,27 @@ impl SynapseDiscoveryService {
         std::thread::Builder::new()
             .name("synapse-discovery-thread".into())
             .spawn(move || {
-                let ports_to_try = [49289, 49288, 49287];
-                let mut socket_opt = None;
-                let mut active_port = 49289;
-                for p in ports_to_try {
-                    match UdpSocket::bind(format!("0.0.0.0:{p}")) {
-                        Ok(s) => {
-                            let _ = s.set_read_timeout(Some(Duration::from_millis(1500)));
-                            socket_opt = Some(s);
-                            active_port = p;
-                            break;
-                        }
-                        Err(_) => continue,
-                    }
-                }
-
-                let socket = match socket_opt {
-                    Some(s) => {
-                        println!("[Synapse Discovery] Escuchando en puerto UDP {active_port}");
-                        s
-                    }
-                    None => {
-                        eprintln!("[Synapse Discovery] No se pudo vincular a ningún puerto UDP disponible");
-                        return;
+                let mut socket = match beacon_socket(49289) {
+                    Ok(socket) => Some(socket),
+                    Err(error) => {
+                        eprintln!("[Synapse Discovery] Puerto 49289 ocupado ({error}); comprobando teléfonos conocidos por Synapse.");
+                        None
                     }
                 };
+                let mut last_probe = Instant::now() - Duration::from_secs(5);
 
                 let mut buf = [0u8; 4096];
 
                 while running_clone.load(Ordering::Relaxed) {
+                    if last_probe.elapsed() >= Duration::from_secs(5) {
+                        if socket.is_none() { socket = beacon_socket(49289).ok(); }
+                        refresh_known_phones(&known_phone_configs, &devices_clone);
+                        last_probe = Instant::now();
+                    }
+                    let Some(socket) = socket.as_ref() else {
+                        std::thread::sleep(Duration::from_millis(1500));
+                        continue;
+                    };
                     match socket.recv_from(&mut buf) {
                         Ok((size, src)) => {
                             if let Ok(json_str) = std::str::from_utf8(&buf[..size]) {
@@ -255,4 +285,36 @@ fn urlencoding_encode(s: &str) -> String {
         }
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn both_instances_receive_broadcast_on_the_same_port() {
+        let first = beacon_socket(0).unwrap();
+        let port = first.local_addr().unwrap().port();
+        let second = beacon_socket(port).unwrap();
+        let sender = UdpSocket::bind("0.0.0.0:0").unwrap();
+        sender.set_broadcast(true).unwrap();
+        sender.send_to(b"synapse-coexistence", ("255.255.255.255", port)).unwrap();
+        for socket in [first, second] {
+            let mut buffer = [0; 64];
+            let (size, _) = socket.recv_from(&mut buffer).unwrap();
+            assert_eq!(&buffer[..size], b"synapse-coexistence");
+        }
+    }
+
+    #[test]
+    #[ignore = "requires an available phone on the normal Synapse service"]
+    fn remembered_phone_is_found_without_owning_the_beacon_port() {
+        let config = std::env::var_os("PRISMA_PHONE_CONFIG").expect("PRISMA_PHONE_CONFIG");
+        let devices = Mutex::new(Vec::new());
+        refresh_known_phones(&[PathBuf::from(config)], &devices);
+        let nodes = devices.lock().unwrap();
+        assert_eq!(nodes.len(), 1);
+        assert!(nodes[0].capabilities.iter().any(|cap| cap == crate::features::audio_relay::CAPABILITY));
+    }
 }

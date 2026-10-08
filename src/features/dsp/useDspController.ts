@@ -10,6 +10,7 @@ import {
   type GlobalPassthruStatus,
 } from "./model/types";
 import { selectAudioOutput } from "./selectAudioOutput";
+import { playbackAudioRoute } from "./playbackAudioRoute";
 import { reconcileGlobalAudio } from "./reconcileGlobalAudio";
 import { dspClient } from "./tauri/client";
 import { useMultiAudioOutput } from "./useMultiAudioOutput";
@@ -221,22 +222,7 @@ export function useDspController() {
           localStorage.setItem(STORAGE_KEY_RENDER_DEVICE, resolvedId);
         }
 
-        // Si mpv tiene un dispositivo coincidente, sincronizarlo también
-        const matchingMpv = devices.find(
-          (d) =>
-            d.description.toLowerCase().includes(resolvedName.toLowerCase()) ||
-            resolvedName.toLowerCase().includes(d.description.toLowerCase()),
-        );
-        if (matchingMpv) {
-          await dspClient.setAudioDevice(matchingMpv.name);
-        }
-
-        // Sincronizar en tiempo real con el reproductor de vídeo / elemento <video>
-        window.dispatchEvent(
-          new CustomEvent("prisma-audio-sink-change", {
-            detail: { deviceName: resolvedName, deviceId: resolvedId },
-          }),
-        );
+        // The routing effect applies this choice through the active capture path.
       } catch (err) {
         console.error("Error al cambiar dispositivo de audio:", err);
       }
@@ -350,21 +336,18 @@ export function useDspController() {
   }, [applyAudioEndpoints]);
 
   useEffect(() => {
-    const virtual = audioEndpoints.find((endpoint) => endpoint.isVirtual);
-    const matching = multiOutput.config.enabled && virtual && globalPassthruStatus?.isRunning
-      ? devices.find((device) => /prisma|fxsound/i.test(device.description))
-      : devices.find((device) => device.description === selectedDevice);
-    if (matching) void dspClient.setAudioDevice(matching.name).catch((error) => console.warn("No se pudo sincronizar la salida del reproductor:", error));
-    if (virtual && multiOutput.config.enabled && globalPassthruStatus?.isRunning) {
+    const route = playbackAudioRoute(audioEndpoints, devices, selectedDevice, selectedRenderDeviceId,
+      globalPassthruStatus?.isRunning ?? false, globalPassthruStatus?.activeCaptureDevice ?? null,
+      mobileAudioOutput.status.enabled, mobileAudioOutput.status.captureDeviceId);
+    if (route.mpvDevice) void dspClient.setAudioDevice(route.mpvDevice, route.throughGlobalDsp)
+      .catch((error) => console.warn("No se pudo sincronizar la salida del reproductor:", error));
+    if (route.endpoint) {
       window.dispatchEvent(new CustomEvent("prisma-audio-sink-change", {
-        detail: { deviceName: virtual.name, deviceId: virtual.id },
-      }));
-    } else if (selectedRenderDeviceId) {
-      window.dispatchEvent(new CustomEvent("prisma-audio-sink-change", {
-        detail: { deviceName: selectedDevice, deviceId: selectedRenderDeviceId },
+        detail: { deviceName: route.endpoint.name, deviceId: route.endpoint.id },
       }));
     }
-  }, [devices, selectedDevice, selectedRenderDeviceId, audioEndpoints, multiOutput.config.enabled, globalPassthruStatus?.isRunning]);
+  }, [devices, selectedDevice, selectedRenderDeviceId, audioEndpoints, globalPassthruStatus?.isRunning,
+    globalPassthruStatus?.activeCaptureDevice, mobileAudioOutput.status.enabled, mobileAudioOutput.status.captureDeviceId]);
 
   // Sincronización automática periódica y por foco con Windows
   useEffect(() => {

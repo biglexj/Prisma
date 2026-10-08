@@ -84,9 +84,10 @@ impl PlaybackProbeState {
         runtime.backend.get_audio_devices()
     }
 
-    pub fn set_audio_device(&self, device_name: &str) -> Result<(), String> {
+    pub fn set_audio_route(&self, device_name: &str, through_global_dsp: bool) -> Result<(), String> {
         let mut runtime = self.lock_runtime()?;
-        runtime.backend.set_audio_device(device_name)
+        runtime.backend.set_audio_device(device_name)?;
+        runtime.backend.set_dsp_bypass(through_global_dsp)
     }
 
     pub fn with_backend(

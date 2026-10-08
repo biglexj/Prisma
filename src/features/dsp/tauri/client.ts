@@ -6,8 +6,8 @@ export const dspClient = {
     invoke<void>("playback_set_dsp_config", { config }),
   getAudioDevices: () =>
     invoke<AudioDeviceItem[]>("playback_get_audio_devices"),
-  setAudioDevice: (deviceName: string) =>
-    invoke<void>("playback_set_audio_device", { deviceName }),
+  setAudioDevice: (deviceName: string, throughGlobalDsp = false) =>
+    invoke<void>("playback_set_audio_device", { deviceName, throughGlobalDsp }),
   globalPassthruGetStatus: () =>
     invoke<GlobalPassthruStatus>("global_passthru_get_status"),
   globalPassthruToggle: (enabled: boolean, captureDeviceId?: string | null, renderDeviceId?: string | null, routeSystemDefault = true) =>

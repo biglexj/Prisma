@@ -54,11 +54,11 @@ export function ShortcutsSettingsPanel({ quickLookShortcut }: ShortcutsSettingsP
           { id: "vol_down", label: "Bajar volumen (-5%)", keys: ["↓", "-"] },
           { id: "mute", label: "Silenciar / Restaurar (Mute)", keys: ["M"] },
           { id: "restore_win", label: "Restaurar / Abrir Prisma desde segundo plano", keys: ["Shift + X", "Ctrl + Shift + X"] },
-          { id: "bg_listen", label: "Segundo plano (escuchar de fondo sin pausar)", keys: ["H", "Shift + H", "Ctrl + H", "Shift + B"] },
+          { id: "bg_listen", label: "Segundo plano (escuchar de fondo sin pausar)", keys: ["H", "Shift + H"] },
           { id: "close_win", label: "Cerrar ventana (pausa vídeo)", keys: ["Ctrl + W", "Alt + F4"] },
           { id: "play_pause_global", label: "Reproducir / Pausar", keys: ["Espacio"] },
           { id: "quick_look", label: "Previsualización (Quick Look)", keys: [quickLookBadge] },
-          { id: "mobile_speaker", label: "Teléfono como altavoz (configurable en Ecualizador)", keys: [mobileShortcut ? mobileShortcut.replaceAll("+", " + ").replace("Shift", "Mayús") : "Desactivado"] },
+          { id: "mobile_speaker", label: "Usar el teléfono como altavoz", keys: ["Shift + T", mobileShortcut ? mobileShortcut.replaceAll("+", " + ").replace("Shift", "Mayús") : "Desactivado"] },
         ],
       },
       {

@@ -9,6 +9,7 @@ pub struct MpvBackend {
     mpv: Mpv,
     path: Option<String>,
     current_dsp: Option<DspConfig>,
+    dsp_bypass: bool,
 }
 
 impl MpvBackend {
@@ -27,12 +28,13 @@ impl MpvBackend {
             mpv,
             path: None,
             current_dsp: None,
+            dsp_bypass: false,
         })
     }
 
     fn apply_dsp(&mut self) -> Result<(), String> {
         let (af_string, replaygain_mode) = if let Some(ref config) = self.current_dsp {
-            let af = build_af_filter_string(config);
+            let af = if self.dsp_bypass { String::new() } else { build_af_filter_string(config) };
             let rg = if config.volume_normalization { "track" } else { "no" };
             (af, rg)
         } else {
@@ -219,6 +221,11 @@ impl PlaybackBackend for MpvBackend {
             .map_err(debug_error)?;
         Ok(())
     }
+
+    fn set_dsp_bypass(&mut self, bypass: bool) -> Result<(), String> {
+        self.dsp_bypass = bypass;
+        self.apply_dsp()
+    }
 }
 
 #[cfg(windows)]
@@ -247,10 +254,14 @@ fn enumerate_windows_audio_endpoints() -> Vec<(String, String)> {
                             if let Ok(props) = device.OpenPropertyStore(STGM_READ) {
                                 if let Ok(val) = props.GetValue(&pkey) {
                                     let desc = val.to_string();
-                                    let lower = desc.to_lowercase();
-                                    let is_prisma = lower.contains("fxsound") || lower.contains("prisma");
-                                    if !desc.is_empty() && !desc.starts_with('{') && !is_prisma {
-                                        let wasapi_name = format!("wasapi/{}", desc);
+                                    // Virtual inputs are required for internal playback to enter
+                                    // the global bridge. Physical output filtering lives in the UI.
+                                    if !desc.is_empty() && !desc.starts_with('{') {
+                                        let Ok(id) = device.GetId() else { continue; };
+                                        let endpoint_id = id.to_string().ok();
+                                        windows::Win32::System::Com::CoTaskMemFree(Some(id.0.cast()));
+                                        let Some(endpoint_id) = endpoint_id else { continue; };
+                                        let wasapi_name = format!("wasapi/{}", endpoint_id);
                                         list.push((wasapi_name, desc));
                                     }
                                 }
@@ -366,4 +377,61 @@ fn build_af_filter_string(config: &DspConfig) -> String {
 
 fn debug_error(error: impl std::fmt::Debug) -> String {
     format!("Error de libmpv: {error:?}")
+}
+
+#[cfg(all(test, windows))]
+mod routing_tests {
+    use super::*;
+    use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
+    use std::time::{Duration, Instant};
+    use crate::features::audio_relay::capture;
+    use crate::infrastructure::media::passthru::PassthruService;
+
+    #[test]
+    #[ignore = "plays the provided WAV into an available virtual Windows endpoint"]
+    fn internal_music_enters_virtual_loopback_without_double_dsp() {
+        let file = std::env::var("PRISMA_AUDIO_PROBE_INTERNAL_FILE").expect("Provide an owned WAV test clip");
+        let endpoint = PassthruService::list_endpoints().unwrap().into_iter()
+            .find(|ep| ep.is_virtual).expect("Virtual endpoint unavailable");
+        let mut player = MpvBackend::new().unwrap();
+        let config: DspConfig = serde_json::from_value(serde_json::json!({
+            "enabled":true,"preampDb":2,"bands":[],"volumeNormalization":false,
+            "effects":{"clarity":0,"ambience":0,"surround":0,"dynamicBoost":0,"bassBoost":0}
+        })).unwrap();
+        player.set_dsp_config(&config).unwrap();
+        assert!(!player.mpv.get_property::<String>("af").unwrap().is_empty());
+        player.set_dsp_bypass(true).unwrap();
+        player.set_dsp_config(&config).unwrap();
+        assert!(player.mpv.get_property::<String>("af").unwrap().is_empty());
+        player.set_dsp_bypass(false).unwrap();
+        assert!(!player.mpv.get_property::<String>("af").unwrap().is_empty());
+        player.set_audio_device(&format!("wasapi/{}", endpoint.id)).unwrap();
+        player.set_volume(20.0).unwrap();
+        let (sender, receiver) = std::sync::mpsc::sync_channel(8);
+        capture::set_tap(Some(sender));
+        let running = Arc::new(AtomicBool::new(true));
+        let worker_running = running.clone();
+        let capture_error = Arc::new(Mutex::new(None));
+        let worker_error = capture_error.clone();
+        let worker = std::thread::spawn(move || capture::standalone(worker_running,
+            Arc::new(PassthruService::new()), Some(endpoint.id), worker_error));
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            player.load(&file).unwrap();
+            let started = Instant::now();
+            let mut nonzero = 0;
+            while started.elapsed() < Duration::from_secs(8) {
+                if let Ok(block) = receiver.recv_timeout(Duration::from_millis(30)) {
+                    nonzero += block.samples.iter().filter(|sample| sample.abs() > 0.0001).count();
+                }
+            }
+            assert!(nonzero > 48000, "Internal MPV audio did not reach the captured endpoint");
+            assert!(capture_error.lock().unwrap().is_none());
+            eprintln!("Internal MPV loopback: {nonzero} nonzero samples; DSP bypass/restore verified.");
+        }));
+        let _ = player.pause();
+        running.store(false, Ordering::SeqCst);
+        capture::set_tap(None);
+        worker.join().unwrap();
+        if let Err(error) = result { std::panic::resume_unwind(error); }
+    }
 }

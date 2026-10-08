@@ -325,7 +325,7 @@ pub fn run() {
             {
                 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
                 let held = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-                let registration = app.global_shortcut().on_shortcut("Ctrl+Shift+Alt+P", move |app, _shortcut, event| {
+                let registration = app.global_shortcut().on_shortcut(if is_dev_mode { "Ctrl+Shift+Alt+D" } else { "Ctrl+Shift+Alt+P" }, move |app, _shortcut, event| {
                     if event.state() == ShortcutState::Released {
                         held.store(false, std::sync::atomic::Ordering::Relaxed);
                         return;
@@ -382,17 +382,27 @@ pub fn run() {
                 infrastructure::video_takes::VideoTakesState::load(data_directory.clone())
                     .map_err(std::io::Error::other)?;
             app.manage(video_takes_state);
-            let audio_relay = features::audio_relay::AudioRelayService::start(app.handle().clone(), data_directory.clone());
+            let audio_relay = features::audio_relay::AudioRelayService::start(app.handle().clone(), data_directory.clone(), is_dev_mode);
             app.manage(audio_relay);
-            let synapse_state = features::synapse::SynapseState::load(data_directory);
+            let synapse_state = features::synapse::SynapseState::load(data_directory.clone());
             app.manage(synapse_state);
 
             // 2. Registro de esquema prisma:// y servicios de Aurora Synapse
-            features::synapse::register_windows_deep_link();
-            infrastructure::file_associations::register_file_associations();
+            if !is_dev_mode {
+                features::synapse::register_windows_deep_link();
+                infrastructure::file_associations::register_file_associations();
+            }
             let beacon_service = features::synapse::SynapseBeaconService::start();
             app.manage(beacon_service);
-            let discovery_service = features::synapse::SynapseDiscoveryService::start();
+            // Read only the known phone address from each profile. Availability is checked
+            // over Synapse; preferences and audio sessions remain independent.
+            let mut known_phone_configs = vec![data_directory.join("mobile-audio.json")];
+            if is_dev_mode {
+                if let Ok(roaming) = std::env::var("APPDATA") {
+                    known_phone_configs.push(std::path::PathBuf::from(roaming).join("com.biglexj.prisma/mobile-audio.json"));
+                }
+            }
+            let discovery_service = features::synapse::SynapseDiscoveryService::start(known_phone_configs);
             app.manage(discovery_service);
             let synapse_server = features::synapse::SynapseServer::start(app.handle().clone());
             app.manage(synapse_server);
