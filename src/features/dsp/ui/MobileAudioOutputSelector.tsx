@@ -57,7 +57,7 @@ export function MobileAudioOutputSelector() {
     {open && createPortal(<div ref={panel} className="mobile-audio-panel" role="dialog" aria-label="Usar el teléfono como altavoz"
       style={{ ...position, maxHeight: `calc(100dvh - ${position.top + 12}px)` }}>
       <div className="mobile-audio-heading"><strong>Usar el teléfono como altavoz</strong><button type="button" aria-label="Cerrar" onClick={() => setOpen(false)}>×</button></div>
-      <p>Se conecta con {galleryName} a través de Synapse y sigue activo hasta que lo desactives.</p>
+      <p>Recibe el audio de Windows en tu teléfono.</p>
       {(phones.length > 1 || (status.device && phones.length > 0 && !rememberedIsVisible)) && <label>Teléfono
         <select value={rememberedIsVisible ? status.device?.address ?? "" : ""} disabled={busy}
           onChange={event => { if (event.target.value) void mobile.selectPhone(event.target.value); }}>
@@ -71,7 +71,7 @@ export function MobileAudioOutputSelector() {
         <button type="button" role="switch" aria-checked={status.enabled} disabled={busy || !mobile.desktopAvailable}
           onClick={() => void mobile.toggle()}>{status.enabled ? "Desactivar" : "Activar"}</button>
       </div>
-      {!mobile.desktopAvailable ? <p>Abre Prisma de escritorio para utilizar el teléfono como altavoz.</p> : !status.device && phones.length === 0 && <p>Abre {galleryName} con Synapse activo en la misma red.</p>}
+      {!mobile.desktopAvailable ? <p>Disponible en Prisma de escritorio.</p> : !status.device && phones.length === 0 && <p>Abre {galleryName} en la misma red.</p>}
       <label>Volumen del teléfono · {gain} %
         <input aria-label="Volumen enviado al teléfono" type="range" min="0" max="100" value={gain} disabled={busy || !mobile.desktopAvailable}
           onChange={event => setGain(Number(event.target.value))}

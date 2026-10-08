@@ -1,3 +1,5 @@
+<!-- Preparación local de publicación. No lanzar ni publicar todavía. -->
+
 # ✨ Prisma 1.1.8
 
 Una actualización que agiliza el guardado en el editor de imágenes, incorpora aceleración GPU multi-vendor (AMD FSR 1 y NVIDIA NIS) en Prisma Upscaler y optimiza la navegación hacia el conversor.
@@ -9,6 +11,10 @@ Una actualización que agiliza el guardado en el editor de imágenes, incorpora 
 - Soporte para escala 1x (enfoque puro sin cambiar dimensiones) en motores espaciales.
 - Acceso directo al Conversor Multimedia desde el visor de imágenes con el atajo «V».
 - Revisión y reproducción de imágenes, audio y vídeo directamente desde los resultados del conversor.
+- «Usar el teléfono como altavoz» mediante Synapse, sin PIN, QR ni IP manual.
+- Audio de Windows continuo en Super Galería, con reconexión, silencio y cambio de fuente conservados.
+- Activación desde el Ecualizador y atajo global configurable.
+- Nombre de Super Galería localizado según el idioma de Prisma.
 
 ## 📦 Windows x64
 
