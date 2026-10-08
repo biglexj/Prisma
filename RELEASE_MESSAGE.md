@@ -2,7 +2,7 @@
 
 # ✨ Prisma 1.1.8
 
-Una actualización que agiliza el guardado en el editor de imágenes, incorpora aceleración GPU multi-vendor (AMD FSR 1 y NVIDIA NIS) en Prisma Upscaler y optimiza la navegación hacia el conversor.
+Usa tu teléfono como altavoz para el audio de Windows y la música de Prisma. Esta actualización también mejora el editor de imágenes, Prisma Upscaler y la navegación al conversor.
 
 - Animación y estado visual de carga al guardar o sobrescribir en el editor de imágenes.
 - Cierre inmediato del editor y apertura de la vista previa del archivo guardado sin esperas.
@@ -18,6 +18,7 @@ Una actualización que agiliza el guardado en el editor de imágenes, incorpora 
 - Música de Prisma enviada por la misma ruta que el audio del sistema, sin duplicar el DSP.
 - Carátula, título y artista en la notificación del teléfono, cuando la fuente los proporciona.
 - Panel del altavoz adaptado al tema y al espacio disponible; atajos reunidos en Configuración.
+- Segundo plano simplificado a H y Shift + H.
 
 ## 📦 Windows x64
 

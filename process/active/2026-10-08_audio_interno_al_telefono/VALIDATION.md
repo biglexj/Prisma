@@ -31,3 +31,7 @@ Biglex pide quitar el selector de combinaciones y centralizar los atajos en Conf
 La paleta usaba variables md-sys ausentes y caía a un fondo oscuro; ahora usa los tokens vigentes del tema. ResizeObserver/MutationObserver recalculan la posición al abrir opciones y se desconectan al cerrar. Callback local estable y auto-repetición filtrada; registro global se reintenta automáticamente cuando se libera una combinación ocupada.
 
 Diagnóstico nativo: Ctrl+Shift+Alt+T ocupado, error Windows1409. Biglex identifica AutoHotkey y libera su combinación; confirma «Ya funcionan ambos atajos». Comprobación TypeScript y tres pruebas Rust de audio aprobadas después de los cambios.
+
+## Preparación de versión — 2026-10-08
+
+Solicitud posterior: contrastar GitHub y avanzar únicamente versiones que todavía lo necesiten. Releases y tags remotos verificados: último Prisma v1.1.7; local package.json, tauri.conf.json, Cargo.toml y Cargo.lock ya coinciden en 1.1.8. Se conserva ese número. Se actualizan fecha, entrada de novedades y release message de 1.1.8. No hay tag ni release v1.1.8 remoto, y no se publica ni se hace push.

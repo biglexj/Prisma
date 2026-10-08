@@ -2,9 +2,9 @@
 
 Registro de cambios y versiones de Prisma.
 
-<!-- Preparación local de publicación. No lanzar ni publicar hasta completar la aceptación pendiente. -->
+<!-- Preparación local de publicación. No lanzar ni publicar todavía. -->
 
-## [1.1.8] - 2026-10-04 · Preparación actualizada
+## [1.1.8] - 2026-10-08 · Preparación actualizada
 
 Al guardar o sobrescribir cambios en el editor de imágenes, la interfaz despliega una animación visual de carga fluida tanto en el botón como en un panel superpuesto en el lienzo, cediendo tiempo al renderizado de alta resolución antes del procesamiento intensivo. El guardado desacopla las comprobaciones secundarias en segundo plano, cerrando el editor al instante y abriendo la vista previa cinematográfica del archivo resultante (sea una copia nueva o una imagen sobrescrita) sin pausas involuntarias.
 
@@ -17,6 +17,8 @@ La suite integrada de Prisma Upscaler incorpora compatibilidad multi-vendor para
 La nueva salida «Usar el teléfono como altavoz» conecta Prisma con Super Galería mediante el descubrimiento Synapse existente, sin PIN, código QR ni dirección IP manual. El audio de Windows se transmite de forma continua al teléfono mientras la salida permanezca habilitada, incluso durante silencios, cambios de fuente o al minimizar Prisma, y se puede activar o desactivar desde el Ecualizador con un atajo global predefinido.
 
 La conexión usa una sesión de audio cifrada con reconexión acotada, control de sesiones detenidas y selección automática del único teléfono disponible. La música interna entra en la misma ruta que alimenta al teléfono, evitando aplicar dos veces el DSP global. La notificación recibe título, artista y una carátula pequeña cuando la fuente los proporciona. El panel incorpora los selectores de Prisma, distingue la disponibilidad del escritorio de la vista previa web y presenta el nombre localizado de Super Galería. Desarrollo utiliza otros atajos y puede comprobar la disponibilidad del teléfono conocido aunque la instalada ocupe el descubrimiento.
+
+El panel del altavoz se adapta al tema y al espacio disponible, con sus atajos reunidos en Configuración: Shift + T dentro de Prisma y una combinación global predefinida. Los controles de segundo plano conservan H y Shift + H; se retiran Ctrl + H y Shift + B.
 
 ## [1.1.7] - 2026-10-01
 
