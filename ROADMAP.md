@@ -8,6 +8,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [ ] **Soporte Nativo Pionero para Formatos ElyX (.elx) y JPEG XL (.jxl)**: Integración en Rust de decodificador nativo para el formato experimental ElyX (`.elx`) (wavelet CDF 5/3 entera, YCoCg-R, zlib con CRC32) y decodificación directa de JPEG XL (`.jxl`), dotando a Prisma de detección en biblioteca visual, generación de miniaturas y visualización interactiva a resolución completa. [Proceso activo](process/active/2026-10-17_soporte_nativo_elyx_y_jxl/PLAN.md).
+
 - [ ] **Teléfono como altavoz de Prisma y salidas Android respetuosas**: PC → teléfono continuo implementado; controles en Ecualizador y atajo global. Aceptación física, duración y latencia en curso. [Proceso activo](process/active/2026-10-05_audio_relay_super_gallery/PLAN.md).
 
 - [ ] **Flyout & Mini Widget de Escritorio para Medios y Volumen**: Overlay nativo y autónomo de escritorio en Tauri v2 sin dependencias externas (como FluentFlyout), con tarjeta de reproducción multimedia (carátulas HD, fotogramas de vídeo, metadata y transporte), cápsula de volumen interactiva, posicionamiento paramétrico en 6 zonas de pantalla respetando el área de trabajo de Windows, visualizador de audio reactivo integrado y modo anclado (Pin) para operar como widget de escritorio continuo.
