@@ -85,7 +85,7 @@ function getFileIcon(ext: string): string {
 
 const THUMBNAIL_EXTENSIONS = new Set([
   "png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "ico", "avif", "tiff", "tif",
-  "pdf", "kra", "krz", "ora", "af", "afphoto", "afdesign", "afpub", "aftemplate",
+  "elx", "jxl", "pdf", "kra", "krz", "ora", "af", "afphoto", "afdesign", "afpub", "aftemplate",
   "psd", "psb", "ai", "mp4", "mkv", "avi", "mov", "webm",
 ]);
 

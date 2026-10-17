@@ -15,6 +15,35 @@ pub fn load_image_data_url(path: &Path) -> Option<String> {
         return None;
     }
 
+    let ext = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+
+    if ext == "elx" {
+        let (rgb_img, _header) = crate::infrastructure::codecs::elyx::decode_elyx_file(path).ok()?;
+        let dyn_img = image::DynamicImage::ImageRgb8(rgb_img);
+        let resized = if dyn_img.width() > THUMBNAIL_MAX_DIM || dyn_img.height() > THUMBNAIL_MAX_DIM {
+            dyn_img.thumbnail(THUMBNAIL_MAX_DIM, THUMBNAIL_MAX_DIM)
+        } else {
+            dyn_img
+        };
+        let mut buffer = Vec::new();
+        if resized.write_to(&mut Cursor::new(&mut buffer), ImageFormat::WebP).is_ok() {
+            return Some(format!("data:image/webp;base64,{}", STANDARD.encode(&buffer)));
+        } else if resized.write_to(&mut Cursor::new(&mut buffer), ImageFormat::Jpeg).is_ok() {
+            return Some(format!("data:image/jpeg;base64,{}", STANDARD.encode(&buffer)));
+        }
+        return None;
+    }
+
+    if ext == "jxl" {
+        if let Ok(bytes) = crate::infrastructure::codecs::jxl::decode_jxl_thumbnail(path, THUMBNAIL_MAX_DIM) {
+            return Some(format!("data:image/jpeg;base64,{}", STANDARD.encode(&bytes)));
+        }
+    }
+
     let reader = ImageReader::open(path).ok()?.with_guessed_format().ok()?;
     let format = reader.format()?;
     let img = reader.decode().ok()?;
@@ -41,6 +70,60 @@ pub fn load_image_data_url(path: &Path) -> Option<String> {
     }
 
     Some(format!("data:{mime};base64,{}", STANDARD.encode(&buffer)))
+}
+
+pub fn load_image_full_render_data_url(path: &Path) -> Result<String, String> {
+    let metadata = fs::metadata(path).map_err(|e| format!("No se pudo leer archivo: {e}"))?;
+    if !metadata.is_file() {
+        return Err("La ruta no es un archivo válido".to_string());
+    }
+
+    let ext = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+
+    if ext == "elx" {
+        let (rgb_img, _header) = crate::infrastructure::codecs::elyx::decode_elyx_file(path)?;
+        let dyn_img = image::DynamicImage::ImageRgb8(rgb_img);
+        let mut buffer = Vec::new();
+        if dyn_img.width() <= 16383 && dyn_img.height() <= 16383 {
+            dyn_img
+                .write_to(&mut Cursor::new(&mut buffer), ImageFormat::WebP)
+                .map_err(|e| format!("Error codificando WebP para visor: {e}"))?;
+            return Ok(format!("data:image/webp;base64,{}", STANDARD.encode(&buffer)));
+        } else {
+            dyn_img
+                .write_to(&mut Cursor::new(&mut buffer), ImageFormat::Jpeg)
+                .map_err(|e| format!("Error codificando Jpeg para visor: {e}"))?;
+            return Ok(format!("data:image/jpeg;base64,{}", STANDARD.encode(&buffer)));
+        }
+    }
+
+    if ext == "jxl" {
+        let bytes = crate::infrastructure::codecs::jxl::decode_jxl_full(path)?;
+        return Ok(format!("data:image/webp;base64,{}", STANDARD.encode(&bytes)));
+    }
+
+    let reader = ImageReader::open(path)
+        .map_err(|e| format!("Error abriendo imagen: {e}"))?
+        .with_guessed_format()
+        .map_err(|e| format!("Formato no reconocido: {e}"))?;
+    let img = reader
+        .decode()
+        .map_err(|e| format!("Error decodificando imagen: {e}"))?;
+
+    let mut buffer = Vec::new();
+    if img.width() <= 16383 && img.height() <= 16383 {
+        img.write_to(&mut Cursor::new(&mut buffer), ImageFormat::WebP)
+            .map_err(|e| format!("Error codificando WebP para visor: {e}"))?;
+        Ok(format!("data:image/webp;base64,{}", STANDARD.encode(&buffer)))
+    } else {
+        img.write_to(&mut Cursor::new(&mut buffer), ImageFormat::Jpeg)
+            .map_err(|e| format!("Error codificando Jpeg para visor: {e}"))?;
+        Ok(format!("data:image/jpeg;base64,{}", STANDARD.encode(&buffer)))
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -307,6 +390,36 @@ mod tests {
             assert!(res.is_some(), "MOV CineForm video thumbnail was successfully generated");
             let data = res.unwrap();
             assert!(data.starts_with("data:image/jpeg;base64,"));
+        }
+    }
+
+    #[test]
+    fn test_load_elyx_thumbnail_and_full_render() {
+        use super::{load_image_data_url, load_image_full_render_data_url};
+        use std::path::Path;
+
+        let test_path = Path::new(r"D:\Imágenes\ELYX_nativo_20261017_181309\variantes\Peyto_s8.elx");
+        if test_path.exists() {
+            let thumb = load_image_data_url(test_path).expect("Fallo al generar miniatura de ElyX");
+            assert!(thumb.starts_with("data:image/"));
+
+            let full = load_image_full_render_data_url(test_path).expect("Fallo al generar render completo de ElyX");
+            assert!(full.starts_with("data:image/"));
+        }
+    }
+
+    #[test]
+    fn test_load_jxl_thumbnail_and_full_render() {
+        use super::{load_image_data_url, load_image_full_render_data_url};
+        use std::path::Path;
+
+        let test_path = Path::new(r"D:\Imágenes\ELYX_resultados_20261017_174854\variantes\jxl_q70.jxl");
+        if test_path.exists() {
+            let thumb = load_image_data_url(test_path).expect("Fallo al generar miniatura de JXL");
+            assert!(thumb.starts_with("data:image/"));
+
+            let full = load_image_full_render_data_url(test_path).expect("Fallo al generar render completo de JXL");
+            assert!(full.starts_with("data:image/"));
         }
     }
 }

@@ -152,20 +152,22 @@ mod tests {
         fs::create_dir_all(&nested).unwrap();
         fs::write(root.join("foto 10.JPG"), []).unwrap();
         fs::write(nested.join("foto 2.webp"), []).unwrap();
+        fs::write(nested.join("muestra.elx"), []).unwrap();
+        fs::write(nested.join("foto.jxl"), []).unwrap();
         fs::write(nested.join("clip.mp4"), []).unwrap();
 
         let images = scan_visual_folder(&root, VisualMediaKind::Image, &[]).unwrap();
         let videos = scan_visual_folder(&root, VisualMediaKind::Video, &[]).unwrap();
 
-        assert_eq!(images.source.item_count, 2);
+        assert_eq!(images.source.item_count, 4);
         assert_eq!(videos.source.item_count, 1);
         assert!(videos.items[0].path.ends_with("clip.mp4"));
 
         let excluded_images = scan_visual_folder(&root, VisualMediaKind::Image, &[nested.to_string_lossy().into_owned()]).unwrap();
         assert_eq!(excluded_images.source.item_count, 1);
-        assert_eq!(excluded_images.items.len(), 2);
+        assert_eq!(excluded_images.items.len(), 4);
         assert_eq!(excluded_images.items.iter().filter(|it| !it.is_excluded).count(), 1);
-        assert_eq!(excluded_images.items.iter().filter(|it| it.is_excluded).count(), 1);
+        assert_eq!(excluded_images.items.iter().filter(|it| it.is_excluded).count(), 3);
 
         fs::remove_dir_all(root).unwrap();
     }

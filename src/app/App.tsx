@@ -399,7 +399,7 @@ function AppContent() {
     const isPlaylist = /\.(m3u|m3u8|pls|xspf)$/i.test(lower);
     const isAudio = /\.(mp3|flac|wav|aac|m4a|ogg|opus|wma)$/.test(lower);
     const isVideo = /\.(mp4|mkv|avi|mov|webm|flv|wmv|m4v)$/.test(lower);
-    const isImage = /\.(png|jpe?g|webp|gif|bmp|ico|svg|avif|tiff?)$/.test(lower);
+    const isImage = /\.(png|jpe?g|webp|gif|bmp|ico|svg|avif|tiff?|heic|heif|elx|jxl)$/.test(lower);
     const isDocumentOrProject = /\.(pdf|md|markdown|epub|mobi|cbz|cbr|kra|krz|ora|af|afphoto|afdesign|afpub|psd|psb|ai|blend|drp|txt|json|yaml|yml|toml|rs|ts|tsx|js|jsx|py|css|html|log|ini|env|sh|ps1)$/i.test(lower);
 
     if (isPlaylist) {

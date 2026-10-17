@@ -1,5 +1,6 @@
 pub mod artwork;
 pub mod autostart;
+pub mod codecs;
 pub mod converter;
 pub mod exif;
 pub mod favorites;

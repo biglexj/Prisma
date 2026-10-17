@@ -7,7 +7,7 @@ const AUDIO_EXTENSIONS: &[&str] = &[
     "wv",
 ];
 const IMAGE_EXTENSIONS: &[&str] = &[
-    "avif", "bmp", "gif", "jpeg", "jpg", "jxl", "png", "tif", "tiff", "webp",
+    "avif", "bmp", "elx", "gif", "jpeg", "jpg", "jxl", "png", "tif", "tiff", "webp",
 ];
 const VIDEO_EXTENSIONS: &[&str] = &[
     "3gp", "avi", "flv", "m2ts", "m4v", "mkv", "mov", "mp4", "mpeg", "mpg", "ogv", "ts", "webm",

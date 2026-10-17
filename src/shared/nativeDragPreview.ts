@@ -42,7 +42,7 @@ export function nativeDragPreviewLayout(
 
 export function nativeDragPreviewKind(path: string): PreviewKind {
   const extension = path.split(/[?#]/, 1)[0].match(/\.([^.\\/]+)$/)?.[1]?.toLowerCase();
-  if (extension && /^(png|jpe?g|webp|gif|bmp|svg|tiff?|avif|heic|heif)$/.test(extension)) return "image";
+  if (extension && /^(png|jpe?g|webp|gif|bmp|svg|tiff?|avif|heic|heif|elx|jxl)$/.test(extension)) return "image";
   if (extension && /^(mp4|mkv|mov|avi|webm|m4v|wmv|flv|mpg|mpeg|ts)$/.test(extension)) return "video";
   if (extension && /^(mp3|flac|wav|m4a|aac|ogg|opus|wma|aiff?|alac)$/.test(extension)) return "music";
   return "file";

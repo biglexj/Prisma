@@ -2794,9 +2794,11 @@ name = "prisma"
 version = "1.1.8"
 dependencies = [
  "base64 0.22.1",
+ "crc32fast",
  "image",
  "libmpv2",
  "lofty",
+ "miniz_oxide",
  "native-tls",
  "serde",
  "serde_json",

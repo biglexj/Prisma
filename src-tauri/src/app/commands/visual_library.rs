@@ -11,7 +11,9 @@ use crate::{
             scan_visual_folder,
         },
     },
-    infrastructure::media_preview::{load_image_data_url, load_video_thumbnail_data_url},
+    infrastructure::media_preview::{
+        load_image_data_url, load_image_full_render_data_url, load_video_thumbnail_data_url,
+    },
 };
 
 #[tauri::command]
@@ -134,6 +136,21 @@ pub async fn visual_library_image_preview(path: String) -> Result<Option<String>
     })
     .await
     .map_err(|error| format!("No se pudo preparar la vista previa: {error}"))?
+}
+
+#[tauri::command]
+pub async fn visual_library_image_render(path: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let canonical_path = Path::new(&path)
+            .canonicalize()
+            .map_err(|error| format!("No se pudo abrir la imagen: {error}"))?;
+        if !canonical_path.is_file() {
+            return Err("La ruta indicada no corresponde a un archivo válido.".to_owned());
+        }
+        load_image_full_render_data_url(&canonical_path)
+    })
+    .await
+    .map_err(|error| format!("Error en tarea de decodificación: {error}"))?
 }
 
 async fn scan_in_background(

@@ -45,8 +45,8 @@ use app::commands::custom_libraries::{
     custom_libraries_save_text_file, custom_libraries_scan_items, custom_libraries_toggle_active,
 };
 use app::commands::media::{
-    media_delete_items, media_get_default_pictures_dir, media_rename_item, media_save_image,
-    video_save_snapshot,
+    media_delete_items, media_filter_existing_paths, media_get_default_pictures_dir,
+    media_rename_item, media_save_image, video_save_snapshot,
 };
 use app::commands::quick_look::{
     autostart_get_status, autostart_set, get_minimize_to_tray, is_minimize_to_tray_enabled,
@@ -73,7 +73,7 @@ use app::commands::tags::{
 use app::commands::visual_library::{
     open_external_url, open_in_file_manager, open_path_with_default_app, show_in_file_manager, video_extract_audio_track, video_get_audio_tracks, video_get_playback_source, video_get_subtitles, video_read_subtitle_vtt,
     visual_library_add_excluded_folder, visual_library_add_folder,
-    visual_library_image_preview, visual_library_list_excluded_folders,
+    visual_library_image_preview, visual_library_image_render, visual_library_list_excluded_folders,
     visual_library_list_folders, visual_library_list_items,
     visual_library_move_duplicates, visual_library_remove_excluded_folder, visual_library_remove_folder,
     visual_library_replace_duplicate, visual_library_rescan_folder, visual_library_scan_duplicates, visual_library_scan_folder_items, visual_library_sync_pip_icon,
@@ -637,12 +637,14 @@ pub fn run() {
             visual_library_remove_excluded_folder,
             visual_library_list_items,
             visual_library_image_preview,
+            visual_library_image_render,
             visual_library_sync_pip_icon,
             visual_library_scan_duplicates,
             visual_library_scan_folder_items,
             visual_library_replace_duplicate,
             visual_library_move_duplicates,
             media_delete_items,
+            media_filter_existing_paths,
             media_rename_item,
             media_save_image,
             media_get_default_pictures_dir,

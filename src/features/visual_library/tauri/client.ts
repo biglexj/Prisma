@@ -29,6 +29,8 @@ export const visualLibraryClient = {
     invoke<FolderVisualItemsResult>("visual_library_scan_folder_items", { filePath, kind }),
   imagePreview: (path: string) =>
     invoke<string | null>("visual_library_image_preview", { path }),
+  imageRender: (path: string) =>
+    invoke<string>("visual_library_image_render", { path }),
   scanDuplicates: (kind: VisualMediaKind, options: DuplicateScanOptions) =>
     invoke<DuplicateGroup[]>("visual_library_scan_duplicates", { kind, options }),
   replaceDuplicate: (basePath: string, highResPath: string) =>
