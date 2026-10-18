@@ -47,6 +47,14 @@ const TOOL_DEFINITIONS: ToolItemDef[] = [
     tags: ["Hash 100%", "Similitud dHash", "Comparar Carpetas", "Upgrade HD/4K"],
     category: "native",
   },
+  {
+    key: "screen_capture",
+    label: "Capturador de Pantalla",
+    icon: "camera",
+    description: "Captura ágil de ventana, región o monitor completo con contorno de alta precisión, anotaciones vectoriales y copia directa a memoria sin tocar disco.",
+    tags: ["Ventana Inteligente", "Región / Tiradores", "Monitor Completo", "Copia en Memoria", "PNG"],
+    category: "native",
+  },
 
   // ── Herramientas de Aurora Synapse / Ecosistema ──
   {

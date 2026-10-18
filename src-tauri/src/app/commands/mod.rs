@@ -14,6 +14,7 @@ pub mod tags;
 pub mod video_takes;
 pub mod visual_library;
 pub mod wallpapers;
+pub mod screen_capture;
 
 
 

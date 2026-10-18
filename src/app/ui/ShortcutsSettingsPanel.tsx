@@ -59,6 +59,7 @@ export function ShortcutsSettingsPanel({ quickLookShortcut }: ShortcutsSettingsP
           { id: "play_pause_global", label: "Reproducir / Pausar", keys: ["Espacio"] },
           { id: "quick_look", label: "Previsualización (Quick Look)", keys: [quickLookBadge] },
           { id: "mobile_speaker", label: "Usar el teléfono como altavoz", keys: ["Shift + T", mobileShortcut ? mobileShortcut.replaceAll("+", " + ").replace("Shift", "Mayús") : "Desactivado"] },
+          { id: "screen_capture", label: "Captura de pantalla rápida", keys: ["Impr Pant", "Mayús + Impr Pant"] },
         ],
       },
       {

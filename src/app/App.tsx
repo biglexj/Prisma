@@ -44,6 +44,7 @@ import { LunaFetchView } from "../features/luna_fetch/ui/LunaFetchView";
 import { GalleryDlView } from "../features/gallery_dl/ui/GalleryDlView";
 import { PrismaUpscalerView } from "../features/prisma_upscaler/ui/PrismaUpscalerView";
 import { WallpapersView } from "../features/wallpapers/ui/WallpapersView";
+import { ScreenCaptureView } from "../features/screen_capture";
 import { BatchRenamerView } from "../features/renamer/ui/BatchRenamerView";
 import { DuplicatesScannerModal } from "../features/visual_library/ui/duplicates/DuplicatesScannerModal";
 import { ImageComparisonModal, createVisualItemFromPath } from "../features/comparison";
@@ -82,6 +83,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   prisma_upscaler: "Prisma Upscaler",
   wallpapers: "Wallpapers Aurora",
   duplicates: "Buscador de Duplicados",
+  screen_capture: "Capturador de Pantalla",
 };
 
 function AppContent() {
@@ -1589,6 +1591,7 @@ function AppContent() {
           {activeView === "gallery_dl" ? <GalleryDlView onNavigate={navigateToView} /> : null}
           {activeView === "prisma_upscaler" ? <PrismaUpscalerView onNavigate={navigateToView} /> : null}
           {activeView === "wallpapers" ? <WallpapersView /> : null}
+          {activeView === "screen_capture" ? <ScreenCaptureView /> : null}
         </main>
       </div>
 

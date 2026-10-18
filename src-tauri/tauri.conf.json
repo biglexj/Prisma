@@ -52,6 +52,31 @@
         "skipTaskbar": true,
         "resizable": false,
         "shadow": false
+      },
+      {
+        "label": "screen_capture_overlay",
+        "title": "Prisma · Captura",
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "skipTaskbar": true,
+        "resizable": false,
+        "shadow": false
+      },
+      {
+        "label": "screen_capture_editor",
+        "title": "Prisma · Editor de Captura",
+        "width": 1080,
+        "height": 720,
+        "minWidth": 640,
+        "minHeight": 480,
+        "center": true,
+        "visible": false,
+        "skipTaskbar": false,
+        "decorations": false,
+        "resizable": true,
+        "shadow": true
       }
     ],
     "security": {

@@ -16,13 +16,14 @@ export type ProgressBarStyle =
   | "vinyl_tape"
   | "elastic_string";
 
-export type ToolKey = "converter" | "renamer" | "comparator" | "duplicates" | "luna_fetch" | "gallery_dl" | "prisma_upscaler" | "wallpapers";
+export type ToolKey = "converter" | "renamer" | "comparator" | "duplicates" | "screen_capture" | "luna_fetch" | "gallery_dl" | "prisma_upscaler" | "wallpapers";
 
 export interface EnabledToolsConfig {
   converter: boolean;
   renamer: boolean;
   comparator: boolean;
   duplicates: boolean;
+  screen_capture: boolean;
   luna_fetch: boolean;
   gallery_dl: boolean;
   prisma_upscaler: boolean;
@@ -34,6 +35,7 @@ export const DEFAULT_ENABLED_TOOLS: EnabledToolsConfig = {
   renamer: true,
   comparator: true,
   duplicates: true,
+  screen_capture: true,
   luna_fetch: true,
   gallery_dl: true,
   prisma_upscaler: true,

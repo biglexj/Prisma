@@ -83,6 +83,11 @@ use app::commands::video_takes::{
     video_list_take_markers, video_set_take_marker,
 };
 use app::commands::wallpapers::{wallpaper_save_and_apply, wallpaper_set_desktop};
+use app::commands::screen_capture::{
+    screen_capture_cancel, screen_capture_confirm, screen_capture_detect_subregion,
+    screen_capture_get_editor_payload, screen_capture_get_shortcut_status,
+    screen_capture_save_file, screen_capture_set_shortcut, screen_capture_start,
+};
 use app::state::{
     FavoritesState, InitialFileState, InitialSynapseSendState, MusicLibraryState,
     PlaybackProbeState, VisualLibraryState,
@@ -310,7 +315,9 @@ pub fn run() {
                 .skip_initial_state("main")
                 .skip_initial_state("quicklook")
                 .skip_initial_state("flyout")
-                .with_denylist(&["quicklook", "flyout"])
+                .skip_initial_state("screen_capture_overlay")
+                .skip_initial_state("screen_capture_editor")
+                .with_denylist(&["quicklook", "flyout", "screen_capture_overlay", "screen_capture_editor"])
                 .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
                 .build(),
         )
@@ -406,6 +413,12 @@ pub fn run() {
             app.manage(discovery_service);
             let synapse_server = features::synapse::SynapseServer::start(app.handle().clone());
             app.manage(synapse_server);
+
+            let capture_state: features::screen_capture::SharedCaptureState =
+                std::sync::Arc::new(std::sync::Mutex::new(features::screen_capture::CaptureSessionState::default()));
+            let _ = app::commands::screen_capture::register_capture_shortcut(app.handle(), &capture_state, "PrintScreen")
+                .or_else(|_| app::commands::screen_capture::register_capture_shortcut(app.handle(), &capture_state, "Shift+PrintScreen"));
+            app.manage(capture_state);
 
             let quick_look_state = QuickLookState::new(app.handle().clone());
             quick_look_state.init();
@@ -795,6 +808,14 @@ pub fn run() {
             video_set_take_marker,
             video_list_take_markers,
             video_delete_take_marker,
+            screen_capture_start,
+            screen_capture_detect_subregion,
+            screen_capture_confirm,
+            screen_capture_cancel,
+            screen_capture_get_editor_payload,
+            screen_capture_save_file,
+            screen_capture_get_shortcut_status,
+            screen_capture_set_shortcut,
         ]);
 
         let mut context = tauri::generate_context!();
