@@ -1,0 +1,78 @@
+.image-loading-state {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: image-loading-fade-in 0.2s cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+.image-loading-state-surface {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 2rem;
+  border-radius: 28px;
+  background: var(--surface-container-high, #272735);
+  color: var(--on-surface, #eee);
+  box-shadow: 0 4px 18px rgb(0 0 0 / 14%);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.image-loading-indicator {
+  width: 48px;
+  height: 48px;
+  fill: none;
+  stroke-width: 4;
+  animation: image-loading-rotation 1.5s linear infinite;
+}
+
+.image-loading-track {
+  stroke: var(--primary-container, #493a78);
+}
+
+.image-loading-arc {
+  stroke: var(--primary, #a98afa);
+  stroke-linecap: round;
+  stroke-dasharray: 86 126;
+  animation: image-loading-sweep 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes image-loading-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes image-loading-rotation {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes image-loading-sweep {
+  from {
+    stroke-dasharray: 12 126;
+  }
+  to {
+    stroke-dasharray: 100 126;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image-loading-state {
+    animation: none;
+  }
+  .image-loading-indicator,
+  .image-loading-arc {
+    animation: none;
+  }
+}

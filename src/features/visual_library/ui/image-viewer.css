@@ -731,3 +731,13 @@
     transform: translate(-50%, -10px) scale(0.95);
   }
 }
+.image-viewer-load-error {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--on-surface, #eee);
+}

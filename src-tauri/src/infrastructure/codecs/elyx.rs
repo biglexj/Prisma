@@ -270,6 +270,26 @@ pub fn decode_elyx_file(path: &Path) -> Result<(RgbImage, ElyxHeader), String> {
     decode_elyx_from_reader(reader)
 }
 
+pub fn read_elyx_dimensions(path: &Path) -> Option<(u32, u32)> {
+    let f = File::open(path).ok()?;
+    let mut r = BufReader::new(f);
+    let mut magic = [0u8; 8];
+    r.read_exact(&mut magic).ok()?;
+    if &magic != ELYX_MAGIC {
+        return None;
+    }
+    let mut hn_bytes = [0u8; 4];
+    r.read_exact(&mut hn_bytes).ok()?;
+    let hn = u32::from_le_bytes(hn_bytes) as usize;
+    if !(2..=65536).contains(&hn) {
+        return None;
+    }
+    let mut header_buf = vec![0u8; hn];
+    r.read_exact(&mut header_buf).ok()?;
+    let header: ElyxHeader = serde_json::from_slice(&header_buf).ok()?;
+    Some((header.width, header.height))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

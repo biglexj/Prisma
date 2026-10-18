@@ -4,7 +4,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Icon } from "../../../shared/ui/Icon";
 import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
 import { ContextMenu } from "../../../shared/ui/ContextMenu";
-import { cleanPath, toSafeAssetUrl } from "../../../shared/mediaTree";
+import { cleanPath } from "../../../shared/mediaTree";
 import { useFavorites } from "../../../shared/useFavorites";
 import { useMediaDelete } from "../../../shared/useMediaDelete";
 import { useMediaRename } from "../../../shared/useMediaRename";
@@ -19,6 +19,8 @@ import { ViewerToolsMenu } from "./components/ViewerToolsMenu";
 import { ImageInfoDrawer } from "./components/ImageInfoDrawer";
 import { copyImageToClipboard } from "../services/imageClipboard";
 import { handleNativeDragPointerDown } from "../../../shared/useNativeFileDrag";
+import { useRenderableImage } from "../hooks/useRenderableImage";
+import { ImageLoadingState } from "../../../shared/ui/ImageLoadingState";
 import "./visual-library.css";
 import "./image-viewer.css";
 
@@ -99,6 +101,8 @@ export function ImageViewer({
     pan: { x: number; y: number };
   } | null>(null);
   const clearPrevTimerRef = useRef<number | null>(null);
+  const renderedImage = useRenderableImage(currentItem.path, imageRevision);
+  const renderedPreviousImage = useRenderableImage(previousLayer?.item.path ?? "", previousLayer?.item.modifiedAtMillis ?? 0);
   const suppressTransformTransitionRef = useRef(true);
   const isToolsMenuOpenRef = useRef(false);
 
@@ -1085,6 +1089,19 @@ export function ImageViewer({
         }}
       >
         <div className="image-viewer-media-container">
+          {renderedImage.loading ? (
+            <ImageLoadingState
+              key={`${currentItem.path}-${imageRevision}`}
+              itemKey={`${currentItem.path}-${imageRevision}`}
+            />
+          ) : null}
+          {renderedImage.error ? (
+            <div className="image-viewer-load-error" role="alert">
+              <Icon name="image" />
+              <p>No se pudo decodificar la imagen</p>
+              <button type="button" className="image-viewer-top-btn" onClick={() => setImageRevision(Date.now())}>Reintentar</button>
+            </div>
+          ) : null}
           {previousLayer ? (
             <div
               className="image-viewer-media-layer is-leaving"
@@ -1098,7 +1115,8 @@ export function ImageViewer({
                 className="image-viewer-media"
                 crossOrigin="anonymous"
                 draggable={false}
-                src={toSafeAssetUrl(previousLayer.item.path)}
+                src={renderedPreviousImage.src}
+                onError={renderedPreviousImage.onError}
               />
             </div>
           ) : null}
@@ -1119,9 +1137,11 @@ export function ImageViewer({
               crossOrigin="anonymous"
               draggable={false}
               ref={imgRef}
-              src={`${toSafeAssetUrl(currentItem.path)}?v=${imageRevision}`}
-              onError={() => setIsEntering(true)}
+              src={renderedImage.src}
+              style={{ opacity: renderedImage.loading || renderedImage.error ? 0 : undefined }}
+              onError={() => { setIsEntering(true); renderedImage.onError(); }}
               onLoad={(e) => {
+                renderedImage.onLoad();
                 const img = e.currentTarget;
                 const naturalW = img.naturalWidth || img.width;
                 const naturalH = img.naturalHeight || img.height;

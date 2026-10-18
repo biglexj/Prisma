@@ -12,6 +12,9 @@
 - [x] T06 — Añadir `"elx"` a `IMAGE_EXTENSIONS` en `classifier.rs` y registrar `"elx"` y `"jxl"` en `file_associations.rs`.
 - [x] T07 — Actualizar frontend (`useRenderableImage.ts`, `App.tsx`, `ImageViewer.tsx`) para detección inmediata y renderizado de `.elx` y `.jxl`.
 - [x] T08 — Ejecutar tests unitarios de Rust contra los archivos `.elx` de `D:\Imágenes\ELYX_nativo_20261017_181309\pruebas` y variantes reales.
-- [x] T09 — Validar la carga visual completa en Prisma y preparar documentación de validación.
+- [x] T10 — Integrar códec de decodificación nativa para AVIF (`src-tauri/src/infrastructure/codecs/avif.rs`) y enlace con miniaturas/vistas previas.
+- [x] T11 — Añadir tipos de medio para `avif`, `elx`, `jxl`, `tiff`, `heic` en `QuickLookMediaType` y soporte de renderizado en `QuickLookImage.tsx`.
+- [x] T12 — Registrar asociaciones de Windows en `file_associations.rs` y `tauri.conf.json` para que el Explorador muestre Prisma en "Abrir con...".
 
 Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.
+

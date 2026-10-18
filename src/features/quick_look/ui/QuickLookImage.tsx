@@ -1,7 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useState, useRef, useEffect } from "react";
-import { toSafeAssetUrl } from "../../../shared/mediaTree";
+import { useRenderableImage } from "../../visual_library/hooks/useRenderableImage";
 import { Icon } from "../../../shared/ui/Icon";
+import { ImageLoadingState } from "../../../shared/ui/ImageLoadingState";
 import type { QuickLookPayload } from "../model/types";
 
 interface QuickLookImageProps {
@@ -13,33 +14,33 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [hasError, setHasError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const initialPanRef = useRef({ x: 0, y: 0 });
   const imgRef = useRef<HTMLImageElement | null>(null);
 
-  const baseSrc = toSafeAssetUrl(payload.path);
   const cacheKey = payload.modifiedMillis
     ? `v=${payload.modifiedMillis}`
     : payload.fileSizeBytes
     ? `v=${payload.fileSizeBytes}`
-    : `t=${Date.now()}`;
-  const imgSrc = retryKey > 0 ? `${baseSrc}?${cacheKey}&r=${retryKey}` : `${baseSrc}?${cacheKey}`;
+    : "0";
+  const renderedImage = useRenderableImage(payload.path, `${cacheKey}&r=${retryKey}`);
+  const imgSrc = renderedImage.src;
+  const hasError = Boolean(renderedImage.error);
 
   useEffect(() => {
-    setHasError(false);
     setZoom(1);
     setPan({ x: 0, y: 0 });
     setRetryKey(0);
 
     if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      renderedImage.onLoad();
       onDimensionsLoad?.({ width: imgRef.current.naturalWidth, height: imgRef.current.naturalHeight });
     }
   }, [payload.path, payload.modifiedMillis, payload.fileSizeBytes, onDimensionsLoad]);
 
   const handleImageLoad = async (e: React.SyntheticEvent<HTMLImageElement>) => {
-    setHasError(false);
+    renderedImage.onLoad();
     const img = e.currentTarget;
     const nw = img.naturalWidth;
     const nh = img.naturalHeight;
@@ -86,8 +87,7 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
   };
 
   const handleImageError = () => {
-    console.warn("[QuickLookImage] Fallo al cargar la imagen:", payload.path);
-    setHasError(true);
+    renderedImage.onError();
   };
 
   // Zoom con punto focal en dirección del cursor / lápiz de tableta gráfica
@@ -185,7 +185,6 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
             type="button"
             className="quicklook-error-btn quicklook-error-btn-secondary"
             onClick={() => {
-              setHasError(false);
               setRetryKey((k) => k + 1);
             }}
           >
@@ -204,9 +203,16 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
       onPointerDown={handlePointerDown}
       onDoubleClick={handleDoubleClick}
       style={{
+        position: "relative",
         cursor: zoom > 1 ? (isDragging ? "grabbing" : "grab") : "zoom-in",
       }}
     >
+      {renderedImage.loading ? (
+        <ImageLoadingState
+          key={`${payload.path}-${cacheKey}-${retryKey}`}
+          itemKey={`${payload.path}-${cacheKey}-${retryKey}`}
+        />
+      ) : null}
       <div className="quicklook-image-wrapper">
         <img
           ref={imgRef}
@@ -218,6 +224,7 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
           onLoad={handleImageLoad}
           src={imgSrc}
           style={{
+            opacity: renderedImage.loading ? 0 : 1,
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transition: isDragging || zoom === 1 ? "none" : "transform 0.12s ease-out",
           }}

@@ -123,7 +123,10 @@
           "webp",
           "gif",
           "bmp",
-          "svg"
+          "svg",
+          "avif",
+          "elx",
+          "jxl"
         ],
         "name": "Archivo de Imagen",
         "description": "Archivo de imagen para visor Prisma",

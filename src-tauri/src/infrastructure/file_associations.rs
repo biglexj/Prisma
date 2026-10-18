@@ -20,7 +20,8 @@ pub mod windows_associations {
     pub const MEDIA_EXTENSIONS: &[&str] = &[
         "mp3", "flac", "wav", "aac", "m4a", "ogg", "opus", "wma", "m3u", "m3u8", "mp4", "mkv",
         "avi", "mov", "webm", "flv", "wmv", "m4v", "jpg", "jpeg", "png", "webp", "gif", "bmp",
-        "svg", "ico", "elx", "jxl", "zip", "lrc", "srt", "vtt", "ass", "ssa",
+        "svg", "ico", "avif", "elx", "jxl", "tiff", "tif", "heic", "heif", "zip", "lrc", "srt",
+        "vtt", "ass", "ssa",
     ];
 
     fn set_reg_sz(key: HKEY, value_name: Option<&str>, data: &str) {

@@ -26,7 +26,8 @@ impl QuickLookMediaType {
         match lower.as_str() {
             "mp3" | "flac" | "wav" | "aac" | "m4a" | "ogg" | "opus" | "wma" => Self::Audio,
             "mp4" | "mkv" | "avi" | "mov" | "webm" | "flv" | "wmv" | "m4v" => Self::Video,
-            "jpg" | "jpeg" | "png" | "webp" | "gif" | "bmp" | "svg" | "ico" => Self::Image,
+            "jpg" | "jpeg" | "png" | "webp" | "gif" | "bmp" | "svg" | "ico" | "avif"
+            | "elx" | "jxl" | "tiff" | "tif" | "heic" | "heif" => Self::Image,
             "pdf" => Self::Pdf,
             "epub" => Self::Epub,
             "zip" | "7z" | "rar" | "tar" | "gz" | "bz2" | "xz" | "tgz" => Self::Archive,
@@ -158,7 +159,12 @@ impl QuickLookPayload {
         };
 
         let (width, height) = if media_type == QuickLookMediaType::Image {
-            image::image_dimensions(path).ok().map(|(w, h)| (Some(w), Some(h))).unwrap_or((None, None))
+            let dims = if ext == "elx" {
+                crate::infrastructure::codecs::elyx::read_elyx_dimensions(path)
+            } else {
+                image::image_dimensions(path).ok()
+            };
+            dims.map(|(w, h)| (Some(w), Some(h))).unwrap_or((None, None))
         } else if media_type == QuickLookMediaType::Video {
             get_video_dimensions(path).map(|(w, h)| (Some(w), Some(h))).unwrap_or((None, None))
         } else {
@@ -735,6 +741,10 @@ mod tests {
         assert_eq!(QuickLookMediaType::from_extension("MKV"), QuickLookMediaType::Video);
         assert_eq!(QuickLookMediaType::from_extension("jpg"), QuickLookMediaType::Image);
         assert_eq!(QuickLookMediaType::from_extension("PNG"), QuickLookMediaType::Image);
+        assert_eq!(QuickLookMediaType::from_extension("avif"), QuickLookMediaType::Image);
+        assert_eq!(QuickLookMediaType::from_extension("AVIF"), QuickLookMediaType::Image);
+        assert_eq!(QuickLookMediaType::from_extension("elx"), QuickLookMediaType::Image);
+        assert_eq!(QuickLookMediaType::from_extension("jxl"), QuickLookMediaType::Image);
         assert_eq!(QuickLookMediaType::from_extension("pdf"), QuickLookMediaType::Pdf);
         assert_eq!(QuickLookMediaType::from_extension("epub"), QuickLookMediaType::Epub);
         assert_eq!(QuickLookMediaType::from_extension("zip"), QuickLookMediaType::Archive);

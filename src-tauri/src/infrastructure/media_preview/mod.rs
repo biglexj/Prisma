@@ -44,6 +44,12 @@ pub fn load_image_data_url(path: &Path) -> Option<String> {
         }
     }
 
+    if ext == "avif" {
+        if let Ok(bytes) = crate::infrastructure::codecs::avif::decode_avif_thumbnail(path, THUMBNAIL_MAX_DIM) {
+            return Some(format!("data:image/jpeg;base64,{}", STANDARD.encode(&bytes)));
+        }
+    }
+
     let reader = ImageReader::open(path).ok()?.with_guessed_format().ok()?;
     let format = reader.format()?;
     let img = reader.decode().ok()?;
@@ -88,21 +94,19 @@ pub fn load_image_full_render_data_url(path: &Path) -> Result<String, String> {
         let (rgb_img, _header) = crate::infrastructure::codecs::elyx::decode_elyx_file(path)?;
         let dyn_img = image::DynamicImage::ImageRgb8(rgb_img);
         let mut buffer = Vec::new();
-        if dyn_img.width() <= 16383 && dyn_img.height() <= 16383 {
-            dyn_img
-                .write_to(&mut Cursor::new(&mut buffer), ImageFormat::WebP)
-                .map_err(|e| format!("Error codificando WebP para visor: {e}"))?;
-            return Ok(format!("data:image/webp;base64,{}", STANDARD.encode(&buffer)));
-        } else {
-            dyn_img
-                .write_to(&mut Cursor::new(&mut buffer), ImageFormat::Jpeg)
-                .map_err(|e| format!("Error codificando Jpeg para visor: {e}"))?;
-            return Ok(format!("data:image/jpeg;base64,{}", STANDARD.encode(&buffer)));
-        }
+        dyn_img
+            .write_to(&mut Cursor::new(&mut buffer), ImageFormat::Jpeg)
+            .map_err(|e| format!("Error codificando Jpeg para visor: {e}"))?;
+        return Ok(format!("data:image/jpeg;base64,{}", STANDARD.encode(&buffer)));
     }
 
     if ext == "jxl" {
         let bytes = crate::infrastructure::codecs::jxl::decode_jxl_full(path)?;
+        return Ok(format!("data:image/webp;base64,{}", STANDARD.encode(&bytes)));
+    }
+
+    if ext == "avif" {
+        let bytes = crate::infrastructure::codecs::avif::decode_avif_full(path)?;
         return Ok(format!("data:image/webp;base64,{}", STANDARD.encode(&bytes)));
     }
 

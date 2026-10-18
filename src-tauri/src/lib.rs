@@ -390,8 +390,8 @@ pub fn run() {
             // 2. Registro de esquema prisma:// y servicios de Aurora Synapse
             if !is_dev_mode {
                 features::synapse::register_windows_deep_link();
-                infrastructure::file_associations::register_file_associations();
             }
+            infrastructure::file_associations::register_file_associations();
             let beacon_service = features::synapse::SynapseBeaconService::start();
             app.manage(beacon_service);
             // Read only the known phone address from each profile. Availability is checked

@@ -12,6 +12,10 @@
 - [x] V06 — Agente — Verificar escaneo recursivo de biblioteca visual con archivos `.elx` y `.jxl` (`cargo test separates_images_and_videos_recursively`). Esperado: categorización perfecta como `MediaFamily::Image`.
 - [ ] V07 — Tester — Abrir una carpeta que contenga archivos `.elx` y `.jxl` en Prisma; verificar que aparecen con sus miniaturas en la vista de Biblioteca Visual.
 - [ ] V08 — Tester — Abrir una imagen `.elx` en el visor interactivo (`ImageViewer`), aplicar zoom y paneo a resolución completa.
+- [x] V09 — Agente — Decodificar `avif_q50.avif` mediante el motor FFmpeg/libdav1d (`cargo test test_decode_avif_thumbnail_and_full`). Esperado: miniatura JPEG y render WebP sin errores.
+- [x] V10 — Agente — Comprobar detección de extensiones (`avif`, `elx`, `jxl`, etc.) en `QuickLookMediaType` (`cargo test test_media_type_detection`). Esperado: clasificados como `QuickLookMediaType::Image`.
+- [ ] V11 — Tester — En el Explorador de Windows o dentro de Prisma, presionar Barra Espaciadora sobre un archivo `.avif`, `.elx` o `.jxl` para verificar la previsualización flotante de QuickLook sin fallback de tarjeta genérica.
+
 
 ## Registro de fallos
 

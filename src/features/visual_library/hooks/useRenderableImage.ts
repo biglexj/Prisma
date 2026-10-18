@@ -6,7 +6,7 @@ import { toSafeAssetUrl } from "../../../shared/mediaTree";
  * o si el navegador falla con el asset local. */
 export function useRenderableImage(path: string, revision: string | number) {
   const key = `${path}\n${revision}`;
-  const isDirectDecodeNeeded = Boolean(path && /\.(elx|jxl)$/i.test(path));
+  const isDirectDecodeNeeded = Boolean(path && /\.(elx|jxl|avif)$/i.test(path));
   const [requestedKey, setRequestedKey] = useState<string | null>(null);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [decoded, setDecoded] = useState<{ key: string; src?: string; error?: string } | null>(null);
