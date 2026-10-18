@@ -31,3 +31,4 @@
   - Frontend React: `ScreenCaptureView.tsx`, `ScreenCaptureOverlay.tsx`, `ScreenCaptureEditor.tsx` y `screen-capture.css`.
   - Registro de ventanas en `tauri.conf.json` (`screen_capture_overlay` transparente/sin taskbar; `screen_capture_editor` con taskbar independiente).
   - Capacidades en `capabilities/default.json` y denylist de `window_state` actualizadas.
+  - Atajo `Ctrl + Mayús + Z` (y `Ctrl + Z`) configurado e integrado de forma reactiva y estable para Deshacer trazo/anotación en el editor de captura.

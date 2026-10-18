@@ -127,7 +127,9 @@ export function ShortcutsSettingsPanel({ quickLookShortcut }: ShortcutsSettingsP
         icon: "sliders",
         badgeText: "Herramientas",
         items: [
-          { id: "e_undo", label: "Deshacer trazo (Doodle)", keys: ["Ctrl + Z"] },
+          { id: "e_undo", label: "Deshacer trazo / anotación", keys: ["Ctrl + Mayús + Z", "Ctrl + Z"] },
+          { id: "e_redo", label: "Rehacer anotación", keys: ["Ctrl + Y"] },
+          { id: "e_copy", label: "Copiar captura al portapapeles", keys: ["Ctrl + C"] },
           { id: "e_save", label: "Guardar cambios editados", keys: ["Ctrl + S"] },
           { id: "e_modes", label: "Modos comparador (1 a 4)", keys: ["1", "2", "3", "4"] },
           { id: "e_swap", label: "Intercambiar foto primaria", keys: ["S"] },

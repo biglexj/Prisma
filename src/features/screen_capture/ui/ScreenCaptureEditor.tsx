@@ -27,6 +27,8 @@ export function ScreenCaptureEditor() {
   // Historial de anotaciones vectoriales
   const [annotations, setAnnotations] = useState<AnnotationItem[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const annotationsRef = useRef(annotations);
+  annotationsRef.current = annotations;
 
   // Estado de dibujo activo
   const [isDrawing, setIsDrawing] = useState(false);
@@ -271,16 +273,17 @@ export function ScreenCaptureEditor() {
   };
 
   const handleUndo = useCallback(() => {
-    if (historyIndex >= 0) {
-      setHistoryIndex((prev) => prev - 1);
-    }
-  }, [historyIndex]);
+    setHistoryIndex((prev) => (prev >= 0 ? prev - 1 : -1));
+  }, []);
 
   const handleRedo = useCallback(() => {
-    if (historyIndex < annotations.length - 1) {
-      setHistoryIndex((prev) => prev + 1);
-    }
-  }, [historyIndex, annotations.length]);
+    setHistoryIndex((prev) => {
+      if (prev < annotationsRef.current.length - 1) {
+        return prev + 1;
+      }
+      return prev;
+    });
+  }, []);
 
   // Copiar imagen renderizada al portapapeles sin tocar disco
   const handleCopy = useCallback(async () => {
@@ -343,19 +346,31 @@ export function ScreenCaptureEditor() {
     }
   };
 
-  // Atajos de teclado en el editor (Ctrl+C, Ctrl+S, Ctrl+Z, Ctrl+Y)
+  // Atajos de teclado en el editor (Ctrl+C, Ctrl+S, Ctrl+Mayús+Z / Ctrl+Z, Ctrl+Y)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
+      const isCtrl = e.ctrlKey || e.metaKey;
+      if (!isCtrl) return;
+
+      const key = e.key.toLowerCase();
+      const code = e.code;
+
+      if (key === "c" || code === "KeyC") {
         e.preventDefault();
         void handleCopy();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      } else if (key === "s" || code === "KeyS") {
         e.preventDefault();
         void handleSaveAs();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      } else if ((key === "z" || code === "KeyZ") && e.shiftKey) {
+        // Atajo solicitado: Ctrl + Mayús + Z -> Deshacer
         e.preventDefault();
         handleUndo();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+      } else if (key === "z" || code === "KeyZ") {
+        // Atajo estándar: Ctrl + Z -> Deshacer
+        e.preventDefault();
+        handleUndo();
+      } else if (key === "y" || code === "KeyY") {
+        // Atajo estándar: Ctrl + Y -> Rehacer
         e.preventDefault();
         handleRedo();
       }
@@ -506,7 +521,7 @@ export function ScreenCaptureEditor() {
             className="capture-tool-btn"
             onClick={handleUndo}
             disabled={historyIndex < 0}
-            title="Deshacer (Ctrl+Z)"
+            title="Deshacer (Ctrl+Mayús+Z / Ctrl+Z)"
           >
             <Icon name="undo" width={18} height={18} />
           </button>
