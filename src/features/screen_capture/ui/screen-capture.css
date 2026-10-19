@@ -302,60 +302,72 @@
   background: rgba(255, 107, 129, 0.2);
 }
 
-/* Borde de alta precisión y contraste (Doble trazo oscuro + cyan brillante) */
+/* Borde de alta precisión y contorno (Doble trazo oscuro + cyan brillante con viñeta exterior) */
 .capture-target-box {
   position: fixed;
-  pointer-events: none;
-  border: 2px solid #00aaff;
-  outline: 1px solid rgba(0, 0, 0, 0.8);
-  box-shadow: 0 0 15px rgba(0, 170, 255, 0.5), inset 0 0 10px rgba(0, 170, 255, 0.15);
+  pointer-events: auto;
+  border: 2px solid #00C9B9;
+  outline: 1px solid rgba(0, 0, 0, 0.85);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45), 0 0 15px rgba(0, 201, 185, 0.4);
   border-radius: 3px;
-  transition: all 0.08s cubic-bezier(0.2, 0, 0, 1);
   z-index: 999998;
+  cursor: move;
 }
 
 .capture-target-badge {
   position: absolute;
   left: 8px;
-  top: -30px;
-  background: rgba(10, 15, 24, 0.9);
-  color: #00aaff;
+  top: -32px;
+  background: rgba(10, 15, 24, 0.92);
+  color: #00C9B9;
   font-family: monospace;
   font-size: 0.78rem;
   font-weight: bold;
-  padding: 3px 8px;
+  padding: 3px 10px;
   border-radius: 6px;
-  border: 1px solid rgba(0, 170, 255, 0.4);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 201, 185, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .capture-target-badge.is-flipped {
   top: auto;
-  bottom: -30px;
+  bottom: -32px;
 }
 
-/* Tiradores de ajuste en modo Rectángulo */
+/* Tiradores de ajuste en modo Rectángulo (4 esquinas prominentes + laterales con hit area expandida) */
 .capture-resize-handle {
   position: absolute;
-  width: 10px;
-  height: 10px;
-  background: #fff;
-  border: 2px solid #00aaff;
-  border-radius: 2px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border: 2px solid #00C9B9;
+  border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
   pointer-events: auto;
+  z-index: 10;
+  box-sizing: border-box;
+  touch-action: none;
 }
 
-.capture-resize-handle.nw { top: -6px; left: -6px; cursor: nwse-resize; }
-.capture-resize-handle.ne { top: -6px; right: -6px; cursor: nesw-resize; }
-.capture-resize-handle.sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
-.capture-resize-handle.se { bottom: -6px; right: -6px; cursor: nwse-resize; }
-.capture-resize-handle.n { top: -6px; left: calc(50% - 5px); cursor: ns-resize; }
-.capture-resize-handle.s { bottom: -6px; left: calc(50% - 5px); cursor: ns-resize; }
-.capture-resize-handle.w { top: calc(50% - 5px); left: -6px; cursor: ew-resize; }
-.capture-resize-handle.e { top: calc(50% - 5px); right: -6px; cursor: ew-resize; }
+.capture-resize-handle::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.capture-resize-handle.nw { top: -7px; left: -7px; cursor: nwse-resize; }
+.capture-resize-handle.ne { top: -7px; right: -7px; cursor: nesw-resize; }
+.capture-resize-handle.sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
+.capture-resize-handle.se { bottom: -7px; right: -7px; cursor: nwse-resize; }
+.capture-resize-handle.n { top: -7px; left: calc(50% - 7px); cursor: ns-resize; }
+.capture-resize-handle.s { bottom: -7px; left: calc(50% - 7px); cursor: ns-resize; }
+.capture-resize-handle.w { top: calc(50% - 7px); left: -7px; cursor: ew-resize; }
+.capture-resize-handle.e { top: calc(50% - 7px); right: -7px; cursor: ew-resize; }
 
 /* ── Screen Capture Editor (Ventana Dedicada) ───────────────────────── */
 .capture-editor-window {
@@ -569,6 +581,11 @@
   z-index: 999998;
 }
 
+.capture-inplace-box.is-lasso {
+  border: none;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+}
+
 .capture-inplace-canvas {
   display: block;
   cursor: crosshair;
@@ -577,17 +594,20 @@
 }
 
 .capture-annotation-floating-bar {
-  position: absolute;
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
-  background: rgba(22, 22, 26, 0.92);
+  padding: 6px 14px;
+  background: rgba(22, 22, 26, 0.94);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 999px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
   z-index: 1000000;
   pointer-events: auto;
   white-space: nowrap;

@@ -1,4 +1,4 @@
-export type CaptureMode = "window" | "rect" | "fullscreen";
+export type CaptureMode = "window" | "rect" | "fullscreen" | "freeform";
 
 export interface DetectedTarget {
   id: string;

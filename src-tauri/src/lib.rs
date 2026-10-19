@@ -416,8 +416,6 @@ pub fn run() {
 
             let capture_state: features::screen_capture::SharedCaptureState =
                 std::sync::Arc::new(std::sync::Mutex::new(features::screen_capture::CaptureSessionState::default()));
-            let _ = app::commands::screen_capture::register_capture_shortcut(app.handle(), &capture_state, "PrintScreen")
-                .or_else(|_| app::commands::screen_capture::register_capture_shortcut(app.handle(), &capture_state, "Shift+PrintScreen"));
             app.manage(capture_state);
 
             let quick_look_state = QuickLookState::new(app.handle().clone());

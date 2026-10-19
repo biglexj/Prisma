@@ -147,9 +147,14 @@ pub fn register_capture_shortcut(
     let global_shortcut = app.global_shortcut();
 
     // Desregistrar atajo previo si existía
-    if let Ok(lock) = state.lock() {
+    if let Ok(mut lock) = state.lock() {
         if !lock.active_shortcut.is_empty() {
             let _ = global_shortcut.unregister(lock.active_shortcut.as_str());
+        }
+        if shortcut.trim().is_empty() || shortcut == "disabled" {
+            lock.active_shortcut = String::new();
+            lock.shortcut_error = None;
+            return Ok(());
         }
     }
 

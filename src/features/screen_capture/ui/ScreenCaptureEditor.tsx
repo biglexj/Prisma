@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { save } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../../shared/ui/Icon";
+import { drawAnnotation } from "./utils/annotationDrawing";
 import type { AnnotationItem, AnnotationTool, EditorPayload } from "../model/types";
 import { screenCaptureClient } from "../services/screenCaptureClient";
 import "./screen-capture.css";
@@ -113,68 +114,6 @@ export function ScreenCaptureEditor() {
   useEffect(() => {
     renderCanvas();
   }, [renderCanvas]);
-
-  const drawAnnotation = (ctx: CanvasRenderingContext2D, item: AnnotationItem) => {
-    ctx.save();
-    ctx.strokeStyle = item.color;
-    ctx.fillStyle = item.color;
-    ctx.lineWidth = item.strokeWidth;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-
-    if (item.tool === "highlighter") {
-      ctx.globalAlpha = 0.45;
-      ctx.lineWidth = item.strokeWidth * 3;
-    }
-
-    if (item.tool === "pen" || item.tool === "highlighter") {
-      if (item.points && item.points.length > 1) {
-        ctx.beginPath();
-        ctx.moveTo(item.points[0].x, item.points[0].y);
-        for (let i = 1; i < item.points.length; i++) {
-          ctx.lineTo(item.points[i].x, item.points[i].y);
-        }
-        ctx.stroke();
-      }
-    } else if (item.tool === "rect" && item.rect) {
-      ctx.beginPath();
-      ctx.strokeRect(item.rect.x, item.rect.y, item.rect.width, item.rect.height);
-    } else if (item.tool === "arrow" && item.startPoint && item.endPoint) {
-      drawArrow(ctx, item.startPoint.x, item.startPoint.y, item.endPoint.x, item.endPoint.y, item.strokeWidth * 3);
-    } else if (item.tool === "text" && item.startPoint && item.text) {
-      ctx.font = `bold ${item.fontSize || 20}px Inter, sans-serif`;
-      ctx.shadowColor = "rgba(0,0,0,0.8)";
-      ctx.shadowBlur = 4;
-      ctx.fillText(item.text, item.startPoint.x, item.startPoint.y);
-    }
-
-    ctx.restore();
-  };
-
-  const drawArrow = (
-    ctx: CanvasRenderingContext2D,
-    fromx: number,
-    fromy: number,
-    tox: number,
-    toy: number,
-    headlen: number
-  ) => {
-    const dx = tox - fromx;
-    const dy = toy - fromy;
-    const angle = Math.atan2(dy, dx);
-    ctx.beginPath();
-    ctx.moveTo(fromx, fromy);
-    ctx.lineTo(tox, toy);
-    ctx.stroke();
-
-    // Cabeza de flecha
-    ctx.beginPath();
-    ctx.moveTo(tox, toy);
-    ctx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
-    ctx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
-    ctx.closePath();
-    ctx.fill();
-  };
 
   // Coordenadas locales dentro de la imagen
   const getCanvasCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -362,15 +301,15 @@ export function ScreenCaptureEditor() {
         e.preventDefault();
         void handleSaveAs();
       } else if ((key === "z" || code === "KeyZ") && e.shiftKey) {
-        // Atajo solicitado: Ctrl + Mayús + Z -> Deshacer
+        // Atajo estándar: Ctrl + Mayús + Z -> Rehacer
         e.preventDefault();
-        handleUndo();
+        handleRedo();
       } else if (key === "z" || code === "KeyZ") {
         // Atajo estándar: Ctrl + Z -> Deshacer
         e.preventDefault();
         handleUndo();
       } else if (key === "y" || code === "KeyY") {
-        // Atajo estándar: Ctrl + Y -> Rehacer
+        // Atajo complementario: Ctrl + Y -> Rehacer
         e.preventDefault();
         handleRedo();
       }
@@ -521,7 +460,7 @@ export function ScreenCaptureEditor() {
             className="capture-tool-btn"
             onClick={handleUndo}
             disabled={historyIndex < 0}
-            title="Deshacer (Ctrl+Mayús+Z / Ctrl+Z)"
+            title="Deshacer (Ctrl+Z)"
           >
             <Icon name="undo" width={18} height={18} />
           </button>
@@ -530,7 +469,7 @@ export function ScreenCaptureEditor() {
             className="capture-tool-btn"
             onClick={handleRedo}
             disabled={historyIndex >= annotations.length - 1}
-            title="Rehacer (Ctrl+Y)"
+            title="Rehacer (Ctrl+Mayús+Z / Ctrl+Y)"
           >
             <Icon name="rotate-cw" width={18} height={18} />
           </button>

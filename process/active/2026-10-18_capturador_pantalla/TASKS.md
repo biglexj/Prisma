@@ -14,6 +14,10 @@
 - [x] T07 — Añadir Capturador a navegación, catálogo de herramientas, preferencias y títulos.
 - [x] T08 — Registrar atajo global configurable (propuesta Mayús + Impr Pant; alternativa Impr Pant), conflictos, desactivación y prevención de sesiones duplicadas.
 - [x] T09 — Resolver fallos de levantamiento en dev (bloqueo de puerto/proceso huérfano) y corregir dibujo en canvas mediante Pointer Events y tamaño estático.
+- [x] T11 — Corregir atajos de teclado en overlay y editor: `Ctrl+Z` para Deshacer y `Ctrl+Mayús+Z` para Rehacer (manteniendo `Ctrl+Y`).
+- [x] T12 — Fijar la barra de herramientas de anotación siempre arriba en la pantalla (`position: fixed; top: 24px; left: 50%`) para evitar solapamientos con la selección.
+- [x] T13 — Implementar modo de captura "Lazo Libre" (`freeform`) con trazado poligonal a mano alzada y recorte con máscara transparente.
+- [x] T14 — Optimizar contorno y tiradores de redimensionamiento de las cuatro esquinas en modo rectángulo con captura de puntero estable.
 - [ ] T10 — Actualizar documentación y roadmap al entregar; mantener pendiente cualquier aceptación o comprobación no realizada.
 
 Las pruebas y sus resultados pertenecen a [VALIDATION.md](VALIDATION.md).

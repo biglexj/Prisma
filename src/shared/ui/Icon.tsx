@@ -54,6 +54,7 @@ export type IconName =
   | "filter"
   | "check"
   | "crop"
+  | "lasso"
   | "rotate-cw"
   | "rotate-ccw"
   | "flip-h"
@@ -242,7 +243,8 @@ const paths: Record<IconName, ReactNode> = {
   library: <><path d="m16 6 4 14" /><path d="M12 6v14" /><path d="M8 8v12" /><path d="M4 4v16" /></>,
   chevronDown: <polyline points="6 9 12 15 18 9" />,
   chevronUp: <polyline points="18 15 12 9 6 15" />,
-  convert: <><path d="M21 7v6h-6" /><path d="M3 17v-6h6" /><path d="M6 7.5a9 9 0 0 1 14.5-1.5L21 7" /><path d="M18 16.5a9 9 0 0 1-14.5 1.5L3 17" /></>,
+  convert: <><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 0 0 4.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 0 1-15.357-2m15.357 2H15" /></>,
+  lasso: <><path d="M7 22a5 5 0 0 1-2-4" /><path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1" /><path d="M5 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" /></>,
   tool: <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />,
   watermark: <><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></>,
 };

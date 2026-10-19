@@ -134,6 +134,8 @@ export function AppSettings({
     auroraServerUrl,
     videoSnapshotFolder,
     videoSnapshotFormat,
+    screenCaptureEnabled,
+    screenCaptureShortcut,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
@@ -145,6 +147,8 @@ export function AppSettings({
     setAuroraServerUrl,
     setVideoSnapshotFolder,
     setVideoSnapshotFormat,
+    setScreenCaptureEnabled,
+    setScreenCaptureShortcut,
   } = useSystemSettings();
 
   const [defaultPicturesDir, setDefaultPicturesDir] = useState<string>("");
@@ -493,6 +497,136 @@ export function AppSettings({
                           <strong>JPEG</strong>
                           <small>Archivo ligero y universal</small>
                         </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Capturador de Pantalla del Sistema ── */}
+                <div className="settings-card">
+                  <div className="settings-card-header-row">
+                    <div>
+                      <h3>Capturador de Pantalla</h3>
+                      <p>
+                        Captura ágil de ventana, región rectangular o lazo libre con anotaciones vectoriales y copia directa a memoria sin tocar disco.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="snapshot-folder-config-box">
+                    {/* Toggle de activación (Desactivado por defecto) */}
+                    <div className="system-toggle-item" style={{ padding: "8px 0" }}>
+                      <div className="system-toggle-info">
+                        <strong>Habilitar atajo global de captura</strong>
+                        <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--on-surface-variant)" }}>
+                          Permite invocar el capturador en cualquier momento desde segundo plano con la combinación de teclas seleccionada. Desactivado por defecto para evitar conflictos con herramientas del sistema.
+                        </p>
+                      </div>
+                      <label className="toggle-switch">
+                        <input
+                          type="checkbox"
+                          checked={screenCaptureEnabled}
+                          onChange={(e) => void setScreenCaptureEnabled(e.target.checked)}
+                          aria-label="Habilitar atajo global de captura de pantalla"
+                        />
+                        <span className="toggle-slider" />
+                      </label>
+                    </div>
+
+                    <div className="settings-section-divider" />
+
+                    {/* Selector de atajo */}
+                    <h4 className="settings-subheading" style={{ marginTop: 12 }}>Atajo de Teclado Global</h4>
+                    <div className="snapshot-format-options">
+                      <button
+                        type="button"
+                        className={`snapshot-format-chip ${screenCaptureShortcut === "Shift+PrintScreen" ? "is-selected" : ""}`}
+                        onClick={() => void setScreenCaptureShortcut("Shift+PrintScreen")}
+                        title="Mayús + Impr Pant (Recomendado sin conflictos)"
+                      >
+                        <Icon name={screenCaptureShortcut === "Shift+PrintScreen" ? "check" : "keyboard"} />
+                        <div className="snapshot-format-info">
+                          <strong>Mayús + Impr Pant</strong>
+                          <small>Recomendado · Sin conflicto con Windows</small>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className={`snapshot-format-chip ${screenCaptureShortcut === "PrintScreen" ? "is-selected" : ""}`}
+                        onClick={() => void setScreenCaptureShortcut("PrintScreen")}
+                        title="Impr Pant (Requiere desactivar Herramienta Recortes en Windows 11)"
+                      >
+                        <Icon name={screenCaptureShortcut === "PrintScreen" ? "check" : "keyboard"} />
+                        <div className="snapshot-format-info">
+                          <strong>Impr Pant</strong>
+                          <small>Exclusivo · Requiere ajuste en Windows 11</small>
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Guía informativa para la tecla Impr Pant en Windows 11 */}
+                    <div
+                      style={{
+                        marginTop: 14,
+                        padding: "12px 16px",
+                        background: "rgba(0, 201, 185, 0.08)",
+                        border: "1px solid rgba(0, 201, 185, 0.25)",
+                        borderRadius: "10px",
+                        fontSize: "0.82rem",
+                        color: "var(--on-surface)",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "#00C9B9", marginBottom: 6 }}>
+                        <Icon name="info" width={16} height={16} />
+                        <span>¿Cómo liberar la tecla Impr Pant en Windows 11?</span>
+                      </div>
+                      <p style={{ margin: "0 0 6px 0" }}>
+                        Windows 11 reserva por defecto la tecla Impr Pant para su aplicación de Recortes nativa. Para usarla con Prisma:
+                      </p>
+                      <ol style={{ margin: "0 0 8px 18px", padding: 0 }}>
+                        <li>Abre <strong>Configuración de Windows &gt; Accesibilidad &gt; Teclado</strong>.</li>
+                        <li>Desactiva <em>«Usar el botón Impr Pant para abrir Recortes de pantalla»</em>.</li>
+                        <li>
+                          O vía Registro (<code>regedit</code>): en <code>HKCU\Control Panel\Keyboard</code>, asigna <code>PrintScreenKeyForSnippingEnabled = 0</code> (DWORD).
+                        </li>
+                      </ol>
+                      <div style={{ marginTop: 8 }}>
+                        <a
+                          href="https://github.com/biglexj/Prisma/blob/main/docs/guides/screen-capture-printscreen.md"
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            color: "#00C9B9",
+                            textDecoration: "underline",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <span>Ver guía completa y pasos avanzados en GitHub</span>
+                          <Icon name="external-link" width={13} height={13} />
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Botón para probar captura inmediata */}
+                    <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
+                      <button
+                        type="button"
+                        className="snapshot-action-btn primary"
+                        onClick={async () => {
+                          try {
+                            const { screenCaptureClient } = await import("../../features/screen_capture/services/screenCaptureClient");
+                            await screenCaptureClient.startCapture("window");
+                          } catch (err) {
+                            console.error("Error al probar captura:", err);
+                          }
+                        }}
+                        title="Probar capturador en pantalla ahora"
+                      >
+                        <Icon name="camera" />
+                        <span>Probar Captura de Pantalla</span>
                       </button>
                     </div>
                   </div>

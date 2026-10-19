@@ -117,6 +117,15 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
             </button>
             <button
               type="button"
+              className={`capture-mode-tab ${selectedMode === "freeform" ? "is-active" : ""}`}
+              onClick={() => setSelectedMode("freeform")}
+              title="Dibuja un lazo a mano alzada para capturar cualquier forma personalizada"
+            >
+              <Icon name="lasso" width={16} height={16} />
+              <span>Lazo Libre</span>
+            </button>
+            <button
+              type="button"
               className={`capture-mode-tab ${selectedMode === "fullscreen" ? "is-active" : ""}`}
               onClick={() => setSelectedMode("fullscreen")}
               title="Captura el monitor completo bajo el cursor"

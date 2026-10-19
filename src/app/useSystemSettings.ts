@@ -16,14 +16,13 @@ export type ProgressBarStyle =
   | "vinyl_tape"
   | "elastic_string";
 
-export type ToolKey = "converter" | "renamer" | "comparator" | "duplicates" | "screen_capture" | "luna_fetch" | "gallery_dl" | "prisma_upscaler" | "wallpapers";
+export type ToolKey = "converter" | "renamer" | "comparator" | "duplicates" | "luna_fetch" | "gallery_dl" | "prisma_upscaler" | "wallpapers";
 
 export interface EnabledToolsConfig {
   converter: boolean;
   renamer: boolean;
   comparator: boolean;
   duplicates: boolean;
-  screen_capture: boolean;
   luna_fetch: boolean;
   gallery_dl: boolean;
   prisma_upscaler: boolean;
@@ -35,7 +34,6 @@ export const DEFAULT_ENABLED_TOOLS: EnabledToolsConfig = {
   renamer: true,
   comparator: true,
   duplicates: true,
-  screen_capture: true,
   luna_fetch: true,
   gallery_dl: true,
   prisma_upscaler: true,
@@ -54,6 +52,8 @@ interface SystemSettings {
   auroraServerUrl: string;
   videoSnapshotFolder?: string;
   videoSnapshotFormat?: "png" | "webp" | "jpeg";
+  screenCaptureEnabled: boolean;
+  screenCaptureShortcut: string;
   enabledTools: EnabledToolsConfig;
 }
 
@@ -73,6 +73,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
   auroraServerUrl: "https://www.biglexj.com",
   videoSnapshotFolder: "",
   videoSnapshotFormat: "png",
+  screenCaptureEnabled: false,
+  screenCaptureShortcut: "Shift+PrintScreen",
   enabledTools: DEFAULT_ENABLED_TOOLS,
 };
 
@@ -151,11 +153,23 @@ export function useSystemSettings() {
               auroraServerUrl: stored.auroraServerUrl ?? prev.auroraServerUrl,
               videoSnapshotFolder: stored.videoSnapshotFolder ?? prev.videoSnapshotFolder,
               videoSnapshotFormat: stored.videoSnapshotFormat ?? prev.videoSnapshotFormat,
+              screenCaptureEnabled: stored.screenCaptureEnabled ?? prev.screenCaptureEnabled,
+              screenCaptureShortcut: stored.screenCaptureShortcut ?? prev.screenCaptureShortcut,
               enabledTools: stored.enabledTools ?? prev.enabledTools,
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
             return synced;
           });
+
+          // Sincronizar atajo global de captura de pantalla (por defecto desactivado)
+          if (stored.screenCaptureEnabled) {
+            await invoke("screen_capture_set_shortcut", {
+              shortcut: stored.screenCaptureShortcut || "Shift+PrintScreen",
+            }).catch(() => {});
+          } else {
+            await invoke("screen_capture_set_shortcut", { shortcut: "disabled" }).catch(() => {});
+          }
+
           setIsLoaded(true);
         }
       } catch {
@@ -320,6 +334,37 @@ export function useSystemSettings() {
     });
   }, []);
 
+  const setScreenCaptureEnabled = useCallback(async (enabled: boolean) => {
+    try {
+      const shortcut = settings.screenCaptureShortcut || "Shift+PrintScreen";
+      await invoke("screen_capture_set_shortcut", { shortcut: enabled ? shortcut : "disabled" });
+    } catch (err) {
+      console.error("Error al configurar estado de capturador:", err);
+    }
+    setSettings((prev) => {
+      const next = { ...prev, screenCaptureEnabled: enabled };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, [settings.screenCaptureShortcut]);
+
+  const setScreenCaptureShortcut = useCallback(async (shortcut: string) => {
+    try {
+      if (settings.screenCaptureEnabled) {
+        await invoke("screen_capture_set_shortcut", { shortcut });
+      }
+    } catch (err) {
+      console.error("Error al registrar atajo de capturador:", err);
+    }
+    setSettings((prev) => {
+      const next = { ...prev, screenCaptureShortcut: shortcut };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, [settings.screenCaptureEnabled]);
+
   return {
     isLoaded,
     quickLookShortcut: settings.quickLookShortcut,
@@ -333,6 +378,8 @@ export function useSystemSettings() {
     auroraServerUrl: settings.auroraServerUrl,
     videoSnapshotFolder: settings.videoSnapshotFolder || "",
     videoSnapshotFormat: settings.videoSnapshotFormat || "png",
+    screenCaptureEnabled: settings.screenCaptureEnabled,
+    screenCaptureShortcut: settings.screenCaptureShortcut || "Shift+PrintScreen",
     enabledTools: settings.enabledTools,
     setQuickLookShortcut,
     setAutostart,
@@ -345,6 +392,8 @@ export function useSystemSettings() {
     setAuroraServerUrl,
     setVideoSnapshotFolder,
     setVideoSnapshotFormat,
+    setScreenCaptureEnabled,
+    setScreenCaptureShortcut,
     setToolEnabled,
   };
 }

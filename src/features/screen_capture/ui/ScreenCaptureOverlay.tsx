@@ -2,8 +2,11 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../../shared/ui/Icon";
+import { CaptureAnnotationBar } from "./components/CaptureAnnotationBar";
+import { drawAnnotation } from "./utils/annotationDrawing";
 import type {
   AnnotationItem,
+  AnnotationPoint,
   AnnotationTool,
   CaptureMode,
   CaptureSessionInit,
@@ -14,18 +17,6 @@ import type {
 } from "../model/types";
 import { screenCaptureClient } from "../services/screenCaptureClient";
 import "./screen-capture.css";
-
-// Paleta oficial con el color insignia de Prisma (#00C9B9) en primer lugar
-const PALETTE = [
-  "#00C9B9", // Color característico de Prisma (Turquesa / Cyan Prisma)
-  "#ff4757", // Rojo vibrante
-  "#ffa502", // Naranja
-  "#eccc68", // Amarillo
-  "#2ed573", // Verde
-  "#1e90ff", // Azul
-  "#ffffff", // Blanco
-  "#2f3542", // Negro / Carbón
-];
 
 export function ScreenCaptureOverlay() {
   const [session, setSession] = useState<CaptureSessionInit | null>(null);
@@ -40,7 +31,24 @@ export function ScreenCaptureOverlay() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [selectionRect, setSelectionRect] = useState<RectSelection | null>(null);
-  const [activeResizeHandle, setActiveResizeHandle] = useState<string | null>(null);
+
+  // Estados para modo Lazo Libre (mano alzada)
+  const [lassoPoints, setLassoPoints] = useState<AnnotationPoint[]>([]);
+  const [isDrawingLasso, setIsDrawingLasso] = useState(false);
+  const [lassoClipPolygon, setLassoClipPolygon] = useState<AnnotationPoint[] | null>(null);
+
+  // Referencias para redimensionamiento y desplazamiento sin pérdida de puntero
+  const resizeRef = useRef<{
+    handle: string;
+    startScreenX: number;
+    startScreenY: number;
+    startRect: RectSelection;
+  } | null>(null);
+  const dragMoveRef = useRef<{
+    startScreenX: number;
+    startScreenY: number;
+    startRect: RectSelection;
+  } | null>(null);
 
   // ── Estados de Anotación In-Situ (en el lugar exacto de captura) ──
   const [annotatingPayload, setAnnotatingPayload] = useState<EditorPayload | null>(null);
@@ -78,6 +86,8 @@ export function ScreenCaptureOverlay() {
           setSubregionTarget(null);
           setUseSubregion(false);
           setSelectionRect(null);
+          setLassoPoints([]);
+          setLassoClipPolygon(null);
           setAnnotatingPayload(null);
           setAnnotations([]);
           setHistoryIndex(-1);
@@ -101,11 +111,12 @@ export function ScreenCaptureOverlay() {
   }, []);
 
   // Confirmar recorte y pasar a anotación IN-SITU (sin abrir otra ventana)
-  const handleConfirmToAnnotate = useCallback(async (rect: RectSelection) => {
+  const handleConfirmToAnnotate = useCallback(async (rect: RectSelection, clipPolygon?: AnnotationPoint[]) => {
     if (rect.width <= 4 || rect.height <= 4) return;
     try {
       const payload = await screenCaptureClient.confirmCapture(rect);
       if (payload) {
+        setLassoClipPolygon(clipPolygon ?? null);
         setAnnotatingPayload(payload);
         setPhase("annotating");
         setAnnotations([]);
@@ -121,6 +132,8 @@ export function ScreenCaptureOverlay() {
   const handleRetrySelection = useCallback(() => {
     setPhase("selecting");
     setAnnotatingPayload(null);
+    setLassoClipPolygon(null);
+    setLassoPoints([]);
     setAnnotations([]);
     setHistoryIndex(-1);
     setCurrentAnnotation(null);
@@ -227,15 +240,15 @@ export function ScreenCaptureOverlay() {
           e.preventDefault();
           void handleSaveAs();
         } else if (isCtrl && ((key === "z" || code === "KeyZ") && e.shiftKey)) {
-          // Solicitado: Ctrl + Mayús + Z -> Deshacer
+          // Solicitado: Ctrl + Mayús + Z -> Rehacer
           e.preventDefault();
-          handleUndo();
+          handleRedo();
         } else if (isCtrl && (key === "z" || code === "KeyZ")) {
-          // Atajo estándar: Ctrl + Z -> Deshacer
+          // Solicitado: Ctrl + Z -> Deshacer
           e.preventDefault();
           handleUndo();
         } else if (isCtrl && (key === "y" || code === "KeyY")) {
-          // Atajo estándar: Ctrl + Y -> Rehacer
+          // Atajo complementario: Ctrl + Y -> Rehacer
           e.preventDefault();
           handleRedo();
         } else if (e.key === "Enter") {
@@ -257,6 +270,20 @@ export function ScreenCaptureOverlay() {
       const currentMode = modeRef.current;
       const screenX = e.screenX;
       const screenY = e.screenY;
+
+      if (currentMode === "freeform") {
+        if (isDrawingLasso) {
+          setLassoPoints((prev) => {
+            const last = prev[prev.length - 1];
+            if (last) {
+              const dist = Math.hypot(screenX - last.x, screenY - last.y);
+              if (dist < 3) return prev;
+            }
+            return [...prev, { x: screenX, y: screenY }];
+          });
+        }
+        return;
+      }
 
       if (currentMode === "window" && sess) {
         const found = sess.targets.find(
@@ -301,34 +328,24 @@ export function ScreenCaptureOverlay() {
           const width = Math.abs(screenX - dragStart.x);
           const height = Math.abs(screenY - dragStart.y);
           setSelectionRect({ x, y, width, height });
-        } else if (activeResizeHandle && selectionRect) {
-          let { x, y, width, height } = selectionRect;
-          if (activeResizeHandle.includes("e")) {
-            width = Math.max(10, screenX - x);
-          }
-          if (activeResizeHandle.includes("s")) {
-            height = Math.max(10, screenY - y);
-          }
-          if (activeResizeHandle.includes("w")) {
-            const newW = Math.max(10, x + width - screenX);
-            x = x + width - newW;
-            width = newW;
-          }
-          if (activeResizeHandle.includes("n")) {
-            const newH = Math.max(10, y + height - screenY);
-            y = y + height - newH;
-            height = newH;
-          }
-          setSelectionRect({ x, y, width, height });
         }
       }
     },
-    [phase, isDragging, dragStart, activeResizeHandle, selectionRect]
+    [phase, isDragging, dragStart, isDrawingLasso]
   );
 
   const handleMouseDownSelecting = (e: React.MouseEvent) => {
     if (phase !== "selecting" || e.button !== 0) return;
-    if (mode === "rect" && !activeResizeHandle) {
+    if ((e.target as HTMLElement).closest(".capture-floating-toolbar")) return;
+    if ((e.target as HTMLElement).closest(".capture-target-box")) return;
+
+    if (mode === "freeform") {
+      setIsDrawingLasso(true);
+      setLassoPoints([{ x: e.screenX, y: e.screenY }]);
+      return;
+    }
+
+    if (mode === "rect") {
       setIsDragging(true);
       setDragStart({ x: e.screenX, y: e.screenY });
       setSelectionRect(null);
@@ -337,16 +354,136 @@ export function ScreenCaptureOverlay() {
 
   const handleMouseUpSelecting = () => {
     if (phase !== "selecting") return;
+
+    if (mode === "freeform") {
+      if (isDrawingLasso) {
+        setIsDrawingLasso(false);
+        if (lassoPoints.length > 5) {
+          const minX = Math.min(...lassoPoints.map((p) => p.x));
+          const maxX = Math.max(...lassoPoints.map((p) => p.x));
+          const minY = Math.min(...lassoPoints.map((p) => p.y));
+          const maxY = Math.max(...lassoPoints.map((p) => p.y));
+          const width = maxX - minX;
+          const height = maxY - minY;
+
+          if (width >= 16 && height >= 16) {
+            const relativePolygon = lassoPoints.map((p) => ({
+              x: p.x - minX,
+              y: p.y - minY,
+            }));
+            void handleConfirmToAnnotate({ x: minX, y: minY, width, height }, relativePolygon);
+          } else {
+            setLassoPoints([]);
+          }
+        } else {
+          setLassoPoints([]);
+        }
+      }
+      return;
+    }
+
     if (mode === "rect") {
       setIsDragging(false);
-      setActiveResizeHandle(null);
+    }
+  };
+
+  // ── Redimensionamiento con Puntero Capturado (4 esquinas) ──
+  const handleResizePointerDown = (
+    handle: string,
+    e: React.PointerEvent<HTMLDivElement>
+  ) => {
+    e.stopPropagation();
+    if (!selectionRect) return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    resizeRef.current = {
+      handle,
+      startScreenX: e.screenX,
+      startScreenY: e.screenY,
+      startRect: { ...selectionRect },
+    };
+  };
+
+  const handleResizePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!resizeRef.current) return;
+    const { handle, startScreenX, startScreenY, startRect } = resizeRef.current;
+    const dx = e.screenX - startScreenX;
+    const dy = e.screenY - startScreenY;
+
+    let { x, y, width, height } = startRect;
+
+    if (handle.includes("e")) {
+      width = Math.max(20, startRect.width + dx);
+    }
+    if (handle.includes("s")) {
+      height = Math.max(20, startRect.height + dy);
+    }
+    if (handle.includes("w")) {
+      const newW = Math.max(20, startRect.width - dx);
+      x = startRect.x + (startRect.width - newW);
+      width = newW;
+    }
+    if (handle.includes("n")) {
+      const newH = Math.max(20, startRect.height - dy);
+      y = startRect.y + (startRect.height - newH);
+      height = newH;
+    }
+
+    setSelectionRect({ x, y, width, height });
+  };
+
+  const handleResizePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (resizeRef.current) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
+      resizeRef.current = null;
+    }
+  };
+
+  // Desplazamiento fluido del marco rectangular sin saltos
+  const handleBoxPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest(".capture-resize-handle")) return;
+    if (!selectionRect) return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    dragMoveRef.current = {
+      startScreenX: e.screenX,
+      startScreenY: e.screenY,
+      startRect: { ...selectionRect },
+    };
+  };
+
+  const handleBoxPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragMoveRef.current) return;
+    const { startScreenX, startScreenY, startRect } = dragMoveRef.current;
+    const dx = e.screenX - startScreenX;
+    const dy = e.screenY - startScreenY;
+    setSelectionRect({
+      ...startRect,
+      x: startRect.x + dx,
+      y: startRect.y + dy,
+    });
+  };
+
+  const handleBoxPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragMoveRef.current) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
+      dragMoveRef.current = null;
     }
   };
 
   const handleClickSelecting = (e: React.MouseEvent) => {
     if (phase !== "selecting") return;
     if ((e.target as HTMLElement).closest(".capture-floating-toolbar")) return;
+    if ((e.target as HTMLElement).closest(".capture-target-box")) return;
     if ((e.target as HTMLElement).closest(".capture-resize-handle")) return;
+    if (mode === "freeform") return;
 
     if (mode === "window") {
       const target = useSubregion && subregionTarget ? subregionTarget : activeTarget;
@@ -376,66 +513,6 @@ export function ScreenCaptureOverlay() {
   };
 
   // ── Renderizado del Lienzo Compuesto en Anotación In-Situ ──
-  const drawArrow = (
-    ctx: CanvasRenderingContext2D,
-    fromx: number,
-    fromy: number,
-    tox: number,
-    toy: number,
-    headlen: number
-  ) => {
-    const dx = tox - fromx;
-    const dy = toy - fromy;
-    const angle = Math.atan2(dy, dx);
-    ctx.beginPath();
-    ctx.moveTo(fromx, fromy);
-    ctx.lineTo(tox, toy);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(tox, toy);
-    ctx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
-    ctx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
-    ctx.closePath();
-    ctx.fill();
-  };
-
-  const drawAnnotation = (ctx: CanvasRenderingContext2D, item: AnnotationItem) => {
-    ctx.save();
-    ctx.strokeStyle = item.color;
-    ctx.fillStyle = item.color;
-    ctx.lineWidth = item.strokeWidth;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-
-    if (item.tool === "highlighter") {
-      ctx.globalAlpha = 0.45;
-      ctx.lineWidth = item.strokeWidth * 3.5;
-    }
-
-    if (item.tool === "pen" || item.tool === "highlighter") {
-      if (item.points && item.points.length > 0) {
-        ctx.beginPath();
-        ctx.moveTo(item.points[0].x, item.points[0].y);
-        for (let i = 1; i < item.points.length; i++) {
-          ctx.lineTo(item.points[i].x, item.points[i].y);
-        }
-        ctx.stroke();
-      }
-    } else if (item.tool === "rect" && item.rect) {
-      ctx.beginPath();
-      ctx.strokeRect(item.rect.x, item.rect.y, item.rect.width, item.rect.height);
-    } else if (item.tool === "arrow" && item.startPoint && item.endPoint) {
-      drawArrow(ctx, item.startPoint.x, item.startPoint.y, item.endPoint.x, item.endPoint.y, item.strokeWidth * 3.5);
-    } else if (item.tool === "text" && item.startPoint && item.text) {
-      ctx.font = `bold ${item.fontSize || 20}px Inter, sans-serif`;
-      ctx.shadowColor = "rgba(0,0,0,0.85)";
-      ctx.shadowBlur = 4;
-      ctx.fillText(item.text, item.startPoint.x, item.startPoint.y);
-    }
-
-    ctx.restore();
-  };
 
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -446,15 +523,49 @@ export function ScreenCaptureOverlay() {
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     const visibleAnnotations = annotations.slice(0, historyIndex + 1);
     const toDraw = currentAnnotation ? [...visibleAnnotations, currentAnnotation] : visibleAnnotations;
 
-    for (const item of toDraw) {
-      drawAnnotation(ctx, item);
+    if (lassoClipPolygon && lassoClipPolygon.length > 2) {
+      // 1. Recorte exclusivo del contenido interior del lazo libre
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(lassoClipPolygon[0].x, lassoClipPolygon[0].y);
+      for (let i = 1; i < lassoClipPolygon.length; i++) {
+        ctx.lineTo(lassoClipPolygon[i].x, lassoClipPolygon[i].y);
+      }
+      ctx.closePath();
+      ctx.clip();
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      for (const item of toDraw) {
+        drawAnnotation(ctx, item);
+      }
+      ctx.restore();
+
+      // 2. Contorno exterior cyan punteado para delimitar el lazo con elegancia
+      ctx.save();
+      ctx.strokeStyle = "#00C9B9";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(lassoClipPolygon[0].x, lassoClipPolygon[0].y);
+      for (let i = 1; i < lassoClipPolygon.length; i++) {
+        ctx.lineTo(lassoClipPolygon[i].x, lassoClipPolygon[i].y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      for (const item of toDraw) {
+        drawAnnotation(ctx, item);
+      }
     }
-  }, [annotations, historyIndex, currentAnnotation]);
+  }, [annotations, historyIndex, currentAnnotation, lassoClipPolygon]);
 
   // Carga inicial de imagen congelada al entrar en fase de anotación
   useEffect(() => {
@@ -594,18 +705,6 @@ export function ScreenCaptureOverlay() {
   const inPlaceWidth = annotatingPayload ? annotatingPayload.width : 0;
   const inPlaceHeight = annotatingPayload ? annotatingPayload.height : 0;
 
-  // Posicionamiento de la barra flotante anclada a la región recortada
-  const toolbarWidth = 620;
-  const rawTbLeft = inPlaceLeft + inPlaceWidth / 2 - toolbarWidth / 2;
-  const clampedLeft = typeof window !== "undefined"
-    ? Math.max(16, Math.min(window.innerWidth - toolbarWidth - 16, rawTbLeft))
-    : rawTbLeft;
-
-  let clampedTop = inPlaceTop + inPlaceHeight + 14;
-  if (typeof window !== "undefined" && clampedTop + 65 > window.innerHeight) {
-    clampedTop = Math.max(16, inPlaceTop - 65);
-  }
-
   return (
     <div
       className={`capture-overlay-container ${phase === "annotating" ? "is-annotating" : ""}`}
@@ -647,6 +746,21 @@ export function ScreenCaptureOverlay() {
 
           <button
             type="button"
+            className={`capture-pill-btn ${mode === "freeform" ? "is-active" : ""}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setMode("freeform");
+              setSelectionRect(null);
+              setLassoPoints([]);
+            }}
+            title="Modo Lazo Libre (Mano alzada)"
+          >
+            <Icon name="lasso" width={15} height={15} />
+            <span>Lazo</span>
+          </button>
+
+          <button
+            type="button"
             className={`capture-pill-btn ${mode === "fullscreen" ? "is-active" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
@@ -673,6 +787,39 @@ export function ScreenCaptureOverlay() {
             <span>Cancelar (Esc)</span>
           </button>
         </div>
+      )}
+
+      {/* ── Visualización en Vivo del Lazo Libre en Fase de Selección ── */}
+      {phase === "selecting" && mode === "freeform" && lassoPoints.length > 1 && (
+        <svg
+          className="capture-lasso-svg"
+          style={{
+            position: "fixed",
+            inset: 0,
+            width: "100vw",
+            height: "100vh",
+            pointerEvents: "none",
+            zIndex: 999998,
+          }}
+        >
+          <defs>
+            <filter id="lasso-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="rgba(0, 201, 185, 0.5)" />
+            </filter>
+          </defs>
+          <polygon
+            points={lassoPoints
+              .map((p) => `${p.x - virtX},${p.y - virtY}`)
+              .join(" ")}
+            fill="rgba(0, 201, 185, 0.15)"
+            stroke="#00C9B9"
+            strokeWidth="2.5"
+            strokeDasharray="6 4"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            filter="url(#lasso-glow)"
+          />
+        </svg>
       )}
 
       {/* ── Resaltado en Modo Ventana ── */}
@@ -715,7 +862,7 @@ export function ScreenCaptureOverlay() {
         </div>
       )}
 
-      {/* ── Resaltado y Tiradores en Modo Rectángulo ── */}
+      {/* ── Resaltado y Tiradores en Modo Rectángulo (4 esquinas con puntero capturado) ── */}
       {phase === "selecting" && mode === "rect" && selectionRect && (
         <div
           className="capture-target-box"
@@ -726,6 +873,10 @@ export function ScreenCaptureOverlay() {
             height: `${selectionRect.height}px`,
             pointerEvents: "auto",
           }}
+          onPointerDown={handleBoxPointerDown}
+          onPointerMove={handleBoxPointerMove}
+          onPointerUp={handleBoxPointerUp}
+          onPointerCancel={handleBoxPointerUp}
           onDoubleClick={() => void handleConfirmToAnnotate(selectionRect)}
         >
           <div
@@ -738,61 +889,68 @@ export function ScreenCaptureOverlay() {
 
           {!isDragging && (
             <>
+              {/* 4 Esquinas Principales de Redimensionamiento */}
               <div
                 className="capture-resize-handle nw"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  setActiveResizeHandle("nw");
-                }}
-              />
-              <div
-                className="capture-resize-handle n"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  setActiveResizeHandle("n");
-                }}
+                onPointerDown={(e) => handleResizePointerDown("nw", e)}
+                onPointerMove={handleResizePointerMove}
+                onPointerUp={handleResizePointerUp}
+                onPointerCancel={handleResizePointerUp}
+                title="Redimensionar esquina superior izquierda"
               />
               <div
                 className="capture-resize-handle ne"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  setActiveResizeHandle("ne");
-                }}
-              />
-              <div
-                className="capture-resize-handle e"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  setActiveResizeHandle("e");
-                }}
+                onPointerDown={(e) => handleResizePointerDown("ne", e)}
+                onPointerMove={handleResizePointerMove}
+                onPointerUp={handleResizePointerUp}
+                onPointerCancel={handleResizePointerUp}
+                title="Redimensionar esquina superior derecha"
               />
               <div
                 className="capture-resize-handle se"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  setActiveResizeHandle("se");
-                }}
-              />
-              <div
-                className="capture-resize-handle s"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  setActiveResizeHandle("s");
-                }}
+                onPointerDown={(e) => handleResizePointerDown("se", e)}
+                onPointerMove={handleResizePointerMove}
+                onPointerUp={handleResizePointerUp}
+                onPointerCancel={handleResizePointerUp}
+                title="Redimensionar esquina inferior derecha"
               />
               <div
                 className="capture-resize-handle sw"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  setActiveResizeHandle("sw");
-                }}
+                onPointerDown={(e) => handleResizePointerDown("sw", e)}
+                onPointerMove={handleResizePointerMove}
+                onPointerUp={handleResizePointerUp}
+                onPointerCancel={handleResizePointerUp}
+                title="Redimensionar esquina inferior izquierda"
+              />
+
+              {/* Tiradores Cardinales */}
+              <div
+                className="capture-resize-handle n"
+                onPointerDown={(e) => handleResizePointerDown("n", e)}
+                onPointerMove={handleResizePointerMove}
+                onPointerUp={handleResizePointerUp}
+                onPointerCancel={handleResizePointerUp}
+              />
+              <div
+                className="capture-resize-handle s"
+                onPointerDown={(e) => handleResizePointerDown("s", e)}
+                onPointerMove={handleResizePointerMove}
+                onPointerUp={handleResizePointerUp}
+                onPointerCancel={handleResizePointerUp}
               />
               <div
                 className="capture-resize-handle w"
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  setActiveResizeHandle("w");
-                }}
+                onPointerDown={(e) => handleResizePointerDown("w", e)}
+                onPointerMove={handleResizePointerMove}
+                onPointerUp={handleResizePointerUp}
+                onPointerCancel={handleResizePointerUp}
+              />
+              <div
+                className="capture-resize-handle e"
+                onPointerDown={(e) => handleResizePointerDown("e", e)}
+                onPointerMove={handleResizePointerMove}
+                onPointerUp={handleResizePointerUp}
+                onPointerCancel={handleResizePointerUp}
               />
             </>
           )}
@@ -804,7 +962,7 @@ export function ScreenCaptureOverlay() {
         <>
           {/* Caja recortada con el lienzo de dibujo interactivo */}
           <div
-            className="capture-inplace-box"
+            className={`capture-inplace-box ${lassoClipPolygon ? "is-lasso" : ""}`}
             style={{
               left: `${inPlaceLeft}px`,
               top: `${inPlaceTop}px`,
@@ -826,179 +984,27 @@ export function ScreenCaptureOverlay() {
             />
           </div>
 
-          {/* Barra Flotante de Herramientas Anclada a la Captura */}
-          <div
-            className="capture-annotation-floating-bar"
-            style={{
-              left: `${clampedLeft}px`,
-              top: `${clampedTop}px`,
+          {/* Barra Flotante de Herramientas Anclada Arriba Fija */}
+          <CaptureAnnotationBar
+            activeTool={activeTool}
+            setActiveTool={setActiveTool}
+            activeColor={activeColor}
+            setActiveColor={setActiveColor}
+            strokeWidth={strokeWidth}
+            setStrokeWidth={setStrokeWidth}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            canUndo={historyIndex >= 0}
+            canRedo={historyIndex < annotations.length - 1}
+            onClear={() => {
+              setAnnotations([]);
+              setHistoryIndex(-1);
             }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Herramientas de trazo */}
-            <div className="capture-toolbar-subgroup">
-              <button
-                type="button"
-                className={`capture-tool-btn ${activeTool === "pen" ? "is-active" : ""}`}
-                onClick={() => setActiveTool("pen")}
-                title="Lápiz libre"
-              >
-                <Icon name="edit" width={17} height={17} />
-              </button>
-              <button
-                type="button"
-                className={`capture-tool-btn ${activeTool === "highlighter" ? "is-active" : ""}`}
-                onClick={() => setActiveTool("highlighter")}
-                title="Resaltador translúcido"
-              >
-                <Icon name="sliders" width={17} height={17} />
-              </button>
-              <button
-                type="button"
-                className={`capture-tool-btn ${activeTool === "arrow" ? "is-active" : ""}`}
-                onClick={() => setActiveTool("arrow")}
-                title="Flecha indicadora"
-              >
-                <Icon name="arrow-right" width={17} height={17} />
-              </button>
-              <button
-                type="button"
-                className={`capture-tool-btn ${activeTool === "rect" ? "is-active" : ""}`}
-                onClick={() => setActiveTool("rect")}
-                title="Marco rectangular"
-              >
-                <Icon name="crop" width={17} height={17} />
-              </button>
-              <button
-                type="button"
-                className={`capture-tool-btn ${activeTool === "text" ? "is-active" : ""}`}
-                onClick={() => setActiveTool("text")}
-                title="Texto anotado"
-              >
-                <Icon name="file-text" width={17} height={17} />
-              </button>
-            </div>
-
-            <div className="capture-pill-divider" />
-
-            {/* Paleta con #00C9B9 en 1er lugar */}
-            <div className="capture-toolbar-subgroup">
-              {PALETTE.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className={`capture-color-swatch ${activeColor === c ? "is-active" : ""}`}
-                  style={{ background: c }}
-                  onClick={() => setActiveColor(c)}
-                  title={c === "#00C9B9" ? "Color Insignia Prisma (#00C9B9)" : c}
-                />
-              ))}
-            </div>
-
-            <div className="capture-pill-divider" />
-
-            {/* Grosor de trazo */}
-            <div className="capture-toolbar-subgroup">
-              {[2, 4, 8].map((w) => (
-                <button
-                  key={w}
-                  type="button"
-                  className={`capture-tool-btn ${strokeWidth === w ? "is-active" : ""}`}
-                  onClick={() => setStrokeWidth(w)}
-                  title={`Grosor: ${w}px`}
-                >
-                  <span
-                    style={{
-                      width: `${w * 2 + 2}px`,
-                      height: `${w * 2 + 2}px`,
-                      borderRadius: "50%",
-                      background: "currentColor",
-                    }}
-                  />
-                </button>
-              ))}
-            </div>
-
-            <div className="capture-pill-divider" />
-
-            {/* Deshacer / Rehacer / Limpiar */}
-            <div className="capture-toolbar-subgroup">
-              <button
-                type="button"
-                className="capture-tool-btn"
-                onClick={handleUndo}
-                disabled={historyIndex < 0}
-                title="Deshacer (Ctrl+Mayús+Z / Ctrl+Z)"
-              >
-                <Icon name="undo" width={16} height={16} />
-              </button>
-              <button
-                type="button"
-                className="capture-tool-btn"
-                onClick={handleRedo}
-                disabled={historyIndex >= annotations.length - 1}
-                title="Rehacer (Ctrl+Y)"
-              >
-                <Icon name="rotate-cw" width={16} height={16} />
-              </button>
-              <button
-                type="button"
-                className="capture-tool-btn"
-                onClick={() => {
-                  setAnnotations([]);
-                  setHistoryIndex(-1);
-                }}
-                disabled={annotations.length === 0}
-                title="Limpiar todas las anotaciones"
-              >
-                <Icon name="trash" width={16} height={16} />
-              </button>
-            </div>
-
-            <div className="capture-pill-divider" />
-
-            {/* Acciones Finales: Copiar, Guardar, Reintentar, Cerrar */}
-            <div className="capture-toolbar-subgroup">
-              <button
-                type="button"
-                className="capture-tool-btn"
-                onClick={handleRetrySelection}
-                title="Volver a seleccionar área"
-              >
-                <Icon name="refresh" width={16} height={16} />
-              </button>
-
-              <button
-                type="button"
-                className="capture-btn-primary"
-                onClick={() => void handleCopy()}
-                title="Copiar imagen al portapapeles sin tocar disco (Ctrl+C / Enter)"
-              >
-                <Icon name="copy" width={15} height={15} />
-                <span>Copiar</span>
-              </button>
-
-              <button
-                type="button"
-                className="capture-pill-btn"
-                style={{ background: "rgba(255, 255, 255, 0.12)" }}
-                onClick={() => void handleSaveAs()}
-                title="Guardar como archivo PNG en disco (Ctrl+S)"
-              >
-                <Icon name="save" width={15} height={15} />
-                <span>Guardar</span>
-              </button>
-
-              <button
-                type="button"
-                className="capture-tool-btn is-cancel"
-                onClick={() => void handleCancel()}
-                title="Cerrar y descartar (Esc)"
-              >
-                <Icon name="close" width={15} height={15} />
-              </button>
-            </div>
-          </div>
+            onRetrySelection={handleRetrySelection}
+            onCopy={() => void handleCopy()}
+            onSaveAs={() => void handleSaveAs()}
+            onCancel={() => void handleCancel()}
+          />
         </>
       )}
     </div>

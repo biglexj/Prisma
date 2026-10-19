@@ -31,5 +31,9 @@
   - Transición a Captura In-Situ: la confirmación recorta el snapshot en memoria y transiciona directamente en el overlay a la fase de anotación sin abrir ventanas auxiliares externas, enmarcando con precisión milimétrica el área tomada.
   - Corrección del motor de dibujo de lápices/formas: se solucionó la mutación repetitiva de dimensiones de canvas que limpiaba el buffer en cada render. Integración de Pointer Events (`setPointerCapture`) para trazos continuos, fluidos y sin saltos.
   - Color insignia de Prisma: `#00C9B9` configurado en el primer puesto de la paleta y seleccionado por defecto.
-  - Deshacer canónico con `Ctrl + Mayús + Z` y `Ctrl + Z`, Rehacer con `Ctrl + Y`, Copia en memoria sin tocar disco con `Ctrl + C` / `Enter`, y Guardar como PNG con `Ctrl + S`.
+  - Deshacer canónico con `Ctrl + Z`, Rehacer con `Ctrl + Mayús + Z` (y `Ctrl + Y`), Copia en memoria sin tocar disco con `Ctrl + C` / `Enter`, y Guardar como PNG con `Ctrl + S`.
   - Diagnóstico de ShareX y tecla Impr Pant: documentado procedimiento para desactivar la interceptación nativa de Windows 11 (Herramienta Recortes) y liberar el atajo global.
+  - Barra de herramientas superior permanente: reubicada de forma fija en la parte superior (`position: fixed; top: 24px; left: 50%`) simulando una ventana completa, eliminando solapamientos con la selección o el recorte. Componente modular `CaptureAnnotationBar` creado.
+  - Modo Lazo Libre (`freeform`): trazado a mano alzada con feedback SVG en vivo (trazo `#00C9B9` punteado con resplandor), recorte mediante máscara `ctx.clip()` sobre el polígono y exportación a PNG con transparencia total fuera del lazo.
+  - Modo Rectángulo y tiradores: rediseñado con viñeta exterior de oscurecimiento (`box-shadow: 0 0 0 9999px rgba(0,0,0,0.45)`), contorno cyan nítido y 4 tiradores de esquina (`nw`, `ne`, `se`, `sw`) con `setPointerCapture` y cálculo de deltas respecto al snapshot inicial, impidiendo reseteos accidentales y permitiendo desplazamiento interior del marco.
+

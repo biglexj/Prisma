@@ -91,7 +91,6 @@ export function AppSidebar({
     { key: "renamer", item: { icon: "edit", label: "Renombrador", view: "renamer" } },
     { key: "comparator", item: { icon: "compare", label: "Comparador", view: "comparator" } },
     { key: "duplicates", item: { icon: "copy", label: "Duplicados", view: "duplicates" } },
-    { key: "screen_capture", item: { icon: "camera", label: "Capturador", view: "screen_capture" } },
   ];
 
   const ecosystemToolItems: { key: keyof typeof enabledTools; item: SidebarItem }[] = [
