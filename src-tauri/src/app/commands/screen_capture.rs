@@ -4,8 +4,9 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 use crate::features::screen_capture::{
-    confirm_crop, get_subregion, init_capture_session, CaptureSessionInit,
-    DetectedTarget, EditorPayload, RectSelection, SharedCaptureState,
+    confirm_crop, get_subregion, init_capture_session, pick_color_at,
+    CaptureSessionInit, DetectedTarget, EditorPayload, PickColorResult,
+    RectSelection, SharedCaptureState,
 };
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -76,6 +77,15 @@ pub async fn screen_capture_cancel(
         lock.snapshot = None;
     }
     Ok(())
+}
+
+#[tauri::command]
+pub async fn screen_capture_pick_color(
+    state: tauri::State<'_, SharedCaptureState>,
+    screen_x: i32,
+    screen_y: i32,
+) -> Result<PickColorResult, String> {
+    pick_color_at(&state, screen_x, screen_y)
 }
 
 #[tauri::command]

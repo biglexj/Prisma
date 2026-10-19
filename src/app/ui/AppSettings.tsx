@@ -3,6 +3,7 @@ import { LibrarySources } from "./LibrarySources";
 import { ModularLibrariesPanel } from "./ModularLibrariesPanel";
 import { ToolsSettingsPanel } from "./ToolsSettingsPanel";
 import { SynapseSettingsPanel } from "./SynapseSettingsPanel";
+import { AuroraSettingsPanel } from "./AuroraSettingsPanel";
 import type { useMusicLibrary } from "../../features/music_library/useMusicLibrary";
 import type { useVisualLibrary } from "../../features/visual_library/useVisualLibrary";
 import type { ThemeMode, AccentColorId, BackgroundVariantId } from "../useTheme";
@@ -10,7 +11,6 @@ import { ACCENT_COLORS, BACKGROUND_VARIANTS } from "../useTheme";
 import {
   useSystemSettings,
   type QuickLookShortcutMode,
-  type ProgressBarStyle,
   type SidebarDensity,
 } from "../useSystemSettings";
 import { ProgressBarSettingsPanel } from "./ProgressBarSettingsPanel";
@@ -27,13 +27,13 @@ import {
 } from "../../features/playback/services/flyoutSettings";
 import "./app-settings.css";
 
-const FLYOUT_ZONES: Array<{ id: FlyoutZone; label: string; desc: string; icon: string }> = [
-  { id: "bottom-left", label: "Abajo Izquierda", desc: "Clásico FluentFlyout", icon: "↙️" },
-  { id: "bottom-center", label: "Abajo Centro", desc: "Estilo Windows 11", icon: "⬇️" },
-  { id: "bottom-right", label: "Abajo Derecha", desc: "Junto al reloj", icon: "↘️" },
-  { id: "top-left", label: "Arriba Izquierda", desc: "Clásico OSD", icon: "↖️" },
-  { id: "top-center", label: "Arriba Centro", desc: "Dynamic Island", icon: "⬆️" },
-  { id: "top-right", label: "Arriba Derecha", desc: "Notificaciones", icon: "↗️" },
+const FLYOUT_ZONES: Array<{ id: FlyoutZone; label: string; desc: string; icon: string; cornerClass: string }> = [
+  { id: "top-left", label: "Arriba Izq", desc: "OSD", icon: "↖️", cornerClass: "pos-top-left" },
+  { id: "top-center", label: "Arriba Centro", desc: "Island", icon: "⬆️", cornerClass: "pos-top-center" },
+  { id: "top-right", label: "Arriba Der", desc: "Notif", icon: "↗️", cornerClass: "pos-top-right" },
+  { id: "bottom-left", label: "Abajo Izq", desc: "Fluent", icon: "↙️", cornerClass: "pos-bottom-left" },
+  { id: "bottom-center", label: "Abajo Centro", desc: "Win 11", icon: "⬇️", cornerClass: "pos-bottom-center" },
+  { id: "bottom-right", label: "Abajo Der", desc: "Reloj", icon: "↘️", cornerClass: "pos-bottom-right" },
 ];
 
 interface AppSettingsProps {
@@ -55,47 +55,26 @@ interface AppSettingsProps {
 type SettingsTab = "general" | "libraries" | "folders" | "tools" | "progress" | "synapse" | "shortcuts" | "aurora";
 
 const THEMES: { mode: ThemeMode; label: string; desc: string; previewClass: string }[] = [
-  { mode: "light", label: "Claro", desc: "Interfaz luminosa", previewClass: "light-preview" },
-  { mode: "dark", label: "Oscuro", desc: "Interfaz oscura", previewClass: "dark-preview" },
-  { mode: "system", label: "Automático", desc: "Sigue al sistema", previewClass: "system-preview" },
+  { mode: "light", label: "Claro", desc: "Luminoso", previewClass: "light-preview" },
+  { mode: "dark", label: "Oscuro", desc: "Oscuro", previewClass: "dark-preview" },
+  { mode: "system", label: "Automático", desc: "Sistema", previewClass: "system-preview" },
 ];
 
 const SIDEBAR_DENSITY_OPTIONS: {
   id: SidebarDensity;
   label: string;
   badge: string;
-  desc: string;
 }[] = [
-    {
-      id: "compact",
-      label: "Compacta",
-      badge: "34px · Ultra delgada",
-      desc: "Aprovechamiento vertical máximo. Ideal para tener todas tus bibliotecas y colecciones activas en pantalla sin scroll.",
-    },
-    {
-      id: "standard",
-      label: "Estándar",
-      badge: "38px · Fina y limpia",
-      desc: "Diseño refinado de Material 3 con proporciones delgadas y navegación ágil.",
-    },
-    {
-      id: "intermediate",
-      label: "Intermedia",
-      badge: "42px · Equilibrada",
-      desc: "Punto medio armónico con altura de 42px que combina ligereza y comodidad visual.",
-    },
-    {
-      id: "comfortable",
-      label: "Cómoda",
-      badge: "46px · Espaciosa",
-      desc: "Separación generosa y área de toque amplia recomendada para pantallas táctiles o paneles 4K.",
-    },
-  ];
+  { id: "compact", label: "Compacta", badge: "34px" },
+  { id: "standard", label: "Estándar", badge: "38px" },
+  { id: "intermediate", label: "Intermedia", badge: "42px" },
+  { id: "comfortable", label: "Cómoda", badge: "46px" },
+];
 
-const SHORTCUTS: { id: QuickLookShortcutMode; label: string; keyBadge: string; desc: string }[] = [
-  { id: "space", label: "Espacio", keyBadge: "Espacio", desc: "Estilo nativo / macOS (Predeterminado)" },
-  { id: "alt_space", label: "Alt + Espacio", keyBadge: "Alt + Espacio", desc: "Atajo secundario alternativo" },
-  { id: "shift_space", label: "Shift + Espacio", keyBadge: "Shift + Espacio", desc: "Atajo rápido con Shift" },
+const SHORTCUTS: { id: QuickLookShortcutMode; label: string; keyBadge: string }[] = [
+  { id: "space", label: "Espacio", keyBadge: "Espacio" },
+  { id: "alt_space", label: "Alt + Espacio", keyBadge: "Alt + Espacio" },
+  { id: "shift_space", label: "Shift + Espacio", keyBadge: "Shift + Espacio" },
 ];
 
 export function AppSettings({
@@ -115,13 +94,13 @@ export function AppSettings({
 }: AppSettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
 
-  // En Configuración siempre se inicia desde arriba y no se recuerda el scroll
   useLayoutEffect(() => {
     const container = document.querySelector(".studio-content") as HTMLElement | null;
     if (container) {
       container.scrollTop = 0;
     }
   }, [activeTab]);
+
   const {
     quickLookShortcut,
     autostart,
@@ -147,6 +126,8 @@ export function AppSettings({
     setAuroraServerUrl,
     setVideoSnapshotFolder,
     setVideoSnapshotFormat,
+    screenCaptureFolder,
+    setScreenCaptureFolder,
     setScreenCaptureEnabled,
     setScreenCaptureShortcut,
   } = useSystemSettings();
@@ -188,6 +169,33 @@ export function AppSettings({
     setVideoSnapshotFolder("");
   };
 
+  const handleSelectScreenCaptureFolder = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: "Seleccionar carpeta para guardado automático de capturas de pantalla",
+        defaultPath: screenCaptureFolder || (defaultPicturesDir ? `${defaultPicturesDir}\\Capturas` : undefined),
+      });
+      if (typeof selected === "string" && selected.trim()) {
+        setScreenCaptureFolder(selected.trim());
+      }
+    } catch (err) {
+      console.error("Error al seleccionar carpeta de capturas de pantalla:", err);
+    }
+  };
+
+  const handleOpenScreenCaptureFolder = () => {
+    const target = screenCaptureFolder || (defaultPicturesDir ? `${defaultPicturesDir}\\Capturas` : "");
+    if (target) {
+      void invoke("show_in_file_manager", { path: target }).catch(() => {});
+    }
+  };
+
+  const handleResetScreenCaptureFolder = () => {
+    setScreenCaptureFolder("");
+  };
+
   const [flyoutSettings, setFlyoutSettingsState] = useState<FlyoutSettings>(() => getFlyoutSettings());
 
   const handleUpdateFlyout = (patch: Partial<FlyoutSettings>) => {
@@ -200,36 +208,6 @@ export function AppSettings({
 
   const handleTestFlyout = () => {
     void invoke("flyout_show", { zone: flyoutSettings.zone }).catch(() => {});
-  };
-
-
-
-  const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
-  const [testFeedback, setTestFeedback] = useState<string>("");
-
-  const handleTestConnection = async () => {
-    setTestStatus("testing");
-    setTestFeedback("Comprobando conexión con el servidor...");
-    const cleanUrl = auroraServerUrl.trim().replace(/\/$/, "");
-    const startTime = performance.now();
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
-
-      await fetch(`${cleanUrl}/api/v1/wallpapers?limit=1`, {
-        signal: controller.signal,
-      }).catch(async () => {
-        return await fetch(cleanUrl, { signal: controller.signal, mode: "no-cors" });
-      });
-
-      clearTimeout(timeoutId);
-      const elapsed = Math.round(performance.now() - startTime);
-      setTestStatus("success");
-      setTestFeedback(`¡Conexión establecida exitosamente! (${elapsed}ms) · Endpoint activo`);
-    } catch {
-      setTestStatus("error");
-      setTestFeedback(`No se pudo conectar a "${cleanUrl}". Verifica que el servidor local (ej. Astro) esté en ejecución.`);
-    }
   };
 
   const isQuickLookActive = quickLookShortcut !== "disabled";
@@ -299,352 +277,23 @@ export function AppSettings({
 
       <div className="settings-tab-content">
         {/* ══════════════════════════════════════════════════════════════════════════
-            PESTAÑA 1: GENERAL Y SISTEMA
+            PESTAÑA 1: GENERAL Y SISTEMA (Distribuida armónicamente en 3 Columnas)
         ══════════════════════════════════════════════════════════════════════════ */}
         {activeTab === "general" && (
           <div className="settings-panel">
             <div className="settings-columns">
-              {/* ── Columna 1: Quick Look, Papelera de reciclaje, Densidad de Barra Lateral ── */}
+              {/* ── Columna 1: Sistema y Segundo Plano, Quick Look, Densidad, Papelera ── */}
               <div className="settings-column">
-                {/* ── Quick Look ── */}
-                <div className="settings-card">
-                  <div className="settings-card-header-row">
-                    <div>
-                      <h3>Previsualización Rápida (Quick Look)</h3>
-                      <p>
-                        Previsualiza al instante cualquier archivo de música, imagen o vídeo seleccionado en el Explorador de Windows o el Escritorio sin abrir la aplicación completa.
-                      </p>
-                    </div>
-                    <label className="toggle-switch">
-                      <input
-                        type="checkbox"
-                        checked={isQuickLookActive}
-                        onChange={(e) => setQuickLookShortcut(e.target.checked ? "space" : "disabled")}
-                        aria-label="Activar Quick Look"
-                      />
-                      <span className="toggle-slider" />
-                    </label>
-                  </div>
-
-                  {isQuickLookActive && (
-                    <div className="quicklook-config-section">
-                      <h4 className="settings-subheading">Atajo de Teclado para Quick Look</h4>
-                      <div className="shortcut-options-grid">
-                        {SHORTCUTS.map(({ id, label, keyBadge, desc }) => (
-                          <button
-                            key={id}
-                            className={`shortcut-card${quickLookShortcut === id ? " is-selected" : ""}`}
-                            onClick={() => setQuickLookShortcut(id)}
-                            aria-pressed={quickLookShortcut === id}
-                          >
-                            <kbd className="shortcut-kbd">{keyBadge}</kbd>
-                            <strong>{label}</strong>
-                            <small>{desc}</small>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* ── Papelera de reciclaje ── */}
-                <div className="settings-card">
-                  <h3>Papelera de reciclaje</h3>
-                  <p>
-                    Controla si Prisma solicita confirmación antes de enviar una pista musical, imagen o vídeo a la papelera de reciclaje del sistema.
-                  </p>
-
-                  <div className="system-toggles-list">
-                    <div className="system-toggle-item">
-                      <div className="system-toggle-info">
-                        <strong>Pedir confirmación antes de mover a la papelera</strong>
-                        <p>Con la confirmación activada, la tecla Supr o la opción «Mover a la papelera» muestran un diálogo de confirmación. Al desactivarla, los archivos se envían directamente a la papelera del sistema sin preguntar.</p>
-                      </div>
-                      <label className="toggle-switch">
-                        <input
-                          type="checkbox"
-                          checked={confirmDeletion}
-                          onChange={(e) => setConfirmDeletion(e.target.checked)}
-                          aria-label="Pedir confirmación antes de mover a la papelera"
-                        />
-                        <span className="toggle-slider" />
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── Densidad de la Barra Lateral ── */}
-                <div className="settings-card">
-                  <h3>Densidad de la Barra Lateral</h3>
-                  <p>
-                    Ajusta la altura y el grosor de los elementos de navegación para optimizar el espacio vertical según tu pantalla y bibliotecas activas.
-                  </p>
-                  <div className="density-options-grid">
-                    {SIDEBAR_DENSITY_OPTIONS.map(({ id, label, badge, desc }) => (
-                      <button
-                        key={id}
-                        className={`density-card${sidebarDensity === id ? " is-selected" : ""}`}
-                        onClick={() => setSidebarDensity(id)}
-                        aria-pressed={sidebarDensity === id}
-                        type="button"
-                      >
-                        <div className={`density-preview density-preview-${id}`}>
-                          <div className="density-preview-bar bar-1" />
-                          <div className="density-preview-bar bar-2" />
-                          <div className="density-preview-bar bar-3" />
-                        </div>
-                        <div className="density-card-info">
-                          <div className="density-card-header">
-                            <strong>{label}</strong>
-                            <span className="density-badge">{badge}</span>
-                          </div>
-                          <small>{desc}</small>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* ── Capturas de Vídeo y Assets ── */}
-                <div className="settings-card">
-                  <div className="settings-card-header-row">
-                    <div>
-                      <h3>Capturas de Vídeo y Assets</h3>
-                      <p>
-                        Configura el directorio donde se guardan los fotogramas capturados (snapshots) del visor de vídeos al presionar <kbd className="shortcut-kbd-pill">Shift + S</kbd> o el botón de cámara.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="snapshot-folder-config-box">
-                    <div className="snapshot-folder-path-display">
-                      <div className="snapshot-folder-header-row">
-                        <span className="snapshot-folder-label">Carpeta de destino</span>
-                        <span className={`snapshot-folder-badge ${videoSnapshotFolder ? "is-custom" : "is-default"}`}>
-                          {videoSnapshotFolder ? "Personalizada" : "Predeterminada (Imágenes)"}
-                        </span>
-                      </div>
-                      <div className="snapshot-folder-path-text" title={videoSnapshotFolder || defaultPicturesDir}>
-                        <Icon name="folder" />
-                        <span>{videoSnapshotFolder || defaultPicturesDir || "Carpeta Imágenes del sistema"}</span>
-                      </div>
-                    </div>
-
-                    <div className="snapshot-folder-actions-row">
-                      <button
-                        type="button"
-                        className="snapshot-action-btn primary"
-                        onClick={handleSelectSnapshotFolder}
-                      >
-                        <Icon name="folder-open" />
-                        <span>Cambiar carpeta...</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="snapshot-action-btn secondary"
-                        onClick={handleOpenSnapshotFolder}
-                        title="Abrir carpeta en el Explorador de Windows"
-                      >
-                        <Icon name="external-link" />
-                        <span>Abrir carpeta</span>
-                      </button>
-                      {videoSnapshotFolder ? (
-                        <button
-                          type="button"
-                          className="snapshot-action-btn tertiary"
-                          onClick={handleResetSnapshotFolder}
-                          title="Restablecer a la carpeta de Imágenes predeterminada"
-                        >
-                          <Icon name="undo" />
-                          <span>Restablecer</span>
-                        </button>
-                      ) : null}
-                    </div>
-
-                    <div className="settings-section-divider" />
-
-                    <h4 className="settings-subheading" style={{ marginTop: 12 }}>Formato de Imagen</h4>
-                    <div className="snapshot-format-options">
-                      <button
-                        type="button"
-                        className={`snapshot-format-chip ${videoSnapshotFormat === "png" ? "is-selected" : ""}`}
-                        onClick={() => setVideoSnapshotFormat("png")}
-                      >
-                        <Icon name={videoSnapshotFormat === "png" ? "check" : "camera"} />
-                        <div className="snapshot-format-info">
-                          <strong>PNG</strong>
-                          <small>Máxima calidad sin pérdidas (Estilo VLC)</small>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        className={`snapshot-format-chip ${videoSnapshotFormat === "webp" ? "is-selected" : ""}`}
-                        onClick={() => setVideoSnapshotFormat("webp")}
-                      >
-                        <Icon name={videoSnapshotFormat === "webp" ? "check" : "sparkles"} />
-                        <div className="snapshot-format-info">
-                          <strong>WebP</strong>
-                          <small>Ultra compacto y moderno (Alta fidelidad)</small>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        className={`snapshot-format-chip ${videoSnapshotFormat === "jpeg" ? "is-selected" : ""}`}
-                        onClick={() => setVideoSnapshotFormat("jpeg")}
-                      >
-                        <Icon name={videoSnapshotFormat === "jpeg" ? "check" : "image"} />
-                        <div className="snapshot-format-info">
-                          <strong>JPEG</strong>
-                          <small>Archivo ligero y universal</small>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── Capturador de Pantalla del Sistema ── */}
-                <div className="settings-card">
-                  <div className="settings-card-header-row">
-                    <div>
-                      <h3>Capturador de Pantalla</h3>
-                      <p>
-                        Captura ágil de ventana, región rectangular o lazo libre con anotaciones vectoriales y copia directa a memoria sin tocar disco.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="snapshot-folder-config-box">
-                    {/* Toggle de activación (Desactivado por defecto) */}
-                    <div className="system-toggle-item" style={{ padding: "8px 0" }}>
-                      <div className="system-toggle-info">
-                        <strong>Habilitar atajo global de captura</strong>
-                        <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--on-surface-variant)" }}>
-                          Permite invocar el capturador en cualquier momento desde segundo plano con la combinación de teclas seleccionada. Desactivado por defecto para evitar conflictos con herramientas del sistema.
-                        </p>
-                      </div>
-                      <label className="toggle-switch">
-                        <input
-                          type="checkbox"
-                          checked={screenCaptureEnabled}
-                          onChange={(e) => void setScreenCaptureEnabled(e.target.checked)}
-                          aria-label="Habilitar atajo global de captura de pantalla"
-                        />
-                        <span className="toggle-slider" />
-                      </label>
-                    </div>
-
-                    <div className="settings-section-divider" />
-
-                    {/* Selector de atajo */}
-                    <h4 className="settings-subheading" style={{ marginTop: 12 }}>Atajo de Teclado Global</h4>
-                    <div className="snapshot-format-options">
-                      <button
-                        type="button"
-                        className={`snapshot-format-chip ${screenCaptureShortcut === "Shift+PrintScreen" ? "is-selected" : ""}`}
-                        onClick={() => void setScreenCaptureShortcut("Shift+PrintScreen")}
-                        title="Mayús + Impr Pant (Recomendado sin conflictos)"
-                      >
-                        <Icon name={screenCaptureShortcut === "Shift+PrintScreen" ? "check" : "keyboard"} />
-                        <div className="snapshot-format-info">
-                          <strong>Mayús + Impr Pant</strong>
-                          <small>Recomendado · Sin conflicto con Windows</small>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        className={`snapshot-format-chip ${screenCaptureShortcut === "PrintScreen" ? "is-selected" : ""}`}
-                        onClick={() => void setScreenCaptureShortcut("PrintScreen")}
-                        title="Impr Pant (Requiere desactivar Herramienta Recortes en Windows 11)"
-                      >
-                        <Icon name={screenCaptureShortcut === "PrintScreen" ? "check" : "keyboard"} />
-                        <div className="snapshot-format-info">
-                          <strong>Impr Pant</strong>
-                          <small>Exclusivo · Requiere ajuste en Windows 11</small>
-                        </div>
-                      </button>
-                    </div>
-
-                    {/* Guía informativa para la tecla Impr Pant en Windows 11 */}
-                    <div
-                      style={{
-                        marginTop: 14,
-                        padding: "12px 16px",
-                        background: "rgba(0, 201, 185, 0.08)",
-                        border: "1px solid rgba(0, 201, 185, 0.25)",
-                        borderRadius: "10px",
-                        fontSize: "0.82rem",
-                        color: "var(--on-surface)",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 600, color: "#00C9B9", marginBottom: 6 }}>
-                        <Icon name="info" width={16} height={16} />
-                        <span>¿Cómo liberar la tecla Impr Pant en Windows 11?</span>
-                      </div>
-                      <p style={{ margin: "0 0 6px 0" }}>
-                        Windows 11 reserva por defecto la tecla Impr Pant para su aplicación de Recortes nativa. Para usarla con Prisma:
-                      </p>
-                      <ol style={{ margin: "0 0 8px 18px", padding: 0 }}>
-                        <li>Abre <strong>Configuración de Windows &gt; Accesibilidad &gt; Teclado</strong>.</li>
-                        <li>Desactiva <em>«Usar el botón Impr Pant para abrir Recortes de pantalla»</em>.</li>
-                        <li>
-                          O vía Registro (<code>regedit</code>): en <code>HKCU\Control Panel\Keyboard</code>, asigna <code>PrintScreenKeyForSnippingEnabled = 0</code> (DWORD).
-                        </li>
-                      </ol>
-                      <div style={{ marginTop: 8 }}>
-                        <a
-                          href="https://github.com/biglexj/Prisma/blob/main/docs/guides/screen-capture-printscreen.md"
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            color: "#00C9B9",
-                            textDecoration: "underline",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                          }}
-                        >
-                          <span>Ver guía completa y pasos avanzados en GitHub</span>
-                          <Icon name="external-link" width={13} height={13} />
-                        </a>
-                      </div>
-                    </div>
-
-                    {/* Botón para probar captura inmediata */}
-                    <div style={{ marginTop: 14, display: "flex", justifyContent: "flex-end" }}>
-                      <button
-                        type="button"
-                        className="snapshot-action-btn primary"
-                        onClick={async () => {
-                          try {
-                            const { screenCaptureClient } = await import("../../features/screen_capture/services/screenCaptureClient");
-                            await screenCaptureClient.startCapture("window");
-                          } catch (err) {
-                            console.error("Error al probar captura:", err);
-                          }
-                        }}
-                        title="Probar capturador en pantalla ahora"
-                      >
-                        <Icon name="camera" />
-                        <span>Probar Captura de Pantalla</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Columna 2: Sistema y Segundo Plano, Apariencia ── */}
-              <div className="settings-column">
-                {/* ── Sistema y Segundo Plano ── */}
+                {/* Sistema y Segundo Plano (Autorun + Minimizar) */}
                 <div className="settings-card">
                   <h3>Sistema y Segundo Plano</h3>
-                  <p>Controla cómo se comporta Prisma al iniciar sesión y al cerrar la ventana principal.</p>
+                  <p>Comportamiento de Prisma al iniciar sesión y cerrar la ventana.</p>
 
                   <div className="system-toggles-list">
                     <div className="system-toggle-item">
                       <div className="system-toggle-info">
                         <strong>Iniciar con Windows (Autorun)</strong>
-                        <p>Arranca Prisma automáticamente en segundo plano al encender el equipo para que Quick Look esté siempre disponible.</p>
+                        <p>Arrancar en segundo plano para tener Quick Look siempre listo.</p>
                       </div>
                       <label className="toggle-switch">
                         <input
@@ -660,7 +309,7 @@ export function AppSettings({
                     <div className="system-toggle-item">
                       <div className="system-toggle-info">
                         <strong>Minimizar a la bandeja al cerrar</strong>
-                        <p>Al hacer clic en ✕, Prisma se oculta en el área de notificación (System Tray) para continuar activo en segundo plano sin ocupar espacio en la barra de tareas.</p>
+                        <p>Ocultar en el System Tray al cerrar la ventana (✕) sin detener la app.</p>
                       </div>
                       <label className="toggle-switch">
                         <input
@@ -675,105 +324,109 @@ export function AppSettings({
                   </div>
                 </div>
 
-                {/* ── Flyout y Mini Widget de Escritorio ── */}
+                {/* Previsualización Rápida (Quick Look) */}
                 <div className="settings-card">
                   <div className="settings-card-header-row">
                     <div>
-                      <h3>Flyout y Mini Widget de Escritorio</h3>
+                      <h3>Previsualización Rápida</h3>
                       <p>
-                        Controla el volumen global de Windows. La tarjeta multimedia aparece durante la reproducción; puedes fijar el panel y elegir su posición.
+                        Vista previa inmediata en el Explorador o Escritorio sin abrir Prisma completo.
                       </p>
                     </div>
                     <label className="toggle-switch">
                       <input
                         type="checkbox"
-                        checked={flyoutSettings.enabled}
-                        onChange={(e) => handleUpdateFlyout({ enabled: e.target.checked })}
-                        aria-label="Activar Flyout de Escritorio"
+                        checked={isQuickLookActive}
+                        onChange={(e) => setQuickLookShortcut(e.target.checked ? "space" : "disabled")}
+                        aria-label="Activar Quick Look"
                       />
                       <span className="toggle-slider" />
                     </label>
                   </div>
 
-                  {flyoutSettings.enabled && (
-                    <div className="flyout-config-section" style={{ marginTop: 12 }}>
-                      <h4 className="settings-subheading">Posición en Pantalla (6 Cuadrantes)</h4>
-                      <div className="density-options-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-                        {FLYOUT_ZONES.map(({ id, label, desc, icon }) => (
+                  {isQuickLookActive && (
+                    <div className="quicklook-config-section">
+                      <h4 className="settings-subheading">Atajo para Quick Look</h4>
+                      <div className="shortcut-options-grid">
+                        {SHORTCUTS.map(({ id, label, keyBadge }) => (
                           <button
                             key={id}
-                            className={`density-card${flyoutSettings.zone === id ? " is-selected" : ""}`}
-                            onClick={() => handleUpdateFlyout({ zone: id })}
+                            className={`shortcut-card${quickLookShortcut === id ? " is-selected" : ""}`}
+                            onClick={() => setQuickLookShortcut(id)}
+                            aria-pressed={quickLookShortcut === id}
+                            title={`Atajo: ${label}`}
                             type="button"
                           >
-                            <div style={{ fontSize: 24, marginBottom: 4 }}>{icon}</div>
-                            <div className="density-card-info" style={{ textAlign: "center" }}>
-                              <strong>{label}</strong>
-                              <small>{desc}</small>
-                            </div>
+                            <kbd className="shortcut-kbd">{keyBadge}</kbd>
+                            <strong>{label}</strong>
                           </button>
                         ))}
-                      </div>
-
-                      <div className="system-toggles-list" style={{ marginTop: 14 }}>
-                        <div className="system-toggle-item">
-                          <div className="system-toggle-info">
-                            <strong>Indicador de reproducción</strong>
-                            <p>Muestra tres barras animadas mientras se reproduce música o vídeo.</p>
-                          </div>
-                          <label className="toggle-switch">
-                            <input
-                              type="checkbox"
-                              checked={flyoutSettings.showSpectrum}
-                              onChange={(e) => handleUpdateFlyout({ showSpectrum: e.target.checked })}
-                              aria-label="Indicador de reproducción"
-                            />
-                            <span className="toggle-slider" />
-                          </label>
-                        </div>
-
-                        <div className="system-toggle-item">
-                          <div className="system-toggle-info">
-                            <strong>Duración en Pantalla</strong>
-                            <p>Tiempo antes de ocultarse automáticamente (2 segundos predeterminados).</p>
-                          </div>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            {[1000, 1500, 2000, 3000, 5000].map((ms) => (
-                              <button
-                                key={ms}
-                                type="button"
-                                className={`snapshot-format-chip ${flyoutSettings.durationMs === ms ? "is-selected" : ""}`}
-                                onClick={() => handleUpdateFlyout({ durationMs: ms })}
-                                style={{ padding: "6px 12px" }}
-                              >
-                                {ms / 1000}s
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
-                        <button
-                          type="button"
-                          className="snapshot-action-btn primary"
-                          onClick={handleTestFlyout}
-                        >
-                          <Icon name="play" />
-                          <span>Probar Flyout en pantalla ahora</span>
-                        </button>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* ── Apariencia / Tema & Acentos ── */}
+                {/* Densidad de la Barra Lateral */}
+                <div className="settings-card">
+                  <h3>Densidad de la Barra Lateral</h3>
+                  <p>Ajusta el grosor y espacio de la navegación según tu pantalla.</p>
+                  <div className="density-options-grid">
+                    {SIDEBAR_DENSITY_OPTIONS.map(({ id, label, badge }) => (
+                      <button
+                        key={id}
+                        className={`density-card${sidebarDensity === id ? " is-selected" : ""}`}
+                        onClick={() => setSidebarDensity(id)}
+                        aria-pressed={sidebarDensity === id}
+                        type="button"
+                        title={`${label} · ${badge}`}
+                      >
+                        <div className={`density-preview density-preview-${id}`}>
+                          <div className="density-preview-bar bar-1" />
+                          <div className="density-preview-bar bar-2" />
+                          <div className="density-preview-bar bar-3" />
+                        </div>
+                        <div className="density-card-info">
+                          <div className="density-card-header">
+                            <strong>{label}</strong>
+                            <span className="density-badge">{badge}</span>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Papelera de reciclaje */}
+                <div className="settings-card">
+                  <div className="settings-card-header-row">
+                    <div>
+                      <h3>Papelera de reciclaje</h3>
+                      <p style={{ margin: 0 }}>
+                        Pedir confirmación antes de mover archivos a la papelera del sistema al pulsar Supr o eliminar.
+                      </p>
+                    </div>
+                    <label className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={confirmDeletion}
+                        onChange={(e) => setConfirmDeletion(e.target.checked)}
+                        aria-label="Pedir confirmación antes de mover a la papelera"
+                      />
+                      <span className="toggle-slider" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Columna 2: Apariencia, Flyout de Escritorio ── */}
+              <div className="settings-column">
+                {/* Apariencia */}
                 <div className="settings-card">
                   <h3>Apariencia</h3>
-                  <p>Personaliza el estilo visual, los colores de énfasis y la adaptación dinámica de Prisma.</p>
+                  <p>Estilo visual, colores de énfasis y adaptación de Prisma.</p>
 
                   {/* Modo Claro / Oscuro */}
-                  <h4 className="settings-subheading">Modo de Interfaz</h4>
+                  <h4 className="settings-subheading" style={{ margin: "4px 0 8px" }}>Modo de Interfaz</h4>
                   <div className="theme-options-grid">
                     {THEMES.map(({ mode, label, desc, previewClass }) => {
                       let previewStyle: React.CSSProperties | undefined;
@@ -801,19 +454,20 @@ export function AppSettings({
                           className={`theme-card${theme === mode ? " is-selected" : ""}`}
                           onClick={() => onThemeChange(mode)}
                           aria-pressed={theme === mode}
+                          title={`${label} · ${desc}`}
+                          type="button"
                         >
                           <div className={`theme-preview ${previewClass}`} style={previewStyle} />
                           <strong>{label}</strong>
-                          <small>{desc}</small>
                         </button>
                       );
                     })}
                   </div>
 
-                  <div className="settings-section-divider" />
+                  <div className="settings-section-divider" style={{ margin: "14px 0 10px" }} />
 
                   {/* Colores de Énfasis */}
-                  <h4 className="settings-subheading">Color de Énfasis Principal</h4>
+                  <h4 className="settings-subheading" style={{ margin: "4px 0 8px" }}>Color de Énfasis Principal</h4>
                   <div className="accent-options-grid">
                     {ACCENT_COLORS.map(({ id, label, colorHex, badge }) => (
                       <button
@@ -832,20 +486,20 @@ export function AppSettings({
                     ))}
                   </div>
 
-                  {/* Tema reactivo a la música en reproducción (Color de énfasis dinámico) */}
-                  <div className="settings-option-row" style={{ marginTop: "14px" }}>
+                  {/* Tema reactivo a la música */}
+                  <div className="settings-option-row" style={{ marginTop: "10px" }}>
                     <div className="settings-option-info">
                       <div className="settings-option-title-row">
-                        <strong>Tema reactivo a la música en reproducción</strong>
+                        <strong>Tema reactivo a la música</strong>
                         {isMusicPaletteActive ? (
                           <span className="settings-option-live-badge">
                             <span className="pulse-dot" />
-                            En vivo · Paleta activa
+                            En vivo
                           </span>
                         ) : null}
                       </div>
                       <p>
-                        Extrae dinámicamente los tonos dominantes de la carátula activa y los aplica globalmente a toda la interfaz mientras escuchas música.
+                        Aplica los tonos dominantes de la carátula activa globalmente.
                       </p>
                     </div>
                     <label className="toggle-switch">
@@ -859,10 +513,10 @@ export function AppSettings({
                     </label>
                   </div>
 
-                  <div className="settings-section-divider" />
+                  <div className="settings-section-divider" style={{ margin: "14px 0 10px" }} />
 
                   {/* Variantes de Fondo */}
-                  <h4 className="settings-subheading">Variante de Fondo</h4>
+                  <h4 className="settings-subheading" style={{ margin: "4px 0 8px" }}>Variante de Fondo</h4>
                   <div className="bg-variant-options-grid">
                     {BACKGROUND_VARIANTS.map(({ id, label, desc, badge, colorHex }) => (
                       <button
@@ -871,6 +525,7 @@ export function AppSettings({
                         onClick={() => onBackgroundVariantChange?.(id)}
                         aria-pressed={backgroundVariant === id}
                         type="button"
+                        title={`${label} · ${desc}`}
                       >
                         {badge ? <span className="bg-variant-badge">{badge}</span> : null}
                         <div className="bg-variant-swatch-box" style={{ backgroundColor: colorHex }}>
@@ -878,10 +533,374 @@ export function AppSettings({
                         </div>
                         <div className="bg-variant-info">
                           <strong>{label}</strong>
-                          <small>{desc}</small>
                         </div>
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                {/* Flyout de Escritorio */}
+                <div className="settings-card">
+                  <div className="settings-card-header-row">
+                    <div>
+                      <h3>Flyout de Escritorio</h3>
+                      <p>Widget flotante para control multimedia y volumen global.</p>
+                    </div>
+                    <label className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={flyoutSettings.enabled}
+                        onChange={(e) => handleUpdateFlyout({ enabled: e.target.checked })}
+                        aria-label="Activar Flyout de Escritorio"
+                      />
+                      <span className="toggle-slider" />
+                    </label>
+                  </div>
+
+                  {flyoutSettings.enabled && (
+                    <div className="flyout-config-section" style={{ marginTop: 12 }}>
+                      <h4 className="settings-subheading">Posición en Pantalla (6 Cuadrantes)</h4>
+                      <div className="flyout-quadrant-grid">
+                        {FLYOUT_ZONES.map(({ id, label, desc, icon, cornerClass }) => {
+                          const isBottom = id.startsWith("bottom");
+                          return (
+                            <button
+                              key={id}
+                              className={`flyout-zone-card ${cornerClass}${flyoutSettings.zone === id ? " is-selected" : ""}`}
+                              onClick={() => handleUpdateFlyout({ zone: id })}
+                              type="button"
+                              title={`${label} (${desc})`}
+                            >
+                              {!isBottom ? (
+                                <>
+                                  <div className="flyout-zone-header">
+                                    <span className="flyout-zone-icon">{icon}</span>
+                                  </div>
+                                  <div className="flyout-zone-text">
+                                    <strong className="flyout-zone-label">{label}</strong>
+                                    <small className="flyout-zone-desc">{desc}</small>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flyout-zone-text">
+                                    <strong className="flyout-zone-label">{label}</strong>
+                                    <small className="flyout-zone-desc">{desc}</small>
+                                  </div>
+                                  <div className="flyout-zone-header">
+                                    <span className="flyout-zone-icon">{icon}</span>
+                                  </div>
+                                </>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="system-toggles-list" style={{ marginTop: 12 }}>
+                        <div className="system-toggle-item">
+                          <div className="system-toggle-info">
+                            <strong>Indicador de reproducción</strong>
+                            <p>Barras animadas durante la reproducción.</p>
+                          </div>
+                          <label className="toggle-switch">
+                            <input
+                              type="checkbox"
+                              checked={flyoutSettings.showSpectrum}
+                              onChange={(e) => handleUpdateFlyout({ showSpectrum: e.target.checked })}
+                              aria-label="Indicador de reproducción"
+                            />
+                            <span className="toggle-slider" />
+                          </label>
+                        </div>
+
+                        <div className="system-toggle-item">
+                          <div className="system-toggle-info">
+                            <strong>Duración en Pantalla</strong>
+                            <p>Tiempo antes de ocultarse.</p>
+                          </div>
+                          <div className="flyout-duration-chips">
+                            {[1000, 1500, 2000, 3000, 5000].map((ms) => (
+                              <button
+                                key={ms}
+                                type="button"
+                                className={`snapshot-format-chip ${flyoutSettings.durationMs === ms ? "is-selected" : ""}`}
+                                onClick={() => handleUpdateFlyout({ durationMs: ms })}
+                              >
+                                {ms / 1000}s
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
+                        <button
+                          type="button"
+                          className="snapshot-action-btn primary"
+                          onClick={handleTestFlyout}
+                        >
+                          <Icon name="play" />
+                          <span>Probar Flyout en pantalla</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Columna 3: Capturas de Vídeo y Assets, Capturador de Pantalla ── */}
+              <div className="settings-column">
+                {/* Capturas de Vídeo y Assets */}
+                <div className="settings-card">
+                  <div className="settings-card-header-row">
+                    <div>
+                      <h3>Capturas de Vídeo y Assets</h3>
+                      <p>
+                        Directorio y formato al presionar <kbd className="shortcut-kbd-pill">Shift + S</kbd> o capturar fotogramas.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="snapshot-folder-config-box">
+                    <div className="snapshot-folder-path-display">
+                      <div className="snapshot-folder-header-row">
+                        <span className="snapshot-folder-label">Carpeta destino</span>
+                        <span className={`snapshot-folder-badge ${videoSnapshotFolder ? "is-custom" : "is-default"}`}>
+                          {videoSnapshotFolder ? "Personalizada" : "Predeterminada"}
+                        </span>
+                      </div>
+                      <div className="snapshot-folder-path-text" title={videoSnapshotFolder || defaultPicturesDir}>
+                        <Icon name="folder" />
+                        <span>{videoSnapshotFolder || defaultPicturesDir || "Carpeta Imágenes"}</span>
+                      </div>
+                    </div>
+
+                    <div className="snapshot-folder-actions-row">
+                      <button
+                        type="button"
+                        className="snapshot-action-btn primary"
+                        onClick={handleSelectSnapshotFolder}
+                      >
+                        <Icon name="folder-open" />
+                        <span>Cambiar...</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="snapshot-action-btn secondary"
+                        onClick={handleOpenSnapshotFolder}
+                        title="Abrir carpeta en el Explorador de Windows"
+                      >
+                        <Icon name="external-link" />
+                        <span>Abrir</span>
+                      </button>
+                      {videoSnapshotFolder ? (
+                        <button
+                          type="button"
+                          className="snapshot-action-btn tertiary"
+                          onClick={handleResetSnapshotFolder}
+                          title="Restablecer a la carpeta de Imágenes predeterminada"
+                        >
+                          <Icon name="undo" />
+                          <span>Restablecer</span>
+                        </button>
+                      ) : null}
+                    </div>
+
+                    <div className="settings-section-divider" style={{ margin: "14px 0 10px" }} />
+
+                    <h4 className="settings-subheading" style={{ margin: "8px 0 8px" }}>Formato de Imagen</h4>
+                    <div className="snapshot-format-options">
+                      <button
+                        type="button"
+                        className={`snapshot-format-chip ${videoSnapshotFormat === "png" ? "is-selected" : ""}`}
+                        onClick={() => setVideoSnapshotFormat("png")}
+                      >
+                        <Icon name={videoSnapshotFormat === "png" ? "check" : "camera"} />
+                        <div className="snapshot-format-info">
+                          <strong>PNG</strong>
+                          <small>Sin pérdidas</small>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className={`snapshot-format-chip ${videoSnapshotFormat === "webp" ? "is-selected" : ""}`}
+                        onClick={() => setVideoSnapshotFormat("webp")}
+                      >
+                        <Icon name={videoSnapshotFormat === "webp" ? "check" : "sparkles"} />
+                        <div className="snapshot-format-info">
+                          <strong>WebP</strong>
+                          <small>Compacto y moderno</small>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className={`snapshot-format-chip ${videoSnapshotFormat === "jpeg" ? "is-selected" : ""}`}
+                        onClick={() => setVideoSnapshotFormat("jpeg")}
+                      >
+                        <Icon name={videoSnapshotFormat === "jpeg" ? "check" : "image"} />
+                        <div className="snapshot-format-info">
+                          <strong>JPEG</strong>
+                          <small>Universal</small>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Capturador de Pantalla */}
+                <div className="settings-card">
+                  <div className="settings-card-header-row">
+                    <div>
+                      <h3>Capturador de Pantalla</h3>
+                      <p>
+                        Captura de región o ventana con anotaciones vectoriales y copia directa a memoria.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="snapshot-folder-config-box">
+                    <div className="system-toggle-item" style={{ padding: "8px 0" }}>
+                      <div className="system-toggle-info">
+                        <strong>Atajo global de captura</strong>
+                        <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--on-surface-variant)" }}>
+                          Invoca el capturador en cualquier momento desde segundo plano.
+                        </p>
+                      </div>
+                      <label className="toggle-switch">
+                        <input
+                          type="checkbox"
+                          checked={screenCaptureEnabled}
+                          onChange={(e) => void setScreenCaptureEnabled(e.target.checked)}
+                          aria-label="Habilitar atajo global de captura de pantalla"
+                        />
+                        <span className="toggle-slider" />
+                      </label>
+                    </div>
+
+                    <div className="settings-section-divider" style={{ margin: "10px 0" }} />
+
+                    <h4 className="settings-subheading" style={{ margin: "4px 0 8px" }}>Atajo de Teclado</h4>
+                    <div className="snapshot-format-options">
+                      <button
+                        type="button"
+                        className={`snapshot-format-chip ${screenCaptureShortcut === "Shift+PrintScreen" ? "is-selected" : ""}`}
+                        onClick={() => void setScreenCaptureShortcut("Shift+PrintScreen")}
+                        title="Mayús + Impr Pant (Recomendado sin conflictos)"
+                      >
+                        <Icon name={screenCaptureShortcut === "Shift+PrintScreen" ? "check" : "keyboard"} />
+                        <div className="snapshot-format-info">
+                          <strong>Mayús + Impr Pant</strong>
+                          <small>Recomendado</small>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className={`snapshot-format-chip ${screenCaptureShortcut === "PrintScreen" ? "is-selected" : ""}`}
+                        onClick={() => void setScreenCaptureShortcut("PrintScreen")}
+                        title="Impr Pant (Requiere desactivar Herramienta Recortes en Windows 11)"
+                      >
+                        <Icon name={screenCaptureShortcut === "PrintScreen" ? "check" : "keyboard"} />
+                        <div className="snapshot-format-info">
+                          <strong>Impr Pant</strong>
+                          <small>Directo (Win 11)</small>
+                        </div>
+                      </button>
+                    </div>
+
+                    <div className="settings-section-divider" style={{ margin: "14px 0 10px" }} />
+
+                    <div className="snapshot-folder-path-display">
+                      <div className="snapshot-folder-header-row">
+                        <span className="snapshot-folder-label">Carpeta de Guardado Automático (Ctrl + S)</span>
+                        <span className={`snapshot-folder-badge ${screenCaptureFolder ? "is-custom" : "is-default"}`}>
+                          {screenCaptureFolder ? "Personalizada" : "Predeterminada (Capturas)"}
+                        </span>
+                      </div>
+                      <div
+                        className="snapshot-folder-path-text"
+                        title={screenCaptureFolder || (defaultPicturesDir ? `${defaultPicturesDir}\\Capturas` : "Imágenes\\Capturas")}
+                      >
+                        <Icon name="folder" />
+                        <span>
+                          {screenCaptureFolder || (defaultPicturesDir ? `${defaultPicturesDir}\\Capturas` : "Imágenes\\Capturas")}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="snapshot-folder-actions-row">
+                      <button
+                        type="button"
+                        className="snapshot-action-btn primary"
+                        onClick={handleSelectScreenCaptureFolder}
+                      >
+                        <Icon name="folder-open" />
+                        <span>Cambiar...</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="snapshot-action-btn secondary"
+                        onClick={handleOpenScreenCaptureFolder}
+                        title="Abrir carpeta en el Explorador de Windows"
+                      >
+                        <Icon name="external-link" />
+                        <span>Abrir</span>
+                      </button>
+                      {screenCaptureFolder ? (
+                        <button
+                          type="button"
+                          className="snapshot-action-btn tertiary"
+                          onClick={handleResetScreenCaptureFolder}
+                          title="Restablecer a la carpeta de Capturas predeterminada"
+                        >
+                          <Icon name="undo" />
+                          <span>Restablecer</span>
+                        </button>
+                      ) : null}
+                    </div>
+
+                    <details className="screen-capture-tip-box">
+                      <summary className="screen-capture-tip-summary">
+                        <Icon name="info" width={15} height={15} />
+                        <span>¿Cómo liberar Impr Pant en Windows 11?</span>
+                      </summary>
+                      <div className="screen-capture-tip-content">
+                        <p>Windows 11 reserva Impr Pant para Recortes. Para usarla con Prisma:</p>
+                        <ol>
+                          <li>Abre <strong>Configuración &gt; Accesibilidad &gt; Teclado</strong>.</li>
+                          <li>Desactiva <em>«Usar botón Impr Pant para abrir Recortes»</em>.</li>
+                          <li>O vía <code>regedit</code>: en <code>HKCU\Control Panel\Keyboard</code> asigna <code>PrintScreenKeyForSnippingEnabled = 0</code>.</li>
+                        </ol>
+                        <a
+                          href="https://github.com/biglexj/Prisma/blob/main/docs/guides/screen-capture-printscreen.md"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="screen-capture-tip-link"
+                        >
+                          <span>Guía completa en GitHub</span>
+                          <Icon name="external-link" width={12} height={12} />
+                        </a>
+                      </div>
+                    </details>
+
+                    <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+                      <button
+                        type="button"
+                        className="snapshot-action-btn primary"
+                        onClick={async () => {
+                          try {
+                            const { screenCaptureClient } = await import("../../features/screen_capture/services/screenCaptureClient");
+                            await screenCaptureClient.startCapture("window");
+                          } catch (err) {
+                            console.error("Error al probar captura:", err);
+                          }
+                        }}
+                        title="Probar capturador en pantalla ahora"
+                      >
+                        <Icon name="camera" />
+                        <span>Probar Captura</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -917,7 +936,7 @@ export function AppSettings({
         )}
 
         {/* ══════════════════════════════════════════════════════════════════════════
-            PESTAÑA 5: BARRA DE PROGRESO (Suite de 10 Estilos Interactivos)
+            PESTAÑA 5: BARRA DE PROGRESO
         ══════════════════════════════════════════════════════════════════════════ */}
         {activeTab === "progress" && (
           <ProgressBarSettingsPanel
@@ -927,7 +946,7 @@ export function AppSettings({
         )}
 
         {/* ══════════════════════════════════════════════════════════════════════════
-            PESTAÑA 4: AURORA SYNAPSE
+            PESTAÑA 6: AURORA SYNAPSE
         ══════════════════════════════════════════════════════════════════════════ */}
         {activeTab === "synapse" && (
           <div className="settings-panel">
@@ -936,267 +955,25 @@ export function AppSettings({
         )}
 
         {/* ══════════════════════════════════════════════════════════════════════════
-            PESTAÑA 5: ATAJOS DE TECLADO
+            PESTAÑA 7: SERVICIOS ONLINE (ECOSISTEMA AURORA)
+        ══════════════════════════════════════════════════════════════════════════ */}
+        {activeTab === "aurora" && (
+          <AuroraSettingsPanel
+            auroraOnlineServicesEnabled={auroraOnlineServicesEnabled}
+            setAuroraOnlineServicesEnabled={setAuroraOnlineServicesEnabled}
+            auroraWallpapersEnabled={auroraWallpapersEnabled}
+            setAuroraWallpapersEnabled={setAuroraWallpapersEnabled}
+            auroraServerUrl={auroraServerUrl}
+            setAuroraServerUrl={setAuroraServerUrl}
+          />
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════════════════
+            PESTAÑA 8: ATAJOS DE TECLADO
         ══════════════════════════════════════════════════════════════════════════ */}
         {activeTab === "shortcuts" && (
           <div className="settings-panel">
             <ShortcutsSettingsPanel quickLookShortcut={quickLookShortcut} />
-          </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════════════════
-            PESTAÑA 7: SERVICIOS ONLINE (ECOSISTEMA AURORA)
-        ══════════════════════════════════════════════════════════════════════════ */}
-        {activeTab === "aurora" && (
-          <div className="settings-panel aurora-settings-panel">
-            {/* ── Banner Principal con Switch Maestro ── */}
-            <div className="settings-card aurora-hero-card">
-              <div className="settings-card-header-row">
-                <div className="aurora-hero-text">
-                  <div className="aurora-hero-title-row">
-                    <div className="aurora-hero-icon">
-                      <Icon name="sparkles" />
-                    </div>
-                    <div>
-                      <h3>Servicios Online del Ecosistema Aurora</h3>
-                      <p>
-                        Habilita la integración en la nube con Aurora para explorar el catálogo de Wallpapers en alta fidelidad, sincronización de favoritos y biblioteca musical.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={auroraOnlineServicesEnabled}
-                    onChange={(e) => setAuroraOnlineServicesEnabled(e.target.checked)}
-                    aria-label="Habilitar Servicios Online de Aurora"
-                  />
-                  <span className="toggle-slider" />
-                </label>
-              </div>
-            </div>
-
-            {auroraOnlineServicesEnabled && (
-              <div className="aurora-columns-layout">
-                {/* ── Columna Izquierda: Servidor de Aurora Cloud ── */}
-                <div className="aurora-col">
-                  <div className="settings-card aurora-server-card">
-                    <div className="aurora-card-header">
-                      <Icon name="server" />
-                      <div>
-                        <h3>Servidor de Aurora Cloud</h3>
-                        <p>Selecciona el entorno de Aurora para la consulta de catálogos y sincronización:</p>
-                      </div>
-                    </div>
-
-                    <div className="aurora-server-options">
-                      {/* Opción 1: Servidor Oficial */}
-                      <div
-                        className={`aurora-env-card ${auroraServerUrl === "https://www.biglexj.com" ? "is-selected" : ""}`}
-                        onClick={() => {
-                          setAuroraServerUrl("https://www.biglexj.com");
-                          setTestStatus("idle");
-                        }}
-                        role="button"
-                        tabIndex={0}
-                      >
-                        <div className="aurora-env-radio">
-                          <span className={`aurora-radio-dot ${auroraServerUrl === "https://www.biglexj.com" ? "is-active" : ""}`} />
-                        </div>
-                        <div className="aurora-env-info">
-                          <div className="aurora-env-title">
-                            <span className="aurora-status-pill is-prod">🟢 Oficial</span>
-                            <strong>Servidor Oficial de Producción</strong>
-                          </div>
-                          <span className="aurora-env-url">https://www.biglexj.com</span>
-                        </div>
-                      </div>
-
-                      {/* Opción 2: Servidor Personalizado / LAN / Astro */}
-                      <div
-                        className={`aurora-env-card is-custom ${auroraServerUrl !== "https://www.biglexj.com" ? "is-selected" : ""}`}
-                        onClick={() => {
-                          if (auroraServerUrl === "https://www.biglexj.com") {
-                            setAuroraServerUrl("http://localhost:4321");
-                          }
-                          setTestStatus("idle");
-                        }}
-                        role="button"
-                        tabIndex={0}
-                      >
-                        <div className="aurora-env-radio">
-                          <span className={`aurora-radio-dot ${auroraServerUrl !== "https://www.biglexj.com" ? "is-active" : ""}`} />
-                        </div>
-                        <div className="aurora-env-info" style={{ flex: 1 }}>
-                          <div className="aurora-env-title">
-                            <span className="aurora-status-pill is-dev">🔵 Personalizado</span>
-                            <strong>Servidor Local / LAN (Astro)</strong>
-                          </div>
-                          <span className="aurora-env-url">Para desarrollo y pruebas locales con Astro o Node</span>
-
-                          {auroraServerUrl !== "https://www.biglexj.com" && (
-                            <div className="aurora-input-group" onClick={(e) => e.stopPropagation()}>
-                              <div className="aurora-input-box">
-                                <span className="aurora-input-icon">
-                                  <Icon name="globe" />
-                                </span>
-                                <input
-                                  type="text"
-                                  className="aurora-server-input"
-                                  value={auroraServerUrl}
-                                  onChange={(e) => {
-                                    setAuroraServerUrl(e.target.value);
-                                    setTestStatus("idle");
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") handleTestConnection();
-                                  }}
-                                  placeholder="http://localhost:4321"
-                                  spellCheck={false}
-                                />
-                                <button
-                                  type="button"
-                                  className={`aurora-test-btn ${testStatus === "testing" ? "is-loading" : ""}`}
-                                  onClick={handleTestConnection}
-                                  title="Probar conexión con este servidor"
-                                >
-                                  <Icon name={testStatus === "success" ? "check" : "refresh"} />
-                                  <span>{testStatus === "testing" ? "Probando..." : "Probar"}</span>
-                                </button>
-                              </div>
-
-                              {/* Preajustes Rápidos */}
-                              <div className="aurora-chips-row">
-                                <span className="aurora-chips-label">Atajos:</span>
-                                <button
-                                  type="button"
-                                  className="aurora-chip"
-                                  onClick={() => {
-                                    setAuroraServerUrl("http://localhost:4321");
-                                    setTestStatus("idle");
-                                  }}
-                                >
-                                  localhost:4321 (Astro)
-                                </button>
-                                <button
-                                  type="button"
-                                  className="aurora-chip"
-                                  onClick={() => {
-                                    setAuroraServerUrl("http://localhost:3000");
-                                    setTestStatus("idle");
-                                  }}
-                                >
-                                  localhost:3000
-                                </button>
-                                <button
-                                  type="button"
-                                  className="aurora-chip"
-                                  onClick={() => {
-                                    setAuroraServerUrl("http://127.0.0.1:4321");
-                                    setTestStatus("idle");
-                                  }}
-                                >
-                                  127.0.0.1:4321
-                                </button>
-                              </div>
-
-                              {/* Estado y Feedback del Test */}
-                              {testStatus !== "idle" && (
-                                <div className={`aurora-test-feedback is-${testStatus}`}>
-                                  <Icon name={testStatus === "success" ? "check" : testStatus === "error" ? "close" : "refresh"} />
-                                  <span>{testFeedback}</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── Columna Derecha: Catálogos y Servicios Nube ── */}
-                <div className="aurora-col">
-                  {/* Catálogo Wallpapers Aurora */}
-                  <div className="settings-card">
-                    <div className="settings-card-header-row">
-                      <div>
-                        <h3>Catálogo de Wallpapers Aurora</h3>
-                        <p>
-                          Descarga y aplica wallpapers en resolución 4K directamente desde el repositorio del blog Aurora integrado en Prisma.
-                        </p>
-                      </div>
-                      <label className="toggle-switch" title={auroraWallpapersEnabled ? "Desactivar Wallpapers" : "Activar Wallpapers"}>
-                        <input
-                          type="checkbox"
-                          checked={auroraWallpapersEnabled}
-                          onChange={(e) => setAuroraWallpapersEnabled(e.target.checked)}
-                          aria-label="Activar o desactivar Catálogo de Wallpapers Aurora"
-                        />
-                        <span className="toggle-slider" />
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Suite Musical de Aurora Cloud (Música, Instrumentales, Karaokes) */}
-                  <div className="settings-card aurora-music-suite-card">
-                    <div className="settings-card-header-row">
-                      <div className="aurora-music-suite-title-row">
-                        <Icon name="music" />
-                        <div>
-                          <h3>Servicios Musicales de Aurora Cloud</h3>
-                          <p>
-                            Ecosistema de streaming en la nube con acceso a pistas completas, versiones instrumentales y karaokes sincronizados.
-                          </p>
-                        </div>
-                      </div>
-                      <span className="aurora-upcoming-badge">
-                        Próximamente
-                      </span>
-                    </div>
-
-                    <div className="aurora-music-services-list">
-                      {/* 1. Explorar Música */}
-                      <div className="aurora-music-service-item">
-                        <div className="aurora-music-service-icon is-music">
-                          <Icon name="disc" />
-                        </div>
-                        <div className="aurora-music-service-info">
-                          <strong>Explorar Música</strong>
-                          <p>Streaming en alta fidelidad de discografía oficial, álbumes y lanzamientos exclusivos.</p>
-                        </div>
-                        <span className="aurora-service-tag">Audio HD</span>
-                      </div>
-
-                      {/* 2. Pistas Instrumentales */}
-                      <div className="aurora-music-service-item">
-                        <div className="aurora-music-service-icon is-instrumental">
-                          <Icon name="sliders" />
-                        </div>
-                        <div className="aurora-music-service-info">
-                          <strong>Instrumentales (Off-Vocal)</strong>
-                          <p>Versiones instrumentales limpias y pistas de acompañamiento para práctica y creación.</p>
-                        </div>
-                        <span className="aurora-service-tag">Off-Vocal</span>
-                      </div>
-
-                      {/* 3. Karaokes */}
-                      <div className="aurora-music-service-item">
-                        <div className="aurora-music-service-icon is-karaoke">
-                          <Icon name="mic" />
-                        </div>
-                        <div className="aurora-music-service-info">
-                          <strong>Karaokes & Letras Dinámicas</strong>
-                          <p>Pistas preparadas para cantar con letras sincronizadas en tiempo real estrofa por estrofa.</p>
-                        </div>
-                        <span className="aurora-service-tag">LRC / Sing</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

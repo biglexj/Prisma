@@ -54,6 +54,7 @@ interface SystemSettings {
   videoSnapshotFormat?: "png" | "webp" | "jpeg";
   screenCaptureEnabled: boolean;
   screenCaptureShortcut: string;
+  screenCaptureFolder?: string;
   enabledTools: EnabledToolsConfig;
 }
 
@@ -75,6 +76,7 @@ const DEFAULT_SETTINGS: SystemSettings = {
   videoSnapshotFormat: "png",
   screenCaptureEnabled: false,
   screenCaptureShortcut: "Shift+PrintScreen",
+  screenCaptureFolder: "",
   enabledTools: DEFAULT_ENABLED_TOOLS,
 };
 
@@ -365,6 +367,15 @@ export function useSystemSettings() {
     });
   }, [settings.screenCaptureEnabled]);
 
+  const setScreenCaptureFolder = useCallback((folder: string) => {
+    setSettings((prev) => {
+      const next = { ...prev, screenCaptureFolder: folder };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, []);
+
   return {
     isLoaded,
     quickLookShortcut: settings.quickLookShortcut,
@@ -380,6 +391,7 @@ export function useSystemSettings() {
     videoSnapshotFormat: settings.videoSnapshotFormat || "png",
     screenCaptureEnabled: settings.screenCaptureEnabled,
     screenCaptureShortcut: settings.screenCaptureShortcut || "Shift+PrintScreen",
+    screenCaptureFolder: settings.screenCaptureFolder || "",
     enabledTools: settings.enabledTools,
     setQuickLookShortcut,
     setAutostart,
@@ -394,6 +406,7 @@ export function useSystemSettings() {
     setVideoSnapshotFormat,
     setScreenCaptureEnabled,
     setScreenCaptureShortcut,
+    setScreenCaptureFolder,
     setToolEnabled,
   };
 }

@@ -8,6 +8,12 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [ ] **Capturador de pantalla en Herramientas — plan preparado, implementación pendiente**: Ventana por defecto con contornos que siguen la ventana o región detectable, Rectángulo y Pantalla completa; anotaciones simples, copia sin archivos y guardado PNG opcional. Vista propia y propuesta de editor independiente, con atajo Impr Pant/Mayús + Impr Pant sujeto a disponibilidad. [Plan y relevo](process/active/2026-10-18_capturador_pantalla/PLAN.md).
+
+- [ ] **Capturador de Pantalla — Extractor de Texto (OCR)**: Reconocimiento óptico de caracteres directamente sobre la captura de pantalla en memoria para copiar texto al portapapeles con un solo clic.
+
+- [ ] **Grabadora de Vídeo de Pantalla**: Grabación fluida y ligera de pantalla completa o ventana seleccionada a formato MP4/WebM con controles flotantes de inicio/parada y guardado directo en la carpeta de capturas.
+
 - [ ] **Soporte Nativo Pionero para Formatos ElyX (.elx) y JPEG XL (.jxl)**: Integración en Rust de decodificador nativo para el formato experimental ElyX (`.elx`) (wavelet CDF 5/3 entera, YCoCg-R, zlib con CRC32) y decodificación directa de JPEG XL (`.jxl`), dotando a Prisma de detección en biblioteca visual, generación de miniaturas y visualización interactiva a resolución completa. [Proceso activo](process/active/2026-10-17_soporte_nativo_elyx_y_jxl/PLAN.md).
 
 - [ ] **Teléfono como altavoz de Prisma y salidas Android respetuosas**: PC → teléfono continuo implementado; controles en Ecualizador y atajo global. Aceptación física, duración y latencia en curso. [Proceso activo](process/active/2026-10-05_audio_relay_super_gallery/PLAN.md).

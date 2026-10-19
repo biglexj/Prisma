@@ -65,10 +65,15 @@ export function drawAnnotation(ctx: CanvasRenderingContext2D, item: AnnotationIt
       item.strokeWidth * 3.5
     );
   } else if (item.tool === "text" && item.startPoint && item.text) {
-    ctx.font = `bold ${item.fontSize || 20}px Inter, sans-serif`;
+    const fontSize = item.fontSize || 20;
+    ctx.font = `bold ${fontSize}px Inter, sans-serif`;
     ctx.shadowColor = "rgba(0,0,0,0.85)";
     ctx.shadowBlur = 4;
-    ctx.fillText(item.text, item.startPoint.x, item.startPoint.y);
+    const lines = item.text.split("\n");
+    const lineHeight = fontSize * 1.25;
+    lines.forEach((line, idx) => {
+      ctx.fillText(line, item.startPoint!.x, item.startPoint!.y + idx * lineHeight);
+    });
   }
 
   ctx.restore();

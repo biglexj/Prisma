@@ -86,7 +86,8 @@ use app::commands::wallpapers::{wallpaper_save_and_apply, wallpaper_set_desktop}
 use app::commands::screen_capture::{
     screen_capture_cancel, screen_capture_confirm, screen_capture_detect_subregion,
     screen_capture_get_editor_payload, screen_capture_get_shortcut_status,
-    screen_capture_save_file, screen_capture_set_shortcut, screen_capture_start,
+    screen_capture_pick_color, screen_capture_save_file, screen_capture_set_shortcut,
+    screen_capture_start,
 };
 use app::state::{
     FavoritesState, InitialFileState, InitialSynapseSendState, MusicLibraryState,
@@ -810,6 +811,7 @@ pub fn run() {
             screen_capture_detect_subregion,
             screen_capture_confirm,
             screen_capture_cancel,
+            screen_capture_pick_color,
             screen_capture_get_editor_payload,
             screen_capture_save_file,
             screen_capture_get_shortcut_status,

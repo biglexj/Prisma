@@ -35,6 +35,19 @@ export const screenCaptureClient = {
     return invoke<void>("screen_capture_cancel");
   },
 
+  async pickColor(
+    screenX: number,
+    screenY: number
+  ): Promise<{ hex: string; r: number; g: number; b: number }> {
+    return invoke<{ hex: string; r: number; g: number; b: number }>(
+      "screen_capture_pick_color",
+      {
+        screenX: Math.round(screenX),
+        screenY: Math.round(screenY),
+      }
+    );
+  },
+
   async getEditorPayload(): Promise<EditorPayload | null> {
     return invoke<EditorPayload | null>("screen_capture_get_editor_payload");
   },

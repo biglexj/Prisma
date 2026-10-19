@@ -4,7 +4,9 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../../shared/ui/Icon";
 import { CaptureAnnotationBar } from "./components/CaptureAnnotationBar";
 import { drawAnnotation } from "./utils/annotationDrawing";
+import { getDefaultPicturesDir } from "../../../shared/mediaOperations";
 import type {
+  ActiveTextBox,
   AnnotationItem,
   AnnotationPoint,
   AnnotationTool,
@@ -18,6 +20,29 @@ import type {
 import { screenCaptureClient } from "../services/screenCaptureClient";
 import "./screen-capture.css";
 
+const MODE_LABELS: Record<CaptureMode, string> = {
+  rect: "Rectángulo",
+  window: "Ventana",
+  fullscreen: "Pantalla completa",
+  freeform: "Forma libre",
+  eyedropper: "Selector de color",
+};
+
+const MODE_ICONS: Record<CaptureMode, any> = {
+  rect: "crop",
+  window: "columns",
+  fullscreen: "fullscreen",
+  freeform: "lasso",
+  eyedropper: "pipette",
+};
+
+const MODE_OPTIONS: Array<{ id: CaptureMode; label: string; icon: any; shortcut: string }> = [
+  { id: "rect", label: "Rectángulo", icon: "crop", shortcut: "R" },
+  { id: "window", label: "Ventana", icon: "columns", shortcut: "V" },
+  { id: "fullscreen", label: "Pantalla completa", icon: "fullscreen", shortcut: "F" },
+  { id: "freeform", label: "Forma libre", icon: "lasso", shortcut: "Q" },
+];
+
 export function ScreenCaptureOverlay() {
   const [session, setSession] = useState<CaptureSessionInit | null>(null);
   const [phase, setPhase] = useState<"selecting" | "annotating">("selecting");
@@ -25,7 +50,7 @@ export function ScreenCaptureOverlay() {
   const [mode, setMode] = useState<CaptureMode>(() => {
     try {
       const saved = localStorage.getItem("prisma.screen-capture.last-mode");
-      if (saved && ["window", "rect", "freeform", "fullscreen"].includes(saved)) {
+      if (saved && ["window", "rect", "freeform", "fullscreen", "eyedropper"].includes(saved)) {
         return saved as CaptureMode;
       }
     } catch {}
@@ -45,6 +70,15 @@ export function ScreenCaptureOverlay() {
   const [lassoPoints, setLassoPoints] = useState<AnnotationPoint[]>([]);
   const [isDrawingLasso, setIsDrawingLasso] = useState(false);
   const [lassoClipPolygon, setLassoClipPolygon] = useState<AnnotationPoint[] | null>(null);
+
+  // Selector de color / Cuentagotas y retroalimentación Toast
+  const [hoveredColor, setHoveredColor] = useState<{ hex: string; rgb: string; x: number; y: number } | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Cuadro de texto interactivo in-situ (elegir marco de texto arrastrando o clic)
+  const [activeTextBox, setActiveTextBox] = useState<ActiveTextBox | null>(null);
+  const dragTextBoxRef = useRef<{ startX: number; startY: number } | null>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Cambiar modo y persistir selección en localStorage
   const handleSetMode = useCallback((newMode: CaptureMode) => {
@@ -212,29 +246,64 @@ export function ScreenCaptureOverlay() {
     }
   }, []);
 
-  // Guardar archivo PNG en disco y cerrar
+  // Guardar archivo PNG en disco de forma automática sin pedir ruta cada vez
   const handleSaveAs = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     try {
+      let targetFolder = "";
+      try {
+        const stored = localStorage.getItem("prisma.system-settings.v1");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.screenCaptureFolder && typeof parsed.screenCaptureFolder === "string" && parsed.screenCaptureFolder.trim()) {
+            targetFolder = parsed.screenCaptureFolder.trim();
+          }
+        }
+      } catch {}
+
+      if (!targetFolder) {
+        try {
+          const picturesDir = await getDefaultPicturesDir();
+          if (picturesDir) {
+            targetFolder = `${picturesDir}\\Capturas`;
+          }
+        } catch {}
+      }
+
       const now = new Date();
-      const dateStr = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
       const defaultFilename = `Prisma_Captura_${dateStr}.png`;
 
-      const chosenPath = await save({
-        title: "Guardar captura de pantalla",
-        defaultPath: defaultFilename,
-        filters: [{ name: "Imagen PNG", extensions: ["png"] }],
-      });
-
-      if (!chosenPath) return;
+      const finalFolder = targetFolder || "C:\\Capturas";
+      const fullPath = `${finalFolder}\\${defaultFilename}`;
 
       const dataUrl = canvas.toDataURL("image/png");
-      await screenCaptureClient.saveFile(chosenPath, dataUrl);
-      await screenCaptureClient.cancelCapture();
+      await screenCaptureClient.saveFile(fullPath, dataUrl);
+
+      setToastMessage(`Guardado en Capturas: ${defaultFilename}`);
+      setTimeout(() => {
+        void screenCaptureClient.cancelCapture();
+      }, 350);
     } catch (err) {
-      console.error("Error al guardar archivo PNG:", err);
+      console.error("Error al guardar archivo PNG automáticamente:", err);
+      try {
+        const now = new Date();
+        const dateStr = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+        const defaultFilename = `Prisma_Captura_${dateStr}.png`;
+        const chosenPath = await save({
+          title: "Guardar captura de pantalla",
+          defaultPath: defaultFilename,
+          filters: [{ name: "Imagen PNG", extensions: ["png"] }],
+        });
+        if (chosenPath) {
+          const dataUrl = canvas.toDataURL("image/png");
+          await screenCaptureClient.saveFile(chosenPath, dataUrl);
+          await screenCaptureClient.cancelCapture();
+        }
+      } catch {}
     }
   }, []);
 
@@ -259,6 +328,35 @@ export function ScreenCaptureOverlay() {
       return next;
     });
   }, [historyIndex]);
+
+  const handleConfirmTextBox = useCallback(() => {
+    if (!activeTextBox) return;
+    const text = activeTextBox.text.trim();
+    if (text) {
+      const fontSize = activeTextBox.fontSize || Math.max(14, strokeWidth * 4 + 10);
+      const newTextItem: AnnotationItem = {
+        id: Math.random().toString(36).slice(2),
+        tool: "text",
+        color: activeTextBox.color,
+        strokeWidth,
+        startPoint: { x: activeTextBox.x, y: activeTextBox.y + fontSize },
+        text,
+        fontSize,
+        rect: {
+          x: activeTextBox.x,
+          y: activeTextBox.y,
+          width: Math.max(120, activeTextBox.width),
+          height: Math.max(40, activeTextBox.height),
+        },
+      };
+      commitAnnotation(newTextItem);
+    }
+    setActiveTextBox(null);
+  }, [activeTextBox, strokeWidth, commitAnnotation]);
+
+  const handleCancelTextBox = useCallback(() => {
+    setActiveTextBox(null);
+  }, []);
 
   // Manejo de atajos globales dentro de la capa
   useEffect(() => {
@@ -322,12 +420,23 @@ export function ScreenCaptureOverlay() {
                 height: mon.height,
               });
             }
+          } else if (key === "c" || code === "KeyC") {
+            // Atajo oficial solicitado para Selector de Color en fase 1
+            e.preventDefault();
+            handleSetMode("eyedropper");
           } else if (key === "tab" && modeRef.current === "window") {
             e.preventDefault();
             setUseSubregion((prev) => !prev);
           }
         }
       } else if (phaseRef.current === "annotating") {
+        if (activeTextBox) {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            handleCancelTextBox();
+            return;
+          }
+        }
         if (e.key === "Escape") {
           e.preventDefault();
           void handleCancel();
@@ -349,7 +458,7 @@ export function ScreenCaptureOverlay() {
           // Atajo complementario: Ctrl + Y -> Rehacer
           e.preventDefault();
           handleRedo();
-        } else if (e.key === "Enter") {
+        } else if (e.key === "Enter" && !activeTextBox) {
           e.preventDefault();
           void handleCopy();
         }
@@ -358,7 +467,7 @@ export function ScreenCaptureOverlay() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleCancel, handleConfirmToAnnotate, handleCopy, handleSaveAs, handleUndo, handleRedo, selectionRect]);
+  }, [handleCancel, handleConfirmToAnnotate, handleCopy, handleSaveAs, handleUndo, handleRedo, selectionRect, activeTextBox, handleConfirmTextBox, handleCancelTextBox]);
 
   // Manejo de movimiento del cursor sobre la pantalla (Fase Selección)
   const handleMouseMoveSelecting = useCallback(
@@ -368,6 +477,21 @@ export function ScreenCaptureOverlay() {
       const currentMode = modeRef.current;
       const screenX = e.screenX;
       const screenY = e.screenY;
+
+      if (currentMode === "eyedropper") {
+        try {
+          const res = await screenCaptureClient.pickColor(screenX, screenY);
+          if (res) {
+            setHoveredColor({
+              hex: res.hex,
+              rgb: `rgb(${res.r}, ${res.g}, ${res.b})`,
+              x: e.clientX,
+              y: e.clientY,
+            });
+          }
+        } catch {}
+        return;
+      }
 
       if (currentMode === "freeform") {
         if (isDrawingLasso) {
@@ -436,6 +560,7 @@ export function ScreenCaptureOverlay() {
     if (phase !== "selecting" || e.button !== 0) return;
     if ((e.target as HTMLElement).closest(".capture-floating-toolbar")) return;
     if ((e.target as HTMLElement).closest(".capture-target-box")) return;
+    if (mode === "eyedropper") return;
 
     if (mode === "freeform") {
       setIsDrawingLasso(true);
@@ -579,10 +704,28 @@ export function ScreenCaptureOverlay() {
     }
   };
 
-  const handleClickSelecting = (e: React.MouseEvent) => {
+  const handleClickSelecting = async (e: React.MouseEvent) => {
     if (phase !== "selecting") return;
     if ((e.target as HTMLElement).closest(".capture-floating-toolbar")) return;
     if ((e.target as HTMLElement).closest(".capture-resize-handle")) return;
+
+    if (mode === "eyedropper") {
+      try {
+        const res = await screenCaptureClient.pickColor(e.screenX, e.screenY);
+        if (res) {
+          await navigator.clipboard.writeText(res.hex);
+          setActiveColor(res.hex);
+          setToastMessage(`Color ${res.hex} copiado al portapapeles`);
+          setTimeout(() => {
+            void handleCancel();
+          }, 350);
+        }
+      } catch (err) {
+        console.error("Error al muestrear color:", err);
+      }
+      return;
+    }
+
     if (mode === "freeform") return;
 
     // Solo evitar en modo rectángulo si se hace clic dentro del marco para moverlo
@@ -718,20 +861,37 @@ export function ScreenCaptureOverlay() {
 
     const { x, y } = getCanvasLocalCoords(e);
 
+    if (activeTool === "eyedropper") {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const pxX = Math.floor(Math.max(0, Math.min(canvas.width - 1, x)));
+      const pxY = Math.floor(Math.max(0, Math.min(canvas.height - 1, y)));
+      const pixel = ctx.getImageData(pxX, pxY, 1, 1).data;
+      const hex = `#${((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1).toUpperCase()}`;
+      void navigator.clipboard.writeText(hex);
+      setActiveColor(hex);
+      setToastMessage(`Color ${hex} copiado`);
+      setTimeout(() => setToastMessage(null), 2500);
+      return;
+    }
+
     if (activeTool === "text") {
-      const text = window.prompt("Introduce el texto para la anotación:");
-      if (text && text.trim()) {
-        const newTextItem: AnnotationItem = {
-          id: Math.random().toString(36).slice(2),
-          tool: "text",
-          color: activeColor,
-          strokeWidth,
-          startPoint: { x, y },
-          text: text.trim(),
-          fontSize: strokeWidth * 5 + 12,
-        };
-        commitAnnotation(newTextItem);
+      if (activeTextBox && activeTextBox.text.trim()) {
+        handleConfirmTextBox();
       }
+      const initialFontSize = Math.max(14, strokeWidth * 4 + 10);
+      dragTextBoxRef.current = { startX: x, startY: y };
+      setActiveTextBox({
+        x: Math.round(x),
+        y: Math.round(y),
+        width: 220,
+        height: 60,
+        text: "",
+        fontSize: initialFontSize,
+        color: activeColor,
+      });
       return;
     }
 
@@ -750,8 +910,51 @@ export function ScreenCaptureOverlay() {
   };
 
   const handlePointerMoveCanvas = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
     const { x, y } = getCanvasLocalCoords(e);
+
+    if (activeTool === "text" && dragTextBoxRef.current) {
+      const sx = dragTextBoxRef.current.startX;
+      const sy = dragTextBoxRef.current.startY;
+      const minX = Math.min(sx, x);
+      const minY = Math.min(sy, y);
+      const w = Math.max(140, Math.abs(x - sx));
+      const h = Math.max(50, Math.abs(y - sy));
+      setActiveTextBox((prev) =>
+        prev
+          ? {
+              ...prev,
+              x: Math.round(minX),
+              y: Math.round(minY),
+              width: Math.round(w),
+              height: Math.round(h),
+            }
+          : null
+      );
+      return;
+    }
+
+    if (activeTool === "eyedropper") {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const pxX = Math.floor(Math.max(0, Math.min(canvas.width - 1, x)));
+      const pxY = Math.floor(Math.max(0, Math.min(canvas.height - 1, y)));
+      const pixel = ctx.getImageData(pxX, pxY, 1, 1).data;
+      const r = pixel[0];
+      const g = pixel[1];
+      const b = pixel[2];
+      const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+      setHoveredColor({
+        hex,
+        rgb: `rgb(${r}, ${g}, ${b})`,
+        x: e.clientX,
+        y: e.clientY,
+      });
+      return;
+    }
+
+    if (!isDrawing) return;
 
     setCurrentAnnotation((prev) => {
       if (!prev) return null;
@@ -783,6 +986,14 @@ export function ScreenCaptureOverlay() {
   };
 
   const handlePointerUpCanvas = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (dragTextBoxRef.current) {
+      dragTextBoxRef.current = null;
+      setTimeout(() => {
+        textAreaRef.current?.focus();
+      }, 50);
+      return;
+    }
+
     if (!isDrawing) return;
     setIsDrawing(false);
     try {
@@ -821,75 +1032,90 @@ export function ScreenCaptureOverlay() {
       onWheel={handleWheel}
       role="presentation"
     >
-      {/* ── FASE 1: BARRA SUPERIOR DE SELECCIÓN ── */}
+      {/* ── FASE 1: BARRA SUPERIOR DE SELECCIÓN EN UNA SOLA FILA REFINADA ── */}
       {phase === "selecting" && (
-        <div className="capture-floating-toolbar" role="toolbar" aria-label="Selector de captura">
-          <button
-            type="button"
-            className={`capture-pill-btn ${mode === "window" ? "is-active" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleSetMode("window");
-            }}
-            title="Modo Ventana (V)"
-          >
-            <Icon name="columns" width={15} height={15} />
-            <span>Ventana (V)</span>
-          </button>
+        <div
+          className="capture-floating-toolbar is-refined-row"
+          role="toolbar"
+          aria-label="Selector de captura"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="capture-mode-row-group">
+            {MODE_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                className={`capture-mode-btn ${mode === opt.id ? "is-active" : ""}`}
+                onClick={() => {
+                  handleSetMode(opt.id);
+                  if (opt.id === "fullscreen") {
+                    const mon = activeMonitorRef.current || sessionRef.current?.monitors?.[0];
+                    if (mon) {
+                      void handleConfirmToAnnotate({
+                        x: mon.x,
+                        y: mon.y,
+                        width: mon.width,
+                        height: mon.height,
+                      });
+                    }
+                  }
+                }}
+                title={`${opt.label} (${opt.shortcut})`}
+              >
+                <Icon name={opt.icon} width={16} height={16} />
+                <span className="label">{opt.label}</span>
+                <span className="shortcut">{opt.shortcut}</span>
+              </button>
+            ))}
+          </div>
 
-          <button
-            type="button"
-            className={`capture-pill-btn ${mode === "rect" ? "is-active" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleSetMode("rect");
-            }}
-            title="Modo Rectángulo libre (R)"
-          >
-            <Icon name="crop" width={15} height={15} />
-            <span>Rectángulo (R)</span>
-          </button>
+          <div className="capture-pill-divider" />
 
+          {/* Selector de color en la pestaña 1 con atajo C */}
           <button
             type="button"
-            className={`capture-pill-btn ${mode === "freeform" ? "is-active" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleSetMode("freeform");
-            }}
-            title="Modo Lazo Libre (Q)"
+            className={`capture-mode-btn is-eyedropper ${mode === "eyedropper" ? "is-active" : ""}`}
+            onClick={() => handleSetMode("eyedropper")}
+            title="Selector de color (C) · Clic en la pantalla para copiar código hexadecimal"
           >
-            <Icon name="lasso" width={15} height={15} />
-            <span>Lazo (Q)</span>
-          </button>
-
-          <button
-            type="button"
-            className={`capture-pill-btn ${mode === "fullscreen" ? "is-active" : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleSetMode("fullscreen");
-            }}
-            title="Modo Pantalla Completa (F)"
-          >
-            <Icon name="fullscreen" width={15} height={15} />
-            <span>Pantalla Completa (F)</span>
+            <Icon name="pipette" width={16} height={16} />
+            <span className="label">Selector de color</span>
+            <span className="shortcut">C</span>
           </button>
 
           <div className="capture-pill-divider" />
 
           <button
             type="button"
-            className="capture-pill-btn is-cancel"
+            className="capture-mode-btn is-cancel"
             onClick={(e) => {
               e.stopPropagation();
               void handleCancel();
             }}
-            title="Cancelar (Esc)"
+            title="Cancelar captura (Esc)"
           >
             <Icon name="close" width={14} height={14} />
-            <span>Cancelar (Esc)</span>
           </button>
+        </div>
+      )}
+
+      {/* Tooltip del Cuentagotas en Fase de Selección (Pestaña 1) */}
+      {phase === "selecting" && mode === "eyedropper" && hoveredColor && (
+        <div
+          className="capture-color-picker-tooltip"
+          style={{
+            left: `${hoveredColor.x + 18}px`,
+            top: `${hoveredColor.y + 18}px`,
+          }}
+        >
+          <div
+            className="capture-color-picker-swatch"
+            style={{ background: hoveredColor.hex }}
+          />
+          <div className="capture-color-picker-info">
+            <span className="hex">{hoveredColor.hex}</span>
+            <span className="rgb">{hoveredColor.rgb}</span>
+          </div>
         </div>
       )}
 
@@ -1105,8 +1331,72 @@ export function ScreenCaptureOverlay() {
               onPointerMove={handlePointerMoveCanvas}
               onPointerUp={handlePointerUpCanvas}
               onPointerCancel={handlePointerUpCanvas}
+              onPointerLeave={() => setHoveredColor(null)}
             />
           </div>
+
+          {/* Cuadro de Texto Interactivo In-Situ (Elegir caja arrastrando o clic) */}
+          {activeTextBox && (
+            <div
+              className="capture-text-box-container"
+              style={{
+                left: `${inPlaceLeft + activeTextBox.x}px`,
+                top: `${inPlaceTop + activeTextBox.y}px`,
+                width: `${activeTextBox.width}px`,
+                minHeight: `${activeTextBox.height}px`,
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="capture-text-box-header">
+                <span className="capture-text-box-hint">Cuadro de texto</span>
+                <div className="capture-text-box-actions">
+                  <button
+                    type="button"
+                    className="capture-text-btn is-check"
+                    onClick={handleConfirmTextBox}
+                    title="Confirmar texto (Enter)"
+                  >
+                    <Icon name="check" width={13} height={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className="capture-text-btn is-close"
+                    onClick={handleCancelTextBox}
+                    title="Cancelar (Esc)"
+                  >
+                    <Icon name="close" width={13} height={13} />
+                  </button>
+                </div>
+              </div>
+              <textarea
+                ref={textAreaRef}
+                className="capture-text-box-textarea"
+                autoFocus
+                value={activeTextBox.text}
+                placeholder="Escribe tu texto..."
+                style={{
+                  color: activeTextBox.color,
+                  fontSize: `${activeTextBox.fontSize}px`,
+                  lineHeight: 1.25,
+                }}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setActiveTextBox((prev) => (prev ? { ...prev, text: val } : null));
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleConfirmTextBox();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    handleCancelTextBox();
+                  }
+                }}
+              />
+            </div>
+          )}
 
           {/* Barra Flotante de Herramientas Anclada Arriba Fija */}
           <CaptureAnnotationBar
@@ -1130,7 +1420,35 @@ export function ScreenCaptureOverlay() {
             onSaveAs={() => void handleSaveAs()}
             onCancel={() => void handleCancel()}
           />
+
+          {/* Tooltip flotante del Selector de Colores en Fase de Anotación */}
+          {activeTool === "eyedropper" && hoveredColor && (
+            <div
+              className="capture-color-picker-tooltip"
+              style={{
+                left: `${hoveredColor.x + 18}px`,
+                top: `${hoveredColor.y + 18}px`,
+              }}
+            >
+              <div
+                className="capture-color-picker-swatch"
+                style={{ background: hoveredColor.hex }}
+              />
+              <div className="capture-color-picker-info">
+                <span className="hex">{hoveredColor.hex}</span>
+                <span className="rgb">{hoveredColor.rgb}</span>
+              </div>
+            </div>
+          )}
         </>
+      )}
+
+      {/* Retroalimentación Toast Global (Fase 1 y Fase 2) */}
+      {toastMessage && (
+        <div className="capture-editor-toast">
+          <Icon name="check" width={16} height={16} style={{ color: "#00C9B9" }} />
+          <span>{toastMessage}</span>
+        </div>
       )}
     </div>
   );

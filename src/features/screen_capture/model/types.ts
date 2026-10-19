@@ -1,4 +1,4 @@
-export type CaptureMode = "window" | "rect" | "fullscreen" | "freeform";
+export type CaptureMode = "window" | "rect" | "fullscreen" | "freeform" | "eyedropper";
 
 export interface DetectedTarget {
   id: string;
@@ -53,7 +53,7 @@ export interface ScreenCaptureShortcutStatus {
   error?: string | null;
 }
 
-export type AnnotationTool = "select" | "pen" | "highlighter" | "rect" | "arrow" | "text";
+export type AnnotationTool = "select" | "pen" | "highlighter" | "rect" | "arrow" | "text" | "eyedropper";
 
 export interface AnnotationPoint {
   x: number;
@@ -71,4 +71,14 @@ export interface AnnotationItem {
   endPoint?: AnnotationPoint;
   text?: string;
   fontSize?: number;
+}
+
+export interface ActiveTextBox {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  text: string;
+  fontSize: number;
+  color: string;
 }

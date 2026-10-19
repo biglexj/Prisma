@@ -143,3 +143,34 @@ pub fn get_subregion(
 ) -> Option<DetectedTarget> {
     detect_subregions_at(parent_x, parent_y, screen_x, screen_y)
 }
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PickColorResult {
+    pub hex: String,
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+}
+
+pub fn pick_color_at(
+    state: &SharedCaptureState,
+    screen_x: i32,
+    screen_y: i32,
+) -> Result<PickColorResult, String> {
+    let lock = state
+        .lock()
+        .map_err(|_| "Error al bloquear estado de captura".to_string())?;
+
+    let snapshot = lock
+        .snapshot
+        .as_ref()
+        .ok_or_else(|| "No hay ninguna captura activa en memoria".to_string())?;
+
+    let (r, g, b) = snapshot
+        .get_pixel_color(screen_x, screen_y)
+        .ok_or_else(|| "Píxel fuera de los límites de pantalla".to_string())?;
+
+    let hex = format!("#{:02X}{:02X}{:02X}", r, g, b);
+    Ok(PickColorResult { hex, r, g, b })
+}

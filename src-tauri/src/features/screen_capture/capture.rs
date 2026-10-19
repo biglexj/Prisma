@@ -60,6 +60,18 @@ impl ScreenSnapshot {
 
         Ok(cropped)
     }
+
+    pub fn get_pixel_color(&self, screen_x: i32, screen_y: i32) -> Option<(u8, u8, u8)> {
+        let rel_x = screen_x - self.x;
+        let rel_y = screen_y - self.y;
+        if rel_x >= 0 && rel_x < self.width as i32 && rel_y >= 0 && rel_y < self.height as i32 {
+            let idx = ((rel_y as usize * self.width as usize + rel_x as usize) * 4);
+            if idx + 2 < self.rgba.len() {
+                return Some((self.rgba[idx], self.rgba[idx + 1], self.rgba[idx + 2]));
+            }
+        }
+        None
+    }
 }
 
 /// Captura el escritorio virtual completo con todas las pantallas y ventanas compuestas.

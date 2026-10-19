@@ -302,20 +302,22 @@
   background: rgba(255, 107, 129, 0.2);
 }
 
-/* Borde de alta precisión y contorno (Doble trazo oscuro + cyan brillante con viñeta exterior) */
+/* Borde de alta precisión y contorno estilo Windows */
 .capture-target-box {
   position: fixed;
+  box-sizing: border-box;
   pointer-events: auto;
-  border: 2px solid #00C9B9;
-  outline: 1px solid rgba(0, 0, 0, 0.85);
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45), 0 0 15px rgba(0, 201, 185, 0.4);
-  border-radius: 3px;
+  border: 1.5px dashed #00C9B9;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  border-radius: 2px;
   z-index: 999998;
   cursor: move;
 }
 
 .capture-target-box.is-window-target {
+  border-style: solid;
   cursor: pointer;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45), 0 0 14px rgba(0, 201, 185, 0.35);
 }
 
 .capture-target-badge {
@@ -343,18 +345,12 @@
   bottom: -32px;
 }
 
-/* Tiradores de ajuste en modo Rectángulo (4 esquinas prominentes + laterales con hit area expandida) */
+/* Tiradores estilo Windows Snipping Tool (4 esquinas L-Bracket + barras intermedias) */
 .capture-resize-handle {
   position: absolute;
-  width: 14px;
-  height: 14px;
-  background: #ffffff;
-  border: 2px solid #00C9B9;
-  border-radius: 3px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+  box-sizing: border-box;
   pointer-events: auto;
   z-index: 10;
-  box-sizing: border-box;
   touch-action: none;
 }
 
@@ -364,14 +360,191 @@
   inset: -8px;
 }
 
-.capture-resize-handle.nw { top: -7px; left: -7px; cursor: nwse-resize; }
-.capture-resize-handle.ne { top: -7px; right: -7px; cursor: nesw-resize; }
-.capture-resize-handle.sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
-.capture-resize-handle.se { bottom: -7px; right: -7px; cursor: nwse-resize; }
-.capture-resize-handle.n { top: -7px; left: calc(50% - 7px); cursor: ns-resize; }
-.capture-resize-handle.s { bottom: -7px; left: calc(50% - 7px); cursor: ns-resize; }
-.capture-resize-handle.w { top: calc(50% - 7px); left: -7px; cursor: ew-resize; }
-.capture-resize-handle.e { top: calc(50% - 7px); right: -7px; cursor: ew-resize; }
+.capture-resize-handle.nw,
+.capture-resize-handle.ne,
+.capture-resize-handle.se,
+.capture-resize-handle.sw {
+  width: 18px;
+  height: 18px;
+  background: transparent;
+}
+
+.capture-resize-handle.nw {
+  top: -3px;
+  left: -3px;
+  border-top: 3.5px solid #ffffff;
+  border-left: 3.5px solid #ffffff;
+  border-top-left-radius: 2px;
+  cursor: nwse-resize;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.65));
+}
+
+.capture-resize-handle.ne {
+  top: -3px;
+  right: -3px;
+  border-top: 3.5px solid #ffffff;
+  border-right: 3.5px solid #ffffff;
+  border-top-right-radius: 2px;
+  cursor: nesw-resize;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.65));
+}
+
+.capture-resize-handle.se {
+  bottom: -3px;
+  right: -3px;
+  border-bottom: 3.5px solid #ffffff;
+  border-right: 3.5px solid #ffffff;
+  border-bottom-right-radius: 2px;
+  cursor: nwse-resize;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.65));
+}
+
+.capture-resize-handle.sw {
+  bottom: -3px;
+  left: -3px;
+  border-bottom: 3.5px solid #ffffff;
+  border-left: 3.5px solid #ffffff;
+  border-bottom-left-radius: 2px;
+  cursor: nesw-resize;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.65));
+}
+
+.capture-resize-handle.n,
+.capture-resize-handle.s {
+  width: 24px;
+  height: 4px;
+  background: #ffffff;
+  border-radius: 2px;
+  left: calc(50% - 12px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+  cursor: ns-resize;
+}
+.capture-resize-handle.n { top: -2px; }
+.capture-resize-handle.s { bottom: -2px; }
+
+.capture-resize-handle.w,
+.capture-resize-handle.e {
+  width: 4px;
+  height: 24px;
+  background: #ffffff;
+  border-radius: 2px;
+  top: calc(50% - 12px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+  cursor: ew-resize;
+}
+.capture-resize-handle.w { left: -2px; }
+.capture-resize-handle.e { right: -2px; }
+
+/* Barra de selección compacta estilo Windows Snipping Tool */
+.capture-floating-toolbar.is-compact {
+  padding: 4px 6px;
+  gap: 6px;
+}
+
+.capture-mode-dropdown-container {
+  position: relative;
+}
+
+.capture-pill-btn.is-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #f0f0f0;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.capture-pill-btn.is-dropdown-trigger:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.capture-mode-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 190px;
+  background: rgba(28, 28, 32, 0.95);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 5px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.75);
+  z-index: 1000002;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: dropdownFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.capture-mode-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: #dcdcdc;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.capture-mode-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.capture-mode-dropdown-item.is-selected {
+  background: rgba(0, 201, 185, 0.14);
+  color: #00C9B9;
+  font-weight: 600;
+}
+
+.capture-mode-dropdown-item .capture-mode-indicator {
+  width: 3px;
+  height: 16px;
+  border-radius: 999px;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.capture-mode-dropdown-item.is-selected .capture-mode-indicator {
+  background: #00C9B9;
+}
+
+.capture-mode-dropdown-item .label {
+  flex: 1;
+}
+
+.capture-mode-dropdown-item .shortcut {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.capture-pill-btn.is-icon-only {
+  padding: 6px 9px;
+}
 
 /* ── Screen Capture Editor (Ventana Dedicada) ───────────────────────── */
 .capture-editor-window {
@@ -577,10 +750,11 @@
 /* ── Captura In-Situ (Anotación sobre el área tomada sin abrir ventana) ── */
 .capture-inplace-box {
   position: absolute;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55), 0 8px 32px rgba(0, 0, 0, 0.4);
-  border: 2px solid #00C9B9;
-  border-radius: 4px;
-  overflow: visible;
+  box-sizing: border-box;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55), inset 0 0 0 1.5px #00C9B9, 0 0 16px rgba(0, 201, 185, 0.35);
+  border: none;
+  border-radius: 2px;
+  overflow: hidden;
   pointer-events: auto;
   z-index: 999998;
 }
@@ -662,5 +836,225 @@
   border-color: #ffffff;
   transform: scale(1.25);
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6);
+}
+
+/* Tooltip flotante del Selector de Colores (Cuentagotas) */
+.capture-color-picker-tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000005;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: rgba(20, 20, 24, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  user-select: none;
+}
+
+.capture-color-picker-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.capture-color-picker-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.capture-color-picker-info .hex {
+  font-family: monospace;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #00C9B9;
+}
+
+.capture-color-picker-info .rgb {
+  font-family: monospace;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* ── Barra Superior de Selección en Una Sola Fila Refinada ── */
+.capture-floating-toolbar.is-refined-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: rgba(18, 18, 22, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
+}
+
+.capture-mode-row-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.capture-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: transparent;
+  color: #d2d2da;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.16s cubic-bezier(0.2, 0, 0, 1);
+  user-select: none;
+}
+
+.capture-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+}
+
+.capture-mode-btn.is-active {
+  background: rgba(0, 201, 185, 0.18);
+  color: #00C9B9;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(0, 201, 185, 0.45);
+}
+
+.capture-mode-btn .shortcut {
+  font-family: monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.capture-mode-btn.is-active .shortcut {
+  background: rgba(0, 201, 185, 0.25);
+  color: #00C9B9;
+}
+
+.capture-mode-btn.is-eyedropper {
+  gap: 6px;
+}
+
+.capture-mode-btn.is-cancel {
+  padding: 6px 8px;
+  color: #ff6b81;
+}
+
+.capture-mode-btn.is-cancel:hover {
+  background: rgba(255, 107, 129, 0.2);
+  color: #ff8599;
+}
+
+/* ── Cuadro de Texto Interactivo In-Situ (Elegir caja o clic) ── */
+.capture-text-box-container {
+  position: absolute;
+  z-index: 1000002;
+  display: flex;
+  flex-direction: column;
+  background: rgba(14, 16, 22, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px dashed #00C9B9;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 0 14px rgba(0, 201, 185, 0.25);
+  padding: 6px 8px;
+  box-sizing: border-box;
+  animation: fadeIn 0.15s ease;
+  overflow: hidden;
+}
+
+.capture-text-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  user-select: none;
+}
+
+.capture-text-box-hint {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #00C9B9;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.capture-text-box-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.capture-text-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.capture-text-btn.is-check {
+  background: rgba(0, 201, 185, 0.2);
+  color: #00C9B9;
+}
+
+.capture-text-btn.is-check:hover {
+  background: #00C9B9;
+  color: #0c1417;
+}
+
+.capture-text-btn.is-close {
+  background: rgba(255, 107, 129, 0.15);
+  color: #ff6b81;
+}
+
+.capture-text-btn.is-close:hover {
+  background: rgba(255, 107, 129, 0.35);
+  color: #ffffff;
+}
+
+.capture-text-box-textarea {
+  width: 100%;
+  min-height: 40px;
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: Inter, sans-serif;
+  font-weight: 700;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+.capture-text-box-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.38);
+  font-weight: 400;
 }
 

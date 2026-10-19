@@ -22,6 +22,14 @@
 - [x] T16 — Corregir bloqueo en modo Ventana al hacer clic sobre `.capture-target-box` o presionar `Enter` (desbloqueando eventos de puntero descartados).
 - [x] T17 — Persistir y recordar la última herramienta/modo utilizada (`localStorage` `"prisma.screen-capture.last-mode"`) entre Ventana, Rectángulo, Lazo y Pantalla Completa.
 - [x] T18 — Implementar atajos rápidos `V` (Ventana), `R` (Rectángulo), `Q` (Lazo) y `F` (Pantalla Completa inmediata) en fase de selección.
+- [x] T19 — Prevenir corte de bordes derecho e inferior en el área capturada mediante `inset` y `box-sizing: border-box`, con contorno fino no invasivo de 1.5px.
+- [x] T20 — Rediseñar tiradores de redimensionamiento con 4 esquinas L-bracket blancas y barras intermedias estilo Windows Snipping Tool.
+- [x] T21 — Barra de selección compacta de ancho mínimo (~120px) con menú desplegable de modos (Rectángulo, Ventana, Pantalla completa, Forma libre).
+- [x] T22 — Selector de colores / Cuentagotas (Eyedropper): badge flotante con muestra, hex y rgb, y copia directa de #HEX al portapapeles con un clic.
+- [x] T23 — Guardado automático directo en disco (Ctrl+S / botón Guardar) con fecha y hora en carpeta configurable (por defecto `Imágenes\Capturas`) sin diálogos repetitivos.
+- [x] T24 — Registrar en ROADMAP.md el Extractor de Texto (OCR) y la Grabadora de Vídeo de Pantalla.
+- [x] T25 — Cuadro de texto interactivo in-situ: selección de marco arrastrando o por clic, edición directa sin diálogos emergentes, controles de confirmación/cancelación y renderizado multilínea.
+- [x] T26 — Barra de selección superior en una sola fila refinada (`is-refined-row`): Rectángulo (`R`), Ventana (`V`), Pantalla completa (`F`), Forma libre (`Q`), Selector de color (`C`) con copia directa y cierre, y Cerrar (`Esc`).
 - [ ] T10 — Actualizar documentación y roadmap al entregar; mantener pendiente cualquier aceptación o comprobación no realizada.
 
 Las pruebas y sus resultados pertenecen a [VALIDATION.md](VALIDATION.md).
