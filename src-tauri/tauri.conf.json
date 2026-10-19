@@ -56,6 +56,8 @@
       {
         "label": "screen_capture_overlay",
         "title": "Prisma · Captura",
+        "width": 800,
+        "height": 600,
         "decorations": false,
         "transparent": true,
         "alwaysOnTop": true,
