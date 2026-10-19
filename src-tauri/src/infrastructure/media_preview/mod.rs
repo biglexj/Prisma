@@ -410,6 +410,15 @@ mod tests {
             let full = load_image_full_render_data_url(test_path).expect("Fallo al generar render completo de ElyX");
             assert!(full.starts_with("data:image/"));
         }
+
+        let test_path_v2 = Path::new(r"D:\Imágenes\Test.elx");
+        if test_path_v2.exists() {
+            let thumb = load_image_data_url(test_path_v2).expect("Fallo al generar miniatura de ElyX v2");
+            assert!(thumb.starts_with("data:image/"));
+
+            let full = load_image_full_render_data_url(test_path_v2).expect("Fallo al generar render completo de ElyX v2");
+            assert!(full.starts_with("data:image/"));
+        }
     }
 
     #[test]
