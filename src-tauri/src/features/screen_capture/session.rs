@@ -32,6 +32,8 @@ pub struct EditorPayload {
     pub width: u32,
     pub height: u32,
     pub timestamp: u64,
+    pub x: i32,
+    pub y: i32,
 }
 
 pub struct CaptureSessionState {
@@ -122,6 +124,8 @@ pub fn confirm_crop(
         width: cropped.width(),
         height: cropped.height(),
         timestamp: now,
+        x: rect.x,
+        y: rect.y,
     };
 
     lock.editor_payload = Some(payload.clone());

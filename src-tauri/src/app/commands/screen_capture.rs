@@ -53,23 +53,11 @@ pub async fn screen_capture_detect_subregion(
 
 #[tauri::command]
 pub async fn screen_capture_confirm(
-    app: tauri::AppHandle,
+    _app: tauri::AppHandle,
     state: tauri::State<'_, SharedCaptureState>,
     rect: RectSelection,
 ) -> Result<EditorPayload, String> {
-    if let Some(overlay) = app.get_webview_window("screen_capture_overlay") {
-        let _ = overlay.hide();
-    }
-
     let payload = confirm_crop(&state, rect)?;
-
-    if let Some(editor) = app.get_webview_window("screen_capture_editor") {
-        let _ = editor.show();
-        let _ = editor.unminimize();
-        let _ = editor.set_focus();
-        let _ = editor.emit("screen_capture://editor-payload", &payload);
-    }
-
     Ok(payload)
 }
 
@@ -80,6 +68,9 @@ pub async fn screen_capture_cancel(
 ) -> Result<(), String> {
     if let Some(overlay) = app.get_webview_window("screen_capture_overlay") {
         let _ = overlay.hide();
+    }
+    if let Some(editor) = app.get_webview_window("screen_capture_editor") {
+        let _ = editor.hide();
     }
     if let Ok(mut lock) = state.lock() {
         lock.snapshot = None;

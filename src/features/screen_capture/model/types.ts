@@ -36,6 +36,8 @@ export interface EditorPayload {
   width: number;
   height: number;
   timestamp: number;
+  x: number;
+  y: number;
 }
 
 export interface RectSelection {

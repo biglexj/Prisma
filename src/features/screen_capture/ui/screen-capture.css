@@ -557,3 +557,86 @@
   from { opacity: 0; transform: translate(-50%, 10px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* ── Captura In-Situ (Anotación sobre el área tomada sin abrir ventana) ── */
+.capture-inplace-box {
+  position: absolute;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55), 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 2px solid #00C9B9;
+  border-radius: 4px;
+  overflow: visible;
+  pointer-events: auto;
+  z-index: 999998;
+}
+
+.capture-inplace-canvas {
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+  border-radius: 2px;
+}
+
+.capture-annotation-floating-bar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(22, 22, 26, 0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+  z-index: 1000000;
+  pointer-events: auto;
+  white-space: nowrap;
+  animation: toolbarSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.capture-toolbar-subgroup {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.capture-annotation-floating-bar .capture-tool-btn {
+  color: #e0e0e0;
+}
+
+.capture-annotation-floating-bar .capture-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.capture-annotation-floating-bar .capture-tool-btn.is-active {
+  background: #00C9B9;
+  color: #0b1517;
+  box-shadow: 0 2px 10px rgba(0, 201, 185, 0.45);
+}
+
+.capture-annotation-floating-bar .capture-tool-btn.is-cancel:hover {
+  background: rgba(255, 107, 129, 0.25);
+  color: #ff6b81;
+}
+
+.capture-annotation-floating-bar .capture-btn-primary {
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  background: #00C9B9;
+  color: #0b1517;
+  font-weight: 700;
+  border-radius: 999px;
+  box-shadow: 0 2px 10px rgba(0, 201, 185, 0.45);
+}
+
+.capture-annotation-floating-bar .capture-btn-primary:hover {
+  background: #25d6c8;
+}
+
+.capture-annotation-floating-bar .capture-color-swatch.is-active {
+  border-color: #ffffff;
+  transform: scale(1.25);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6);
+}
+

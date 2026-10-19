@@ -26,9 +26,10 @@
 ## Evidencia y fallos
 
 - **2026-10-18**:
-  - Compilación técnica completada al 100%.
+  - Compilación técnica completada al 100% (`cargo check` y `bun run check` limpios con código 0).
   - Backend Rust: `features/screen_capture` (`capture.rs`, `windows.rs`, `session.rs`) y comandos Tauri en `app/commands/screen_capture.rs`.
-  - Frontend React: `ScreenCaptureView.tsx`, `ScreenCaptureOverlay.tsx`, `ScreenCaptureEditor.tsx` y `screen-capture.css`.
-  - Registro de ventanas en `tauri.conf.json` (`screen_capture_overlay` transparente/sin taskbar; `screen_capture_editor` con taskbar independiente).
-  - Capacidades en `capabilities/default.json` y denylist de `window_state` actualizadas.
-  - Atajo `Ctrl + Mayús + Z` (y `Ctrl + Z`) configurado e integrado de forma reactiva y estable para Deshacer trazo/anotación en el editor de captura.
+  - Transición a Captura In-Situ: la confirmación recorta el snapshot en memoria y transiciona directamente en el overlay a la fase de anotación sin abrir ventanas auxiliares externas, enmarcando con precisión milimétrica el área tomada.
+  - Corrección del motor de dibujo de lápices/formas: se solucionó la mutación repetitiva de dimensiones de canvas que limpiaba el buffer en cada render. Integración de Pointer Events (`setPointerCapture`) para trazos continuos, fluidos y sin saltos.
+  - Color insignia de Prisma: `#00C9B9` configurado en el primer puesto de la paleta y seleccionado por defecto.
+  - Deshacer canónico con `Ctrl + Mayús + Z` y `Ctrl + Z`, Rehacer con `Ctrl + Y`, Copia en memoria sin tocar disco con `Ctrl + C` / `Enter`, y Guardar como PNG con `Ctrl + S`.
+  - Diagnóstico de ShareX y tecla Impr Pant: documentado procedimiento para desactivar la interceptación nativa de Windows 11 (Herramienta Recortes) y liberar el atajo global.

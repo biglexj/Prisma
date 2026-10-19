@@ -18,10 +18,12 @@ Este encargo solo autoriza dejar el plan. El siguiente agente se encargará de l
 - **Ventana es el modo predeterminado**, sustituyendo la propuesta anterior de iniciar en Rectángulo.
 - Al mover el cursor, se debe ver un borde preciso que indique qué ventana o área de ella se está seleccionando. El objetivo debe actualizarse según lo que haya en pantalla.
 - Otros modos pedidos: **Rectángulo** y **Pantalla completa**.
-- La referencia adjunta muestra un menú compacto con iconos y nombres. Aunque incluye Forma libre, ese modo no forma parte del alcance inicial confirmado.
+- **Flujo In-Situ (Sin ventana secundaria)**: Por indicación explícita de Biglex, se elimina la apertura de una ventana editora separada («no me gusta que la captura se abra una ventanita... que se quede en la ventana que tomó, como todo»). Toda la fase de anotación y confirmación ocurre en el mismo overlay en el lugar exacto capturado con herramientas ancladas.
+- **Color Insignia de Prisma**: `#00C9B9` como primer color de la paleta y seleccionado por defecto para las anotaciones.
+- **Lápices y dibujo fluido**: Se garantiza que el lienzo permita pintar sin reinicios ni pérdidas de trazo, usando Pointer Events directos.
 - Se requieren notas sobre la imagen, copia al portapapeles y guardado opcional. Evitar la cantidad de opciones y flujos de ShareX.
-- Acceso por la tecla de captura: se mencionaron Impr Pant y Mayús + Impr Pant. ShareX ocupa actualmente el atajo según Biglex; el estado del sistema no se ha inspeccionado.
-- La herramienta debe estar en Herramientas y tener su propio «task». Propuesta para concretarlo: vista propia en Prisma y editor en ventana dedicada, accesible desde la barra de tareas/Alt+Tab. No implica crear otro proceso ejecutable ni otro chat de Codex. Esta interpretación debe quedar visible al presentar la implementación.
+- Acceso por la tecla de captura: se mencionaron Impr Pant y Mayús + Impr Pant. Explicar cómo liberar Impr Pant de Windows Snipping Tool / ShareX si está retenido.
+- La herramienta está disponible en Herramientas y cuenta con su propia vista de configuración y acceso rápido.
 
 ### Referencia visual
 
