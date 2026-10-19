@@ -90,14 +90,6 @@ export function CaptureAnnotationBar({
         >
           <Icon name="file-text" width={17} height={17} />
         </button>
-        <button
-          type="button"
-          className={`capture-tool-btn ${activeTool === "eyedropper" ? "is-active" : ""}`}
-          onClick={() => setActiveTool("eyedropper")}
-          title="Selector de color / Cuentagotas (Copiar Hexadecimal #HEX)"
-        >
-          <Icon name="pipette" width={17} height={17} />
-        </button>
       </div>
 
       <div className="capture-pill-divider" />

@@ -715,10 +715,11 @@ export function ScreenCaptureOverlay() {
         if (res) {
           await navigator.clipboard.writeText(res.hex);
           setActiveColor(res.hex);
+          setHoveredColor(null);
           setToastMessage(`Color ${res.hex} copiado al portapapeles`);
           setTimeout(() => {
             void handleCancel();
-          }, 350);
+          }, 1500);
         }
       } catch (err) {
         console.error("Error al muestrear color:", err);
@@ -861,22 +862,6 @@ export function ScreenCaptureOverlay() {
 
     const { x, y } = getCanvasLocalCoords(e);
 
-    if (activeTool === "eyedropper") {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      const pxX = Math.floor(Math.max(0, Math.min(canvas.width - 1, x)));
-      const pxY = Math.floor(Math.max(0, Math.min(canvas.height - 1, y)));
-      const pixel = ctx.getImageData(pxX, pxY, 1, 1).data;
-      const hex = `#${((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1).toUpperCase()}`;
-      void navigator.clipboard.writeText(hex);
-      setActiveColor(hex);
-      setToastMessage(`Color ${hex} copiado`);
-      setTimeout(() => setToastMessage(null), 2500);
-      return;
-    }
-
     if (activeTool === "text") {
       if (activeTextBox && activeTextBox.text.trim()) {
         handleConfirmTextBox();
@@ -930,27 +915,6 @@ export function ScreenCaptureOverlay() {
             }
           : null
       );
-      return;
-    }
-
-    if (activeTool === "eyedropper") {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      const pxX = Math.floor(Math.max(0, Math.min(canvas.width - 1, x)));
-      const pxY = Math.floor(Math.max(0, Math.min(canvas.height - 1, y)));
-      const pixel = ctx.getImageData(pxX, pxY, 1, 1).data;
-      const r = pixel[0];
-      const g = pixel[1];
-      const b = pixel[2];
-      const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
-      setHoveredColor({
-        hex,
-        rgb: `rgb(${r}, ${g}, ${b})`,
-        x: e.clientX,
-        y: e.clientY,
-      });
       return;
     }
 
@@ -1420,26 +1384,6 @@ export function ScreenCaptureOverlay() {
             onSaveAs={() => void handleSaveAs()}
             onCancel={() => void handleCancel()}
           />
-
-          {/* Tooltip flotante del Selector de Colores en Fase de Anotación */}
-          {activeTool === "eyedropper" && hoveredColor && (
-            <div
-              className="capture-color-picker-tooltip"
-              style={{
-                left: `${hoveredColor.x + 18}px`,
-                top: `${hoveredColor.y + 18}px`,
-              }}
-            >
-              <div
-                className="capture-color-picker-swatch"
-                style={{ background: hoveredColor.hex }}
-              />
-              <div className="capture-color-picker-info">
-                <span className="hex">{hoveredColor.hex}</span>
-                <span className="rgb">{hoveredColor.rgb}</span>
-              </div>
-            </div>
-          )}
         </>
       )}
 
