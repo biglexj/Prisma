@@ -15,6 +15,7 @@ interface CaptureAnnotationBarProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  canClear?: boolean;
   onClear: () => void;
   onRetrySelection: () => void;
   onCopy: () => void;
@@ -33,6 +34,7 @@ export function CaptureAnnotationBar({
   onRedo,
   canUndo,
   canRedo,
+  canClear = true,
   onClear,
   onRetrySelection,
   onCopy,
@@ -54,7 +56,7 @@ export function CaptureAnnotationBar({
           onClick={() => setActiveTool("pen")}
           title="Lápiz libre"
         >
-          <Icon name="brush" width={16} height={16} />
+          <Icon name="edit" width={17} height={17} />
         </button>
         <button
           type="button"
@@ -62,67 +64,68 @@ export function CaptureAnnotationBar({
           onClick={() => setActiveTool("highlighter")}
           title="Resaltador translúcido"
         >
-          <Icon name="sliders" width={16} height={16} />
+          <Icon name="sliders" width={17} height={17} />
         </button>
         <button
           type="button"
           className={`capture-tool-btn ${activeTool === "arrow" ? "is-active" : ""}`}
           onClick={() => setActiveTool("arrow")}
-          title="Flecha direccional"
+          title="Flecha indicadora"
         >
-          <Icon name="arrow-right" width={16} height={16} />
+          <Icon name="arrow-right" width={17} height={17} />
         </button>
         <button
           type="button"
           className={`capture-tool-btn ${activeTool === "rect" ? "is-active" : ""}`}
           onClick={() => setActiveTool("rect")}
-          title="Rectángulo hueco"
+          title="Marco rectangular"
         >
-          <Icon name="crop" width={16} height={16} />
+          <Icon name="crop" width={17} height={17} />
         </button>
         <button
           type="button"
           className={`capture-tool-btn ${activeTool === "text" ? "is-active" : ""}`}
           onClick={() => setActiveTool("text")}
-          title="Texto"
+          title="Texto anotado"
         >
-          <Icon name="file-text" width={16} height={16} />
+          <Icon name="file-text" width={17} height={17} />
         </button>
       </div>
 
       <div className="capture-pill-divider" />
 
-      {/* Paleta de Colores */}
+      {/* Paleta con #00C9B9 en 1er lugar */}
       <div className="capture-toolbar-subgroup">
         {PALETTE.map((c) => (
           <button
             key={c}
             type="button"
-            className={`capture-color-dot ${activeColor === c ? "is-active" : ""}`}
+            className={`capture-color-swatch ${activeColor === c ? "is-active" : ""}`}
             style={{ background: c }}
             onClick={() => setActiveColor(c)}
-            title={c === "#00C9B9" ? "Color Insignia Prisma (Predeterminado)" : c}
+            title={c === "#00C9B9" ? "Color Insignia Prisma (#00C9B9)" : c}
           />
         ))}
       </div>
 
       <div className="capture-pill-divider" />
 
-      {/* Selector de Grosor */}
+      {/* Grosor de trazo */}
       <div className="capture-toolbar-subgroup">
         {STROKE_WIDTHS.map((w) => (
           <button
             key={w}
             type="button"
-            className={`capture-stroke-btn ${strokeWidth === w ? "is-active" : ""}`}
+            className={`capture-tool-btn ${strokeWidth === w ? "is-active" : ""}`}
             onClick={() => setStrokeWidth(w)}
             title={`Grosor: ${w}px`}
           >
             <span
-              className="capture-stroke-indicator"
               style={{
                 width: `${w * 2 + 2}px`,
                 height: `${w * 2 + 2}px`,
+                borderRadius: "50%",
+                background: "currentColor",
               }}
             />
           </button>
@@ -131,7 +134,7 @@ export function CaptureAnnotationBar({
 
       <div className="capture-pill-divider" />
 
-      {/* Deshacer, Rehacer, Borrar */}
+      {/* Deshacer / Rehacer / Limpiar / Reintentar */}
       <div className="capture-toolbar-subgroup">
         <button
           type="button"
@@ -153,17 +156,18 @@ export function CaptureAnnotationBar({
         </button>
         <button
           type="button"
-          className="capture-tool-btn is-cancel"
+          className="capture-tool-btn"
           onClick={onClear}
+          disabled={!canClear}
           title="Limpiar todas las anotaciones"
         >
-          <Icon name="broom" width={16} height={16} />
+          <Icon name="trash" width={16} height={16} />
         </button>
         <button
           type="button"
           className="capture-tool-btn"
           onClick={onRetrySelection}
-          title="Reintentar selección de área"
+          title="Volver a seleccionar área"
         >
           <Icon name="refresh" width={16} height={16} />
         </button>
@@ -171,22 +175,23 @@ export function CaptureAnnotationBar({
 
       <div className="capture-pill-divider" />
 
-      {/* Acciones Finales: Copiar y Guardar */}
+      {/* Acciones Finales: Copiar, Guardar, Cerrar */}
       <div className="capture-toolbar-subgroup">
         <button
           type="button"
-          className="capture-pill-btn is-active"
+          className="capture-btn-primary"
           onClick={onCopy}
           title="Copiar imagen al portapapeles sin tocar disco (Ctrl+C / Enter)"
         >
           <Icon name="copy" width={15} height={15} />
           <span>Copiar</span>
         </button>
+
         <button
           type="button"
           className="capture-pill-btn"
-          onClick={onSaveAs}
           style={{ background: "rgba(255, 255, 255, 0.12)" }}
+          onClick={onSaveAs}
           title="Guardar como archivo PNG en disco (Ctrl+S)"
         >
           <Icon name="save" width={15} height={15} />

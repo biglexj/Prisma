@@ -314,6 +314,10 @@
   cursor: move;
 }
 
+.capture-target-box.is-window-target {
+  cursor: pointer;
+}
+
 .capture-target-badge {
   position: absolute;
   left: 8px;

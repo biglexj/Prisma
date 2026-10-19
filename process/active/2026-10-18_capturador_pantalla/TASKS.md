@@ -18,6 +18,10 @@
 - [x] T12 — Fijar la barra de herramientas de anotación siempre arriba en la pantalla (`position: fixed; top: 24px; left: 50%`) para evitar solapamientos con la selección.
 - [x] T13 — Implementar modo de captura "Lazo Libre" (`freeform`) con trazado poligonal a mano alzada y recorte con máscara transparente.
 - [x] T14 — Optimizar contorno y tiradores de redimensionamiento de las cuatro esquinas en modo rectángulo con captura de puntero estable.
+- [x] T15 — Restaurar diseño original y personalidad visual de `CaptureAnnotationBar` (botones primarios `#00C9B9`, `.capture-color-swatch`, grosores circulares, `.capture-btn-primary` en Copiar, `.capture-pill-btn` en Guardar, `.capture-tool-btn.is-cancel` en Cerrar).
+- [x] T16 — Corregir bloqueo en modo Ventana al hacer clic sobre `.capture-target-box` o presionar `Enter` (desbloqueando eventos de puntero descartados).
+- [x] T17 — Persistir y recordar la última herramienta/modo utilizada (`localStorage` `"prisma.screen-capture.last-mode"`) entre Ventana, Rectángulo, Lazo y Pantalla Completa.
+- [x] T18 — Implementar atajos rápidos `V` (Ventana), `R` (Rectángulo), `Q` (Lazo) y `F` (Pantalla Completa inmediata) en fase de selección.
 - [ ] T10 — Actualizar documentación y roadmap al entregar; mantener pendiente cualquier aceptación o comprobación no realizada.
 
 Las pruebas y sus resultados pertenecen a [VALIDATION.md](VALIDATION.md).

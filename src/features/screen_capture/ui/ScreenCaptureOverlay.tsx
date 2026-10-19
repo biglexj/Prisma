@@ -21,7 +21,16 @@ import "./screen-capture.css";
 export function ScreenCaptureOverlay() {
   const [session, setSession] = useState<CaptureSessionInit | null>(null);
   const [phase, setPhase] = useState<"selecting" | "annotating">("selecting");
-  const [mode, setMode] = useState<CaptureMode>("window");
+  // Recordar la última herramienta/modo utilizada (Ventana, Rectángulo, Lazo o Pantalla Completa)
+  const [mode, setMode] = useState<CaptureMode>(() => {
+    try {
+      const saved = localStorage.getItem("prisma.screen-capture.last-mode");
+      if (saved && ["window", "rect", "freeform", "fullscreen"].includes(saved)) {
+        return saved as CaptureMode;
+      }
+    } catch {}
+    return "window";
+  });
   const [activeTarget, setActiveTarget] = useState<DetectedTarget | null>(null);
   const [subregionTarget, setSubregionTarget] = useState<DetectedTarget | null>(null);
   const [useSubregion, setUseSubregion] = useState(false);
@@ -36,6 +45,20 @@ export function ScreenCaptureOverlay() {
   const [lassoPoints, setLassoPoints] = useState<AnnotationPoint[]>([]);
   const [isDrawingLasso, setIsDrawingLasso] = useState(false);
   const [lassoClipPolygon, setLassoClipPolygon] = useState<AnnotationPoint[] | null>(null);
+
+  // Cambiar modo y persistir selección en localStorage
+  const handleSetMode = useCallback((newMode: CaptureMode) => {
+    setMode(newMode);
+    try {
+      localStorage.setItem("prisma.screen-capture.last-mode", newMode);
+    } catch {}
+    if (newMode !== "rect") {
+      setSelectionRect(null);
+    }
+    if (newMode !== "freeform") {
+      setLassoPoints([]);
+    }
+  }, []);
 
   // Referencias para redimensionamiento y desplazamiento sin pérdida de puntero
   const resizeRef = useRef<{
@@ -69,6 +92,16 @@ export function ScreenCaptureOverlay() {
   phaseRef.current = phase;
   const annotationsRef = useRef(annotations);
   annotationsRef.current = annotations;
+  const activeTargetRef = useRef(activeTarget);
+  activeTargetRef.current = activeTarget;
+  const subregionTargetRef = useRef(subregionTarget);
+  subregionTargetRef.current = subregionTarget;
+  const useSubregionRef = useRef(useSubregion);
+  useSubregionRef.current = useSubregion;
+  const activeMonitorRef = useRef(activeMonitor);
+  activeMonitorRef.current = activeMonitor;
+  const selectionRectRef = useRef(selectionRect);
+  selectionRectRef.current = selectionRect;
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const bgImageRef = useRef<HTMLImageElement | null>(null);
@@ -81,8 +114,24 @@ export function ScreenCaptureOverlay() {
         if (event.payload) {
           setSession(event.payload);
           setPhase("selecting");
-          setMode(event.payload.defaultMode || "window");
-          setActiveTarget(null);
+          let initialMode: CaptureMode = event.payload.defaultMode || "window";
+          try {
+            const saved = localStorage.getItem("prisma.screen-capture.last-mode") as CaptureMode | null;
+            if (saved && ["window", "rect", "freeform", "fullscreen"].includes(saved)) {
+              initialMode = saved;
+            }
+          } catch {}
+          setMode(initialMode);
+          if (event.payload.targets && event.payload.targets.length > 0) {
+            setActiveTarget(event.payload.targets[0]);
+          } else {
+            setActiveTarget(null);
+          }
+          if (event.payload.monitors && event.payload.monitors.length > 0) {
+            setActiveMonitor(event.payload.monitors[0]);
+          } else {
+            setActiveMonitor(null);
+          }
           setSubregionTarget(null);
           setUseSubregion(false);
           setSelectionRect(null);
@@ -222,12 +271,61 @@ export function ScreenCaptureOverlay() {
         if (e.key === "Escape") {
           e.preventDefault();
           void handleCancel();
-        } else if (e.key === "Enter" && modeRef.current === "rect" && selectionRect) {
+        } else if (e.key === "Enter") {
           e.preventDefault();
-          void handleConfirmToAnnotate(selectionRect);
-        } else if (e.key === "Tab" && modeRef.current === "window") {
-          e.preventDefault();
-          setUseSubregion((prev) => !prev);
+          if (modeRef.current === "window") {
+            const target = (useSubregionRef.current && subregionTargetRef.current)
+              ? subregionTargetRef.current
+              : activeTargetRef.current;
+            if (target) {
+              void handleConfirmToAnnotate({
+                x: target.x,
+                y: target.y,
+                width: target.width,
+                height: target.height,
+              });
+            }
+          } else if (modeRef.current === "rect") {
+            if (selectionRectRef.current) {
+              void handleConfirmToAnnotate(selectionRectRef.current);
+            }
+          } else if (modeRef.current === "fullscreen") {
+            const mon = activeMonitorRef.current || sessionRef.current?.monitors?.[0];
+            if (mon) {
+              void handleConfirmToAnnotate({
+                x: mon.x,
+                y: mon.y,
+                width: mon.width,
+                height: mon.height,
+              });
+            }
+          }
+        } else if (!isCtrl && !e.altKey) {
+          if (key === "v" || code === "KeyV") {
+            e.preventDefault();
+            handleSetMode("window");
+          } else if (key === "r" || code === "KeyR") {
+            e.preventDefault();
+            handleSetMode("rect");
+          } else if (key === "q" || code === "KeyQ") {
+            e.preventDefault();
+            handleSetMode("freeform");
+          } else if (key === "f" || code === "KeyF") {
+            e.preventDefault();
+            handleSetMode("fullscreen");
+            const mon = activeMonitorRef.current || sessionRef.current?.monitors?.[0];
+            if (mon) {
+              void handleConfirmToAnnotate({
+                x: mon.x,
+                y: mon.y,
+                width: mon.width,
+                height: mon.height,
+              });
+            }
+          } else if (key === "tab" && modeRef.current === "window") {
+            e.preventDefault();
+            setUseSubregion((prev) => !prev);
+          }
         }
       } else if (phaseRef.current === "annotating") {
         if (e.key === "Escape") {
@@ -384,6 +482,9 @@ export function ScreenCaptureOverlay() {
 
     if (mode === "rect") {
       setIsDragging(false);
+      if (selectionRect && selectionRect.width >= 10 && selectionRect.height >= 10) {
+        void handleConfirmToAnnotate(selectionRect);
+      }
     }
   };
 
@@ -481,9 +582,11 @@ export function ScreenCaptureOverlay() {
   const handleClickSelecting = (e: React.MouseEvent) => {
     if (phase !== "selecting") return;
     if ((e.target as HTMLElement).closest(".capture-floating-toolbar")) return;
-    if ((e.target as HTMLElement).closest(".capture-target-box")) return;
     if ((e.target as HTMLElement).closest(".capture-resize-handle")) return;
     if (mode === "freeform") return;
+
+    // Solo evitar en modo rectángulo si se hace clic dentro del marco para moverlo
+    if (mode === "rect" && (e.target as HTMLElement).closest(".capture-target-box")) return;
 
     if (mode === "window") {
       const target = useSubregion && subregionTarget ? subregionTarget : activeTarget;
@@ -495,13 +598,16 @@ export function ScreenCaptureOverlay() {
           height: target.height,
         });
       }
-    } else if (mode === "fullscreen" && activeMonitor) {
-      void handleConfirmToAnnotate({
-        x: activeMonitor.x,
-        y: activeMonitor.y,
-        width: activeMonitor.width,
-        height: activeMonitor.height,
-      });
+    } else if (mode === "fullscreen") {
+      const mon = activeMonitor || session?.monitors?.[0];
+      if (mon) {
+        void handleConfirmToAnnotate({
+          x: mon.x,
+          y: mon.y,
+          width: mon.width,
+          height: mon.height,
+        });
+      }
     }
   };
 
@@ -723,12 +829,12 @@ export function ScreenCaptureOverlay() {
             className={`capture-pill-btn ${mode === "window" ? "is-active" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
-              setMode("window");
+              handleSetMode("window");
             }}
-            title="Modo Ventana (Predeterminado)"
+            title="Modo Ventana (V)"
           >
             <Icon name="columns" width={15} height={15} />
-            <span>Ventana</span>
+            <span>Ventana (V)</span>
           </button>
 
           <button
@@ -736,12 +842,12 @@ export function ScreenCaptureOverlay() {
             className={`capture-pill-btn ${mode === "rect" ? "is-active" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
-              setMode("rect");
+              handleSetMode("rect");
             }}
-            title="Modo Rectángulo libre"
+            title="Modo Rectángulo libre (R)"
           >
             <Icon name="crop" width={15} height={15} />
-            <span>Rectángulo</span>
+            <span>Rectángulo (R)</span>
           </button>
 
           <button
@@ -749,14 +855,12 @@ export function ScreenCaptureOverlay() {
             className={`capture-pill-btn ${mode === "freeform" ? "is-active" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
-              setMode("freeform");
-              setSelectionRect(null);
-              setLassoPoints([]);
+              handleSetMode("freeform");
             }}
-            title="Modo Lazo Libre (Mano alzada)"
+            title="Modo Lazo Libre (Q)"
           >
             <Icon name="lasso" width={15} height={15} />
-            <span>Lazo</span>
+            <span>Lazo (Q)</span>
           </button>
 
           <button
@@ -764,12 +868,12 @@ export function ScreenCaptureOverlay() {
             className={`capture-pill-btn ${mode === "fullscreen" ? "is-active" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
-              setMode("fullscreen");
+              handleSetMode("fullscreen");
             }}
-            title="Modo Pantalla Completa"
+            title="Modo Pantalla Completa (F)"
           >
             <Icon name="fullscreen" width={15} height={15} />
-            <span>Pantalla Completa</span>
+            <span>Pantalla Completa (F)</span>
           </button>
 
           <div className="capture-pill-divider" />
@@ -825,12 +929,22 @@ export function ScreenCaptureOverlay() {
       {/* ── Resaltado en Modo Ventana ── */}
       {phase === "selecting" && mode === "window" && displayedTarget && (
         <div
-          className="capture-target-box"
+          className="capture-target-box is-window-target"
           style={{
             left: `${displayedTarget.x - virtX}px`,
             top: `${displayedTarget.y - virtY}px`,
             width: `${displayedTarget.width}px`,
             height: `${displayedTarget.height}px`,
+            cursor: "pointer",
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            void handleConfirmToAnnotate({
+              x: displayedTarget.x,
+              y: displayedTarget.y,
+              width: displayedTarget.width,
+              height: displayedTarget.height,
+            });
           }}
         >
           <div
@@ -838,7 +952,7 @@ export function ScreenCaptureOverlay() {
               displayedTarget.y - virtY < 35 ? "is-flipped" : ""
             }`}
           >
-            {displayedTarget.width} × {displayedTarget.height} px
+            {displayedTarget.width} × {displayedTarget.height} px · Clic o Enter para capturar
             {displayedTarget.title ? ` · ${displayedTarget.title.slice(0, 32)}` : ""}
             {subregionTarget ? " (Rueda ratón para alternar subregión)" : ""}
           </div>
@@ -854,10 +968,20 @@ export function ScreenCaptureOverlay() {
             top: `${activeMonitor.y - virtY}px`,
             width: `${activeMonitor.width}px`,
             height: `${activeMonitor.height}px`,
+            cursor: "pointer",
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            void handleConfirmToAnnotate({
+              x: activeMonitor.x,
+              y: activeMonitor.y,
+              width: activeMonitor.width,
+              height: activeMonitor.height,
+            });
           }}
         >
           <div className="capture-target-badge">
-            {activeMonitor.name} · {activeMonitor.width} × {activeMonitor.height} px
+            {activeMonitor.name} · {activeMonitor.width} × {activeMonitor.height} px · Clic o Enter para capturar
           </div>
         </div>
       )}
@@ -996,6 +1120,7 @@ export function ScreenCaptureOverlay() {
             onRedo={handleRedo}
             canUndo={historyIndex >= 0}
             canRedo={historyIndex < annotations.length - 1}
+            canClear={annotations.length > 0}
             onClear={() => {
               setAnnotations([]);
               setHistoryIndex(-1);
