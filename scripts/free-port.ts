@@ -50,7 +50,7 @@ export function freePort(port: number | string): boolean {
 export function cleanupDevPrismaProcesses(): void {
     if (process.platform !== "win32") return;
     try {
-        const psCmd = `Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.ExecutablePath -like '*\\target\\debug\\prisma.exe' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`;
+        const psCmd = `Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { ($_.ExecutablePath -like '*\\target\\debug\\prisma.exe') -or ($_.Name -eq 'prisma.exe' -and $_.CommandLine -like '*target*debug*') } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`;
         spawnSync("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", psCmd], {
             stdio: "ignore",
             windowsHide: true,
