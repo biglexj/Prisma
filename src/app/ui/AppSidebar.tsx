@@ -107,6 +107,9 @@ export function AppSidebar({
     .filter(({ key }) => isToolVisible(key))
     .map(({ item }) => item);
 
+  // El capturador es una capacidad propia de Prisma: siempre disponible.
+  const captureItem: SidebarItem = { icon: "camera", label: "Capturador", view: "screen_capture" };
+
   const activeEcosystemTools = ecosystemToolItems
     .filter(({ key }) => isToolVisible(key))
     .map(({ item }) => item);
@@ -149,6 +152,12 @@ export function AppSidebar({
                 onNavigate={onNavigate}
               />
             ))}
+            <SidebarItemButton
+              key={captureItem.label}
+              item={captureItem}
+              activeView={activeView}
+              onNavigate={onNavigate}
+            />
             {activeNativeTools.length > 0 && activeEcosystemTools.length > 0 && (
               <div
                 className="sidebar-tools-divider"

@@ -1,3 +1,4 @@
+import { getCaptureFormat, type CaptureFormat } from "../../../shared/captureFormat";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   CaptureMode,
@@ -14,17 +15,38 @@ export const screenCaptureClient = {
   },
 
   async detectSubregion(
-    parentX: number,
-    parentY: number,
+    parentHwnd: number,
     screenX: number,
     screenY: number
   ): Promise<DetectedTarget | null> {
     return invoke<DetectedTarget | null>("screen_capture_detect_subregion", {
-      parentX,
-      parentY,
+      parentHwnd,
       screenX,
       screenY,
     });
+  },
+
+  /**
+   * Resuelve la ventana bajo el cursor con el hit-test del sistema operativo.
+   * Es la fuente de verdad del modo Ventana: no depende de la lista de la sesión.
+   */
+  async detectWindowAt(
+    screenX: number,
+    screenY: number
+  ): Promise<DetectedTarget | null> {
+    return invoke<DetectedTarget | null>("screen_capture_detect_window_at", {
+      screenX: Math.round(screenX),
+      screenY: Math.round(screenY),
+    });
+  },
+
+  /** Sesión de captura vigente en el backend (respaldo si se pierde el evento). */
+  async getSession(): Promise<CaptureSessionInit | null> {
+    return invoke<CaptureSessionInit | null>("screen_capture_get_session");
+  },
+
+  async overlayReady(sessionId: number): Promise<void> {
+    return invoke<void>("screen_capture_overlay_ready", { sessionId });
   },
 
   async confirmCapture(rect: RectSelection): Promise<EditorPayload> {
@@ -52,10 +74,11 @@ export const screenCaptureClient = {
     return invoke<EditorPayload | null>("screen_capture_get_editor_payload");
   },
 
-  async saveFile(filePath: string, dataBase64: string): Promise<string> {
+  async saveFile(filePath: string, dataBase64: string, format: CaptureFormat = getCaptureFormat().id): Promise<string> {
     return invoke<string>("screen_capture_save_file", {
       filePath,
       dataBase64,
+      format,
     });
   },
 
@@ -63,7 +86,12 @@ export const screenCaptureClient = {
     return invoke<ScreenCaptureShortcutStatus>("screen_capture_get_shortcut_status");
   },
 
-  async setShortcut(shortcut: string): Promise<void> {
-    return invoke<void>("screen_capture_set_shortcut", { shortcut });
+  /**
+   * Aplica la preferencia del atajo global. El backend registra en el sistema
+   * operativo, guarda la preferencia y devuelve el estado resultante; un
+   * conflicto viaja en `error` para poder explicarlo en la interfaz.
+   */
+  async configure(enabled: boolean, shortcut: string): Promise<ScreenCaptureShortcutStatus> {
+    return invoke<ScreenCaptureShortcutStatus>("screen_capture_configure", { enabled, shortcut });
   },
 };

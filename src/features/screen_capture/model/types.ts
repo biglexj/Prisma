@@ -9,6 +9,8 @@ export interface DetectedTarget {
   width: number;
   height: number;
   isChild?: boolean;
+  /** HWND nativo de la ventana, usado para detectar controles internos. */
+  hwnd?: number;
 }
 
 export interface MonitorTarget {
@@ -22,6 +24,8 @@ export interface MonitorTarget {
 }
 
 export interface CaptureSessionInit {
+  /** Identificador monótono: permite descartar sesiones obsoletas. */
+  sessionId: number;
   virtualX: number;
   virtualY: number;
   virtualWidth: number;
@@ -48,12 +52,21 @@ export interface RectSelection {
 }
 
 export interface ScreenCaptureShortcutStatus {
+  /** Atajo realmente registrado en el sistema operativo. */
   shortcut: string;
+  /** Atajo solicitado por el usuario. */
+  requestedShortcut: string;
+  /** El atajo global está habilitado. */
+  enabled: boolean;
+  /** El sistema aceptó un atajo y está activo. */
   isRegistered: boolean;
+  /** Motivo por el que el atajo solicitado no pudo activarse. */
   error?: string | null;
+  /** Ya existe una preferencia guardada. */
+  hasStoredPreference?: boolean;
 }
 
-export type AnnotationTool = "select" | "pen" | "highlighter" | "rect" | "arrow" | "text" | "eyedropper";
+export type AnnotationTool = "select" | "pen" | "highlighter" | "rect" | "ellipse" | "arrow" | "text" | "eyedropper";
 
 export interface AnnotationPoint {
   x: number;

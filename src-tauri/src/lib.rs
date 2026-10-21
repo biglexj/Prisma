@@ -84,10 +84,10 @@ use app::commands::video_takes::{
 };
 use app::commands::wallpapers::{wallpaper_save_and_apply, wallpaper_set_desktop};
 use app::commands::screen_capture::{
-    screen_capture_cancel, screen_capture_confirm, screen_capture_detect_subregion,
-    screen_capture_get_editor_payload, screen_capture_get_shortcut_status,
-    screen_capture_pick_color, screen_capture_save_file, screen_capture_set_shortcut,
-    screen_capture_start,
+    screen_capture_cancel, screen_capture_configure, screen_capture_confirm, screen_capture_detect_subregion,
+    screen_capture_detect_window_at, screen_capture_get_editor_payload,
+    screen_capture_get_session, screen_capture_get_shortcut_status, screen_capture_pick_color,
+    screen_capture_save_file, screen_capture_start,
 };
 use app::state::{
     FavoritesState, InitialFileState, InitialSynapseSendState, MusicLibraryState,
@@ -100,57 +100,9 @@ use tauri::{Emitter, Manager, WindowEvent};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 fn restart_application(app: &tauri::AppHandle) {
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        const DETACHED_PROCESS: u32 = 0x00000008;
-
-        // Liberar el bloqueo de instancia única para no colisionar con la nueva instancia
-        tauri_plugin_single_instance::destroy(app);
-
-        if let Ok(exe_path) = std::env::current_exe() {
-            let pid = std::process::id();
-            let exe_str = exe_path.to_string_lossy().replace('\'', "''");
-            let args: Vec<String> = std::env::args().skip(1).collect();
-
-            let ps_command = if args.is_empty() {
-                format!(
-                    "Wait-Process -Id {} -ErrorAction SilentlyContinue; Start-Process -FilePath '{}'",
-                    pid, exe_str
-                )
-            } else {
-                let args_joined = args
-                    .iter()
-                    .map(|a| format!("'{}'", a.replace('\'', "''")))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                format!(
-                    "Wait-Process -Id {} -ErrorAction SilentlyContinue; Start-Process -FilePath '{}' -ArgumentList @({})",
-                    pid, exe_str, args_joined
-                )
-            };
-
-            let _ = std::process::Command::new("powershell")
-                .args(&[
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-WindowStyle",
-                    "Hidden",
-                    "-Command",
-                    &ps_command,
-                ])
-                .creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS)
-                .spawn();
-        }
-
-        app.exit(0);
-    }
-
-    #[cfg(not(windows))]
-    {
-        app.restart();
-    }
+    // El evento de bandeja se ejecuta en el hilo principal. request_restart
+    // permite completar RunEvent::Exit (audio e instancia única) antes del relanzamiento.
+    app.request_restart();
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -417,7 +369,16 @@ pub fn run() {
 
             let capture_state: features::screen_capture::SharedCaptureState =
                 std::sync::Arc::new(std::sync::Mutex::new(features::screen_capture::CaptureSessionState::default()));
-            app.manage(capture_state);
+            app.manage(capture_state.clone());
+
+            // El atajo global del capturador queda activo desde el arranque: la
+            // aplicación responde en segundo plano, en bandeja o minimizada,
+            // sin depender de que el frontend abra alguna vista.
+            app::commands::screen_capture::apply_capture_shortcut_at_startup(
+                app.handle(),
+                &capture_state,
+                &data_directory.join("screen_capture.json"),
+            );
 
             let quick_look_state = QuickLookState::new(app.handle().clone());
             quick_look_state.init();
@@ -598,6 +559,16 @@ pub fn run() {
                         let _ = window.hide();
                     } else {
                         let _ = window.app_handle().save_window_state(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED);
+                    }
+                }
+            } else if matches!(window.label(), "screen_capture_overlay" | "screen_capture_editor") {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    // Son ventanas reutilizables: Alt+F4 debe cancelar, no destruirlas
+                    // y dejar los siguientes atajos sin una ventana que mostrar.
+                    api.prevent_close();
+                    app::commands::screen_capture::hide_capture_windows(window.app_handle());
+                    if let Some(state) = window.app_handle().try_state::<features::screen_capture::SharedCaptureState>() {
+                        features::screen_capture::clear_session(&state);
                     }
                 }
             } else if window.label() == "quicklook" {
@@ -808,14 +779,18 @@ pub fn run() {
             video_list_take_markers,
             video_delete_take_marker,
             screen_capture_start,
+            app::commands::screen_capture::screen_capture_overlay_ready,
+            features::screen_capture::diagnostics::screen_capture_trace,
             screen_capture_detect_subregion,
+            screen_capture_detect_window_at,
+            screen_capture_get_session,
             screen_capture_confirm,
             screen_capture_cancel,
             screen_capture_pick_color,
             screen_capture_get_editor_payload,
             screen_capture_save_file,
             screen_capture_get_shortcut_status,
-            screen_capture_set_shortcut,
+            screen_capture_configure,
         ]);
 
         let mut context = tauri::generate_context!();
@@ -827,6 +802,16 @@ pub fn run() {
             .build(context)
             .expect("Prisma no pudo iniciar el runtime de Tauri")
         .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Ready)
+                && std::env::args().any(|arg| arg == "--capture-diagnostics")
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_title("Prisma · Diagnóstico de lápiz");
+                }
+                if let Some(window) = app.get_webview_window("screen_capture_overlay") {
+                    let _ = window.set_title("Prisma · Captura · Diagnóstico");
+                }
+            }
             if matches!(event, tauri::RunEvent::Exit) {
                 if let Some(relay) = app.try_state::<std::sync::Arc<features::audio_relay::AudioRelayService>>() { relay.shutdown(); }
                 let service = app.state::<std::sync::Arc<infrastructure::media::passthru::PassthruService>>();

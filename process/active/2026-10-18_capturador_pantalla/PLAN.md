@@ -117,3 +117,54 @@ El borde debe ser legible sobre fondos claros y oscuros. Atenuar suavemente el e
 - [x] Biglex solicitó planificar y dejar el trabajo en `process` para otro agente el 2026-10-18.
 - [ ] Implementación autorizada en una instrucción posterior al agente encargado.
 - [ ] Resultado funcional validado y aceptación del usuario registrada cuando corresponda.
+
+
+## Ajustes autorizados por Biglex — 2026-10-18
+
+La petición actual autoriza implementar y probar estos ajustes sobre el capturador ya existente; sustituye el límite histórico de solo planificación para este alcance.
+
+- Cada nueva sesión restablece el modo solicitado (Ventana por defecto), lápiz, turquesa y grosor inicial; descarta el cuadro de texto y estados de interacción anteriores.
+- Iconos reconocibles de lápiz, resaltador y texto, separados de flecha, rectángulo y círculo/elipse. Botones directos, sin menú de formas.
+- Flecha con punta proporcional y cuerpo terminado en la base del triángulo.
+- Contorno segmentado turquesa, esquinas y tiradores centrales visibles en rectángulo y ventana, también al anotar. Pantalla completa conserva solo el contorno.
+- Ajustar un tirador vuelve a recortar el original congelado y conserva las posiciones de las anotaciones. El original permanece en memoria hasta cancelar/copiar/guardar y cerrar.
+- Probar la app de desarrollo y presentar capturas en el chat. No incluye publicación ni instalación.
+
+
+## Atajos y memoria del modo — 2026-10-19
+
+Por petición posterior de Biglex, el capturador vuelve a recordar el último modo de imagen confirmado (Rectángulo, Ventana, Pantalla completa o Forma libre), incluso tras reiniciar. Esta decisión sustituye el reinicio obligatorio a Ventana registrado anteriormente. El selector de color no reemplaza esa preferencia y cada sesión sigue limpiando anotaciones, cuadros de texto y gestos.
+
+Atajos de anotación: B lápiz, R resaltador, T texto, S rectángulo, C círculo/elipse, F flecha; 1–7 colores de izquierda a derecha; Mayús+1/2/3 grosores 2/4/8 px. N vuelve a seleccionar y Supr limpia las anotaciones. Copiar, guardar, deshacer, rehacer y cerrar conservan sus atajos. No se añade borrador.
+
+Las teclas se muestran en tooltips, sin insignias visibles en la barra. Los atajos de captura R/V/F/Q/C siguen disponibles antes de anotar; la fase determina su acción. Mientras se escribe en un cuadro de texto se respetan letras, números y Ctrl+C/Z nativos del campo.
+
+## Reincidencia del lápiz en la instalación — 2026-10-20
+
+Biglex informa que, tras compilar e instalar, el lápiz funciona al arrancar y después no permite arrastrar Rectángulo ni dibujar anotaciones, aunque ambas barras siguen funcionando. La confirmación anterior de varias capturas en Dev no cierra esta incidencia.
+
+Registrar en una compilación de producción los contactos, sus filtros y el estado de los gestos antes/después de los manejadores. Diagnóstico local optativo con `--capture-diagnostics`, sin imágenes ni textos y con tamaño acotado. Reproducir el bloqueo antes de atribuirlo a foco, captura del puntero o su clasificación como principal. Corregir la causa observada y comprobar otra vez con lápiz físico. No publicar ni sustituir la instalación automáticamente.
+
+## Evitar restos de la captura anterior — 2026-10-21
+
+Biglex detecta que, al pasar de A a B, aparecen fugazmente los trazos anteriores. Limpiar el lienzo y su imagen al cancelar, al terminar nativamente y al cambiar de sesión. Ocultar la captura anterior antes de congelar la siguiente; mostrar el overlay cuando el frontend confirme que ha aplicado la nueva sesión. Ignorar cierres/confirmaciones de sesiones antiguas.
+
+## El capturador no respondía al arrancar — 2026-10-21
+
+Biglex reporta que el capturador no responde al iniciar Prisma: hay que abrir la aplicación, esperar a que cargue la biblioteca y entrar a Configuración para que la captura se habilite. En segundo plano la pulsación del atajo no produce ninguna reacción. Lo describe como rarísimo, porque la aplicación ya está en marcha.
+
+### Causa observada
+
+El atajo global del capturador no pertenecía a la aplicación: lo registraba un efecto del frontend (`useSystemSettings`), y solo cuando la preferencia `screenCaptureEnabled` era verdadera. Ese registro ocurría al montar una vista, no al iniciar el proceso.
+
+En la instalación de Biglex, además, el atajo elegido es «Impr Pant», que Windows tiene ocupado: la Herramienta Recortes registra esa tecla mientras está abierta. El registro en el sistema operativo fallaba y el error se descartaba en silencio (`.catch(() => {})`), de modo que ningún atajo quedaba activo. El estado que devolvía el backend declaraba «Atajo Activo» siempre que no hubiera error previo, incluso con ninguna tecla registrada, y la vista «Capturador» no era alcanzable desde la barra lateral: no había forma de ver el problema. Solo «Probar Captura» en Configuración abría el capturador, que es lo que Biglex observaba.
+
+### Decisiones
+
+- **Rust pasa a ser la fuente de verdad.** El atajo se registra al arrancar la aplicación, en `setup`, y la preferencia se guarda en `screen_capture.json` dentro del directorio de datos. Ninguna vista del frontend es responsable de activarlo.
+- **Estado honesto.** `screen_capture_get_shortcut_status` informa del atajo realmente registrado, del solicitado, de si está habilitado y del motivo del conflicto. La interfaz nunca declara un atajo activo que no lo esté.
+- **Reserva automática.** Si el atajo pedido está ocupado, se activa «Mayús + Impr Pant» y se explica el motivo en pantalla. La preferencia del usuario se conserva y se reintenta en cada arranque, de modo que la captura se recupera sola cuando la tecla queda libre.
+- **Preferencia heredada.** La preferencia antigua del `localStorage` se transfiere una sola vez al backend al detectar que no existe archivo de preferencias.
+- **Visibilidad.** Configuración muestra el estado real del atajo y la vista «Capturador» vuelve a estar en la barra lateral, bajo Herramientas, junto a las demás herramientas nativas.
+
+No se publica una release ni se sustituye la instalación habitual: la comprobación final corresponde a la compilación que Biglex instale.

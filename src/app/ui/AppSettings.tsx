@@ -1,3 +1,4 @@
+import { CAPTURE_FORMATS } from "../../shared/captureFormat";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { LibrarySources } from "./LibrarySources";
 import { ModularLibrariesPanel } from "./ModularLibrariesPanel";
@@ -7,7 +8,7 @@ import { AuroraSettingsPanel } from "./AuroraSettingsPanel";
 import type { useMusicLibrary } from "../../features/music_library/useMusicLibrary";
 import type { useVisualLibrary } from "../../features/visual_library/useVisualLibrary";
 import type { ThemeMode, AccentColorId, BackgroundVariantId } from "../useTheme";
-import { ACCENT_COLORS, BACKGROUND_VARIANTS } from "../useTheme";
+import { ACCENT_COLORS, getBackgroundVariants } from "../useTheme";
 import {
   useSystemSettings,
   type QuickLookShortcutMode,
@@ -19,6 +20,7 @@ import { Icon } from "../../shared/ui/Icon";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { getDefaultPicturesDir } from "../../shared/mediaOperations";
+import { useCaptureShortcut } from "../../features/screen_capture/useCaptureShortcut";
 import {
   getFlyoutSettings,
   saveFlyoutSettings,
@@ -42,10 +44,13 @@ interface AppSettingsProps {
   videos: ReturnType<typeof useVisualLibrary>;
   onPlay: (path: string) => void;
   theme: ThemeMode;
+  resolvedTheme: "light" | "dark";
   onThemeChange: (mode: ThemeMode) => void;
   accentColor?: AccentColorId;
   onAccentColorChange?: (accent: AccentColorId) => void;
   backgroundVariant?: BackgroundVariantId;
+  lightBackgroundVariant?: BackgroundVariantId;
+  darkBackgroundVariant?: BackgroundVariantId;
   onBackgroundVariantChange?: (variant: BackgroundVariantId) => void;
   dynamicMusicTheme?: boolean;
   onDynamicMusicThemeChange?: (enabled: boolean) => void;
@@ -83,16 +88,22 @@ export function AppSettings({
   videos,
   onPlay,
   theme,
+  resolvedTheme,
   onThemeChange,
   accentColor = "purple",
   onAccentColorChange,
   backgroundVariant = "prisma",
+  lightBackgroundVariant = backgroundVariant,
+  darkBackgroundVariant = backgroundVariant,
   onBackgroundVariantChange,
   dynamicMusicTheme = true,
   onDynamicMusicThemeChange,
   isMusicPaletteActive = false,
 }: AppSettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>("general");
+  const backgroundOptions = getBackgroundVariants(resolvedTheme);
+  const lightPreview = getBackgroundVariants("light").find(option => option.id === lightBackgroundVariant)!.colorHex;
+  const darkPreview = getBackgroundVariants("dark").find(option => option.id === darkBackgroundVariant)!.colorHex;
 
   useLayoutEffect(() => {
     const container = document.querySelector(".studio-content") as HTMLElement | null;
@@ -112,9 +123,7 @@ export function AppSettings({
     auroraWallpapersEnabled,
     auroraServerUrl,
     videoSnapshotFolder,
-    videoSnapshotFormat,
-    screenCaptureEnabled,
-    screenCaptureShortcut,
+    captureFormat,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
@@ -125,12 +134,27 @@ export function AppSettings({
     setAuroraWallpapersEnabled,
     setAuroraServerUrl,
     setVideoSnapshotFolder,
-    setVideoSnapshotFormat,
+    setCaptureFormat,
     screenCaptureFolder,
     setScreenCaptureFolder,
-    setScreenCaptureEnabled,
-    setScreenCaptureShortcut,
   } = useSystemSettings();
+
+  const { status: captureShortcutStatus, isUpdating: isUpdatingCaptureShortcut, configure: configureCaptureShortcut } =
+    useCaptureShortcut();
+
+  const captureShortcutEnabled = captureShortcutStatus?.enabled ?? true;
+  const captureShortcutEffective = captureShortcutStatus?.shortcut || "Shift+PrintScreen";
+  const captureShortcutRequested = captureShortcutStatus?.requestedShortcut || captureShortcutEffective;
+  const captureShortcutConflict = captureShortcutStatus?.error ?? null;
+  const captureShortcutActive = Boolean(captureShortcutStatus?.isRegistered);
+  const captureShortcutBlocked = captureShortcutRequested !== captureShortcutEffective;
+  const captureShortcutMessage = !captureShortcutEnabled
+    ? "Atajo global desactivado. Actívalo para capturar desde cualquier aplicación, incluso con Prisma en la bandeja."
+    : captureShortcutConflict
+      ? captureShortcutConflict
+      : captureShortcutActive
+        ? `Atajo activo: «${captureShortcutEffective}». Funciona con Prisma minimizado o en la bandeja.`
+        : "No hay ningún atajo activo en el sistema. Revisa el atajo elegido.";
 
   const [defaultPicturesDir, setDefaultPicturesDir] = useState<string>("");
 
@@ -429,24 +453,11 @@ export function AppSettings({
                   <h4 className="settings-subheading" style={{ margin: "4px 0 8px" }}>Modo de Interfaz</h4>
                   <div className="theme-options-grid">
                     {THEMES.map(({ mode, label, desc, previewClass }) => {
-                      let previewStyle: React.CSSProperties | undefined;
-                      if (mode === "dark") {
-                        if (backgroundVariant === "neutral") {
-                          previewStyle = { background: "linear-gradient(135deg, #121214, #27272a)" };
-                        } else if (backgroundVariant === "dark_blue") {
-                          previewStyle = { background: "linear-gradient(135deg, #16161e, #24283b)" };
-                        } else {
-                          previewStyle = { background: "linear-gradient(135deg, #1b1216, #2d1822)" };
-                        }
-                      } else if (mode === "system") {
-                        if (backgroundVariant === "neutral") {
-                          previewStyle = { background: "linear-gradient(135deg, #121214 50%, #fafafa 50%)" };
-                        } else if (backgroundVariant === "dark_blue") {
-                          previewStyle = { background: "linear-gradient(135deg, #16161e 50%, #f4f6fc 50%)" };
-                        } else {
-                          previewStyle = { background: "linear-gradient(135deg, #1b1216 50%, #fff5f7 50%)" };
-                        }
-                      }
+                      const previewStyle = {
+                        background: mode === "system"
+                          ? `linear-gradient(135deg, ${darkPreview} 50%, ${lightPreview} 50%)`
+                          : mode === "dark" ? darkPreview : lightPreview,
+                      };
 
                       return (
                         <button
@@ -469,7 +480,7 @@ export function AppSettings({
                   {/* Colores de Énfasis */}
                   <h4 className="settings-subheading" style={{ margin: "4px 0 8px" }}>Color de Énfasis Principal</h4>
                   <div className="accent-options-grid">
-                    {ACCENT_COLORS.map(({ id, label, colorHex, badge }) => (
+                    {ACCENT_COLORS.map(({ id, label, colorHex }) => (
                       <button
                         key={id}
                         className={`accent-card${accentColor === id ? " is-selected" : ""}`}
@@ -477,7 +488,6 @@ export function AppSettings({
                         aria-pressed={accentColor === id}
                         type="button"
                       >
-                        {badge ? <span className="accent-badge">{badge}</span> : null}
                         <span className="accent-swatch" style={{ backgroundColor: colorHex }}>
                           {accentColor === id ? <Icon name="check" /> : null}
                         </span>
@@ -516,27 +526,25 @@ export function AppSettings({
                   <div className="settings-section-divider" style={{ margin: "14px 0 10px" }} />
 
                   {/* Variantes de Fondo */}
-                  <h4 className="settings-subheading" style={{ margin: "4px 0 8px" }}>Variante de Fondo</h4>
+                  <h4 className="settings-subheading" style={{ margin: "4px 0 8px" }}>Variante de Fondo · {resolvedTheme === "dark" ? "Oscuro" : "Claro"}</h4>
                   <div className="bg-variant-options-grid">
-                    {BACKGROUND_VARIANTS.map(({ id, label, desc, badge, colorHex }) => (
+                    {backgroundOptions.map(({ id, label, desc, colorHex }) => (
                       <button
                         key={id}
                         className={`bg-variant-card${backgroundVariant === id ? " is-selected" : ""}`}
+                        style={{ backgroundColor: colorHex, color: resolvedTheme === "dark" ? "#fafafa" : "#202020" }}
                         onClick={() => onBackgroundVariantChange?.(id)}
                         aria-pressed={backgroundVariant === id}
                         type="button"
                         title={`${label} · ${desc}`}
                       >
-                        {badge ? <span className="bg-variant-badge">{badge}</span> : null}
-                        <div className="bg-variant-swatch-box" style={{ backgroundColor: colorHex }}>
-                          {backgroundVariant === id ? <Icon name="check" /> : null}
-                        </div>
                         <div className="bg-variant-info">
                           <strong>{label}</strong>
                         </div>
                       </button>
                     ))}
                   </div>
+
                 </div>
 
                 {/* Flyout de Escritorio */}
@@ -655,17 +663,39 @@ export function AppSettings({
                 <div className="settings-card">
                   <div className="settings-card-header-row">
                     <div>
-                      <h3>Capturas de Vídeo y Assets</h3>
+                      <h3>Formato de Capturas</h3>
                       <p>
-                        Directorio y formato al presionar <kbd className="shortcut-kbd-pill">Shift + S</kbd> o capturar fotogramas.
+                        Formato global para capturas de pantalla y fotogramas de vídeo.
                       </p>
                     </div>
                   </div>
 
+                  <div className="snapshot-format-options capture-format-options">
+                    {CAPTURE_FORMATS.map(({ id, label, description }) => (
+                      <button key={id} type="button"
+                        className={`snapshot-format-chip ${captureFormat === id ? "is-selected" : ""}`}
+                        aria-pressed={captureFormat === id}
+                        onClick={() => setCaptureFormat(id)}
+                        title={id === "elx" ? "ElyX experimental: RGB sin pérdidas. La transparencia se guarda sobre blanco." : description}>
+                        <Icon name={captureFormat === id ? "check" : "image"} />
+                        <div className="snapshot-format-info">
+                          <strong>{label}</strong>
+                          <small>{description}</small>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {captureFormat === "elx" ? <p style={{ marginTop: 8 }}>ELX es experimental: RGB sin pérdidas. La transparencia se guarda sobre blanco.</p> : null}
+                </div>
+
+                <div className="settings-card">
+                  <h3>Capturas de Vídeo</h3>
+                  <p>Carpeta de guardado de los fotogramas capturados.</p>
                   <div className="snapshot-folder-config-box">
                     <div className="snapshot-folder-path-display">
                       <div className="snapshot-folder-header-row">
-                        <span className="snapshot-folder-label">Carpeta destino</span>
+                        <span className="snapshot-folder-label">Carpeta de fotogramas de vídeo</span>
                         <span className={`snapshot-folder-badge ${videoSnapshotFolder ? "is-custom" : "is-default"}`}>
                           {videoSnapshotFolder ? "Personalizada" : "Predeterminada"}
                         </span>
@@ -707,44 +737,6 @@ export function AppSettings({
                       ) : null}
                     </div>
 
-                    <div className="settings-section-divider" style={{ margin: "14px 0 10px" }} />
-
-                    <h4 className="settings-subheading" style={{ margin: "8px 0 8px" }}>Formato de Imagen</h4>
-                    <div className="snapshot-format-options">
-                      <button
-                        type="button"
-                        className={`snapshot-format-chip ${videoSnapshotFormat === "png" ? "is-selected" : ""}`}
-                        onClick={() => setVideoSnapshotFormat("png")}
-                      >
-                        <Icon name={videoSnapshotFormat === "png" ? "check" : "camera"} />
-                        <div className="snapshot-format-info">
-                          <strong>PNG</strong>
-                          <small>Sin pérdidas</small>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        className={`snapshot-format-chip ${videoSnapshotFormat === "webp" ? "is-selected" : ""}`}
-                        onClick={() => setVideoSnapshotFormat("webp")}
-                      >
-                        <Icon name={videoSnapshotFormat === "webp" ? "check" : "sparkles"} />
-                        <div className="snapshot-format-info">
-                          <strong>WebP</strong>
-                          <small>Compacto y moderno</small>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        className={`snapshot-format-chip ${videoSnapshotFormat === "jpeg" ? "is-selected" : ""}`}
-                        onClick={() => setVideoSnapshotFormat("jpeg")}
-                      >
-                        <Icon name={videoSnapshotFormat === "jpeg" ? "check" : "image"} />
-                        <div className="snapshot-format-info">
-                          <strong>JPEG</strong>
-                          <small>Universal</small>
-                        </div>
-                      </button>
-                    </div>
                   </div>
                 </div>
 
@@ -760,35 +752,45 @@ export function AppSettings({
                   </div>
 
                   <div className="snapshot-folder-config-box">
-                    <div className="system-toggle-item" style={{ padding: "8px 0" }}>
+                    <div className="system-toggle-item">
                       <div className="system-toggle-info">
                         <strong>Atajo global de captura</strong>
-                        <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--on-surface-variant)" }}>
+                        <p>
                           Invoca el capturador en cualquier momento desde segundo plano.
                         </p>
                       </div>
                       <label className="toggle-switch">
                         <input
                           type="checkbox"
-                          checked={screenCaptureEnabled}
-                          onChange={(e) => void setScreenCaptureEnabled(e.target.checked)}
+                          checked={captureShortcutEnabled}
+                          onChange={(e) => void configureCaptureShortcut(e.target.checked, captureShortcutRequested)}
+                          disabled={isUpdatingCaptureShortcut}
                           aria-label="Habilitar atajo global de captura de pantalla"
                         />
                         <span className="toggle-slider" />
                       </label>
                     </div>
 
+                    <div
+                      className={`capture-shortcut-state ${captureShortcutConflict ? "is-conflict" : captureShortcutActive ? "is-active" : "is-idle"}`}
+                      role="status"
+                    >
+                      <Icon name={captureShortcutConflict ? "info" : captureShortcutActive ? "check" : "keyboard"} width={15} height={15} />
+                      <span>{captureShortcutMessage}</span>
+                    </div>
+
                     <div className="settings-section-divider" style={{ margin: "10px 0" }} />
 
                     <h4 className="settings-subheading" style={{ margin: "4px 0 8px" }}>Atajo de Teclado</h4>
-                    <div className="snapshot-format-options">
+                    <div className="snapshot-format-options capture-shortcut-options">
                       <button
                         type="button"
-                        className={`snapshot-format-chip ${screenCaptureShortcut === "Shift+PrintScreen" ? "is-selected" : ""}`}
-                        onClick={() => void setScreenCaptureShortcut("Shift+PrintScreen")}
+                        className={`snapshot-format-chip ${captureShortcutEffective === "Shift+PrintScreen" ? "is-selected" : ""}`}
+                        onClick={() => void configureCaptureShortcut(true, "Shift+PrintScreen")}
+                        disabled={isUpdatingCaptureShortcut}
                         title="Mayús + Impr Pant (Recomendado sin conflictos)"
                       >
-                        <Icon name={screenCaptureShortcut === "Shift+PrintScreen" ? "check" : "keyboard"} />
+                        <Icon name={captureShortcutEffective === "Shift+PrintScreen" ? "check" : "keyboard"} />
                         <div className="snapshot-format-info">
                           <strong>Mayús + Impr Pant</strong>
                           <small>Recomendado</small>
@@ -796,14 +798,15 @@ export function AppSettings({
                       </button>
                       <button
                         type="button"
-                        className={`snapshot-format-chip ${screenCaptureShortcut === "PrintScreen" ? "is-selected" : ""}`}
-                        onClick={() => void setScreenCaptureShortcut("PrintScreen")}
+                        className={`snapshot-format-chip ${captureShortcutEffective === "PrintScreen" ? "is-selected" : ""}`}
+                        onClick={() => void configureCaptureShortcut(true, "PrintScreen")}
+                        disabled={isUpdatingCaptureShortcut}
                         title="Impr Pant (Requiere desactivar Herramienta Recortes en Windows 11)"
                       >
-                        <Icon name={screenCaptureShortcut === "PrintScreen" ? "check" : "keyboard"} />
+                        <Icon name={captureShortcutEffective === "PrintScreen" ? "check" : "keyboard"} />
                         <div className="snapshot-format-info">
                           <strong>Impr Pant</strong>
-                          <small>Directo (Win 11)</small>
+                          <small>{captureShortcutBlocked ? "En uso por otra aplicación" : "Directo (Win 11)"}</small>
                         </div>
                       </button>
                     </div>

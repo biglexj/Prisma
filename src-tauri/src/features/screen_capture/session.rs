@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use std::path::PathBuf;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 
 use super::capture::{enumerate_monitors, capture_virtual_screen, MonitorTarget, ScreenSnapshot};
@@ -16,6 +17,7 @@ pub struct RectSelection {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CaptureSessionInit {
+    pub session_id: u64,
     pub virtual_x: i32,
     pub virtual_y: i32,
     pub virtual_width: u32,
@@ -41,8 +43,21 @@ pub struct CaptureSessionState {
     pub targets: Vec<DetectedTarget>,
     pub monitors: Vec<MonitorTarget>,
     pub editor_payload: Option<EditorPayload>,
+    /// Atajo solicitado por el usuario (el que aparece seleccionado en Ajustes).
     pub active_shortcut: String,
+    /// Atajo que el sistema operativo aceptó realmente. `None` mientras no haya ninguno activo.
+    pub registered_shortcut: Option<String>,
+    /// El atajo global está activo.
+    pub shortcut_enabled: bool,
     pub shortcut_error: Option<String>,
+    /// Archivo de preferencias del capturador en el directorio de datos de la app.
+    pub preferences_path: PathBuf,
+    /// Ya existe un archivo de preferencias guardado por el usuario.
+    pub has_stored_preference: bool,
+    /// Sesión vigente: permite al overlay recuperarla aunque se pierda el evento.
+    pub session: Option<CaptureSessionInit>,
+    /// Contador monótono de sesiones iniciadas.
+    pub session_counter: u64,
 }
 
 impl Default for CaptureSessionState {
@@ -52,8 +67,14 @@ impl Default for CaptureSessionState {
             targets: Vec::new(),
             monitors: Vec::new(),
             editor_payload: None,
-            active_shortcut: "Shift+PrintScreen".to_string(),
+            active_shortcut: super::preferences::DEFAULT_SHORTCUT.to_string(),
+            registered_shortcut: None,
+            shortcut_enabled: true,
             shortcut_error: None,
+            preferences_path: PathBuf::new(),
+            has_stored_preference: false,
+            session: None,
+            session_counter: 0,
         }
     }
 }
@@ -76,10 +97,15 @@ pub fn init_capture_session(state: &SharedCaptureState) -> Result<CaptureSession
         .map_err(|_| "Error al bloquear estado de sesión de captura".to_string())?;
 
     lock.snapshot = Some(snapshot);
+    lock.editor_payload = None;
     lock.targets = targets.clone();
     lock.monitors = monitors.clone();
 
-    Ok(CaptureSessionInit {
+    lock.session_counter = lock.session_counter.wrapping_add(1);
+    let session_id = lock.session_counter;
+
+    let init = CaptureSessionInit {
+        session_id,
         virtual_x,
         virtual_y,
         virtual_width,
@@ -87,7 +113,28 @@ pub fn init_capture_session(state: &SharedCaptureState) -> Result<CaptureSession
         targets,
         monitors,
         default_mode: "window".to_string(), // Modo por defecto requerido: Ventana
-    })
+    };
+
+    // Guardar la sesión para que el overlay pueda recuperarla aunque el evento se pierda.
+    lock.session = Some(init.clone());
+
+    Ok(init)
+}
+
+/// Devuelve la sesión de captura vigente, si existe.
+pub fn get_session(state: &SharedCaptureState) -> Option<CaptureSessionInit> {
+    let lock = state.lock().ok()?;
+    lock.session.clone()
+}
+
+pub fn clear_session(state: &SharedCaptureState) {
+    if let Ok(mut lock) = state.lock() {
+        lock.snapshot = None;
+        lock.editor_payload = None;
+        lock.session = None;
+        lock.targets.clear();
+        lock.monitors.clear();
+    }
 }
 
 pub fn confirm_crop(
@@ -129,19 +176,17 @@ pub fn confirm_crop(
     };
 
     lock.editor_payload = Some(payload.clone());
-    // Liberar el snapshot completo para recuperar memoria de inmediato
-    lock.snapshot = None;
+    // Conservar el original mientras se ajusta el recorte; cancelar libera la sesión.
 
     Ok(payload)
 }
 
 pub fn get_subregion(
-    parent_x: i32,
-    parent_y: i32,
+    parent_hwnd: u64,
     screen_x: i32,
     screen_y: i32,
 ) -> Option<DetectedTarget> {
-    detect_subregions_at(parent_x, parent_y, screen_x, screen_y)
+    detect_subregions_at(parent_hwnd, screen_x, screen_y)
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

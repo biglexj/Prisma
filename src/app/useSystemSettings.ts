@@ -1,3 +1,4 @@
+import { resolveCaptureFormat, type CaptureFormat } from "../shared/captureFormat";
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
@@ -51,8 +52,10 @@ interface SystemSettings {
   auroraWallpapersEnabled: boolean;
   auroraServerUrl: string;
   videoSnapshotFolder?: string;
-  videoSnapshotFormat?: "png" | "webp" | "jpeg";
+  videoSnapshotFormat?: CaptureFormat;
+  /** @deprecated El atajo global del capturador vive ahora en el backend. */
   screenCaptureEnabled: boolean;
+  /** @deprecated El atajo global del capturador vive ahora en el backend. */
   screenCaptureShortcut: string;
   screenCaptureFolder?: string;
   enabledTools: EnabledToolsConfig;
@@ -88,6 +91,7 @@ function loadStoredSettings(): SystemSettings {
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
+      videoSnapshotFormat: resolveCaptureFormat(parsed.videoSnapshotFormat).id,
       enabledTools: {
         ...DEFAULT_SETTINGS.enabledTools,
         ...(parsed.enabledTools || {}),
@@ -162,15 +166,6 @@ export function useSystemSettings() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
             return synced;
           });
-
-          // Sincronizar atajo global de captura de pantalla (por defecto desactivado)
-          if (stored.screenCaptureEnabled) {
-            await invoke("screen_capture_set_shortcut", {
-              shortcut: stored.screenCaptureShortcut || "Shift+PrintScreen",
-            }).catch(() => {});
-          } else {
-            await invoke("screen_capture_set_shortcut", { shortcut: "disabled" }).catch(() => {});
-          }
 
           setIsLoaded(true);
         }
@@ -312,7 +307,7 @@ export function useSystemSettings() {
     });
   }, []);
 
-  const setVideoSnapshotFormat = useCallback((format: "png" | "webp" | "jpeg") => {
+  const setVideoSnapshotFormat = useCallback((format: CaptureFormat) => {
     setSettings((prev) => {
       const next = { ...prev, videoSnapshotFormat: format };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -336,37 +331,6 @@ export function useSystemSettings() {
     });
   }, []);
 
-  const setScreenCaptureEnabled = useCallback(async (enabled: boolean) => {
-    try {
-      const shortcut = settings.screenCaptureShortcut || "Shift+PrintScreen";
-      await invoke("screen_capture_set_shortcut", { shortcut: enabled ? shortcut : "disabled" });
-    } catch (err) {
-      console.error("Error al configurar estado de capturador:", err);
-    }
-    setSettings((prev) => {
-      const next = { ...prev, screenCaptureEnabled: enabled };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      notifySettingsChanged(next);
-      return next;
-    });
-  }, [settings.screenCaptureShortcut]);
-
-  const setScreenCaptureShortcut = useCallback(async (shortcut: string) => {
-    try {
-      if (settings.screenCaptureEnabled) {
-        await invoke("screen_capture_set_shortcut", { shortcut });
-      }
-    } catch (err) {
-      console.error("Error al registrar atajo de capturador:", err);
-    }
-    setSettings((prev) => {
-      const next = { ...prev, screenCaptureShortcut: shortcut };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      notifySettingsChanged(next);
-      return next;
-    });
-  }, [settings.screenCaptureEnabled]);
-
   const setScreenCaptureFolder = useCallback((folder: string) => {
     setSettings((prev) => {
       const next = { ...prev, screenCaptureFolder: folder };
@@ -389,8 +353,8 @@ export function useSystemSettings() {
     auroraServerUrl: settings.auroraServerUrl,
     videoSnapshotFolder: settings.videoSnapshotFolder || "",
     videoSnapshotFormat: settings.videoSnapshotFormat || "png",
-    screenCaptureEnabled: settings.screenCaptureEnabled,
-    screenCaptureShortcut: settings.screenCaptureShortcut || "Shift+PrintScreen",
+    captureFormat: settings.videoSnapshotFormat || "png",
+    setCaptureFormat: setVideoSnapshotFormat,
     screenCaptureFolder: settings.screenCaptureFolder || "",
     enabledTools: settings.enabledTools,
     setQuickLookShortcut,
@@ -404,8 +368,6 @@ export function useSystemSettings() {
     setAuroraServerUrl,
     setVideoSnapshotFolder,
     setVideoSnapshotFormat,
-    setScreenCaptureEnabled,
-    setScreenCaptureShortcut,
     setScreenCaptureFolder,
     setToolEnabled,
   };

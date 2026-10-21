@@ -232,6 +232,9 @@
   cursor: crosshair;
   background: transparent;
   overflow: hidden;
+  /* Impedir el desplazamiento/zoom nativo al arrastrar con lápiz o con el dedo. */
+  touch-action: none;
+  overscroll-behavior: none;
   z-index: 999999;
 }
 
@@ -302,6 +305,18 @@
   background: rgba(255, 107, 129, 0.2);
 }
 
+/* La vista del capturador vive en la aplicación principal: los botones
+   heredan el tema activo en lugar deloverlay oscuro. */
+.screen-capture-view .capture-pill-btn {
+  color: var(--on-surface);
+  background: color-mix(in srgb, var(--on-surface) 8%, transparent);
+  border: 1px solid var(--outline-variant);
+}
+
+.screen-capture-view .capture-pill-btn:hover {
+  background: color-mix(in srgb, var(--on-surface) 15%, transparent);
+}
+
 /* Borde de alta precisión y contorno estilo Windows */
 .capture-target-box {
   position: fixed;
@@ -315,7 +330,7 @@
 }
 
 .capture-target-box.is-window-target {
-  border-style: solid;
+  border-style: dashed;
   cursor: pointer;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45), 0 0 14px rgba(0, 201, 185, 0.35);
 }
@@ -372,8 +387,8 @@
 .capture-resize-handle.nw {
   top: -3px;
   left: -3px;
-  border-top: 3.5px solid #ffffff;
-  border-left: 3.5px solid #ffffff;
+  border-top: 3.5px solid #00C9B9;
+  border-left: 3.5px solid #00C9B9;
   border-top-left-radius: 2px;
   cursor: nwse-resize;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.65));
@@ -382,8 +397,8 @@
 .capture-resize-handle.ne {
   top: -3px;
   right: -3px;
-  border-top: 3.5px solid #ffffff;
-  border-right: 3.5px solid #ffffff;
+  border-top: 3.5px solid #00C9B9;
+  border-right: 3.5px solid #00C9B9;
   border-top-right-radius: 2px;
   cursor: nesw-resize;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.65));
@@ -392,8 +407,8 @@
 .capture-resize-handle.se {
   bottom: -3px;
   right: -3px;
-  border-bottom: 3.5px solid #ffffff;
-  border-right: 3.5px solid #ffffff;
+  border-bottom: 3.5px solid #00C9B9;
+  border-right: 3.5px solid #00C9B9;
   border-bottom-right-radius: 2px;
   cursor: nwse-resize;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.65));
@@ -402,8 +417,8 @@
 .capture-resize-handle.sw {
   bottom: -3px;
   left: -3px;
-  border-bottom: 3.5px solid #ffffff;
-  border-left: 3.5px solid #ffffff;
+  border-bottom: 3.5px solid #00C9B9;
+  border-left: 3.5px solid #00C9B9;
   border-bottom-left-radius: 2px;
   cursor: nesw-resize;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.65));
@@ -413,7 +428,7 @@
 .capture-resize-handle.s {
   width: 24px;
   height: 4px;
-  background: #ffffff;
+  background: #00C9B9;
   border-radius: 2px;
   left: calc(50% - 12px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
@@ -426,7 +441,7 @@
 .capture-resize-handle.e {
   width: 4px;
   height: 24px;
-  background: #ffffff;
+  background: #00C9B9;
   border-radius: 2px;
   top: calc(50% - 12px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
@@ -751,10 +766,10 @@
 .capture-inplace-box {
   position: absolute;
   box-sizing: border-box;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55), inset 0 0 0 1.5px #00C9B9, 0 0 16px rgba(0, 201, 185, 0.35);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55), 0 0 16px rgba(0, 201, 185, 0.35);
   border: none;
   border-radius: 2px;
-  overflow: hidden;
+  overflow: visible;
   pointer-events: auto;
   z-index: 999998;
 }
@@ -764,7 +779,19 @@
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
 }
 
+.capture-inplace-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
 .capture-inplace-canvas {
+  position: absolute;
+  /* El marco recorta el lienzo a escala nativa durante el arrastre. */
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
   display: block;
   cursor: crosshair;
   touch-action: none;
@@ -1058,3 +1085,19 @@
   font-weight: 400;
 }
 
+
+/* El marco se dibuja sobre el lienzo, fuera de los píxeles exportados. */
+.capture-inplace-box:not(.is-lasso)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1.5px dashed #00C9B9;
+  pointer-events: none;
+}
+.capture-frame-handles {
+  position: absolute;
+  inset: 3px;
+  z-index: 2;
+  pointer-events: none;
+}
+.capture-frame-handles.is-preview .capture-resize-handle { pointer-events: none; cursor: pointer; }

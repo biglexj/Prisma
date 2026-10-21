@@ -45,6 +45,7 @@ import { GalleryDlView } from "../features/gallery_dl/ui/GalleryDlView";
 import { PrismaUpscalerView } from "../features/prisma_upscaler/ui/PrismaUpscalerView";
 import { WallpapersView } from "../features/wallpapers/ui/WallpapersView";
 import { ScreenCaptureView } from "../features/screen_capture";
+import { useCaptureShortcut } from "../features/screen_capture/useCaptureShortcut";
 import { BatchRenamerView } from "../features/renamer/ui/BatchRenamerView";
 import { DuplicatesScannerModal } from "../features/visual_library/ui/duplicates/DuplicatesScannerModal";
 import { ImageComparisonModal, createVisualItemFromPath } from "../features/comparison";
@@ -122,10 +123,14 @@ function AppContent() {
   const [synapseToastFile, setSynapseToastFile] = useState<SynapseReceivedFile | null>(null);
   const [sendModalFile, setSendModalFile] = useState<{ path: string; title?: string } | null>(null);
   const {
-    theme, setTheme, accentColor, setAccentColor, backgroundVariant, setBackgroundVariant,
+    theme, resolvedTheme, setTheme, accentColor, setAccentColor, backgroundVariant, setBackgroundVariant,
+    lightBackgroundVariant, darkBackgroundVariant,
     dynamicMusicTheme, setDynamicMusicTheme, applyMusicPalette, isMusicPaletteActive,
   } = useTheme();
   const { confirmDeletion, sidebarDensity, auroraOnlineServicesEnabled } = useSystemSettings();
+  // El atajo global del capturador vive en el backend: se consulta al arrancar
+  // para conocer el estado real y transferir la preferencia heredada.
+  useCaptureShortcut();
   const playback = usePlaybackController();
   const { osdState: globalSeekOsd, triggerSeekOsd: triggerGlobalSeekOsd } = useSeekOsd();
   const { osdState: globalVolumeOsd, triggerOsd: triggerGlobalVolumeOsd } = useVolumeOsd(playback.snapshot.volume ?? 100);
@@ -1503,9 +1508,12 @@ function AppContent() {
               onPlay={playMusicItem}
               onThemeChange={setTheme}
               theme={theme}
+              resolvedTheme={resolvedTheme}
               accentColor={accentColor}
               onAccentColorChange={setAccentColor}
               backgroundVariant={backgroundVariant}
+              lightBackgroundVariant={lightBackgroundVariant}
+              darkBackgroundVariant={darkBackgroundVariant}
               onBackgroundVariantChange={setBackgroundVariant}
               dynamicMusicTheme={dynamicMusicTheme}
               onDynamicMusicThemeChange={setDynamicMusicTheme}

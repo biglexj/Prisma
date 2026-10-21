@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
-import type { CaptureMode, ScreenCaptureShortcutStatus } from "../model/types";
+import type { CaptureMode } from "../model/types";
 import { screenCaptureClient } from "../services/screenCaptureClient";
+import { useCaptureShortcut } from "../useCaptureShortcut";
 import "./screen-capture.css";
 
 interface ScreenCaptureViewProps {
@@ -10,24 +11,18 @@ interface ScreenCaptureViewProps {
 
 export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
   const [selectedMode, setSelectedMode] = useState<CaptureMode>("window");
-  const [shortcutStatus, setShortcutStatus] = useState<ScreenCaptureShortcutStatus | null>(null);
   const [isLaunching, setIsLaunching] = useState(false);
-  const [customShortcut, setCustomShortcut] = useState("");
-  const [isUpdatingShortcut, setIsUpdatingShortcut] = useState(false);
+  const {
+    status: shortcutStatus,
+    isUpdating: isUpdatingShortcut,
+    configure: configureShortcut,
+  } = useCaptureShortcut();
 
-  const refreshShortcut = useCallback(async () => {
-    try {
-      const status = await screenCaptureClient.getShortcutStatus();
-      setShortcutStatus(status);
-      setCustomShortcut(status.shortcut);
-    } catch {
-      // Ignorar si aún no está inicializado
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshShortcut();
-  }, [refreshShortcut]);
+  const shortcutLabel = shortcutStatus?.shortcut || "Shift+PrintScreen";
+  const shortcutIsActive = Boolean(shortcutStatus?.isRegistered);
+  const shortcutBadge = shortcutStatus?.error
+    ? shortcutIsActive ? "Atajo alternativo activo" : "Atajo no disponible"
+    : shortcutIsActive ? "Atajo Activo" : "Atajo inactivo";
 
   const handleStart = async (mode: CaptureMode = selectedMode) => {
     setIsLaunching(true);
@@ -44,20 +39,6 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
     }
   };
 
-  const handleSaveShortcut = async (newSc: string) => {
-    if (!newSc.trim()) return;
-    setIsUpdatingShortcut(true);
-    try {
-      await screenCaptureClient.setShortcut(newSc.trim());
-      await refreshShortcut();
-    } catch (err) {
-      console.error("Error al asignar atajo global:", err);
-      await refreshShortcut();
-    } finally {
-      setIsUpdatingShortcut(false);
-    }
-  };
-
   return (
     <div className="screen-capture-view">
       {/* ── Encabezado Principal ── */}
@@ -69,8 +50,8 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
           <div className="capture-hero-title-row">
             <h1>Capturador de Pantalla</h1>
             <span className={`capture-badge ${shortcutStatus?.error ? "is-warning" : ""}`}>
-              <Icon name={shortcutStatus?.error ? "info" : "check"} width={14} height={14} />
-              {shortcutStatus?.isRegistered ? "Atajo Activo" : "Atajo no disponible"}
+              <Icon name={shortcutStatus?.error ? "info" : shortcutIsActive ? "check" : "keyboard"} width={14} height={14} />
+              {shortcutBadge}
             </span>
           </div>
           <p>
@@ -92,7 +73,7 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
             <Icon name="camera" width={18} height={18} />
             <span>Iniciar Captura</span>
             <span className="capture-shortcut-pill">
-              {shortcutStatus?.shortcut || "Impr Pant"}
+              {shortcutLabel}
             </span>
           </button>
 
@@ -145,30 +126,34 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
                 <>
                   <strong>Conflicto de atajo:</strong> {shortcutStatus.error}
                 </>
+              ) : shortcutIsActive ? (
+                <>
+                  El atajo global <strong>{shortcutLabel}</strong> está activo incluso con Prisma minimizado o en bandeja.
+                </>
               ) : (
                 <>
-                  El atajo global <strong>{shortcutStatus?.shortcut}</strong> está activo incluso con Prisma minimizado o en bandeja.
+                  No hay ningún atajo global activo. Actívalo en <strong>Configuración → Capturador de Pantalla</strong>.
                 </>
               )}
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {shortcutStatus?.shortcut !== "PrintScreen" && (
+            {shortcutLabel !== "PrintScreen" && (
               <button
                 type="button"
                 className="capture-pill-btn"
-                onClick={() => void handleSaveShortcut("PrintScreen")}
+                onClick={() => void configureShortcut(true, "PrintScreen")}
                 disabled={isUpdatingShortcut}
                 title="Intentar registrar la tecla Impr Pant estándar (si ShareX u otra app no la ocupan)"
               >
                 Usar Impr Pant
               </button>
             )}
-            {shortcutStatus?.shortcut !== "Shift+PrintScreen" && (
+            {shortcutLabel !== "Shift+PrintScreen" && (
               <button
                 type="button"
                 className="capture-pill-btn"
-                onClick={() => void handleSaveShortcut("Shift+PrintScreen")}
+                onClick={() => void configureShortcut(true, "Shift+PrintScreen")}
                 disabled={isUpdatingShortcut}
                 title="Usar la combinación Shift + Impr Pant"
               >

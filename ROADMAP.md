@@ -8,15 +8,9 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [ ] **Capturador de pantalla en Herramientas — plan preparado, implementación pendiente**: Ventana por defecto con contornos que siguen la ventana o región detectable, Rectángulo y Pantalla completa; anotaciones simples, copia sin archivos y guardado PNG opcional. Vista propia y propuesta de editor independiente, con atajo Impr Pant/Mayús + Impr Pant sujeto a disponibilidad. [Plan y relevo](process/active/2026-10-18_capturador_pantalla/PLAN.md).
-
 - [ ] **Capturador de Pantalla — Extractor de Texto (OCR)**: Reconocimiento óptico de caracteres directamente sobre la captura de pantalla en memoria para copiar texto al portapapeles con un solo clic.
 
 - [ ] **Grabadora de Vídeo de Pantalla**: Grabación fluida y ligera de pantalla completa o ventana seleccionada a formato MP4/WebM con controles flotantes de inicio/parada y guardado directo en la carpeta de capturas.
-
-- [ ] **Soporte Nativo Pionero para Formatos ElyX (.elx) y JPEG XL (.jxl)**: Integración en Rust de decodificador nativo para el formato experimental ElyX (`.elx`) (wavelet CDF 5/3 entera, YCoCg-R, zlib con CRC32) y decodificación directa de JPEG XL (`.jxl`), dotando a Prisma de detección en biblioteca visual, generación de miniaturas y visualización interactiva a resolución completa. [Proceso activo](process/active/2026-10-17_soporte_nativo_elyx_y_jxl/PLAN.md).
-
-- [ ] **Teléfono como altavoz de Prisma y salidas Android respetuosas**: PC → teléfono continuo implementado; controles en Ecualizador y atajo global. Aceptación física, duración y latencia en curso. [Proceso activo](process/active/2026-10-05_audio_relay_super_gallery/PLAN.md).
 
 - [ ] **Flyout & Mini Widget de Escritorio para Medios y Volumen**: Overlay nativo y autónomo de escritorio en Tauri v2 sin dependencias externas (como FluentFlyout), con tarjeta de reproducción multimedia (carátulas HD, fotogramas de vídeo, metadata y transporte), cápsula de volumen interactiva, posicionamiento paramétrico en 6 zonas de pantalla respetando el área de trabajo de Windows, visualizador de audio reactivo integrado y modo anclado (Pin) para operar como widget de escritorio continuo.
 - [ ] **Miniaturas al arrastrar archivos fuera de Prisma**: Mostrar portada, miniatura o fotograma en el cursor de arrastre para imágenes, música y vídeos; queda pendiente la revisión visual y la entrega real en Windows.
@@ -54,26 +48,35 @@ Ideas de evolución registradas el 1 de octubre de 2026 para el uso personal de 
 
 ## 🟢 Completado
 
-- [x] **v1.1.8 — 2026-10-04**
+- [x] **v1.1.8 — 2026-10-19**
+  - **Capturador de Pantalla Inteligente y Anotaciones In-situ**:
+    - Detección automática de ventanas, selector de región rectangular con guías dimensionales y modo de pantalla completa.
+    - Barra de herramientas horizontal ergonómica in-situ con paleta de anotaciones: lápiz libre, flechas directrices, marcos rectangulares y cuadro de texto interactivo.
+    - Selector emergente de color con atajo `C` y temporizador de auto-ocultamiento (1500 ms), atajos directos (`V`, `R`, `Q`, `F`) y función de deshacer con `Ctrl + Mayús + Z`.
+    - Copia directa al portapapeles sin generar archivos residuales y selección compartida de formato para capturas de pantalla y fotogramas de vídeo: PNG predeterminado, WebP, JPG y ElyX experimental.
+    - Atajo global gestionado por el backend: se registra al arrancar la aplicación (funciona en bandeja o minimizada, sin abrir Configuración), la preferencia se persiste en `screen_capture.json`, el estado en pantalla es honesto y, si el atajo elegido está ocupado por otra aplicación, se activa «Mayús + Impr Pant» con aviso explícito.
+  - **Soporte Nativo Pionero para Formatos ElyX (.elx), JPEG XL (.jxl) y AVIF**:
+    - Decodificador nativo en Rust para el formato de compresión ElyX (`.elx`) basado en ondículas CDF 5/3 y espacio de color YCoCg-R.
+    - Integración de decodificación directa de archivos JPEG XL (`.jxl`) e imágenes AVIF con generación inmediata de miniaturas y vista previa en Quick Look sin códecs externos.
+  - **Transmisión de Audio Synapse («Usar el teléfono como altavoz»)**:
+    - Conexión cifrada sin configuración manual (cero PIN/QR/IP) con Super Galería en dispositivos móviles para retransmitir el audio del sistema y de Prisma.
+    - Sincronización continua de carátula, artista y título de pista en la notificación móvil, con controles directos en el Ecualizador y atajo de teclado global.
+  - **Prisma Upscaler: Motores Multi-Vendor (AMD FSR 1, NVIDIA NIS, RTX Video y DLSS)**:
+    - Incorporación de AMD FidelityFX FSR 1 (EASU + RCAS) y NVIDIA Image Scaling (NIS) con aceleración GPU nativa ultrarrápida sin modelos pesados.
+    - Adaptadores para RTX Video Super Resolution y DLSS Neural Rendering (experimental) en GPUs NVIDIA RTX en Windows.
+    - Selector dinámico de escalas con soporte para 1x (enfoque puro sin redimensionamiento) e insignias Material 3 Expressive.
   - **Feedback y Desacoplamiento de Guardado en Editor de Imágenes**:
     - Animación y estado de carga visual inmediato al guardar o sobrescribir en `SaveImageDialog` e `ImageEditor`.
     - Ceder ciclo al navegador (`requestAnimationFrame`) para pintar el spinner antes de procesar el canvas pesado de alta resolución.
-    - Overlay central visual durante el procesamiento de exportación.
     - Desacoplamiento del cierre del editor respecto al escaneo global de carpetas en segundo plano, abriendo la vista previa del archivo resultante al instante sin demoras.
   - **Invalidación Reactiva de Miniaturas y Proporciones Bento**:
     - Purga reactiva de caché en `VisualThumbnail` y `VideoThumbnail` ante modificaciones (`modifiedAtMillis`) o guardados.
     - Recálculo dinámico de dimensiones y adaptación automática de cuadrícula bento (horizontal a vertical 9:16 o 3:4) en `VisualCard`.
     - Botón de recarga en catálogo con limpieza total de memoria y re-escaneo directo desde disco.
-    - Soporte de timestamp de revisión en visor de imágenes para evitar retención de caché HTTP en WebView2.
-  - **Navegación Fluida hacia el Conversor Multimedia**:
+  - **Navegación Fluida hacia el Conversor Multimedia y Limpieza de Colecciones**:
     - Acceso directo al conversor desde el visor de fotos con el atajo canónico `V`, menú de herramientas y menú contextual.
-    - Transición limpia que respeta el desmontaje del visor y conserva el archivo seleccionado al montar el conversor.
     - Reproducción y apertura directa de resultados completados (imagen, audio y vídeo) desde la cola de conversión.
-  - **Prisma Upscaler: Motores Multi-Vendor (AMD FSR 1, NVIDIA NIS, RTX Video y DLSS NR)**:
-    - Incorporación de AMD FidelityFX FSR 1 (EASU + RCAS) y NVIDIA Image Scaling (NIS) con aceleración GPU nativa ultrarrápida (sub-segundo en Vulkan/DirectX 12) sin requerir modelos descargables pesados.
-    - Adaptadores para RTX Video Super Resolution y DLSS Neural Rendering (experimental) en GPUs NVIDIA RTX en Windows.
-    - Selector dinámico de escalas con soporte para 1x (enfoque puro sin redimensionamiento) e insignias de arquitectura Material 3 Expressive.
-    - Detección universal del motor y enrutamiento dual resiliente en Rust.
+    - Limpieza y filtrado automático de archivos inexistentes u ocultos en las vistas de Historial y Favoritos.
 
 - [x] **v1.1.7 — 2026-10-01**
   - Comparador multimedia integrado con modo claro, modo oscuro y colores dinámicos del tema.
