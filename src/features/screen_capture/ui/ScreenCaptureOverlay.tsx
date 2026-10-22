@@ -73,6 +73,8 @@ export function ScreenCaptureOverlay() {
   const [hoveredColor, setHoveredColor] = useState<{ hex: string; rgb: string; x: number; y: number } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   // Cuenta atrás antes de empezar a grabar (3, 2, 1).
+  // Título de la ventana seleccionada: sirve para seguirla durante la grabación.
+  const windowTitleRef = useRef<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
 
   // Cuadro de texto interactivo in-situ (elegir marco de texto arrastrando o clic)
@@ -253,6 +255,7 @@ export function ScreenCaptureOverlay() {
     resetPointerGestures();
     clearAnnotationSurface();
     phaseRef.current = "selecting";
+    windowTitleRef.current = null;
     // El lazo libre no existe en una sesión de vídeo: se arranca en Ventana.
     const restoredMode = lastCaptureMode(payload.defaultMode || "window");
     const initialMode =
@@ -365,7 +368,7 @@ export function ScreenCaptureOverlay() {
   // Iniciar la grabación de la región confirmada.
   // El backend aparta el overlay antes de capturar: si el overlay siguiera
   // visible, aparecería dentro del vídeo grabado.
-  const handleStartRecording = useCallback(async (rect: RectSelection) => {
+  const handleStartRecording = useCallback(async (rect: RectSelection, windowTitle?: string) => {
     targetQuery.cancel();
     ++confirmRevisionRef.current;
     setToastMessage("Iniciando la grabación…");
@@ -389,6 +392,8 @@ export function ScreenCaptureOverlay() {
         quality: preferences.quality,
         maxHeight: preferences.maxHeight,
         systemAudio: preferences.systemAudio,
+        // Con título, la captura sigue a la ventana aunque se mueva.
+        windowTitle: windowTitle ?? null,
       });
       await handleCancel();
     } catch (err) {
@@ -403,7 +408,7 @@ export function ScreenCaptureOverlay() {
     if (rect.width <= 4 || rect.height <= 4) return;
     // En una sesión de vídeo, confirmar la región significa «grabar aquí».
     if (sessionRef.current?.intent === "video") {
-      await handleStartRecording(rect);
+      await handleStartRecording(rect, windowTitleRef.current ?? undefined);
       return;
     }
     const sessionId = sessionRef.current?.sessionId;
@@ -642,6 +647,7 @@ export function ScreenCaptureOverlay() {
               ? subregionTargetRef.current
               : activeTargetRef.current;
             if (target) {
+              windowTitleRef.current = target.title || null;
               void handleConfirmToAnnotate({
                 x: target.x,
                 y: target.y,
@@ -1039,6 +1045,7 @@ export function ScreenCaptureOverlay() {
       } catch { return; }
       if (!sessionRef.current || sessionRef.current.sessionId !== sessionId || modeRef.current !== "window") return;
       if (target) {
+        windowTitleRef.current = target.title || null;
         void handleConfirmToAnnotate({
           x: target.x,
           y: target.y,

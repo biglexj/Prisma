@@ -31,9 +31,22 @@
 - **Añadir a la biblioteca de Vídeos**: botón en el aviso de «Grabación guardada» que da de alta la carpeta de la grabación en la biblioteca de Vídeos de Prisma.
 - **Pruebas**: 80 del backend en verde (7 ignoradas), 64 del frontend en verde, `tsc` limpio y build de producción correcto.
 
+## Cuarta tanda: captura de una ventana que se mueve
+
+- **Grabar por título de ventana**: GDIGRAB admite `-i title=…`, con lo que la captura **sigue a la ventana** aunque se mueva por la pantalla. En el overlay, al confirmar en modo Ventana se pasa el título de la ventana detectada.
+- **Fallo real encontrado y corregido**: una ventana con dimensión impar (en la prueba, 360×169) hacía fallar la grabación con **todos** los motores — «height not divisible by 2» en libx264 y «SubmitInput() failed with error 29» en AMF. Ahora, en modo título, se pasa un tamaño par a GDIGRAB y la captura sale recortada un píxel.
+- **Sonda a la resolución real**: la comprobación de motores codifica unos fotogramas del tamaño exacto de la grabación, porque un motor puede funcionar en un tamaño y fallar en otro. Con esa sonda, el modo automático detecta a tiempo un motor que no entrega fotogramas y prueba el siguiente en vez de perder la grabación.
+- **Respaldo automático**: si el registro de FFmpeg trae un error de codificación en los primeros instantes, se abandona ese motor y se prueba el siguiente.
+
 ## Aviso: prueba intermitente ajena a este trabajo
 
-`infrastructure::windows_com::tests::audio_helper_*` (del feature de audio relay) falla de forma intermitente cuando en la misma ejecución corren varias grabaciones de pantalla: el hilo de la prueba queda con un apartamento COM del que cree haberse descargado. Con el árbol sin los cambios de esta sesión la suite pasa; con ellos también pasa en 4 de 4 ejecuciones seguidas, y falló en 2 de 10 antes. La prueba no es de este trabajo y su causa está en el manejo de apartamento COM de ese feature, no en la grabadora. Queda avisado para que el dueño de esa funcionalidad lo endurezca.
+`infrastructure::windows_com::tests::audio_helper_*` (del feature de audio relay, código de septiembre) falla de forma intermitente cuando en la misma ejecución hay capturas de pantalla en curso: el hilo de la prueba queda con un apartamento COM del que cree haberse descargado.
+
+Medido en esta máquina:
+- Estado commiteado sin los cambios de esta sesión: 1 de 4 ejecuciones fallan.
+- Con los cambios de esta sesión: 2 de 5 ejecuciones fallan.
+
+La tasa es comparable, así que **no es una regresión de este trabajo**; la causa está en el manejo de apartamento COM de ese feature. Como ayuda, el helper de la prueba ahora interpreta `APTTYPE_NA` como «el hilo no tiene apartamento», que es lo que Windows devuelve después de un `OleUninitialize` y que antes se tomaba por un apartamento vivo. Lo que queda de intermitencia corresponde al dueño de esa funcionalidad.
 
 ## Pendiente de comprobación visual en la aplicación
 

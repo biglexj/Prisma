@@ -50,6 +50,10 @@ pub struct RecordingOptions {
     /// Capturar también el audio del sistema (WASAPI loopback).
     #[serde(default)]
     pub system_audio: Option<bool>,
+    /// Título de la ventana a seguir. Si viene informado, la captura sigue a
+    /// la ventana aunque se mueva por la pantalla.
+    #[serde(default)]
+    pub window_title: Option<String>,
 }
 
 /// Estado público de la grabadora.
@@ -298,6 +302,8 @@ struct SpawnPlan<'a> {
     width: u32,
     height: u32,
     audio_device: Option<&'a str>,
+    /// Título de la ventana a seguir, si la grabación es de una ventana.
+    window_title: Option<String>,
     /// Audio del sistema: puerto local, frecuencia y canales.
     system_audio: Option<(u16, u32, usize)>,
     output_path: &'a std::path::Path,
@@ -350,26 +356,27 @@ fn encoder_args(encoder: &str, quality: &str) -> Vec<String> {
     }
 }
 
-/// Caché de sondas: cada motor se comprueba una sola vez por proceso.
+/// Caché de sondas: cada motor y tamaño se comprueba una sola vez por proceso.
 fn encoder_probe_cache() -> &'static Mutex<std::collections::HashMap<String, bool>> {
     static CACHE: OnceLock<Mutex<std::collections::HashMap<String, bool>>> = OnceLock::new();
     CACHE.get_or_init(|| Mutex::new(std::collections::HashMap::new()))
 }
 
-/// Comprueba si el motor de codificación existe y funciona en esta máquina.
+/// Comprueba si el motor de codificación existe y funciona a la resolución pedida.
 ///
 /// No basta con lanzar la grabación: cuando el codificador falla, FFmpeg no
 /// muere, se queda vivo con el vídeo vacío y el archivo final sale sin datos.
-/// Por eso se hace una codificación de prueba mínima y se mira su código de
-/// salida antes de compromise con un motor.
-fn encoder_available(ffmpeg: &std::path::Path, encoder: &str) -> bool {
+/// La sonda codifica unos fotogramas del tamaño exacto de la grabación, porque
+/// un motor puede funcionar en un tamaño y fallar en otro.
+fn encoder_available(ffmpeg: &std::path::Path, encoder: &str, width: u32, height: u32) -> bool {
     if encoder == "cpu" {
         return true;
     }
 
+    let key = format!("{encoder}:{width}x{height}");
     {
         let cache = encoder_probe_cache().lock().unwrap_or_else(|error| error.into_inner());
-        if let Some(available) = cache.get(encoder) {
+        if let Some(available) = cache.get(&key) {
             return *available;
         }
     }
@@ -377,8 +384,8 @@ fn encoder_available(ffmpeg: &std::path::Path, encoder: &str) -> bool {
     let mut command = Command::new(ffmpeg);
     command
         .args(["-hide_banner", "-loglevel", "error"])
-        .args(["-f", "lavfi", "-i", "color=c=black:s=128x128"])
-        .args(["-frames:v", "1"])
+        .args(["-f", "lavfi", "-i", &format!("color=c=black:s={width}x{height}")])
+        .args(["-frames:v", "2"])
         .args(encoder_args(encoder, "medium"))
         .args(["-f", "null", "-"])
         .stdin(Stdio::null())
@@ -392,7 +399,7 @@ fn encoder_available(ffmpeg: &std::path::Path, encoder: &str) -> bool {
 
     let available = matches!(command.output(), Ok(output) if output.status.success());
     let mut cache = encoder_probe_cache().lock().unwrap_or_else(|error| error.into_inner());
-    cache.insert(encoder.to_string(), available);
+    cache.insert(key, available);
     available
 }
 
@@ -406,14 +413,27 @@ fn spawn_recorder(
     encoder: &str,
 ) -> Result<(Child, Option<ChildStdin>, Arc<Mutex<String>>), String> {
     let mut command = Command::new(plan.ffmpeg);
-    command
-        .args(["-hide_banner", "-loglevel", "error", "-stats"])
-        .args(["-f", "gdigrab", "-draw_mouse", "1"])
-        .args(["-framerate", &plan.fps.to_string()])
-        .args(["-offset_x", &plan.offset_x.to_string()])
-        .args(["-offset_y", &plan.offset_y.to_string()])
-        .args(["-video_size", &format!("{}x{}", plan.width, plan.height)])
-        .args(["-i", "desktop"]);
+    command.args(["-hide_banner", "-loglevel", "error", "-stats"]);
+    command.args(["-f", "gdigrab", "-draw_mouse", "1"]);
+    command.args(["-framerate", &plan.fps.to_string()]);
+
+    match plan.window_title.as_deref() {
+        // Con título, GDIGRAB sigue a la ventana: si se mueve, la captura la
+        // sigue. No se pasa el desplazamiento (la posición es la de la
+        // ventana), pero sí el tamaño, que debe ser par: H.264 no admite
+        // dimensiones impares y el motor de hardware las rechaza.
+        Some(title) => {
+            command.args(["-video_size", &format!("{}x{}", plan.width, plan.height)]);
+            command.args(["-i", &format!("title={title}")]);
+        }
+        None => {
+            command
+                .args(["-offset_x", &plan.offset_x.to_string()])
+                .args(["-offset_y", &plan.offset_y.to_string()])
+                .args(["-video_size", &format!("{}x{}", plan.width, plan.height)])
+                .args(["-i", "desktop"]);
+        }
+    }
 
     // El audio del sistema llega por un socket local: FFmpeg se conecta como
     // cliente y lee el PCM en crudo que le escribe la captura WASAPI.
@@ -498,7 +518,7 @@ fn spawn_recorder(
     }
 
     // Si FFmpeg falla de inmediato (región inválida, códec ausente) se detecta aquí.
-    std::thread::sleep(Duration::from_millis(450));
+    std::thread::sleep(Duration::from_millis(900));
     if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
         let log_text = log.lock().map(|guard| guard.clone()).unwrap_or_default();
         let _ = std::fs::remove_file(plan.output_path);
@@ -508,6 +528,26 @@ fn spawn_recorder(
             log_text.trim().to_string()
         };
         return Err(detail);
+    }
+
+    // Hay motores que arrancan bien y fallan al recibir los primeros fotogramas
+    // (por ejemplo, con la resolución de una ventana concreta). Si el registro
+    // trae un error de codificación, se abandona este motor: el modo automático
+    // probará el siguiente y el usuario no pierde la grabación.
+    {
+        let log_text = log.lock().map(|guard| guard.clone()).unwrap_or_default();
+        let encoder_failed = log_text.contains("SubmitInput() failed")
+            || log_text.contains("Error while opening encoder")
+            || log_text.contains("Error submitting video frame")
+            || log_text.contains("Cannot load")
+            || log_text.contains("not divisible by")
+            || log_text.contains("Device not available");
+        if encoder_failed {
+            let _ = child.kill();
+            let _ = child.wait();
+            let _ = std::fs::remove_file(plan.output_path);
+            return Err(log_text.trim().to_string());
+        }
     }
 
     let stdin = child.stdin.take();
@@ -546,7 +586,13 @@ pub fn start_recording(
     let (origin_x, origin_y) = virtual_origin();
     let offset_x = options.region.x - origin_x;
     let offset_y = options.region.y - origin_y;
-    if offset_x < 0 || offset_y < 0 {
+    let follows_window = options
+        .window_title
+        .as_deref()
+        .map(str::trim)
+        .filter(|title| !title.is_empty())
+        .is_some();
+    if !follows_window && (offset_x < 0 || offset_y < 0) {
         return Err("La región a grabar está fuera del escritorio virtual".to_string());
     }
 
@@ -583,6 +629,15 @@ pub fn start_recording(
         .to_lowercase();
     let max_height = options.max_height.filter(|value| *value >= 240);
 
+    // Título de la ventana a seguir. Los dos puntos y el igual rompen el
+    // análisis de opciones de FFmpeg, así que se sustituyen por un espacio.
+    let window_title = options
+        .window_title
+        .as_deref()
+        .map(str::trim)
+        .filter(|title| !title.is_empty())
+        .map(|title| title.replace([':', '='], " "));
+
     // Audio del sistema: se abre la captura antes de lanzar FFmpeg para que
     // sepa el puerto, la frecuencia y los canales con los que debe grabar.
     #[cfg(windows)]
@@ -615,6 +670,7 @@ pub fn start_recording(
             .as_deref()
             .map(str::trim)
             .filter(|value| !value.is_empty()),
+        window_title,
         #[cfg(windows)]
         system_audio,
         #[cfg(not(windows))]
@@ -626,8 +682,8 @@ pub fn start_recording(
     let mut last_error = String::new();
     let mut spawned = None;
     for encoder in candidates {
-        if !encoder_available(&ffmpeg, encoder) {
-            last_error = format!("el motor «{encoder}» no está disponible en esta máquina");
+        if !encoder_available(&ffmpeg, encoder, width, height) {
+            last_error = format!("el motor «{encoder}» no está disponible a {width}×{height}");
             continue;
         }
         match spawn_recorder(&plan, encoder) {
@@ -635,7 +691,10 @@ pub fn start_recording(
                 spawned = Some(parts);
                 break;
             }
-            Err(error) => last_error = error,
+            Err(error) => {
+                eprintln!("[Grabadora] El motor «{encoder}» no sirvió: {error}");
+                last_error = error;
+            }
         }
     }
 
@@ -948,19 +1007,39 @@ mod tests {
         }
     }
 
-    /// Pausar y reanudar una grabación real: el archivo debe seguir cerrando
-    /// bien y el estado debe reflejar la pausa.
+    /// La captura por título sigue a la ventana aunque se mueva. La prueba
+    /// busca una ventana real del escritorio; si no hay ninguna apta, se omite.
     #[test]
-    fn la_grabacion_se_pausa_y_se_reanuda() {
+    fn graba_una_ventana_por_titulo() {
         if find_ffmpeg_binary().is_none() {
-            eprintln!("[Grabadora] FFmpeg no disponible: se omite la prueba de pausa");
+            eprintln!("[Grabadora] FFmpeg no disponible: se omite la prueba de ventana");
             return;
         }
 
+        // Una ventana real con título utilizable.
+        let target = crate::features::screen_capture::windows::enumerate_visible_windows()
+            .into_iter()
+            .find(|target| {
+                !target.title.trim().is_empty()
+                    && !target.title.contains([':', '=', '"'])
+                    && target.width > 32
+                    && target.height > 32
+            });
+        let Some(target) = target else {
+            eprintln!("[Grabadora] No hay ninguna ventana con título utilizable: se omite");
+            return;
+        };
+        let title = target.title.clone();
+
         let state: SharedRecorderState = Arc::new(Mutex::new(None));
-        let folder = std::env::temp_dir().join("prisma-recorder-pause");
+        let folder = std::env::temp_dir().join("prisma-recorder-window");
         let options = RecordingOptions {
-            region: RecordingRegion { x: 0, y: 0, width: 320, height: 240 },
+            region: RecordingRegion {
+                x: target.x,
+                y: target.y,
+                width: target.width as u32,
+                height: target.height as u32,
+            },
             fps: Some(15),
             audio_device: None,
             output_folder: Some(folder.to_string_lossy().into_owned()),
@@ -968,29 +1047,28 @@ mod tests {
             quality: None,
             max_height: None,
             system_audio: Some(false),
+            window_title: Some(title.clone()),
         };
 
-        if start_recording(&state, options).is_err() {
-            eprintln!("[Grabadora] Sin escritorio disponible: se omite la prueba de pausa");
-            return;
+        match start_recording(&state, options) {
+            Ok(info) => {
+                eprintln!(
+                    "[Grabadora] Ventana «{title}» capturada a {}×{}",
+                    info.width, info.height
+                );
+                std::thread::sleep(Duration::from_millis(1800));
+                let finished = stop_recording(&state)
+                    .unwrap_or_else(|error| panic!("debe cerrarse: {error}"));
+                let path = PathBuf::from(&finished.output_path);
+                let size = std::fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
+                assert!(size > 0, "La grabación de la ventana «{title}» debe tener contenido");
+                let _ = std::fs::remove_file(&path);
+            }
+            Err(error) => {
+                eprintln!("[Grabadora] No se pudo grabar la ventana «{title}»: {error}");
+            }
         }
 
-        std::thread::sleep(Duration::from_millis(1200));
-        assert!(toggle_pause(&state).expect("debe pausar"), "la grabación debe quedar pausada");
-        assert!(recording_info(&state).map(|info| info.paused).unwrap_or(false));
-
-        std::thread::sleep(Duration::from_millis(800));
-        assert!(
-            !toggle_pause(&state).expect("debe reanudar"),
-            "la grabación debe volver a estar activa"
-        );
-
-        let finished = stop_recording(&state).expect("La grabación debe cerrarse");
-        let path = PathBuf::from(&finished.output_path);
-        let size = std::fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
-        assert!(size > 0, "El vídeo pausado debe tener contenido");
-
-        let _ = std::fs::remove_file(&path);
         let _ = std::fs::remove_dir(&folder);
     }
 
@@ -1021,6 +1099,7 @@ mod tests {
             quality: None,
             max_height: None,
             system_audio: Some(true),
+            window_title: None,
         };
 
         let started = match start_recording(&state, options) {
@@ -1079,6 +1158,7 @@ mod tests {
             quality: None,
             max_height: None,
             system_audio: Some(false),
+            window_title: None,
         };
 
         let started = match start_recording(&state, options) {
@@ -1090,9 +1170,19 @@ mod tests {
         };
         assert_eq!(started.status, "recording");
 
-        std::thread::sleep(Duration::from_millis(2000));
+        std::thread::sleep(Duration::from_millis(1200));
         assert!(recording_info(&state).is_some());
 
+        // Pausa y reanudación en mitad de la grabación.
+        assert!(toggle_pause(&state).expect("debe pausar"), "la grabación debe quedar pausada");
+        assert!(recording_info(&state).map(|info| info.paused).unwrap_or(false));
+        std::thread::sleep(Duration::from_millis(600));
+        assert!(
+            !toggle_pause(&state).expect("debe reanudar"),
+            "la grabación debe volver a estar activa"
+        );
+
+        std::thread::sleep(Duration::from_millis(600));
         let finished = stop_recording(&state).expect("La grabación debe cerrarse");
         assert_eq!(finished.status, "finished");
         assert!(finished.elapsed_ms >= 1500);

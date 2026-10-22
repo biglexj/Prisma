@@ -21,6 +21,8 @@ export interface RecordingOptions {
   quality?: "high" | "medium" | "low";
   maxHeight?: number | null;
   systemAudio?: boolean;
+  /** Título de la ventana a seguir durante la grabación. */
+  windowTitle?: string | null;
 }
 
 /** Estado de la grabadora difundo por el backend. */

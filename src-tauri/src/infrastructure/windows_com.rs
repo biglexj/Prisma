@@ -41,7 +41,7 @@ mod tests {
     use super::*;
     use windows::Win32::System::{
         Com::{
-            CoGetApartmentType, APTTYPE, APTTYPEQUALIFIER, APTTYPE_MAINSTA, APTTYPE_MTA,
+            CoGetApartmentType, APTTYPE, APTTYPEQUALIFIER, APTTYPE_MAINSTA, APTTYPE_MTA, APTTYPE_NA,
             APTTYPE_STA,
         },
         Ole::{OleInitialize, OleUninitialize},
@@ -52,6 +52,12 @@ mod tests {
         let mut qualifier = APTTYPEQUALIFIER::default();
         unsafe {
             CoGetApartmentType(&mut kind, &mut qualifier).ok()?;
+        }
+        // APTTYPE_NA significa que el hilo no tiene apartamento: después de
+        // un OleUninitialize la API lo informa así, en vez de devolver un
+        // error, y el resultado cambia según la carga de la máquina.
+        if kind == APTTYPE_NA {
+            return None;
         }
         Some(kind)
     }
