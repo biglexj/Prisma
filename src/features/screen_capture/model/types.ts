@@ -1,5 +1,37 @@
 export type CaptureMode = "window" | "rect" | "fullscreen" | "freeform" | "eyedropper";
 
+/** Intención de la sesión de captura: imagen puntual o grabación de vídeo. */
+export type CaptureIntent = "image" | "video";
+
+/** Región de pantalla a grabar, en coordenadas físicas del escritorio virtual. */
+export interface RecordingRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Parámetros de una grabación. */
+export interface RecordingOptions {
+  region: RecordingRegion;
+  fps?: number;
+  audioDevice?: string | null;
+  outputFolder?: string | null;
+}
+
+/** Estado de la grabadora difundo por el backend. */
+export interface RecordingInfo {
+  status: "recording" | "finished" | "idle" | "error";
+  outputPath: string;
+  startedAtMs: number;
+  elapsedMs: number;
+  region: RecordingRegion;
+  fps: number;
+  width: number;
+  height: number;
+  error?: string | null;
+}
+
 export interface DetectedTarget {
   id: string;
   title: string;
@@ -33,6 +65,8 @@ export interface CaptureSessionInit {
   targets: DetectedTarget[];
   monitors: MonitorTarget[];
   defaultMode: CaptureMode;
+  /** `image` para captura puntual, `video` para preparar una grabación. */
+  intent: CaptureIntent;
 }
 
 export interface EditorPayload {

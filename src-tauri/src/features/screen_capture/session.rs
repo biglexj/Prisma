@@ -25,6 +25,8 @@ pub struct CaptureSessionInit {
     pub targets: Vec<DetectedTarget>,
     pub monitors: Vec<MonitorTarget>,
     pub default_mode: String,
+    /// `image` para una captura puntual, `video` para preparar una grabación.
+    pub intent: String,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -81,7 +83,10 @@ impl Default for CaptureSessionState {
 
 pub type SharedCaptureState = Arc<Mutex<CaptureSessionState>>;
 
-pub fn init_capture_session(state: &SharedCaptureState) -> Result<CaptureSessionInit, String> {
+pub fn init_capture_session(
+    state: &SharedCaptureState,
+    intent: &str,
+) -> Result<CaptureSessionInit, String> {
     // 1. Capturar pantalla virtual completa antes de interactuar con la interfaz
     let snapshot = capture_virtual_screen()?;
     let targets = enumerate_visible_windows();
@@ -104,6 +109,8 @@ pub fn init_capture_session(state: &SharedCaptureState) -> Result<CaptureSession
     lock.session_counter = lock.session_counter.wrapping_add(1);
     let session_id = lock.session_counter;
 
+    let intent = if intent == "video" { "video" } else { "image" };
+
     let init = CaptureSessionInit {
         session_id,
         virtual_x,
@@ -113,6 +120,7 @@ pub fn init_capture_session(state: &SharedCaptureState) -> Result<CaptureSession
         targets,
         monitors,
         default_mode: "window".to_string(), // Modo por defecto requerido: Ventana
+        intent: intent.to_string(),
     };
 
     // Guardar la sesión para que el overlay pueda recuperarla aunque el evento se pierda.

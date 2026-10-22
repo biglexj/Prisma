@@ -1,0 +1,100 @@
+/* ── Zona de recepción de archivos (parte superior central) ───────────── */
+.file-drop-zone {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+/* Muesca discreta: ~50 px de ancho por 3 px de alto. */
+.file-drop-zone-notch {
+  width: 50px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--primary);
+  opacity: 0.35;
+  box-shadow: 0 1px 6px color-mix(in srgb, var(--primary) 45%, transparent);
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.file-drop-zone:hover .file-drop-zone-notch {
+  width: 72px;
+  opacity: 0.7;
+}
+
+.file-drop-zone.is-expanded {
+  pointer-events: auto;
+}
+
+.file-drop-zone.is-expanded .file-drop-zone-notch {
+  width: 260px;
+  height: 4px;
+  opacity: 0.9;
+  animation: dropZoneBreathe 1.8s ease-in-out infinite;
+}
+
+.file-drop-zone.is-hovering .file-drop-zone-notch {
+  width: 300px;
+  opacity: 1;
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--primary) 70%, transparent);
+}
+
+.file-drop-zone-panel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.26);
+  color: var(--on-surface);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: dropZoneRise 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.file-drop-zone.is-hovering .file-drop-zone-panel {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 14%, var(--surface-container-high));
+  animation: dropZoneReceive 0.9s ease-in-out infinite;
+}
+
+.file-drop-zone-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.file-drop-zone-label {
+  color: var(--on-surface);
+}
+
+@keyframes dropZoneBreathe {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.55; }
+}
+
+@keyframes dropZoneRise {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dropZoneReceive {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025); }
+}

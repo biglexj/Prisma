@@ -33,6 +33,7 @@ import { playlistsRead } from "../features/collections/tauri/client";
 import { AboutView } from "./ui/AboutView";
 import { SynapseToast, type SynapseReceivedFile } from "./ui/SynapseToast";
 import { SendToSuperGalleryModal } from "./ui/SendToSuperGalleryModal";
+import { FileDropZone } from "./ui/FileDropZone";
 import { addToHistory } from "../shared/useHistory";
 import { CustomLibraryView } from "../features/custom_libraries/ui/CustomLibraryView";
 import { DocumentViewer } from "../features/custom_libraries/ui/DocumentViewer";
@@ -45,6 +46,7 @@ import { GalleryDlView } from "../features/gallery_dl/ui/GalleryDlView";
 import { PrismaUpscalerView } from "../features/prisma_upscaler/ui/PrismaUpscalerView";
 import { WallpapersView } from "../features/wallpapers/ui/WallpapersView";
 import { ScreenCaptureView } from "../features/screen_capture";
+import { RecordingHud } from "../features/screen_capture/ui/RecordingHud";
 import { useCaptureShortcut } from "../features/screen_capture/useCaptureShortcut";
 import { BatchRenamerView } from "../features/renamer/ui/BatchRenamerView";
 import { DuplicatesScannerModal } from "../features/visual_library/ui/duplicates/DuplicatesScannerModal";
@@ -1626,6 +1628,14 @@ function AppContent() {
         isOpen={Boolean(sendModalFile)}
         onClose={() => setSendModalFile(null)}
       />
+
+      {/* Indicador de grabación: vive en la ventana principal porque el overlay
+          debe ocultarse durante la captura para no aparecer en el vídeo. */}
+      <RecordingHud />
+
+      {/* Zona de recepción en la parte superior central: envía el archivo
+          arrastrado desde el Explorador al sistema de transferencias. */}
+      <FileDropZone />
 
       <DspEqualizerModal
         isOpen={isEqualizerModalOpen}

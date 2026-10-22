@@ -7,9 +7,9 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutEvent, ShortcutSta
 
 use crate::features::screen_capture::{
     clear_session, confirm_crop, detect_window_at, get_session, get_subregion, init_capture_session,
-    pick_color_at, preferences, CaptureSessionInit, CaptureShortcutPreferences, DetectedTarget,
-    EditorPayload, PickColorResult, RectSelection, SharedCaptureState, DEFAULT_SHORTCUT,
-    FALLBACK_SHORTCUT,
+    pick_color_at, preferences, recorder, CaptureSessionInit, CaptureShortcutPreferences, DetectedTarget,
+    EditorPayload, PickColorResult, RectSelection, RecordingInfo, RecordingOptions, SharedCaptureState,
+    SharedRecorderState, DEFAULT_SHORTCUT, FALLBACK_SHORTCUT,
 };
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -33,12 +33,20 @@ pub struct ScreenCaptureShortcutStatus {
 pub async fn screen_capture_start(
     app: tauri::AppHandle,
     state: tauri::State<'_, SharedCaptureState>,
-    _mode: Option<String>,
+    mode: Option<String>,
+    intent: Option<String>,
 ) -> Result<CaptureSessionInit, String> {
-    start_capture_session(&app, &state)
+    // El modo elegido en la interfaz se aplica en el overlay; aquí solo se
+    // necesita distinguir una captura de imagen de una preparación de grabación.
+    let _ = mode;
+    start_capture_session(&app, &state, intent.as_deref().unwrap_or("image"))
 }
 
-fn start_capture_session(app: &tauri::AppHandle, state: &SharedCaptureState) -> Result<CaptureSessionInit, String> {
+fn start_capture_session(
+    app: &tauri::AppHandle,
+    state: &SharedCaptureState,
+    intent: &str,
+) -> Result<CaptureSessionInit, String> {
     // No congelar ni volver a mostrar el lienzo de la captura anterior.
     #[cfg(windows)]
     let was_visible = ["screen_capture_overlay", "screen_capture_editor"].iter().any(|label| {
@@ -50,7 +58,7 @@ fn start_capture_session(app: &tauri::AppHandle, state: &SharedCaptureState) -> 
         // Esperar a que el compositor retire la captura A antes de congelar la B.
         let _ = unsafe { windows::Win32::Graphics::Dwm::DwmFlush() };
     }
-    let init = init_capture_session(state)?;
+    let init = init_capture_session(state, intent)?;
 
     if let Some(overlay) = app.get_webview_window("screen_capture_overlay") {
         // Una ventana minimizada (por ejemplo tras Win+D) ignora set_position/set_size y
@@ -371,7 +379,7 @@ fn build_capture_handler(
         let state = state.clone();
 
         tauri::async_runtime::spawn(async move {
-            let _ = start_capture_session(&app, &state);
+            let _ = start_capture_session(&app, &state, "image");
         });
     }
 }
@@ -424,6 +432,105 @@ pub fn apply_capture_shortcut_at_startup(
     if let Err(error) = apply_capture_shortcut(app, state, enabled, &shortcut) {
         eprintln!("[Capturador] No se pudo aplicar el atajo al arrancar: {error}");
     }
+}
+
+// ── Grabadora de vídeo ──────────────────────────────────────────────────────
+
+/// Evento que difunde el estado de la grabación a todas las ventanas.
+pub const RECORDING_STATE_EVENT: &str = "prisma://recording-state";
+
+/// Inicia la grabación de la región indicada.
+///
+/// El overlay de selección cubre toda la pantalla, así que se oculta antes de
+/// empezar: si siguiera visible, aparecería en el vídeo grabado.
+#[tauri::command]
+pub async fn screen_recorder_start(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, SharedRecorderState>,
+    options: RecordingOptions,
+) -> Result<RecordingInfo, String> {
+    hide_capture_windows(&app);
+    #[cfg(windows)]
+    unsafe {
+        let _ = windows::Win32::Graphics::Dwm::DwmFlush();
+    }
+
+    let recorder_state = state.inner().clone();
+    let info = tauri::async_runtime::spawn_blocking(move || {
+        std::thread::sleep(recorder::OVERLAY_RELEASE_DELAY);
+        recorder::start_recording(&recorder_state, options)
+    })
+    .await
+    .map_err(|e| format!("Error iniciando la grabación: {e}"))??;
+
+    let _ = app.emit(RECORDING_STATE_EVENT, &info);
+    Ok(info)
+}
+
+/// Detiene la grabación y cierra el archivo para que quede reproducible.
+#[tauri::command]
+pub async fn screen_recorder_stop(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, SharedRecorderState>,
+) -> Result<RecordingInfo, String> {
+    let recorder_state = state.inner().clone();
+    let info = tauri::async_runtime::spawn_blocking(move || {
+        recorder::stop_recording(&recorder_state)
+    })
+    .await
+    .map_err(|e| format!("Error deteniendo la grabación: {e}"))??;
+
+    let _ = app.emit(RECORDING_STATE_EVENT, &info);
+    Ok(info)
+}
+
+/// Estado de la grabación en curso.
+#[tauri::command]
+pub async fn screen_recorder_status(
+    state: tauri::State<'_, SharedRecorderState>,
+) -> Result<Option<RecordingInfo>, String> {
+    Ok(recorder::recording_info(&state))
+}
+
+/// Detiene la grabación y descarta el archivo parcial.
+#[tauri::command]
+pub async fn screen_recorder_cancel(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, SharedRecorderState>,
+) -> Result<(), String> {
+    let recorder_state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || recorder::cancel_recording(&recorder_state))
+        .await
+        .map_err(|e| format!("Error cancelando la grabación: {e}"))??;
+
+    let _ = app.emit(
+        RECORDING_STATE_EVENT,
+        &RecordingInfo {
+            status: "idle".to_string(),
+            output_path: String::new(),
+            started_at_ms: 0,
+            elapsed_ms: 0,
+            region: recorder::RecordingRegion {
+                x: 0,
+                y: 0,
+                width: 0,
+                height: 0,
+            },
+            fps: 0,
+            width: 0,
+            height: 0,
+            error: None,
+        },
+    );
+    Ok(())
+}
+
+/// Dispositivos de audio capturables (micrófono, cable de audio, mezcla estéreo).
+#[tauri::command]
+pub async fn screen_recorder_list_audio_devices() -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(recorder::list_audio_devices)
+        .await
+        .map_err(|e| format!("Error listando dispositivos de audio: {e}"))
 }
 
 #[cfg(test)]

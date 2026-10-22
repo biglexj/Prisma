@@ -1101,3 +1101,309 @@
   pointer-events: none;
 }
 .capture-frame-handles.is-preview .capture-resize-handle { pointer-events: none; cursor: pointer; }
+
+/* ── Switch Imagen | Vídeo (estilo Recortes) ──────────────────────────── */
+.capture-kind-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.capture-kind-switch {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 0;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  isolation: isolate;
+}
+
+.capture-kind-switch-thumb {
+  position: absolute;
+  z-index: 0;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease;
+  pointer-events: none;
+}
+
+.capture-kind-switch.is-video .capture-kind-switch-thumb {
+  transform: translateX(100%);
+  background: color-mix(in srgb, var(--error) 16%, var(--surface));
+}
+
+.capture-kind-option {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 116px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--on-surface-variant);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.15s ease;
+}
+
+.capture-kind-option:hover:not(:disabled) {
+  color: var(--on-surface);
+}
+
+.capture-kind-option.is-active {
+  color: var(--on-surface);
+}
+
+.capture-kind-switch.is-video .capture-kind-option.is-active {
+  color: var(--error);
+}
+
+.capture-kind-option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.capture-kind-hint {
+  font-size: 0.82rem;
+  color: var(--on-surface-variant);
+}
+
+/* ── Ajustes de grabación ─────────────────────────────────────────────── */
+.capture-recording-options {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--surface-container-low);
+  border: 1px solid var(--outline-variant);
+}
+
+.capture-select-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.capture-select-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+
+.capture-select {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface);
+  color: var(--on-surface);
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.capture-select:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.capture-recording-note {
+  font-size: 0.78rem;
+  color: var(--on-surface-variant);
+  padding-bottom: 8px;
+}
+
+.capture-btn-primary.is-video {
+  background: var(--error);
+  color: var(--on-error);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--error) 32%, transparent);
+}
+
+.capture-btn-primary.is-video:hover {
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--error) 42%, transparent);
+}
+
+/* ── Distintivo de grabación en el overlay ────────────────────────────── */
+.capture-video-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ff5252;
+  background: rgba(255, 82, 82, 0.14);
+  border: 1px solid rgba(255, 82, 82, 0.4);
+}
+
+.capture-video-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff5252;
+  animation: captureRecordPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes captureRecordPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.75); }
+}
+
+/* ── Indicador flotante de grabación ──────────────────────────────────── */
+.recording-hud-root {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  z-index: 9990;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.recording-hud {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  border-radius: 18px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  animation: captureFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.recording-hud.is-live {
+  border-color: color-mix(in srgb, var(--error) 45%, var(--outline-variant));
+}
+
+.recording-hud-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ff5252;
+  animation: captureRecordPulse 1.4s ease-in-out infinite;
+}
+
+.recording-hud-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.recording-hud-time {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.recording-hud-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.recording-hud-meta {
+  font-size: 0.76rem;
+  color: var(--on-surface-variant);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recording-hud-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: none;
+  background: var(--error);
+  color: var(--on-error);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.recording-hud-stop:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--error) 40%, transparent);
+}
+
+.recording-hud-stop:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.recording-hud-stop-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: currentColor;
+}
+
+.recording-hud-done-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--success) 20%, transparent);
+  color: var(--success);
+  flex-shrink: 0;
+}
+
+.recording-hud.is-error .recording-hud-done-icon {
+  background: color-mix(in srgb, var(--error) 20%, transparent);
+  color: var(--error);
+}
+
+.recording-hud-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface);
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.recording-hud-action:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}

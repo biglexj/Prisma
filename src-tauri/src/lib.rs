@@ -87,7 +87,8 @@ use app::commands::screen_capture::{
     screen_capture_cancel, screen_capture_configure, screen_capture_confirm, screen_capture_detect_subregion,
     screen_capture_detect_window_at, screen_capture_get_editor_payload,
     screen_capture_get_session, screen_capture_get_shortcut_status, screen_capture_pick_color,
-    screen_capture_save_file, screen_capture_start,
+    screen_capture_save_file, screen_capture_start, screen_recorder_cancel, screen_recorder_list_audio_devices,
+    screen_recorder_start, screen_recorder_status, screen_recorder_stop,
 };
 use app::state::{
     FavoritesState, InitialFileState, InitialSynapseSendState, MusicLibraryState,
@@ -370,6 +371,11 @@ pub fn run() {
             let capture_state: features::screen_capture::SharedCaptureState =
                 std::sync::Arc::new(std::sync::Mutex::new(features::screen_capture::CaptureSessionState::default()));
             app.manage(capture_state.clone());
+
+            // Estado de la grabadora de vídeo: una sola grabación activa a la vez.
+            let recorder_state: features::screen_capture::SharedRecorderState =
+                std::sync::Arc::new(std::sync::Mutex::new(None));
+            app.manage(recorder_state.clone());
 
             // El atajo global del capturador queda activo desde el arranque: la
             // aplicación responde en segundo plano, en bandeja o minimizada,
@@ -791,6 +797,11 @@ pub fn run() {
             screen_capture_save_file,
             screen_capture_get_shortcut_status,
             screen_capture_configure,
+            screen_recorder_start,
+            screen_recorder_stop,
+            screen_recorder_status,
+            screen_recorder_cancel,
+            screen_recorder_list_audio_devices,
         ]);
 
         let mut context = tauri::generate_context!();

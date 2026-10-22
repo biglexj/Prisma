@@ -1,17 +1,20 @@
 import { getCaptureFormat, type CaptureFormat } from "../../../shared/captureFormat";
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  CaptureIntent,
   CaptureMode,
   CaptureSessionInit,
   DetectedTarget,
   EditorPayload,
+  RecordingInfo,
+  RecordingOptions,
   RectSelection,
   ScreenCaptureShortcutStatus,
 } from "../model/types";
 
 export const screenCaptureClient = {
-  async startCapture(mode?: CaptureMode): Promise<CaptureSessionInit> {
-    return invoke<CaptureSessionInit>("screen_capture_start", { mode });
+  async startCapture(mode?: CaptureMode, intent: CaptureIntent = "image"): Promise<CaptureSessionInit> {
+    return invoke<CaptureSessionInit>("screen_capture_start", { mode, intent });
   },
 
   async detectSubregion(
@@ -93,5 +96,32 @@ export const screenCaptureClient = {
    */
   async configure(enabled: boolean, shortcut: string): Promise<ScreenCaptureShortcutStatus> {
     return invoke<ScreenCaptureShortcutStatus>("screen_capture_configure", { enabled, shortcut });
+  },
+
+  // ── Grabadora de vídeo ──────────────────────────────────────────────────
+
+  /** Inicia la grabación de la región indicada. El overlay se oculta antes. */
+  async startRecording(options: RecordingOptions): Promise<RecordingInfo> {
+    return invoke<RecordingInfo>("screen_recorder_start", { options });
+  },
+
+  /** Detiene la grabación y cierra el archivo para que quede reproducible. */
+  async stopRecording(): Promise<RecordingInfo> {
+    return invoke<RecordingInfo>("screen_recorder_stop");
+  },
+
+  /** Estado de la grabación en curso, si la hay. */
+  async getRecordingStatus(): Promise<RecordingInfo | null> {
+    return invoke<RecordingInfo | null>("screen_recorder_status");
+  },
+
+  /** Detiene la grabación y descarta el archivo parcial. */
+  async cancelRecording(): Promise<void> {
+    return invoke<void>("screen_recorder_cancel");
+  },
+
+  /** Dispositivos de audio capturables (micrófono, cable de audio, mezcla estéreo). */
+  async listAudioDevices(): Promise<string[]> {
+    return invoke<string[]>("screen_recorder_list_audio_devices");
   },
 };

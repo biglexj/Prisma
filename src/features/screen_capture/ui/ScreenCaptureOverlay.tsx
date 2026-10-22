@@ -10,6 +10,7 @@ import { CaptureAnnotationBar } from "./components/CaptureAnnotationBar";
 import { drawAnnotation } from "./utils/annotationDrawing";
 import { annotationShapeRect } from "./utils/annotationGeometry";
 import { annotationShortcut, lastCaptureMode, rememberCaptureMode } from "../model/captureControls";
+import { loadRecordingPreferences, resolveRecordingFolder } from "../model/recordingSettings";
 import { getDefaultPicturesDir } from "../../../shared/mediaOperations";
 import type {
   ActiveTextBox,
@@ -250,12 +251,16 @@ export function ScreenCaptureOverlay() {
     resetPointerGestures();
     clearAnnotationSurface();
     phaseRef.current = "selecting";
-    modeRef.current = lastCaptureMode(payload.defaultMode || "window");
+    // El lazo libre no existe en una sesión de vídeo: se arranca en Ventana.
+    const restoredMode = lastCaptureMode(payload.defaultMode || "window");
+    const initialMode =
+      payload.intent === "video" && restoredMode === "freeform" ? "window" : restoredMode;
+    modeRef.current = initialMode;
 
     sessionRef.current = payload;
     setSession(payload);
     setPhase("selecting");
-    setMode(lastCaptureMode(payload.defaultMode || "window"));
+    setMode(initialMode);
     setActiveTool("pen");
     setActiveColor("#00C9B9");
     setStrokeWidth(4);
@@ -355,9 +360,38 @@ export function ScreenCaptureOverlay() {
     }
   }, []);
 
+  // Iniciar la grabación de la región confirmada.
+  // El backend aparta el overlay antes de capturar: si el overlay siguiera
+  // visible, aparecería dentro del vídeo grabado.
+  const handleStartRecording = useCallback(async (rect: RectSelection) => {
+    targetQuery.cancel();
+    ++confirmRevisionRef.current;
+    setToastMessage("Iniciando la grabación…");
+    try {
+      const preferences = loadRecordingPreferences();
+      const outputFolder = await resolveRecordingFolder();
+      await screenCaptureClient.startRecording({
+        region: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        fps: preferences.fps,
+        audioDevice: preferences.audioDevice,
+        outputFolder,
+      });
+      await handleCancel();
+    } catch (err) {
+      console.error("Error al iniciar la grabación:", err);
+      setToastMessage(`No se pudo iniciar la grabación: ${String(err)}`);
+      setTimeout(() => setToastMessage(null), 5000);
+    }
+  }, [handleCancel]);
+
   // Confirmar recorte y pasar a anotación IN-SITU (sin abrir otra ventana)
   const handleConfirmToAnnotate = useCallback(async (rect: RectSelection, clipPolygon?: AnnotationPoint[], previousRect?: RectSelection) => {
     if (rect.width <= 4 || rect.height <= 4) return;
+    // En una sesión de vídeo, confirmar la región significa «grabar aquí».
+    if (sessionRef.current?.intent === "video") {
+      await handleStartRecording(rect);
+      return;
+    }
     const sessionId = sessionRef.current?.sessionId;
     const revision = ++confirmRevisionRef.current;
     targetQuery.cancel();
@@ -623,7 +657,7 @@ export function ScreenCaptureOverlay() {
           } else if (key === "r" || code === "KeyR") {
             e.preventDefault();
             handleSetMode("rect");
-          } else if (key === "q" || code === "KeyQ") {
+          } else if ((key === "q" || code === "KeyQ") && sessionRef.current?.intent !== "video") {
             e.preventDefault();
             handleSetMode("freeform");
           } else if (key === "f" || code === "KeyF") {
@@ -638,7 +672,7 @@ export function ScreenCaptureOverlay() {
                 height: mon.height,
               });
             }
-          } else if (key === "c" || code === "KeyC") {
+          } else if ((key === "c" || code === "KeyC") && sessionRef.current?.intent !== "video") {
             // Atajo oficial solicitado para Selector de Color en fase 1
             e.preventDefault();
             handleSetMode("eyedropper");
@@ -1264,6 +1298,9 @@ export function ScreenCaptureOverlay() {
   const virtX = session?.virtualX ?? 0;
   const virtY = session?.virtualY ?? 0;
 
+  // En una sesión de vídeo el lazo libre no aplica: la grabación es rectangular.
+  const isVideoSession = session?.intent === "video";
+
   const inPlaceRect = selectionRect ?? annotatingPayload;
   const inPlaceLeft = inPlaceRect ? inPlaceRect.x - virtX : 0;
   const inPlaceTop = inPlaceRect ? inPlaceRect.y - virtY : 0;
@@ -1293,7 +1330,13 @@ export function ScreenCaptureOverlay() {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="capture-mode-row-group">
-            {MODE_OPTIONS.map((opt) => (
+            {isVideoSession && (
+              <span className="capture-video-badge" title="Sesión de grabación de vídeo">
+                <span className="capture-video-badge-dot" aria-hidden="true" />
+                Grabación
+              </span>
+            )}
+            {MODE_OPTIONS.filter((opt) => !(isVideoSession && opt.id === "freeform")).map((opt) => (
               <button
                 key={opt.id}
                 type="button"
@@ -1323,15 +1366,17 @@ export function ScreenCaptureOverlay() {
           <div className="capture-pill-divider" />
 
           {/* Selector de color en la pestaña 1 con atajo C */}
-          <button
-            type="button"
-            className={`capture-mode-btn is-eyedropper ${mode === "eyedropper" ? "is-active" : ""}`}
-            onClick={() => handleSetMode("eyedropper")}
-            title="Selector de color (C) · Clic en la pantalla para copiar código hexadecimal"
-          >
-            <Icon name="pipette" width={16} height={16} />
-            <span className="label">Selector de color</span>
-          </button>
+          {!isVideoSession && (
+            <button
+              type="button"
+              className={`capture-mode-btn is-eyedropper ${mode === "eyedropper" ? "is-active" : ""}`}
+              onClick={() => handleSetMode("eyedropper")}
+              title="Selector de color (C) · Clic en la pantalla para copiar código hexadecimal"
+            >
+              <Icon name="pipette" width={16} height={16} />
+              <span className="label">Selector de color</span>
+            </button>
+          )}
 
           <div className="capture-pill-divider" />
 

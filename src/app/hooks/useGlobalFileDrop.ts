@@ -3,6 +3,7 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { cleanPath } from "../../shared/mediaTree";
 import { isOwnNativeFileDrop } from "../../shared/useNativeFileDrag";
+import { isClaimedDrop, isDropZoneArmed } from "../../shared/dropRouter";
 import type { AppView } from "../ui/AppSidebar";
 
 interface UseGlobalFileDropProps {
@@ -75,6 +76,9 @@ export function useGlobalFileDrop({
     const handleDroppedPaths = (paths: string[]) => {
       if (!paths || paths.length === 0) return;
       if (isOwnNativeFileDrop(paths)) return;
+      // Una zona de recepción concreta (por ejemplo, la superior central que
+      // envía a Super Galería) ya se quedó con este archivo: no se duplica.
+      if (isDropZoneArmed() || isClaimedDrop(paths)) return;
       // Si el comparador de imágenes o sus selectores están en pantalla, tienen prioridad exclusiva
       if (
         document.querySelector(".img-compare-modal-root") ||
