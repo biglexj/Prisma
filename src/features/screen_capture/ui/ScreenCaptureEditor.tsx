@@ -1,3 +1,4 @@
+import { getCaptureFormat } from "../../../shared/captureFormat";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -249,27 +250,28 @@ export function ScreenCaptureEditor() {
     }
   }, [showToast]);
 
-  // Guardar como PNG mediante diálogo del sistema
+  // Guardar en el formato global mediante diálogo del sistema
   const handleSaveAs = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const captureFormat = getCaptureFormat();
 
     try {
       const now = new Date();
       const dateStr = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
-      const defaultFilename = `Prisma_Captura_${dateStr}.png`;
+      const defaultFilename = `Prisma_Captura_${dateStr}.${captureFormat.extension}`;
 
       const chosenPath = await save({
         title: "Guardar captura de pantalla",
         defaultPath: defaultFilename,
-        filters: [{ name: "Imagen PNG", extensions: ["png"] }],
+        filters: [{ name: `Imagen ${captureFormat.label}`, extensions: [captureFormat.extension] }],
       });
 
       if (!chosenPath) return; // Usuario canceló el diálogo
 
       const dataUrl = canvas.toDataURL("image/png");
-      await screenCaptureClient.saveFile(chosenPath, dataUrl);
-      showToast(`¡Guardada con éxito en ${chosenPath.replace(/.*[/\\]/, "")}!`);
+      const savedPath = await screenCaptureClient.saveFile(chosenPath, dataUrl, captureFormat.id);
+      showToast(`¡Guardada con éxito en ${savedPath.replace(/.*[/\\]/, "")}!`);
     } catch (err) {
       console.error("Error al guardar archivo:", err);
       showToast("Error al guardar la captura en disco.");
@@ -514,7 +516,7 @@ export function ScreenCaptureEditor() {
             className="capture-pill-btn"
             style={{ background: "var(--surface-container-high)" }}
             onClick={() => void handleSaveAs()}
-            title="Guardar archivo PNG en disco (Ctrl+S)"
+            title="Guardar captura en disco (Ctrl+S)"
           >
             <Icon name="save" width={16} height={16} />
             <span>Guardar como…</span>

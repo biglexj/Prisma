@@ -1,8 +1,6 @@
 import { Icon } from "../../../../shared/ui/Icon";
 import type { AnnotationTool } from "../../model/types";
-
-const PALETTE = ["#00C9B9", "#FF5252", "#FFD600", "#4CAF50", "#2196F3", "#FFFFFF", "#212121"];
-const STROKE_WIDTHS = [2, 4, 8];
+import { ANNOTATION_KEYS, CAPTURE_PALETTE, CAPTURE_STROKE_WIDTHS } from "../../model/captureControls";
 
 interface CaptureAnnotationBarProps {
   activeTool: AnnotationTool;
@@ -48,62 +46,47 @@ export function CaptureAnnotationBar({
       aria-label="Herramientas de anotación"
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Herramientas de trazo */}
-      <div className="capture-toolbar-subgroup">
-        <button
-          type="button"
-          className={`capture-tool-btn ${activeTool === "pen" ? "is-active" : ""}`}
-          onClick={() => setActiveTool("pen")}
-          title="Lápiz libre"
-        >
-          <Icon name="edit" width={17} height={17} />
-        </button>
-        <button
-          type="button"
-          className={`capture-tool-btn ${activeTool === "highlighter" ? "is-active" : ""}`}
-          onClick={() => setActiveTool("highlighter")}
-          title="Resaltador translúcido"
-        >
-          <Icon name="sliders" width={17} height={17} />
-        </button>
-        <button
-          type="button"
-          className={`capture-tool-btn ${activeTool === "arrow" ? "is-active" : ""}`}
-          onClick={() => setActiveTool("arrow")}
-          title="Flecha indicadora"
-        >
-          <Icon name="arrow-right" width={17} height={17} />
-        </button>
-        <button
-          type="button"
-          className={`capture-tool-btn ${activeTool === "rect" ? "is-active" : ""}`}
-          onClick={() => setActiveTool("rect")}
-          title="Marco rectangular"
-        >
-          <Icon name="crop" width={17} height={17} />
-        </button>
-        <button
-          type="button"
-          className={`capture-tool-btn ${activeTool === "text" ? "is-active" : ""}`}
-          onClick={() => setActiveTool("text")}
-          title="Texto anotado"
-        >
-          <Icon name="file-text" width={17} height={17} />
-        </button>
+      <div className="capture-toolbar-subgroup" aria-label="Dibujo y texto">
+        {([
+          ["pen", "Lápiz libre", "m4 16 12-12 4 4L8 20H4v-4Zm10-10 4 4"],
+          ["highlighter", "Resaltador translúcido", "m5 13 9-9 6 6-9 9-6-6Zm0 0-2 5 3 3 5-2M3 22h14"],
+          ["text", "Texto anotado", "M4 5h16M12 5v15M8 20h8M4 5v3M20 5v3"],
+        ] as const).map(([tool, label, path]) => (
+          <button key={tool} type="button" className={`capture-tool-btn ${activeTool === tool ? "is-active" : ""}`}
+            onClick={() => setActiveTool(tool)} title={`${label} (${ANNOTATION_KEYS[tool]})`} aria-label={label} aria-keyshortcuts={ANNOTATION_KEYS[tool]} aria-pressed={activeTool === tool}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={path} /></svg>
+          </button>
+        ))}
+      </div>
+      <div className="capture-pill-divider" />
+      <div className="capture-toolbar-subgroup" aria-label="Formas">
+        {([
+          ["arrow", "Flecha indicadora"], ["rect", "Marco rectangular (Mayús: cuadrado)"], ["ellipse", "Círculo / elipse (Mayús: círculo)"],
+        ] as const).map(([tool, label]) => (
+          <button key={tool} type="button" className={`capture-tool-btn ${activeTool === tool ? "is-active" : ""}`}
+            onClick={() => setActiveTool(tool)} title={`${label} · ${ANNOTATION_KEYS[tool]}`} aria-label={label} aria-keyshortcuts={ANNOTATION_KEYS[tool]} aria-pressed={activeTool === tool}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              {tool === "arrow" ? <path d="M4 20 20 4M9 4h11v11" /> : tool === "rect" ? <rect x="4" y="5" width="16" height="14" rx="1" /> : <circle cx="12" cy="12" r="8" />}
+            </svg>
+          </button>
+        ))}
       </div>
 
       <div className="capture-pill-divider" />
 
       {/* Paleta con #00C9B9 en 1er lugar */}
       <div className="capture-toolbar-subgroup">
-        {PALETTE.map((c) => (
+        {CAPTURE_PALETTE.map(({ color, name }, index) => (
           <button
-            key={c}
+            key={color}
             type="button"
-            className={`capture-color-swatch ${activeColor === c ? "is-active" : ""}`}
-            style={{ background: c }}
-            onClick={() => setActiveColor(c)}
-            title={c === "#00C9B9" ? "Color Insignia Prisma (#00C9B9)" : c}
+            className={`capture-color-swatch ${activeColor === color ? "is-active" : ""}`}
+            style={{ background: color }}
+            onClick={() => setActiveColor(color)}
+            title={`${name} (${color}) · ${index + 1}`}
+            aria-label={`${name} (${color})`}
+            aria-keyshortcuts={String(index + 1)}
+            aria-pressed={activeColor === color}
           />
         ))}
       </div>
@@ -112,13 +95,16 @@ export function CaptureAnnotationBar({
 
       {/* Grosor de trazo */}
       <div className="capture-toolbar-subgroup">
-        {STROKE_WIDTHS.map((w) => (
+        {CAPTURE_STROKE_WIDTHS.map((w, index) => (
           <button
             key={w}
             type="button"
             className={`capture-tool-btn ${strokeWidth === w ? "is-active" : ""}`}
             onClick={() => setStrokeWidth(w)}
-            title={`Grosor: ${w}px`}
+            title={`Grosor: ${w}px (Mayús+${index + 1})`}
+            aria-label={`Grosor: ${w}px`}
+            aria-keyshortcuts={`Shift+${index + 1}`}
+            aria-pressed={strokeWidth === w}
           >
             <span
               style={{
@@ -159,7 +145,9 @@ export function CaptureAnnotationBar({
           className="capture-tool-btn"
           onClick={onClear}
           disabled={!canClear}
-          title="Limpiar todas las anotaciones"
+          title="Limpiar todas las anotaciones (Supr)"
+          aria-label="Limpiar todas las anotaciones"
+          aria-keyshortcuts="Delete"
         >
           <Icon name="trash" width={16} height={16} />
         </button>
@@ -167,7 +155,9 @@ export function CaptureAnnotationBar({
           type="button"
           className="capture-tool-btn"
           onClick={onRetrySelection}
-          title="Volver a seleccionar área"
+          title="Volver a seleccionar área (N)"
+          aria-label="Volver a seleccionar área"
+          aria-keyshortcuts="N"
         >
           <Icon name="refresh" width={16} height={16} />
         </button>
@@ -192,7 +182,7 @@ export function CaptureAnnotationBar({
           className="capture-pill-btn"
           style={{ background: "rgba(255, 255, 255, 0.12)" }}
           onClick={onSaveAs}
-          title="Guardar como archivo PNG en disco (Ctrl+S)"
+          title="Guardar captura en disco (Ctrl+S)"
         >
           <Icon name="save" width={15} height={15} />
           <span>Guardar</span>

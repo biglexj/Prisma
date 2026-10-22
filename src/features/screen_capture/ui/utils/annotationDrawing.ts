@@ -10,21 +10,27 @@ export function drawArrow(
 ) {
   const dx = tox - fromx;
   const dy = toy - fromy;
+  const length = Math.hypot(dx, dy);
+  if (length < 1) return;
+  headlen = Math.min(Math.max(headlen, 12), length * 0.65);
   const angle = Math.atan2(dy, dx);
+  const baseX = tox - headlen * Math.cos(angle);
+  const baseY = toy - headlen * Math.sin(angle);
+  const halfWidth = headlen * 0.48;
   ctx.beginPath();
   ctx.moveTo(fromx, fromy);
-  ctx.lineTo(tox, toy);
+  ctx.lineTo(baseX, baseY);
   ctx.stroke();
 
   ctx.beginPath();
   ctx.moveTo(tox, toy);
   ctx.lineTo(
-    tox - headlen * Math.cos(angle - Math.PI / 6),
-    toy - headlen * Math.sin(angle - Math.PI / 6)
+    baseX - halfWidth * Math.sin(angle),
+    baseY + halfWidth * Math.cos(angle)
   );
   ctx.lineTo(
-    tox - headlen * Math.cos(angle + Math.PI / 6),
-    toy - headlen * Math.sin(angle + Math.PI / 6)
+    baseX + halfWidth * Math.sin(angle),
+    baseY - halfWidth * Math.cos(angle)
   );
   ctx.closePath();
   ctx.fill();
@@ -55,6 +61,11 @@ export function drawAnnotation(ctx: CanvasRenderingContext2D, item: AnnotationIt
   } else if (item.tool === "rect" && item.rect) {
     ctx.beginPath();
     ctx.strokeRect(item.rect.x, item.rect.y, item.rect.width, item.rect.height);
+  } else if (item.tool === "ellipse" && item.rect) {
+    const { x, y, width, height } = item.rect;
+    ctx.beginPath();
+    ctx.ellipse(x + width / 2, y + height / 2, width / 2, height / 2, 0, 0, Math.PI * 2);
+    ctx.stroke();
   } else if (item.tool === "arrow" && item.startPoint && item.endPoint) {
     drawArrow(
       ctx,

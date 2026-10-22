@@ -169,7 +169,7 @@ export function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   useVideoAudioDsp(videoRef);
 
-  const { videoSnapshotFolder, videoSnapshotFormat } = useSystemSettings();
+  const { videoSnapshotFolder, captureFormat } = useSystemSettings();
   const {
     isCapturing,
     isFlashing,
@@ -184,7 +184,7 @@ export function VideoPlayer({
     videoPath: path,
     videoTitle: path ? mediaTitle(path) : undefined,
     videoSnapshotFolder,
-    videoSnapshotFormat,
+    captureFormat,
     onSeek: (newTime) => setPosition(newTime),
     onPauseStateChange: (isPaused) => setPaused(isPaused),
   });

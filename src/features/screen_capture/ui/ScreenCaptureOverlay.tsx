@@ -1,9 +1,15 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { getCaptureFormat } from "../../../shared/captureFormat";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { latestTargetQuery } from "../model/latestTargetQuery";
+import { CapturePointer } from "../model/pointerCapture";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { save } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../../shared/ui/Icon";
 import { CaptureAnnotationBar } from "./components/CaptureAnnotationBar";
 import { drawAnnotation } from "./utils/annotationDrawing";
+import { annotationShapeRect } from "./utils/annotationGeometry";
+import { annotationShortcut, lastCaptureMode, rememberCaptureMode } from "../model/captureControls";
 import { getDefaultPicturesDir } from "../../../shared/mediaOperations";
 import type {
   ActiveTextBox,
@@ -18,6 +24,7 @@ import type {
   RectSelection,
 } from "../model/types";
 import { screenCaptureClient } from "../services/screenCaptureClient";
+import { captureDiagnostics } from "../services/captureDiagnostics";
 import "./screen-capture.css";
 
 const MODE_LABELS: Record<CaptureMode, string> = {
@@ -46,16 +53,7 @@ const MODE_OPTIONS: Array<{ id: CaptureMode; label: string; icon: any; shortcut:
 export function ScreenCaptureOverlay() {
   const [session, setSession] = useState<CaptureSessionInit | null>(null);
   const [phase, setPhase] = useState<"selecting" | "annotating">("selecting");
-  // Recordar la última herramienta/modo utilizada (Ventana, Rectángulo, Lazo o Pantalla Completa)
-  const [mode, setMode] = useState<CaptureMode>(() => {
-    try {
-      const saved = localStorage.getItem("prisma.screen-capture.last-mode");
-      if (saved && ["window", "rect", "freeform", "fullscreen", "eyedropper"].includes(saved)) {
-        return saved as CaptureMode;
-      }
-    } catch {}
-    return "window";
-  });
+  const [mode, setMode] = useState<CaptureMode>(() => lastCaptureMode());
   const [activeTarget, setActiveTarget] = useState<DetectedTarget | null>(null);
   const [subregionTarget, setSubregionTarget] = useState<DetectedTarget | null>(null);
   const [useSubregion, setUseSubregion] = useState(false);
@@ -63,12 +61,11 @@ export function ScreenCaptureOverlay() {
 
   // Estados para modo Rectángulo en fase de selección
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const [selectionRect, setSelectionRect] = useState<RectSelection | null>(null);
+
 
   // Estados para modo Lazo Libre (mano alzada)
   const [lassoPoints, setLassoPoints] = useState<AnnotationPoint[]>([]);
-  const [isDrawingLasso, setIsDrawingLasso] = useState(false);
   const [lassoClipPolygon, setLassoClipPolygon] = useState<AnnotationPoint[] | null>(null);
 
   // Selector de color / Cuentagotas y retroalimentación Toast
@@ -80,12 +77,16 @@ export function ScreenCaptureOverlay() {
   const dragTextBoxRef = useRef<{ startX: number; startY: number } | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Cambiar modo y persistir selección en localStorage
+  // Las anotaciones se reinician; el último modo confirmado se conserva.
   const handleSetMode = useCallback((newMode: CaptureMode) => {
+    targetQuery.cancel();
+    ++confirmRevisionRef.current;
+    modeRef.current = newMode;
+    resetPointerGestures();
+    dragStateRef.current = { active: false, start: null };
+    setIsDragging(false);
+    lassoPointsRef.current = [];
     setMode(newMode);
-    try {
-      localStorage.setItem("prisma.screen-capture.last-mode", newMode);
-    } catch {}
     if (newMode !== "rect") {
       setSelectionRect(null);
     }
@@ -109,6 +110,7 @@ export function ScreenCaptureOverlay() {
 
   // ── Estados de Anotación In-Situ (en el lugar exacto de captura) ──
   const [annotatingPayload, setAnnotatingPayload] = useState<EditorPayload | null>(null);
+  const [canvasRect, setCanvasRect] = useState<RectSelection | null>(null);
   const [activeTool, setActiveTool] = useState<AnnotationTool>("pen");
   const [activeColor, setActiveColor] = useState<string>("#00C9B9");
   const [strokeWidth, setStrokeWidth] = useState<number>(4);
@@ -136,56 +138,216 @@ export function ScreenCaptureOverlay() {
   activeMonitorRef.current = activeMonitor;
   const selectionRectRef = useRef(selectionRect);
   selectionRectRef.current = selectionRect;
+  // Estado inmediato del arrastre. El lápiz de una tableta gráfica genera eventos a
+  // mucha más frecuencia que un ratón: entre el último `pointermove` y el `pointerup`
+  // React puede no haber re-renderizado todavía, de modo que leer el estado (closure)
+  // devolvería valores obsoletos y el rectángulo nunca llegaría a confirmarse.
+  const dragStateRef = useRef<{ active: boolean; start: { x: number; y: number } | null }>({
+    active: false,
+    start: null,
+  });
+  const lassoPointsRef = useRef<AnnotationPoint[]>([]);
+  const selectionPointer = useRef(new CapturePointer()).current;
+  const canvasPointer = useRef(new CapturePointer()).current;
+  const currentAnnotationRef = useRef<AnnotationItem | null>(null);
+  const confirmRevisionRef = useRef(0);
+  const diagnosticState = useRef<(id?: number) => Record<string, unknown>>(() => ({}));
+  diagnosticState.current = (id) => ({
+    session: sessionRef.current?.sessionId, phase: phaseRef.current, mode: modeRef.current,
+    tool: activeTool, color: activeColor, history: historyIndex, annotations: annotations.length,
+    points: currentAnnotationRef.current?.points?.length ?? 0,
+    selectionContact: id !== undefined && selectionPointer.matches(id),
+    canvasContact: id !== undefined && canvasPointer.matches(id),
+  });
+  useEffect(() => captureDiagnostics((id) => diagnosticState.current(id)), []);
+  const resetPointerGestures = useCallback(() => {
+    selectionPointer.release();
+    canvasPointer.release();
+    currentAnnotationRef.current = null;
+    dragStateRef.current = { active: false, start: null };
+    lassoPointsRef.current = [];
+    dragTextBoxRef.current = null;
+    resizeRef.current = null;
+    dragMoveRef.current = null;
+    setIsDrawing(false);
+    setIsDragging(false);
+    setCurrentAnnotation(null);
+    if (phaseRef.current === "selecting") {
+      selectionRectRef.current = null;
+      setSelectionRect(null);
+      setLassoPoints([]);
+    }
+  }, [selectionPointer, canvasPointer]);
+
+  useEffect(() => {
+    window.addEventListener("blur", resetPointerGestures);
+    return () => {
+      window.removeEventListener("blur", resetPointerGestures);
+      selectionPointer.release();
+      canvasPointer.release();
+    };
+  }, [resetPointerGestures, selectionPointer, canvasPointer]);
+
+  const targetQuery = useMemo(() => latestTargetQuery(
+    async (x, y) => {
+      const target = await screenCaptureClient.detectWindowAt(x, y);
+      const sub = target?.hwnd
+        ? await screenCaptureClient.detectSubregion(target.hwnd, x, y)
+        : null;
+      return { target, sub };
+    },
+    ({ target, sub }) => {
+      if (phaseRef.current !== "selecting" || modeRef.current !== "window") return;
+      activeTargetRef.current = target;
+      setActiveTarget(target);
+      const region = target && sub && sub.width < target.width && sub.height < target.height ? sub : null;
+      subregionTargetRef.current = region;
+      setSubregionTarget(region);
+    },
+  ), []);
+  useEffect(() => () => targetQuery.cancel(), [targetQuery]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const bgImageRef = useRef<HTMLImageElement | null>(null);
+  const clearAnnotationSurface = useCallback(() => {
+    bgImageRef.current = null;
+    const canvas = canvasRef.current;
+    canvas?.getContext("2d")?.clearRect(0, 0, canvas.width, canvas.height);
+    setAnnotatingPayload(null);
+    setCanvasRect(null);
+    setAnnotations([]);
+    setHistoryIndex(-1);
+    setActiveTextBox(null);
+    setCurrentAnnotation(null);
+    currentAnnotationRef.current = null;
+  }, []);
+
+  const clearCaptureView = useCallback(() => {
+    targetQuery.cancel();
+    ++confirmRevisionRef.current;
+    resetPointerGestures();
+    clearAnnotationSurface();
+    sessionRef.current = null;
+    phaseRef.current = "selecting";
+    setSession(null);
+    setPhase("selecting");
+    setSelectionRect(null);
+    setLassoPoints([]);
+    setLassoClipPolygon(null);
+    setHoveredColor(null);
+  }, [targetQuery, resetPointerGestures, clearAnnotationSurface]);
+
+  // Aplicar una sesión de captura. Las sesiones obsoletas se descartan: el overlay
+  // puede recibir varias señales (evento + resincronización) y solo la última manda.
+  const appliedSessionIdRef = useRef(0);
+  const applySession = useCallback((payload: CaptureSessionInit) => {
+    const sessionId = payload.sessionId ?? 0;
+    if (sessionId && sessionId <= appliedSessionIdRef.current) return;
+    if (sessionId) appliedSessionIdRef.current = sessionId;
+
+    targetQuery.cancel();
+    ++confirmRevisionRef.current;
+    resetPointerGestures();
+    clearAnnotationSurface();
+    phaseRef.current = "selecting";
+    modeRef.current = lastCaptureMode(payload.defaultMode || "window");
+
+    sessionRef.current = payload;
+    setSession(payload);
+    setPhase("selecting");
+    setMode(lastCaptureMode(payload.defaultMode || "window"));
+    setActiveTool("pen");
+    setActiveColor("#00C9B9");
+    setStrokeWidth(4);
+    setActiveTextBox(null);
+    setIsDrawing(false);
+    setIsDragging(false);
+    dragStateRef.current = { active: false, start: null };
+    lassoPointsRef.current = [];
+    setHoveredColor(null);
+    setToastMessage(null);
+    dragTextBoxRef.current = null;
+    resizeRef.current = null;
+    dragMoveRef.current = null;
+    // Sin selección previa: el objetivo se determina al mover el cursor, de modo que
+    // nunca quede preseleccionada una ventana del sistema (barra de tareas, escritorio).
+    activeTargetRef.current = null;
+    subregionTargetRef.current = null;
+    setActiveTarget(null);
+    if (payload.monitors && payload.monitors.length > 0) {
+      setActiveMonitor(payload.monitors[0]);
+    } else {
+      setActiveMonitor(null);
+    }
+    setSubregionTarget(null);
+    setUseSubregion(false);
+    setSelectionRect(null);
+    setLassoPoints([]);
+    setLassoClipPolygon(null);
+    setAnnotatingPayload(null);
+    setCanvasRect(null);
+    setAnnotations([]);
+    setHistoryIndex(-1);
+    setCurrentAnnotation(null);
+  }, []);
+
+  // El backend mantiene el overlay oculto hasta que React haya limpiado la sesión anterior.
+  useEffect(() => {
+    if (session) void screenCaptureClient.overlayReady(session.sessionId).catch(() => {});
+  }, [session]);
+
+  useEffect(() => {
+    const unlisten = listen<number | null>("screen_capture://session-ended", ({ payload }) => {
+      if (payload !== null && payload === sessionRef.current?.sessionId) clearCaptureView();
+    });
+    return () => { void unlisten.then((stop) => stop()); };
+  }, [clearCaptureView]);
 
   // Escuchar inicio de sesión desde Rust o hotkey global
   useEffect(() => {
     const unlistenPromise = listen<CaptureSessionInit>(
       "screen_capture://session-started",
       (event) => {
-        if (event.payload) {
-          setSession(event.payload);
-          setPhase("selecting");
-          let initialMode: CaptureMode = event.payload.defaultMode || "window";
-          try {
-            const saved = localStorage.getItem("prisma.screen-capture.last-mode") as CaptureMode | null;
-            if (saved && ["window", "rect", "freeform", "fullscreen"].includes(saved)) {
-              initialMode = saved;
-            }
-          } catch {}
-          setMode(initialMode);
-          if (event.payload.targets && event.payload.targets.length > 0) {
-            setActiveTarget(event.payload.targets[0]);
-          } else {
-            setActiveTarget(null);
-          }
-          if (event.payload.monitors && event.payload.monitors.length > 0) {
-            setActiveMonitor(event.payload.monitors[0]);
-          } else {
-            setActiveMonitor(null);
-          }
-          setSubregionTarget(null);
-          setUseSubregion(false);
-          setSelectionRect(null);
-          setLassoPoints([]);
-          setLassoClipPolygon(null);
-          setAnnotatingPayload(null);
-          setAnnotations([]);
-          setHistoryIndex(-1);
-          setCurrentAnnotation(null);
-        }
+        if (event.payload) applySession(event.payload);
       }
     );
 
+    // Respaldo: si el evento no llega (overlay oculto, webview pausada), la sesión
+    // vigente se recupera del backend al montar y al recuperar el foco.
+    const syncSession = async () => {
+      try {
+        const current = await screenCaptureClient.getSession();
+        if (current) applySession(current);
+      } catch {
+        // Sin sesión disponible todavía.
+      }
+    };
+
+    void syncSession();
+
+    let disposed = false;
+    let focusUnlisten: (() => void) | null = null;
+    void getCurrentWebviewWindow()
+      .onFocusChanged(({ payload: focused }) => {
+        if (disposed) return;
+        if (focused) void syncSession();
+        else resetPointerGestures();
+      })
+      .then((unlisten) => {
+        focusUnlisten = unlisten;
+      })
+      .catch(() => undefined);
+
     return () => {
+      disposed = true;
+      if (focusUnlisten) focusUnlisten();
       void unlistenPromise.then((unlisten) => unlisten());
     };
-  }, []);
+  }, [applySession, resetPointerGestures]);
 
   // Cancelar captura completa
   const handleCancel = useCallback(async () => {
+    clearCaptureView();
     try {
       await screenCaptureClient.cancelCapture();
     } catch {
@@ -194,27 +356,62 @@ export function ScreenCaptureOverlay() {
   }, []);
 
   // Confirmar recorte y pasar a anotación IN-SITU (sin abrir otra ventana)
-  const handleConfirmToAnnotate = useCallback(async (rect: RectSelection, clipPolygon?: AnnotationPoint[]) => {
+  const handleConfirmToAnnotate = useCallback(async (rect: RectSelection, clipPolygon?: AnnotationPoint[], previousRect?: RectSelection) => {
     if (rect.width <= 4 || rect.height <= 4) return;
+    const sessionId = sessionRef.current?.sessionId;
+    const revision = ++confirmRevisionRef.current;
+    targetQuery.cancel();
     try {
       const payload = await screenCaptureClient.confirmCapture(rect);
+      if (!sessionRef.current || sessionRef.current.sessionId !== sessionId || revision !== confirmRevisionRef.current) return;
       if (payload) {
+        resetPointerGestures();
+        bgImageRef.current = null;
+        phaseRef.current = "annotating";
+        rememberCaptureMode(modeRef.current);
+        setSelectionRect(null);
+        setActiveTextBox(null);
+        setIsDrawing(false);
         setLassoClipPolygon(clipPolygon ?? null);
         setAnnotatingPayload(payload);
         setPhase("annotating");
-        setAnnotations([]);
-        setHistoryIndex(-1);
+        if (previousRect) {
+          const dx = previousRect.x - payload.x;
+          const dy = previousRect.y - payload.y;
+          const shift = (p: AnnotationPoint) => ({ x: p.x + dx, y: p.y + dy });
+          setAnnotations((items) => items.map((item) => ({
+            ...item,
+            points: item.points?.map(shift),
+            startPoint: item.startPoint ? shift(item.startPoint) : undefined,
+            endPoint: item.endPoint ? shift(item.endPoint) : undefined,
+            rect: item.rect ? { ...item.rect, x: item.rect.x + dx, y: item.rect.y + dy } : undefined,
+          })));
+        } else {
+          setAnnotations([]);
+          setHistoryIndex(-1);
+        }
         setCurrentAnnotation(null);
       }
     } catch (err) {
+      if (revision !== confirmRevisionRef.current) return;
+      setSelectionRect(null);
       console.error("Error al confirmar captura in-situ:", err);
     }
   }, []);
 
   // Volver a la fase de selección
   const handleRetrySelection = useCallback(() => {
+    phaseRef.current = "selecting";
+    ++confirmRevisionRef.current;
+    resetPointerGestures();
+    clearAnnotationSurface();
     setPhase("selecting");
+    setActiveTextBox(null);
+    setActiveTool("pen");
+    setIsDrawing(false);
+    setSelectionRect(null);
     setAnnotatingPayload(null);
+    setCanvasRect(null);
     setLassoClipPolygon(null);
     setLassoPoints([]);
     setAnnotations([]);
@@ -226,6 +423,7 @@ export function ScreenCaptureOverlay() {
   const handleCopy = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const revision = confirmRevisionRef.current;
 
     try {
       const blob = await new Promise<Blob | null>((resolve) => {
@@ -240,16 +438,18 @@ export function ScreenCaptureOverlay() {
         }),
       ]);
 
-      await screenCaptureClient.cancelCapture();
+      if (sessionRef.current && confirmRevisionRef.current === revision) await handleCancel();
     } catch (err) {
       console.error("Error al copiar al portapapeles:", err);
     }
   }, []);
 
-  // Guardar archivo PNG en disco de forma automática sin pedir ruta cada vez
+  // Guardar en el formato global sin pedir ruta cada vez
   const handleSaveAs = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const revision = confirmRevisionRef.current;
+    const captureFormat = getCaptureFormat();
 
     try {
       let targetFolder = "";
@@ -275,33 +475,36 @@ export function ScreenCaptureOverlay() {
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-      const defaultFilename = `Prisma_Captura_${dateStr}.png`;
+      const defaultFilename = `Prisma_Captura_${dateStr}.${captureFormat.extension}`;
 
       const finalFolder = targetFolder || "C:\\Capturas";
       const fullPath = `${finalFolder}\\${defaultFilename}`;
 
       const dataUrl = canvas.toDataURL("image/png");
-      await screenCaptureClient.saveFile(fullPath, dataUrl);
+      if (!sessionRef.current || confirmRevisionRef.current !== revision) return;
+      await screenCaptureClient.saveFile(fullPath, dataUrl, captureFormat.id);
 
+      if (!sessionRef.current || confirmRevisionRef.current !== revision) return;
       setToastMessage(`Guardado en Capturas: ${defaultFilename}`);
       setTimeout(() => {
-        void screenCaptureClient.cancelCapture();
+        if (sessionRef.current && confirmRevisionRef.current === revision) void handleCancel();
       }, 350);
     } catch (err) {
-      console.error("Error al guardar archivo PNG automáticamente:", err);
+      if (!sessionRef.current || confirmRevisionRef.current !== revision) return;
+      console.error("Error al guardar captura automáticamente:", err);
       try {
         const now = new Date();
         const dateStr = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
-        const defaultFilename = `Prisma_Captura_${dateStr}.png`;
+        const defaultFilename = `Prisma_Captura_${dateStr}.${captureFormat.extension}`;
         const chosenPath = await save({
           title: "Guardar captura de pantalla",
           defaultPath: defaultFilename,
-          filters: [{ name: "Imagen PNG", extensions: ["png"] }],
+          filters: [{ name: `Imagen ${captureFormat.label}`, extensions: [captureFormat.extension] }],
         });
-        if (chosenPath) {
+        if (chosenPath && sessionRef.current && confirmRevisionRef.current === revision) {
           const dataUrl = canvas.toDataURL("image/png");
-          await screenCaptureClient.saveFile(chosenPath, dataUrl);
-          await screenCaptureClient.cancelCapture();
+          await screenCaptureClient.saveFile(chosenPath, dataUrl, captureFormat.id);
+          if (sessionRef.current && confirmRevisionRef.current === revision) await handleCancel();
         }
       } catch {}
     }
@@ -358,12 +561,27 @@ export function ScreenCaptureOverlay() {
     setActiveTextBox(null);
   }, []);
 
+  const handleClearAnnotations = useCallback(() => {
+    setAnnotations([]);
+    setHistoryIndex(-1);
+  }, []);
+
   // Manejo de atajos globales dentro de la capa
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isCtrl = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();
       const code = e.code;
+
+      if (e.isComposing) return;
+      if (activeTextBox) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          handleCancelTextBox();
+        }
+        return;
+      }
+      if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
 
       if (phaseRef.current === "selecting") {
         if (e.key === "Escape") {
@@ -430,13 +648,6 @@ export function ScreenCaptureOverlay() {
           }
         }
       } else if (phaseRef.current === "annotating") {
-        if (activeTextBox) {
-          if (e.key === "Escape") {
-            e.preventDefault();
-            handleCancelTextBox();
-            return;
-          }
-        }
         if (e.key === "Escape") {
           e.preventDefault();
           void handleCancel();
@@ -461,17 +672,29 @@ export function ScreenCaptureOverlay() {
         } else if (e.key === "Enter" && !activeTextBox) {
           e.preventDefault();
           void handleCopy();
+        } else if (!isDrawing && !e.repeat) {
+          const shortcut = annotationShortcut(e);
+          if (!shortcut) return;
+          e.preventDefault();
+          if ("tool" in shortcut) setActiveTool(shortcut.tool);
+          else if ("color" in shortcut) setActiveColor(shortcut.color);
+          else if ("strokeWidth" in shortcut) setStrokeWidth(shortcut.strokeWidth);
+          else if (shortcut.action === "retry") handleRetrySelection();
+          else handleClearAnnotations();
         }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleCancel, handleConfirmToAnnotate, handleCopy, handleSaveAs, handleUndo, handleRedo, selectionRect, activeTextBox, handleConfirmTextBox, handleCancelTextBox]);
+  }, [handleCancel, handleConfirmToAnnotate, handleCopy, handleSaveAs, handleUndo, handleRedo, selectionRect, activeTextBox, handleConfirmTextBox, handleCancelTextBox, handleRetrySelection, handleClearAnnotations, isDrawing]);
 
   // Manejo de movimiento del cursor sobre la pantalla (Fase Selección)
-  const handleMouseMoveSelecting = useCallback(
-    async (e: React.MouseEvent) => {
+  // Se escuchan eventos de puntero (pointer) y no de ratón (mouse) para que la
+  // captura funcione igual con lápiz de tableta gráfica, con ratón o con el dedo:
+  // el lápiz de una tableta no genera eventos `mousemove`, solo `pointermove`.
+  const handlePointerMoveSelecting = useCallback(
+    async (e: React.PointerEvent) => {
       if (phase !== "selecting") return;
       const sess = sessionRef.current;
       const currentMode = modeRef.current;
@@ -494,46 +717,22 @@ export function ScreenCaptureOverlay() {
       }
 
       if (currentMode === "freeform") {
-        if (isDrawingLasso) {
-          setLassoPoints((prev) => {
-            const last = prev[prev.length - 1];
-            if (last) {
-              const dist = Math.hypot(screenX - last.x, screenY - last.y);
-              if (dist < 3) return prev;
-            }
-            return [...prev, { x: screenX, y: screenY }];
-          });
+        if (selectionPointer.matches(e.pointerId)) {
+          const points = lassoPointsRef.current;
+          const last = points[points.length - 1];
+          if (!last || Math.hypot(screenX - last.x, screenY - last.y) >= 3) {
+            const next = [...points, { x: screenX, y: screenY }];
+            lassoPointsRef.current = next;
+            setLassoPoints(next);
+          }
         }
         return;
       }
 
-      if (currentMode === "window" && sess) {
-        const found = sess.targets.find(
-          (t) =>
-            screenX >= t.x &&
-            screenX <= t.x + t.width &&
-            screenY >= t.y &&
-            screenY <= t.y + t.height
-        );
-
-        if (found) {
-          setActiveTarget(found);
-          try {
-            const sub = await screenCaptureClient.detectSubregion(
-              found.x,
-              found.y,
-              screenX,
-              screenY
-            );
-            if (sub && sub.width < found.width && sub.height < found.height) {
-              setSubregionTarget(sub);
-            } else {
-              setSubregionTarget(null);
-            }
-          } catch {
-            setSubregionTarget(null);
-          }
-        }
+      if (currentMode === "window") {
+        // Mantener el marco actual hasta resolver el siguiente objetivo nativo.
+        // Alternarlo con el catálogo inicial hacía parpadear ventanas y subregiones.
+        targetQuery.request(screenX, screenY);
       } else if (currentMode === "fullscreen" && sess) {
         const mon = sess.monitors.find(
           (m) =>
@@ -544,61 +743,86 @@ export function ScreenCaptureOverlay() {
         );
         if (mon) setActiveMonitor(mon);
       } else if (currentMode === "rect") {
-        if (isDragging && dragStart) {
-          const x = Math.min(dragStart.x, screenX);
-          const y = Math.min(dragStart.y, screenY);
-          const width = Math.abs(screenX - dragStart.x);
-          const height = Math.abs(screenY - dragStart.y);
-          setSelectionRect({ x, y, width, height });
+        const drag = dragStateRef.current;
+        if (drag.active && drag.start && selectionPointer.matches(e.pointerId)) {
+          const x = Math.min(drag.start.x, screenX);
+          const y = Math.min(drag.start.y, screenY);
+          const width = Math.abs(screenX - drag.start.x);
+          const height = Math.abs(screenY - drag.start.y);
+          const next = { x, y, width, height };
+          selectionRectRef.current = next;
+          setSelectionRect(next);
         }
       }
     },
-    [phase, isDragging, dragStart, isDrawingLasso]
+    [phase, targetQuery]
   );
 
-  const handleMouseDownSelecting = (e: React.MouseEvent) => {
-    if (phase !== "selecting" || e.button !== 0) return;
+  const handlePointerDownSelecting = (e: React.PointerEvent) => {
+    if (phase !== "selecting") return;
     if ((e.target as HTMLElement).closest(".capture-floating-toolbar")) return;
     if ((e.target as HTMLElement).closest(".capture-target-box")) return;
     if (mode === "eyedropper") return;
+    if (mode !== "rect" && mode !== "freeform") return;
+    if (!selectionPointer.begin(e)) return;
+    // Nota: no se llama a preventDefault() porque suprimiría los eventos de clic
+    // compatibles (los botones de la barra y la confirmación dependen de ellos).
+    // El desplazamiento/zoom con lápiz o dedo se evita con `touch-action: none`.
 
     if (mode === "freeform") {
-      setIsDrawingLasso(true);
-      setLassoPoints([{ x: e.screenX, y: e.screenY }]);
+      const first = { x: e.screenX, y: e.screenY };
+      lassoPointsRef.current = [first];
+      setLassoPoints([first]);
       return;
     }
 
     if (mode === "rect") {
+      const start = { x: e.screenX, y: e.screenY };
+      dragStateRef.current = { active: true, start };
+      selectionRectRef.current = null;
       setIsDragging(true);
-      setDragStart({ x: e.screenX, y: e.screenY });
       setSelectionRect(null);
     }
   };
 
-  const handleMouseUpSelecting = () => {
-    if (phase !== "selecting") return;
+  const handlePointerUpSelecting = (e: React.PointerEvent) => {
+    if (phase !== "selecting" || !selectionPointer.matches(e.pointerId)) return;
+    if (e.type === "lostpointercapture" && e.currentTarget.hasPointerCapture(e.pointerId)) return;
+    const start = dragStateRef.current.start;
+    selectionPointer.release();
+    dragStateRef.current = { active: false, start: null };
+    setIsDragging(false);
+    if (e.type !== "pointerup") {
+      selectionRectRef.current = null;
+      lassoPointsRef.current = [];
+      setSelectionRect(null);
+      setLassoPoints([]);
+      return;
+    }
 
     if (mode === "freeform") {
-      if (isDrawingLasso) {
-        setIsDrawingLasso(false);
-        if (lassoPoints.length > 5) {
-          const minX = Math.min(...lassoPoints.map((p) => p.x));
-          const maxX = Math.max(...lassoPoints.map((p) => p.x));
-          const minY = Math.min(...lassoPoints.map((p) => p.y));
-          const maxY = Math.max(...lassoPoints.map((p) => p.y));
+      {
+        const points = lassoPointsRef.current;
+        if (points.length > 5) {
+          const minX = Math.min(...points.map((p) => p.x));
+          const maxX = Math.max(...points.map((p) => p.x));
+          const minY = Math.min(...points.map((p) => p.y));
+          const maxY = Math.max(...points.map((p) => p.y));
           const width = maxX - minX;
           const height = maxY - minY;
 
           if (width >= 16 && height >= 16) {
-            const relativePolygon = lassoPoints.map((p) => ({
+            const relativePolygon = points.map((p) => ({
               x: p.x - minX,
               y: p.y - minY,
             }));
             void handleConfirmToAnnotate({ x: minX, y: minY, width, height }, relativePolygon);
           } else {
+            lassoPointsRef.current = [];
             setLassoPoints([]);
           }
         } else {
+          lassoPointsRef.current = [];
           setLassoPoints([]);
         }
       }
@@ -606,9 +830,14 @@ export function ScreenCaptureOverlay() {
     }
 
     if (mode === "rect") {
-      setIsDragging(false);
-      if (selectionRect && selectionRect.width >= 10 && selectionRect.height >= 10) {
-        void handleConfirmToAnnotate(selectionRect);
+      // Se lee el ref: con lápiz, el `pointerup` puede llegar antes de que React
+      // haya aplicado el último `setSelectionRect`.
+      const rect = start ? {
+        x: Math.min(start.x, e.screenX), y: Math.min(start.y, e.screenY),
+        width: Math.abs(e.screenX - start.x), height: Math.abs(e.screenY - start.y),
+      } : null;
+      if (rect && rect.width >= 10 && rect.height >= 10) {
+        void handleConfirmToAnnotate(rect);
       }
     }
   };
@@ -619,7 +848,9 @@ export function ScreenCaptureOverlay() {
     e: React.PointerEvent<HTMLDivElement>
   ) => {
     e.stopPropagation();
-    if (!selectionRect) return;
+    if (e.button !== 0 || activeTextBox) return;
+    const rect = selectionRect ?? (phase === "annotating" ? annotatingPayload : null);
+    if (!rect) return;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {}
@@ -627,7 +858,7 @@ export function ScreenCaptureOverlay() {
       handle,
       startScreenX: e.screenX,
       startScreenY: e.screenY,
-      startRect: { ...selectionRect },
+      startRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
     };
   };
 
@@ -656,7 +887,17 @@ export function ScreenCaptureOverlay() {
       height = newH;
     }
 
-    setSelectionRect({ x, y, width, height });
+    const sess = sessionRef.current;
+    if (sess) {
+      const right = Math.min(x + width, sess.virtualX + sess.virtualWidth);
+      const bottom = Math.min(y + height, sess.virtualY + sess.virtualHeight);
+      x = Math.max(sess.virtualX, x);
+      y = Math.max(sess.virtualY, y);
+      width = Math.max(20, right - x);
+      height = Math.max(20, bottom - y);
+    }
+    selectionRectRef.current = { x, y, width, height };
+    setSelectionRect(selectionRectRef.current);
   };
 
   const handleResizePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -665,6 +906,11 @@ export function ScreenCaptureOverlay() {
         e.currentTarget.releasePointerCapture(e.pointerId);
       } catch {}
       resizeRef.current = null;
+      if (e.type === "pointercancel") {
+        setSelectionRect(null);
+      } else if (phase === "annotating" && selectionRectRef.current && annotatingPayload) {
+        void handleConfirmToAnnotate(selectionRectRef.current, undefined, annotatingPayload);
+      }
     }
   };
 
@@ -710,15 +956,17 @@ export function ScreenCaptureOverlay() {
     if ((e.target as HTMLElement).closest(".capture-resize-handle")) return;
 
     if (mode === "eyedropper") {
+      const revision = confirmRevisionRef.current;
       try {
         const res = await screenCaptureClient.pickColor(e.screenX, e.screenY);
         if (res) {
           await navigator.clipboard.writeText(res.hex);
+          if (!sessionRef.current || confirmRevisionRef.current !== revision) return;
           setActiveColor(res.hex);
           setHoveredColor(null);
           setToastMessage(`Color ${res.hex} copiado al portapapeles`);
           setTimeout(() => {
-            void handleCancel();
+            if (sessionRef.current && confirmRevisionRef.current === revision) void handleCancel();
           }, 1500);
         }
       } catch (err) {
@@ -733,7 +981,15 @@ export function ScreenCaptureOverlay() {
     if (mode === "rect" && (e.target as HTMLElement).closest(".capture-target-box")) return;
 
     if (mode === "window") {
-      const target = useSubregion && subregionTarget ? subregionTarget : activeTarget;
+      const sessionId = sessionRef.current?.sessionId;
+      let target: DetectedTarget | null;
+      try {
+        target = await screenCaptureClient.detectWindowAt(e.screenX, e.screenY);
+        if (target?.hwnd && useSubregionRef.current) {
+          target = await screenCaptureClient.detectSubregion(target.hwnd, e.screenX, e.screenY) ?? target;
+        }
+      } catch { return; }
+      if (!sessionRef.current || sessionRef.current.sessionId !== sessionId || modeRef.current !== "window") return;
       if (target) {
         void handleConfirmToAnnotate({
           x: target.x,
@@ -817,13 +1073,15 @@ export function ScreenCaptureOverlay() {
     }
   }, [annotations, historyIndex, currentAnnotation, lassoClipPolygon]);
 
+  const renderCanvasRef = useRef(renderCanvas);
+  renderCanvasRef.current = renderCanvas;
+
   // Carga inicial de imagen congelada al entrar en fase de anotación
   useEffect(() => {
     if (phase !== "annotating" || !annotatingPayload?.dataUrl) return;
 
     const img = new Image();
     img.crossOrigin = "anonymous";
-    img.src = annotatingPayload.dataUrl;
     img.onload = () => {
       bgImageRef.current = img;
       const canvas = canvasRef.current;
@@ -831,9 +1089,12 @@ export function ScreenCaptureOverlay() {
         canvas.width = annotatingPayload.width;
         canvas.height = annotatingPayload.height;
       }
-      renderCanvas();
+      setCanvasRect({ x: annotatingPayload.x, y: annotatingPayload.y, width: annotatingPayload.width, height: annotatingPayload.height });
+      renderCanvasRef.current();
     };
-  }, [phase, annotatingPayload, renderCanvas]);
+    img.src = annotatingPayload.dataUrl;
+    return () => { img.onload = null; };
+  }, [phase, annotatingPayload]);
 
   useEffect(() => {
     if (phase === "annotating") {
@@ -855,10 +1116,8 @@ export function ScreenCaptureOverlay() {
   };
 
   const handlePointerDownCanvas = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (e.button !== 0) return;
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {}
+    if (!canvasPointer.begin(e)) return;
+    dragTextBoxRef.current = null;
 
     const { x, y } = getCanvasLocalCoords(e);
 
@@ -891,10 +1150,12 @@ export function ScreenCaptureOverlay() {
       endPoint: { x, y },
       rect: { x, y, width: 0, height: 0 },
     };
+    currentAnnotationRef.current = newItem;
     setCurrentAnnotation(newItem);
   };
 
   const handlePointerMoveCanvas = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!canvasPointer.matches(e.pointerId)) return;
     const { x, y } = getCanvasLocalCoords(e);
 
     if (activeTool === "text" && dragTextBoxRef.current) {
@@ -918,24 +1179,19 @@ export function ScreenCaptureOverlay() {
       return;
     }
 
-    if (!isDrawing) return;
-
-    setCurrentAnnotation((prev) => {
-      if (!prev) return null;
+    const prev = currentAnnotationRef.current;
+    if (!prev) return;
+    const next = (() => {
       if (prev.tool === "pen" || prev.tool === "highlighter") {
         return {
           ...prev,
           points: [...(prev.points || []), { x, y }],
         };
       }
-      if (prev.tool === "rect" && prev.startPoint) {
-        const rx = Math.min(prev.startPoint.x, x);
-        const ry = Math.min(prev.startPoint.y, y);
-        const rw = Math.abs(x - prev.startPoint.x);
-        const rh = Math.abs(y - prev.startPoint.y);
+      if ((prev.tool === "rect" || prev.tool === "ellipse") && prev.startPoint) {
         return {
           ...prev,
-          rect: { x: rx, y: ry, width: rw, height: rh },
+          rect: annotationShapeRect(prev.startPoint, { x, y }, e.shiftKey),
           endPoint: { x, y },
         };
       }
@@ -946,27 +1202,54 @@ export function ScreenCaptureOverlay() {
         };
       }
       return prev;
-    });
+    })();
+    currentAnnotationRef.current = next;
+    setCurrentAnnotation(currentAnnotationRef.current);
   };
 
+  // Shift también responde al presionarlo o soltarlo sin mover el puntero.
+  useEffect(() => {
+    if (!isDrawing) return;
+    const handleShift = (event: KeyboardEvent) => {
+      if (event.key !== "Shift") return;
+      const item = currentAnnotationRef.current;
+      if (!item?.startPoint || !item.endPoint || (item.tool !== "rect" && item.tool !== "ellipse")) return;
+      currentAnnotationRef.current = { ...item, rect: annotationShapeRect(item.startPoint, item.endPoint, event.shiftKey) };
+      setCurrentAnnotation(currentAnnotationRef.current);
+    };
+    window.addEventListener("keydown", handleShift);
+    window.addEventListener("keyup", handleShift);
+    return () => {
+      window.removeEventListener("keydown", handleShift);
+      window.removeEventListener("keyup", handleShift);
+    };
+  }, [isDrawing]);
+
   const handlePointerUpCanvas = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!canvasPointer.matches(e.pointerId)) return;
+    if (e.type === "lostpointercapture" && e.currentTarget.hasPointerCapture(e.pointerId)) return;
+    canvasPointer.release();
+    const cancelled = e.type !== "pointerup";
     if (dragTextBoxRef.current) {
       dragTextBoxRef.current = null;
-      setTimeout(() => {
+      if (cancelled) setActiveTextBox(null);
+      else setTimeout(() => {
         textAreaRef.current?.focus();
       }, 50);
       return;
     }
 
-    if (!isDrawing) return;
     setIsDrawing(false);
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {}
-
-    if (currentAnnotation) {
-      commitAnnotation(currentAnnotation);
-      setCurrentAnnotation(null);
+    const item = currentAnnotationRef.current;
+    currentAnnotationRef.current = null;
+    setCurrentAnnotation(null);
+    if (item && !cancelled) {
+      const endPoint = getCanvasLocalCoords(e);
+      commitAnnotation(
+        (item.tool === "rect" || item.tool === "ellipse") && item.startPoint
+          ? { ...item, endPoint, rect: annotationShapeRect(item.startPoint, endPoint, e.shiftKey) }
+          : { ...item, endPoint, points: item.points ? [...item.points, endPoint] : undefined }
+      );
     }
   };
 
@@ -981,17 +1264,22 @@ export function ScreenCaptureOverlay() {
   const virtX = session?.virtualX ?? 0;
   const virtY = session?.virtualY ?? 0;
 
-  const inPlaceLeft = annotatingPayload ? annotatingPayload.x - virtX : 0;
-  const inPlaceTop = annotatingPayload ? annotatingPayload.y - virtY : 0;
-  const inPlaceWidth = annotatingPayload ? annotatingPayload.width : 0;
-  const inPlaceHeight = annotatingPayload ? annotatingPayload.height : 0;
+  const inPlaceRect = selectionRect ?? annotatingPayload;
+  const inPlaceLeft = inPlaceRect ? inPlaceRect.x - virtX : 0;
+  const inPlaceTop = inPlaceRect ? inPlaceRect.y - virtY : 0;
+  const inPlaceWidth = inPlaceRect?.width ?? 0;
+  const inPlaceHeight = inPlaceRect?.height ?? 0;
+
+  if (!session) return null;
 
   return (
     <div
       className={`capture-overlay-container ${phase === "annotating" ? "is-annotating" : ""}`}
-      onMouseMove={handleMouseMoveSelecting}
-      onMouseDown={handleMouseDownSelecting}
-      onMouseUp={handleMouseUpSelecting}
+      onPointerMove={handlePointerMoveSelecting}
+      onPointerDown={handlePointerDownSelecting}
+      onPointerUp={handlePointerUpSelecting}
+      onPointerCancel={handlePointerUpSelecting}
+      onLostPointerCapture={handlePointerUpSelecting}
       onClick={handleClickSelecting}
       onWheel={handleWheel}
       role="presentation"
@@ -1028,7 +1316,6 @@ export function ScreenCaptureOverlay() {
               >
                 <Icon name={opt.icon} width={16} height={16} />
                 <span className="label">{opt.label}</span>
-                <span className="shortcut">{opt.shortcut}</span>
               </button>
             ))}
           </div>
@@ -1044,7 +1331,6 @@ export function ScreenCaptureOverlay() {
           >
             <Icon name="pipette" width={16} height={16} />
             <span className="label">Selector de color</span>
-            <span className="shortcut">C</span>
           </button>
 
           <div className="capture-pill-divider" />
@@ -1129,12 +1415,7 @@ export function ScreenCaptureOverlay() {
           }}
           onClick={(e) => {
             e.stopPropagation();
-            void handleConfirmToAnnotate({
-              x: displayedTarget.x,
-              y: displayedTarget.y,
-              width: displayedTarget.width,
-              height: displayedTarget.height,
-            });
+            void handleClickSelecting(e);
           }}
         >
           <div
@@ -1145,6 +1426,11 @@ export function ScreenCaptureOverlay() {
             {displayedTarget.width} × {displayedTarget.height} px · Clic o Enter para capturar
             {displayedTarget.title ? ` · ${displayedTarget.title.slice(0, 32)}` : ""}
             {subregionTarget ? " (Rueda ratón para alternar subregión)" : ""}
+          </div>
+          <div className="capture-frame-handles is-preview" aria-hidden="true">
+            {["nw", "ne", "se", "sw", "n", "s", "w", "e"].map((handle) => (
+              <div key={handle} className={`capture-resize-handle ${handle}`} />
+            ))}
           </div>
         </div>
       )}
@@ -1284,19 +1570,35 @@ export function ScreenCaptureOverlay() {
               height: `${inPlaceHeight}px`,
             }}
           >
-            <canvas
-              ref={canvasRef}
-              className="capture-inplace-canvas"
-              style={{
-                width: `${inPlaceWidth}px`,
-                height: `${inPlaceHeight}px`,
-              }}
-              onPointerDown={handlePointerDownCanvas}
-              onPointerMove={handlePointerMoveCanvas}
-              onPointerUp={handlePointerUpCanvas}
-              onPointerCancel={handlePointerUpCanvas}
-              onPointerLeave={() => setHoveredColor(null)}
-            />
+            {!lassoClipPolygon && mode !== "fullscreen" && (
+              <div className="capture-frame-handles">
+                {["nw", "ne", "se", "sw", "n", "s", "w", "e"].map((handle) => (
+                  <div key={handle} className={`capture-resize-handle ${handle}`}
+                    onPointerDown={(e) => handleResizePointerDown(handle, e)}
+                    onPointerMove={handleResizePointerMove}
+                    onPointerUp={handleResizePointerUp}
+                    onPointerCancel={handleResizePointerUp} />
+                ))}
+              </div>
+            )}
+            <div className="capture-inplace-viewport">
+              <canvas
+                ref={canvasRef}
+                width={annotatingPayload.width}
+                height={annotatingPayload.height}
+                className="capture-inplace-canvas"
+                style={{
+                  left: `${(canvasRect?.x ?? annotatingPayload.x) - virtX - inPlaceLeft}px`,
+                  top: `${(canvasRect?.y ?? annotatingPayload.y) - virtY - inPlaceTop}px`,
+                }}
+                onPointerDown={handlePointerDownCanvas}
+                onPointerMove={handlePointerMoveCanvas}
+                onPointerUp={handlePointerUpCanvas}
+                onPointerCancel={handlePointerUpCanvas}
+                onLostPointerCapture={handlePointerUpCanvas}
+                onPointerLeave={() => setHoveredColor(null)}
+              />
+            </div>
           </div>
 
           {/* Cuadro de Texto Interactivo In-Situ (Elegir caja arrastrando o clic) */}
@@ -1375,10 +1677,7 @@ export function ScreenCaptureOverlay() {
             canUndo={historyIndex >= 0}
             canRedo={historyIndex < annotations.length - 1}
             canClear={annotations.length > 0}
-            onClear={() => {
-              setAnnotations([]);
-              setHistoryIndex(-1);
-            }}
+            onClear={handleClearAnnotations}
             onRetrySelection={handleRetrySelection}
             onCopy={() => void handleCopy()}
             onSaveAs={() => void handleSaveAs()}

@@ -65,7 +65,7 @@ impl ScreenSnapshot {
         let rel_x = screen_x - self.x;
         let rel_y = screen_y - self.y;
         if rel_x >= 0 && rel_x < self.width as i32 && rel_y >= 0 && rel_y < self.height as i32 {
-            let idx = ((rel_y as usize * self.width as usize + rel_x as usize) * 4);
+            let idx = (rel_y as usize * self.width as usize + rel_x as usize) * 4;
             if idx + 2 < self.rgba.len() {
                 return Some((self.rgba[idx], self.rgba[idx + 1], self.rgba[idx + 2]));
             }

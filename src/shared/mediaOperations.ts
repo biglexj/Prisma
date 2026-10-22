@@ -1,3 +1,4 @@
+import type { CaptureFormat } from "./captureFormat";
 import { invoke } from "@tauri-apps/api/core";
 
 export interface DeleteMediaResult {
@@ -53,7 +54,7 @@ export interface SaveSnapshotParams {
   imageBase64: string;
   outputFolder?: string;
   timestampSecs?: number;
-  format?: "png" | "webp" | "jpeg";
+  format?: CaptureFormat;
 }
 
 /** Guarda una captura de pantalla de un fotograma de vídeo en disco. */
@@ -70,5 +71,11 @@ export function saveVideoSnapshot(params: SaveSnapshotParams): Promise<SaveSnaps
 /** Obtiene la ruta canónica del directorio de imágenes del sistema. */
 export function getDefaultPicturesDir(): Promise<string> {
   return invoke<string>("media_get_default_pictures_dir");
+}
+
+/** Filtra rutas comprobando que existan en disco y no estén ocultas por el sistema. */
+export function filterExistingMediaPaths(paths: string[]): Promise<string[]> {
+  if (!paths || paths.length === 0) return Promise.resolve([]);
+  return invoke<string[]>("media_filter_existing_paths", { paths });
 }
 

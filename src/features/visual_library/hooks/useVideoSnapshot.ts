@@ -1,3 +1,4 @@
+import type { CaptureFormat } from "../../../shared/captureFormat";
 import { useCallback, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { saveVideoSnapshot, type SaveSnapshotResult } from "../../../shared/mediaOperations";
@@ -18,7 +19,7 @@ export interface UseVideoSnapshotOptions {
   videoPath: string | null;
   videoTitle?: string;
   videoSnapshotFolder?: string;
-  videoSnapshotFormat?: "png" | "webp" | "jpeg";
+  captureFormat?: CaptureFormat;
   onSeek?: (newTime: number) => void;
   onPauseStateChange?: (paused: boolean) => void;
 }
@@ -27,7 +28,7 @@ export function useVideoSnapshot({
   videoRef,
   videoPath,
   videoSnapshotFolder,
-  videoSnapshotFormat = "png",
+  captureFormat = "png",
   onSeek,
   onPauseStateChange,
 }: UseVideoSnapshotOptions) {
@@ -90,26 +91,8 @@ export function useVideoSnapshot({
 
       ctx.drawImage(video, 0, 0, vw, vh);
 
-      const mime =
-        videoSnapshotFormat === "webp"
-          ? "image/webp"
-          : videoSnapshotFormat === "jpeg"
-          ? "image/jpeg"
-          : "image/png";
-      const quality =
-        videoSnapshotFormat === "webp"
-          ? 0.92
-          : videoSnapshotFormat === "jpeg"
-          ? 0.95
-          : undefined;
-
-      let dataUrl: string;
-      try {
-        dataUrl = canvas.toDataURL(mime, quality);
-      } catch (canvasErr) {
-        console.warn("Error exportando formato solicitado, intentando fallback a PNG:", canvasErr);
-        dataUrl = canvas.toDataURL("image/png");
-      }
+      // Transporte sin pérdidas; el backend común codifica el formato global.
+      const dataUrl = canvas.toDataURL("image/png");
 
       const currentTime = video.currentTime;
       const totalSecs = Math.max(0, Math.floor(currentTime));
@@ -126,7 +109,7 @@ export function useVideoSnapshot({
         imageBase64: dataUrl,
         outputFolder: videoSnapshotFolder || undefined,
         timestampSecs: currentTime,
-        format: videoSnapshotFormat,
+        format: captureFormat,
       });
 
       if (toastTimeoutRef.current) {
@@ -174,7 +157,7 @@ export function useVideoSnapshot({
     } finally {
       setIsCapturing(false);
     }
-  }, [videoRef, videoPath, videoSnapshotFolder, videoSnapshotFormat]);
+  }, [videoRef, videoPath, videoSnapshotFolder, captureFormat]);
 
   /**
    * Avanza 1 fotograma (+1/30 s ~ 33.3ms) pausando automáticamente la reproducción.
