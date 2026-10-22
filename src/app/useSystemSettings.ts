@@ -58,6 +58,10 @@ interface SystemSettings {
   /** @deprecated El atajo global del capturador vive ahora en el backend. */
   screenCaptureShortcut: string;
   screenCaptureFolder?: string;
+  /** Zona de recepción del sistema (muesca flotante en la pantalla). */
+  systemDropZoneEnabled: boolean;
+  /** Carpeta donde se copian los archivos soltados en la zona del sistema. */
+  systemDropZoneFolder: string;
   enabledTools: EnabledToolsConfig;
 }
 
@@ -80,6 +84,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
   screenCaptureEnabled: false,
   screenCaptureShortcut: "Shift+PrintScreen",
   screenCaptureFolder: "",
+  systemDropZoneEnabled: true,
+  systemDropZoneFolder: "",
   enabledTools: DEFAULT_ENABLED_TOOLS,
 };
 
@@ -108,6 +114,21 @@ function notifySettingsChanged(newSettings?: SystemSettings) {
   void emit(TAURI_SYNC_EVENT, payload).catch(() => {});
 }
 
+/**
+ * Preferencias de la zona de recepción del sistema.
+ *
+ * La zona vive en otra ventana, así que lee las preferencias directamente del
+ * almacenamiento local en vez de usar el gancho: así funciona aunque la ventana
+ * principal esté en la bandeja.
+ */
+export function loadDropZonePreferences(): { enabled: boolean; folder: string } {
+  const stored = loadStoredSettings();
+  return {
+    enabled: stored.systemDropZoneEnabled !== false,
+    folder: stored.systemDropZoneFolder || "",
+  };
+}
+
 export function useSystemSettings() {
   const [settings, setSettings] = useState<SystemSettings>(loadStoredSettings);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -126,6 +147,12 @@ export function useSystemSettings() {
         }
         if (typeof stored.minimizeToTray === "boolean") {
           await invoke("set_minimize_to_tray", { enabled: stored.minimizeToTray }).catch(() => {});
+        }
+        // La zona de recepción del sistema se muestra u oculta al arrancar.
+        if (typeof stored.systemDropZoneEnabled === "boolean") {
+          await invoke("system_drop_zone_set_visible", {
+            visible: stored.systemDropZoneEnabled,
+          }).catch(() => {});
         }
 
         // Leer estado real del registro de Windows
@@ -161,6 +188,9 @@ export function useSystemSettings() {
               videoSnapshotFormat: stored.videoSnapshotFormat ?? prev.videoSnapshotFormat,
               screenCaptureEnabled: stored.screenCaptureEnabled ?? prev.screenCaptureEnabled,
               screenCaptureShortcut: stored.screenCaptureShortcut ?? prev.screenCaptureShortcut,
+              screenCaptureFolder: stored.screenCaptureFolder ?? prev.screenCaptureFolder,
+              systemDropZoneEnabled: stored.systemDropZoneEnabled ?? prev.systemDropZoneEnabled,
+              systemDropZoneFolder: stored.systemDropZoneFolder ?? prev.systemDropZoneFolder,
               enabledTools: stored.enabledTools ?? prev.enabledTools,
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
@@ -340,6 +370,26 @@ export function useSystemSettings() {
     });
   }, []);
 
+  const setSystemDropZoneEnabled = useCallback((enabled: boolean) => {
+    setSettings((prev) => {
+      const next = { ...prev, systemDropZoneEnabled: enabled };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+    // La ventana del sistema se muestra u oculta de inmediato.
+    void invoke("system_drop_zone_set_visible", { visible: enabled }).catch(() => {});
+  }, []);
+
+  const setSystemDropZoneFolder = useCallback((folder: string) => {
+    setSettings((prev) => {
+      const next = { ...prev, systemDropZoneFolder: folder };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, []);
+
   return {
     isLoaded,
     quickLookShortcut: settings.quickLookShortcut,
@@ -356,6 +406,8 @@ export function useSystemSettings() {
     captureFormat: settings.videoSnapshotFormat || "png",
     setCaptureFormat: setVideoSnapshotFormat,
     screenCaptureFolder: settings.screenCaptureFolder || "",
+    systemDropZoneEnabled: settings.systemDropZoneEnabled !== false,
+    systemDropZoneFolder: settings.systemDropZoneFolder || "",
     enabledTools: settings.enabledTools,
     setQuickLookShortcut,
     setAutostart,
@@ -369,6 +421,8 @@ export function useSystemSettings() {
     setVideoSnapshotFolder,
     setVideoSnapshotFormat,
     setScreenCaptureFolder,
+    setSystemDropZoneEnabled,
+    setSystemDropZoneFolder,
     setToolEnabled,
   };
 }

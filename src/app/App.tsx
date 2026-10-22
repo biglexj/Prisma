@@ -33,8 +33,7 @@ import { playlistsRead } from "../features/collections/tauri/client";
 import { AboutView } from "./ui/AboutView";
 import { SynapseToast, type SynapseReceivedFile } from "./ui/SynapseToast";
 import { SendToSuperGalleryModal } from "./ui/SendToSuperGalleryModal";
-import { FileDropZone } from "./ui/FileDropZone";
-import { folderForLibrary } from "../shared/dropRouter";
+import { VAULT_SEND_EVENT } from "./ui/SystemDropZone";
 import { addToHistory } from "../shared/useHistory";
 import { CustomLibraryView } from "../features/custom_libraries/ui/CustomLibraryView";
 import { DocumentViewer } from "../features/custom_libraries/ui/DocumentViewer";
@@ -184,6 +183,27 @@ function AppContent() {
   useEffect(() => {
     applyMusicPalette(currentAudioPath ? currentAlbumPalette : null);
   }, [currentAudioPath, currentAlbumPalette, applyMusicPalette]);
+
+  useEffect(() => {
+    // Un elemento de la bóveda flotante enviado al teléfono.
+    const unlistenPromise = listen<{ path: string; title?: string }>(
+      VAULT_SEND_EVENT,
+      (event) => {
+        const { path, title } = event.payload ?? { path: "" };
+        if (!path) return;
+        // Si Prisma está en la bandeja, la ventana principal se muestra.
+        void getCurrentWebviewWindow()
+          .show()
+          .then(() => getCurrentWebviewWindow().setFocus())
+          .catch(() => undefined);
+        setSendModalFile({ path, title });
+      }
+    );
+
+    return () => {
+      void unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
 
   const isVideoActive = Boolean(activeVideoPath) && (activeView === "video_player" || isPip);
 
@@ -1643,36 +1663,9 @@ function AppContent() {
           debe ocultarse durante la captura para no aparecer en el vídeo. */}
       <RecordingHud onAddToVideoLibrary={(folder) => void videoLibrary.addFolder(folder)} />
 
-      {/* Zona de recepción en la parte superior central: el menú de destinos
-          decide si el archivo va a Super Galería, a una biblioteca o al
-          Explorador de archivos. */}
-      <FileDropZone
-        onSendToSuperGallery={(paths) => {
-          const [first, ...rest] = paths;
-          if (!first) return;
-          sendQueueRef.current = rest;
-          setSendModalFile({ path: first, title: first.replace(/.*[/\\]/, "") });
-        }}
-        onAddToLibrary={(kind, paths) => {
-          // A una biblioteca se añade la carpeta que contiene el archivo.
-          const folders = Array.from(new Set(paths.map(folderForLibrary)));
-          for (const folder of folders) {
-            if (kind === "images") void imageLibrary.addFolder(folder);
-            else if (kind === "videos") void videoLibrary.addFolder(folder);
-            else void library.addFolder(folder);
-          }
-        }}
-        onOpenWithDefaultApp={(paths) => {
-          for (const path of paths) {
-            void invoke("open_path_with_default_app", { path });
-          }
-        }}
-        onRevealInExplorer={(paths) => {
-          for (const path of paths) {
-            void invoke("open_in_file_manager", { path });
-          }
-        }}
-      />
+      {/* Zona de recepción del sistema: es una ventana propia, siempre encima,
+          anclada en el borde superior de la pantalla. Funciona desde el
+          Explorador de archivos o cualquier otra aplicación. */}
 
       <DspEqualizerModal
         isOpen={isEqualizerModalOpen}

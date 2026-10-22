@@ -1,6 +1,7 @@
 pub mod converter;
 pub mod audio_relay;
 pub mod custom_libraries;
+pub mod drop_zone;
 pub mod flyout;
 pub mod favorites;
 pub mod media;
@@ -11,6 +12,7 @@ pub mod quick_look;
 pub mod renamer;
 pub mod synapse;
 pub mod tags;
+pub mod vault;
 pub mod video_takes;
 pub mod visual_library;
 pub mod wallpapers;

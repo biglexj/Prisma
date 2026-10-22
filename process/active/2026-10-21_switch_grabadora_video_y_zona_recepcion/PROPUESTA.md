@@ -14,9 +14,9 @@ Ordenado por relación entre valor y esfuerzo. Todas las opciones son compatible
 
 ## Nivel 2 — capacidad de verdad
 
-- **Destinos múltiples en la zona de recepción.** Al soltar, un menú rápido: Super Galería, Biblioteca de Imágenes, Biblioteca de Vídeos, Convertir, Guardar como. Hoy la zona tiene un destino único y fijo.
-- **Archivos múltiples y cola.** Aceptar N archivos y enviarlos todos, con progreso, en lugar de tomar solo el primero.
-- **Vista previa al arrastrar.** Miniatura, nombre y tamaño del archivo sobre la zona: que se vea que la aplicación «lo está recibiendo», no solo una barra que crece.
+- ~~**Destinos múltiples en la zona de recepción.**~~ **Hecho, pero con otro forma:** la zona del sistema es ahora una bóveda de tres elementos con acciones por elemento (enviar al teléfono, guardar copia, fijar, quitar) y arrastre hacia fuera. Ver `process/active/2026-10-22_boveda_flotante_del_sistema`.
+- ~~**Vista previa al arrastrar.**~~ **Hecho:** miniatura, nombre y tamaño sobre la tarjeta, tanto en la estantería como durante el arrastre.
+- **Archivos múltiples y cola.** Aceptar N archivos y enviarlos todos, con progreso, en lugar de tomar solo el primero. La bóveda ya acepta varios; falta la cola de envío con progreso hacia el teléfono.
 - **Grabación al terminar en la biblioteca.** El MP4 aparece solo en Prisma → Vídeos, y desde ahí a Super Galería con un clic.
 - **Recorte sin recodificar.** Marcar entradas y salidas sobre el MP4 y recortar con `-c copy`: instantáneo y sin pérdida de calidad.
 - **Captura por ventana (HWND).** Grabar una ventana concreta por su identificador en vez de por región, con seguimiento si se mueve.

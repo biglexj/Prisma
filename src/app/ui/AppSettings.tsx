@@ -137,6 +137,10 @@ export function AppSettings({
     setCaptureFormat,
     screenCaptureFolder,
     setScreenCaptureFolder,
+    systemDropZoneEnabled,
+    systemDropZoneFolder,
+    setSystemDropZoneEnabled,
+    setSystemDropZoneFolder,
   } = useSystemSettings();
 
   const { status: captureShortcutStatus, isUpdating: isUpdatingCaptureShortcut, configure: configureCaptureShortcut } =
@@ -904,6 +908,108 @@ export function AppSettings({
                         <span>Probar Captura</span>
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* ── Zona de recepción del sistema ── */}
+                <div className="settings-card">
+                  <div className="settings-card-header-row">
+                    <div>
+                      <h3>Zona de recepción del sistema</h3>
+                      <p>
+                        Una muesca fija en el borde superior de la pantalla, por encima de todas
+                        las ventanas. Arrastra una imagen de la web, un documento o cualquier
+                        archivo desde el Explorador hasta ella y elige qué hacer con él.
+                      </p>
+                    </div>
+                    <label className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={systemDropZoneEnabled}
+                        onChange={(e) => setSystemDropZoneEnabled(e.target.checked)}
+                        aria-label="Mostrar la zona de recepción del sistema"
+                      />
+                      <span className="toggle-slider" />
+                    </label>
+                  </div>
+
+                  <div className="system-toggle-item">
+                    <div className="system-toggle-info">
+                      <strong>Zona de recepción visible</strong>
+                      <p>
+                        {systemDropZoneEnabled
+                          ? "Arriba al centro de la pantalla, incluso con Prisma minimizado o en la bandeja."
+                          : "Oculta. Los archivos arrastrados vuelven a ir a las bibliotecas según la vista activa."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="settings-section-divider" style={{ margin: "14px 0 10px" }} />
+
+                  <div className="snapshot-folder-path-display">
+                    <div className="snapshot-folder-header-row">
+                      <span className="snapshot-folder-label">
+                        Carpeta donde se copian los archivos soltados
+                      </span>
+                      <span className={`snapshot-folder-badge ${systemDropZoneFolder ? "is-custom" : "is-default"}`}>
+                        {systemDropZoneFolder ? "Personalizada" : "Predeterminada (Descargas\\Prisma)"}
+                      </span>
+                    </div>
+                    <div
+                      className="snapshot-folder-path-text"
+                      title={systemDropZoneFolder || "Descargas\\Prisma"}
+                    >
+                      <Icon name="folder" />
+                      <span>{systemDropZoneFolder || "Descargas\\Prisma"}</span>
+                    </div>
+                  </div>
+
+                  <div className="snapshot-folder-actions-row">
+                    <button
+                      type="button"
+                      className="snapshot-action-btn primary"
+                      onClick={async () => {
+                        try {
+                          const selected = await open({
+                            directory: true,
+                            multiple: false,
+                            title: "Seleccionar carpeta para los archivos soltados en la zona del sistema",
+                            defaultPath: systemDropZoneFolder || undefined,
+                          });
+                          if (typeof selected === "string" && selected.trim()) {
+                            setSystemDropZoneFolder(selected.trim());
+                          }
+                        } catch (err) {
+                          console.error("Error al seleccionar carpeta de la zona de recepción:", err);
+                        }
+                      }}
+                    >
+                      <Icon name="folder-open" />
+                      <span>Cambiar...</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="snapshot-action-btn secondary"
+                      onClick={() => {
+                        const target = systemDropZoneFolder || "Descargas\\Prisma";
+                        void invoke("show_in_file_manager", { path: target }).catch(() => {});
+                      }}
+                      title="Abrir carpeta en el Explorador de Windows"
+                    >
+                      <Icon name="external-link" />
+                      <span>Abrir</span>
+                    </button>
+                    {systemDropZoneFolder ? (
+                      <button
+                        type="button"
+                        className="snapshot-action-btn tertiary"
+                        onClick={() => setSystemDropZoneFolder("")}
+                        title="Restablecer a la carpeta predeterminada"
+                      >
+                        <Icon name="undo" />
+                        <span>Restablecer</span>
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               </div>

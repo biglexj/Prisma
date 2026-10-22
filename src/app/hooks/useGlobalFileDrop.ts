@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { cleanPath } from "../../shared/mediaTree";
 import { isOwnNativeFileDrop } from "../../shared/useNativeFileDrag";
@@ -73,12 +74,16 @@ export function useGlobalFileDrop({
     const unlistens: UnlistenFn[] = [];
     let isCancelled = false;
 
-    const handleDroppedPaths = (paths: string[]) => {
+    const handleDroppedPaths = async (paths: string[]) => {
       if (!paths || paths.length === 0) return;
       if (isOwnNativeFileDrop(paths)) return;
       // Una zona de recepción concreta (por ejemplo, la superior central que
       // envía a Super Galería) ya se quedó con este archivo: no se duplica.
       if (isDropZoneArmed() || isClaimedDrop(paths)) return;
+      // La zona de recepción del sistema es otra ventana: el aviso vive en el
+      // backend para que la ventana principal no lo procese dos veces.
+      const systemZoneActive = await invoke<boolean>("drop_zone_is_active").catch(() => false);
+      if (systemZoneActive) return;
       // Si el comparador de imágenes o sus selectores están en pantalla, tienen prioridad exclusiva
       if (
         document.querySelector(".img-compare-modal-root") ||
@@ -102,7 +107,7 @@ export function useGlobalFileDrop({
     listen<{ paths?: string[] }>("prisma://native-drag-drop", (event) => {
       if (isCancelled) return;
       if (event.payload?.paths && event.payload.paths.length > 0) {
-        handleDroppedPaths(event.payload.paths);
+        void handleDroppedPaths(event.payload.paths);
       }
     }).then((unlisten) => {
       if (isCancelled) unlisten();
@@ -115,7 +120,7 @@ export function useGlobalFileDrop({
       webview.onDragDropEvent((event) => {
         if (isCancelled) return;
         if (event.payload.type === "drop" && event.payload.paths) {
-          handleDroppedPaths(event.payload.paths);
+          void handleDroppedPaths(event.payload.paths);
         }
       }).then((unlisten) => {
         if (isCancelled) unlisten();

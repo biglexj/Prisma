@@ -90,6 +90,12 @@ use app::commands::screen_capture::{
     screen_capture_save_file, screen_capture_start, screen_recorder_cancel, screen_recorder_list_audio_devices,
     screen_recorder_pause, screen_recorder_start, screen_recorder_status, screen_recorder_stop, screen_recorder_trim,
 };
+use app::commands::drop_zone::{
+    drop_zone_copy_file, drop_zone_default_folder, drop_zone_is_active, system_drop_zone_expand,
+    system_drop_zone_set_size, system_drop_zone_set_visible, vault_add, vault_list, vault_remove,
+    vault_toggle_pin,
+};
+use app::commands::vault::VaultState;
 use app::state::{
     FavoritesState, InitialFileState, InitialSynapseSendState, MusicLibraryState,
     PlaybackProbeState, VisualLibraryState,
@@ -392,6 +398,15 @@ pub fn run() {
                 &capture_state,
                 &data_directory.join("screen_capture.json"),
             );
+
+            // Zona de recepción del sistema: una muesca fija en el borde superior
+            // central de la pantalla, por encima de cualquier ventana, para
+            // arrastrar archivos desde el Explorador o cualquier aplicación.
+            app::commands::drop_zone::place_at_startup(app.handle());
+
+            // Bóveda flotante: guarda hasta tres elementos, uno de ellos fijable.
+            let vault_state = VaultState::new(data_directory.join("vault.json"));
+            app.manage(vault_state);
 
             let quick_look_state = QuickLookState::new(app.handle().clone());
             quick_look_state.init();
@@ -811,6 +826,16 @@ pub fn run() {
             screen_recorder_pause,
             screen_recorder_trim,
             screen_recorder_list_audio_devices,
+            system_drop_zone_expand,
+            system_drop_zone_set_size,
+            system_drop_zone_set_visible,
+            drop_zone_default_folder,
+            drop_zone_copy_file,
+            drop_zone_is_active,
+            vault_list,
+            vault_add,
+            vault_remove,
+            vault_toggle_pin,
         ]);
 
         let mut context = tauri::generate_context!();

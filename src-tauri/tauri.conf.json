@@ -67,6 +67,21 @@
         "shadow": false
       },
       {
+        "label": "system_drop_zone",
+        "title": "Prisma · Zona de recepción",
+        "width": 50,
+        "height": 3,
+        "focus": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "visible": false,
+        "skipTaskbar": true,
+        "resizable": false,
+        "shadow": false,
+        "dragDropEnabled": true
+      },
+      {
         "label": "screen_capture_recorder",
         "title": "Prisma · Grabación",
         "width": 320,

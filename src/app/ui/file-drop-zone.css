@@ -13,7 +13,7 @@
 
 /* Muesca discreta: ~50 px de ancho por 3 px de alto. */
 .file-drop-zone-notch {
-  width: 50px;
+  width: 80px;
   height: 3px;
   border-radius: 0 0 3px 3px;
   background: var(--primary);
@@ -99,8 +99,179 @@
   50% { transform: scale(1.025); }
 }
 
-/* ── Menú de destinos de la zona ──────────────────────────────────────── */
-.file-drop-zone-menu {
+/* ── Bóveda flotante ───────────────────────────────────────────────────── */
+.vault-shelf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding-top: 2px;
+}
+
+.vault-items {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 14px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3);
+}
+
+.vault-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 78px;
+  padding: 5px 4px 4px;
+  border-radius: 11px;
+  background: var(--surface);
+  border: 1px solid var(--outline-variant);
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.vault-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.vault-card:active {
+  cursor: grabbing;
+}
+
+.vault-card.is-pinned {
+  border-color: color-mix(in srgb, var(--primary) 60%, var(--outline-variant));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent);
+}
+
+.vault-card-preview {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 34px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+}
+
+.vault-card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vault-card-pin {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.vault-card-name {
+  width: 100%;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  color: var(--on-surface-variant);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-card-actions {
+  display: flex;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.vault-card:hover .vault-card-actions,
+.vault-card:focus-within .vault-card-actions {
+  opacity: 1;
+}
+
+.vault-card-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.vault-card-actions button:hover {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.vault-drop-hint {
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--primary);
+  color: var(--on-surface);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+}
+
+/* ── Zona del sistema: la muesca no debe robar el clic a la pantalla ─── */
+html.is-system-drop-zone,
+body.is-system-drop-zone {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.system-drop-zone {
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.system-drop-zone .file-drop-zone-notch {
+  width: 80px;
+  height: 3px;
+}
+
+.system-drop-zone.is-expanded .file-drop-zone-notch {
+  width: 50px;
+  height: 3px;
+  opacity: 0.9;
+  animation: none;
+}
+
+.system-drop-zone.is-expanded .file-drop-zone-panel,
+.system-drop-zone.has-menu .file-drop-zone-menu {
+  margin-top: 6px;
+}
+
+/* ── Menú de destinos de la zona ──────────────────────────────────────── */.file-drop-zone-menu {
   display: flex;
   flex-direction: column;
   min-width: 268px;
