@@ -119,6 +119,36 @@ export function RecordingHud({ onAddToVideoLibrary }: RecordingHudProps = {}) {
     setIsInLibrary(true);
   }, [finished, onAddToVideoLibrary]);
 
+  const [isTrimming, setIsTrimming] = useState(false);
+  const [trimStart, setTrimStart] = useState("0");
+  const [trimEnd, setTrimEnd] = useState("0");
+
+  const handleToggleTrim = useCallback(() => {
+    if (!isTrimming && finished) {
+      // El recorte va de 0 al final de la grabación.
+      setTrimStart("0");
+      setTrimEnd(String(Math.max(1, Math.round(finished.elapsedMs / 1000))));
+    }
+    setIsTrimming((value) => !value);
+  }, [finished, isTrimming]);
+
+  const handleTrim = useCallback(async () => {
+    if (!finished) return;
+    const start = Number(trimStart);
+    const end = Number(trimEnd);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      setError("El final del recorte debe ser posterior al inicio");
+      return;
+    }
+    try {
+      const path = await screenCaptureClient.trimVideo(finished.outputPath, start, end);
+      setFinished({ ...finished, outputPath: path, elapsedMs: Math.round((end - start) * 1000) });
+      setIsTrimming(false);
+    } catch (err) {
+      setError(String(err));
+    }
+  }, [finished, trimEnd, trimStart]);
+
   if (!recording && !finished && !error) return null;
 
   return (
@@ -166,6 +196,14 @@ export function RecordingHud({ onAddToVideoLibrary }: RecordingHudProps = {}) {
               {fileName(finished.outputPath)} · {formatElapsed(finished.elapsedMs)}
             </span>
           </div>
+          <button
+            type="button"
+            className="recording-hud-action"
+            onClick={handleToggleTrim}
+            title="Recortar el vídeo sin recodificarlo"
+          >
+            <Icon name="crop" width={16} height={16} />
+          </button>
           {onAddToVideoLibrary && !isInLibrary && (
             <button
               type="button"
@@ -198,6 +236,54 @@ export function RecordingHud({ onAddToVideoLibrary }: RecordingHudProps = {}) {
             onClick={() => setFinished(null)}
             aria-label="Cerrar aviso"
             title="Cerrar"
+          >
+            <Icon name="close" width={14} height={14} />
+          </button>
+        </div>
+      )}
+
+      {isTrimming && finished && (
+        <div className="recording-hud is-trim" role="group" aria-label="Recortar grabación">
+          <span className="recording-hud-done-icon" aria-hidden="true">
+            <Icon name="crop" width={16} height={16} />
+          </span>
+          <div className="recording-hud-body">
+            <strong className="recording-hud-title">Recortar sin recodificar</strong>
+            <span className="recording-hud-meta">
+              El corte cae en el fotograma clave más cercano.
+            </span>
+            <div className="recording-hud-trim-fields">
+              <label>
+                <span>Desde (s)</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={trimStart}
+                  onChange={(event) => setTrimStart(event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Hasta (s)</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={trimEnd}
+                  onChange={(event) => setTrimEnd(event.target.value)}
+                />
+              </label>
+            </div>
+          </div>
+          <button type="button" className="recording-hud-stop" onClick={() => void handleTrim()}>
+            <span>Recortar</span>
+          </button>
+          <button
+            type="button"
+            className="recording-hud-action"
+            onClick={() => setIsTrimming(false)}
+            aria-label="Cancelar el recorte"
+            title="Cancelar"
           >
             <Icon name="close" width={14} height={14} />
           </button>

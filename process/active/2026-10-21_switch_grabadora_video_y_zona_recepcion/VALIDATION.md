@@ -38,6 +38,12 @@
 - **Sonda a la resolución real**: la comprobación de motores codifica unos fotogramas del tamaño exacto de la grabación, porque un motor puede funcionar en un tamaño y fallar en otro. Con esa sonda, el modo automático detecta a tiempo un motor que no entrega fotogramas y prueba el siguiente en vez de perder la grabación.
 - **Respaldo automático**: si el registro de FFmpeg trae un error de codificación en los primeros instantes, se abandona ese motor y se prueba el siguiente.
 
+## Quinta tanda: recorte sin recodificar
+
+- **Recorte instantáneo** con `-c copy`: el archivo se copia tal cual, sin recodificar y sin perder calidad. El corte cae en el fotograma clave más cercano, que es la contrapartida de no recodificar.
+- Interfaz en el aviso de «Grabación guardada»: botón de tijeras que abre desde/hasta en segundos.
+- **Verificado con una grabación real**: se graban ~2,4 s, se recorta de 0,5 s a 2,0 s y el archivo resultante existe, pesa menos que el original y es un MP4 válido.
+
 ## Aviso: prueba intermitente ajena a este trabajo
 
 `infrastructure::windows_com::tests::audio_helper_*` (del feature de audio relay, código de septiembre) falla de forma intermitente cuando en la misma ejecución hay capturas de pantalla en curso: el hilo de la prueba queda con un apartamento COM del que cree haberse descargado.

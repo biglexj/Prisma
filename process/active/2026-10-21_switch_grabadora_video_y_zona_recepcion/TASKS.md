@@ -22,3 +22,6 @@
 - [x] Cuenta atrás de 3 segundos antes de grabar.
 - [x] Pausa y reanudación de la grabación, con estado en el panel y en la barra.
 - [x] Botón para añadir la grabación a la biblioteca de Vídeos de Prisma.
+- [x] Captura de una ventana por su título, para que la siga si se mueve.
+- [x] Sonda de motores a la resolución real y respaldo automático al siguiente motor.
+- [x] Recorte del vídeo sin recodificar, con interfaz desde/hasta.

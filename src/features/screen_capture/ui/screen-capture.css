@@ -1498,6 +1498,40 @@
   transform: translateY(-1px);
 }
 
+.recording-hud.is-trim {
+  min-width: 420px;
+}
+
+.recording-hud-trim-fields {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.recording-hud-trim-fields label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: var(--on-surface-variant);
+}
+
+.recording-hud-trim-fields input {
+  width: 74px;
+  padding: 6px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface);
+  color: var(--on-surface);
+  font-size: 0.8rem;
+  font-family: inherit;
+}
+
+.recording-hud-trim-fields input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
 /* ── Barra flotante de control de grabación (ventana propia) ──────────── */
 .recorder-bar {
   display: flex;

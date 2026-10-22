@@ -125,6 +125,11 @@ export const screenCaptureClient = {
     return invoke<RecordingInfo>("screen_recorder_pause");
   },
 
+  /** Recorta un vídeo grabado sin recodificarlo. Devuelve la ruta nueva. */
+  async trimVideo(sourcePath: string, startSeconds: number, endSeconds: number): Promise<string> {
+    return invoke<string>("screen_recorder_trim", { sourcePath, startSeconds, endSeconds });
+  },
+
   /** Dispositivos de audio capturables (micrófono, cable de audio, mezcla estéreo). */
   async listAudioDevices(): Promise<string[]> {
     return invoke<string[]>("screen_recorder_list_audio_devices");

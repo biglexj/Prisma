@@ -952,6 +952,71 @@ pub fn place_control_bar(
     None
 }
 
+/// Recorta un vídeo ya grabado sin recodificarlo.
+///
+/// Con `-c copy` el archivo se copia tal cual: es instantáneo y no pierde
+/// calidad, a costa de que el corte caiga en el fotograma clave más cercano.
+pub fn trim_video(source: &std::path::Path, start_seconds: f64, end_seconds: f64) -> Result<String, String> {
+    let ffmpeg = find_ffmpeg_binary()
+        .ok_or_else(|| "FFmpeg no está disponible en esta instalación".to_string())?;
+
+    if !source.exists() {
+        return Err("El vídeo de origen ya no existe".to_string());
+    }
+    if !start_seconds.is_finite() || !end_seconds.is_finite() || start_seconds < 0.0 {
+        return Err("El inicio del recorte no es válido".to_string());
+    }
+    if end_seconds <= start_seconds {
+        return Err("El final del recorte debe ser posterior al inicio".to_string());
+    }
+
+    let folder = source.parent().unwrap_or(std::path::Path::new("."));
+    let stem = source
+        .file_stem()
+        .map(|value| value.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "Prisma_Grabacion".to_string());
+    let output_path = folder.join(format!("{stem}_Recortado.mp4"));
+
+    let mut command = Command::new(&ffmpeg);
+    command
+        .args(["-hide_banner", "-loglevel", "error", "-y"])
+        .args(["-ss", &format!("{start_seconds:.3}")])
+        .args(["-to", &format!("{end_seconds:.3}")])
+        .arg("-i")
+        .arg(source)
+        .args(["-c", "copy"])
+        .arg(&output_path)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+
+    let output = command
+        .output()
+        .map_err(|error| format!("No se pudo ejecutar FFmpeg: {error}"))?;
+    if !output.status.success() {
+        let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let _ = std::fs::remove_file(&output_path);
+        return Err(if detail.is_empty() {
+            "No se pudo recortar el vídeo".to_string()
+        } else {
+            detail
+        });
+    }
+
+    let size = std::fs::metadata(&output_path).map(|meta| meta.len()).unwrap_or(0);
+    if size == 0 {
+        let _ = std::fs::remove_file(&output_path);
+        return Err("El recorte quedó vacío: elige un intervalo con contenido".to_string());
+    }
+
+    Ok(output_path.to_string_lossy().into_owned())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1190,6 +1255,17 @@ mod tests {
         let path = PathBuf::from(&finished.output_path);
         let size = std::fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
         assert!(size > 0, "El vídeo grabado debe tener contenido");
+
+        // Recorte sin recodificar: debe salir un archivo más corto y válido.
+        let trimmed = trim_video(&path, 0.5, 2.0).expect("El recorte debe funcionar");
+        let trimmed_path = std::path::PathBuf::from(&trimmed);
+        let trimmed_size = std::fs::metadata(&trimmed_path).map(|meta| meta.len()).unwrap_or(0);
+        assert!(trimmed_size > 0, "El vídeo recortado debe tener contenido");
+        assert!(
+            trimmed_size < size,
+            "El recorte debe pesar menos que el original ({trimmed_size} frente a {size})"
+        );
+        let _ = std::fs::remove_file(&trimmed_path);
 
         let _ = std::fs::remove_file(&path);
         let _ = std::fs::remove_dir(&folder);

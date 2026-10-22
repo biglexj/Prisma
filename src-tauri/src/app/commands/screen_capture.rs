@@ -632,6 +632,19 @@ pub async fn screen_recorder_pause(
     Ok(info)
 }
 
+/// Recorta un vídeo grabado sin recodificarlo.
+#[tauri::command]
+pub async fn screen_recorder_trim(
+    source_path: String,
+    start_seconds: f64,
+    end_seconds: f64,
+) -> Result<String, String> {
+    let source = std::path::PathBuf::from(&source_path);
+    tauri::async_runtime::spawn_blocking(move || recorder::trim_video(&source, start_seconds, end_seconds))
+        .await
+        .map_err(|e| format!("Error recortando el vídeo: {e}"))?
+}
+
 /// Dispositivos de audio capturables (micrófono, cable de audio, mezcla estéreo).
 #[tauri::command]
 pub async fn screen_recorder_list_audio_devices() -> Result<Vec<String>, String> {
