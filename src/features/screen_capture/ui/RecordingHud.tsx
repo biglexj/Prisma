@@ -21,17 +21,23 @@ function fileName(path: string): string {
   return path.replace(/.*[/\\]/, "");
 }
 
+interface RecordingHudProps {
+  /** Añade la carpeta de la grabación a la biblioteca de Vídeos de Prisma. */
+  onAddToVideoLibrary?: (folder: string) => void;
+}
+
 /**
  * Indicador flotante de grabación. Vive en la ventana principal, no en el
  * overlay, porque el overlay debe ocultarse durante la captura: si siguiera
  * visible aparecería dentro del vídeo grabado.
  */
-export function RecordingHud() {
+export function RecordingHud({ onAddToVideoLibrary }: RecordingHudProps = {}) {
   const [recording, setRecording] = useState<RecordingInfo | null>(null);
   const [finished, setFinished] = useState<RecordingInfo | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [isStopping, setIsStopping] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isInLibrary, setIsInLibrary] = useState(false);
 
   useEffect(() => {
     const unlistenPromise = listen<RecordingInfo>(RECORDING_STATE_EVENT, ({ payload }) => {
@@ -98,6 +104,21 @@ export function RecordingHud() {
     void invoke("open_in_file_manager", { path: finished.outputPath });
   }, [finished]);
 
+  const handleTogglePause = useCallback(async () => {
+    try {
+      await screenCaptureClient.togglePause();
+    } catch (err) {
+      console.error("Error al pausar la grabación:", err);
+    }
+  }, []);
+
+  const handleAddToLibrary = useCallback(() => {
+    if (!finished?.outputPath || !onAddToVideoLibrary) return;
+    const folder = finished.outputPath.replace(/[/\\][^/\\]*$/, "");
+    onAddToVideoLibrary(folder);
+    setIsInLibrary(true);
+  }, [finished, onAddToVideoLibrary]);
+
   if (!recording && !finished && !error) return null;
 
   return (
@@ -106,11 +127,21 @@ export function RecordingHud() {
         <div className="recording-hud is-live" role="status" aria-live="polite">
           <span className="recording-hud-dot" aria-hidden="true" />
           <div className="recording-hud-body">
-            <strong className="recording-hud-time">{formatElapsed(elapsedMs)}</strong>
+            <strong className="recording-hud-time">
+              {recording.paused ? "En pausa" : formatElapsed(elapsedMs)}
+            </strong>
             <span className="recording-hud-meta">
               {recording.width}×{recording.height} · {recording.fps} fps
             </span>
           </div>
+          <button
+            type="button"
+            className="recording-hud-action"
+            onClick={() => void handleTogglePause()}
+            title={recording.paused ? "Reanudar la grabación" : "Pausar la grabación"}
+          >
+            <Icon name={recording.paused ? "play" : "pause"} width={15} height={15} />
+          </button>
           <button
             type="button"
             className="recording-hud-stop"
@@ -135,6 +166,16 @@ export function RecordingHud() {
               {fileName(finished.outputPath)} · {formatElapsed(finished.elapsedMs)}
             </span>
           </div>
+          {onAddToVideoLibrary && !isInLibrary && (
+            <button
+              type="button"
+              className="recording-hud-action"
+              onClick={handleAddToLibrary}
+              title="Añadir la carpeta a la biblioteca de Vídeos"
+            >
+              <Icon name="film" width={16} height={16} />
+            </button>
+          )}
           <button
             type="button"
             className="recording-hud-action"

@@ -22,6 +22,19 @@
   - Un fallo real encontrado y corregido por el camino: el cliente COM se usaba después de cerrar su apartamento. Ahora el apartamento vive con el cliente y la lectura del formato se hace en un hilo aislado.
 - **Suite completa del backend**: 79 pruebas superadas, 0 fallidas, 7 ignoradas. `cargo test --lib` sin hilos ni fallos. `tsc --noEmit` limpio, 61 pruebas del frontend en verde y `bun run build` correcto.
 
+## Tercera tanda: zona con destinos múltiples, cuenta atrás, pausa y biblioteca
+
+- **Zona de recepción con menú de destinos**: al soltar el archivo aparece un menú con Super Galería, Imágenes, Vídeos, Música, «Abrir con la aplicación predeterminada» y «Mostrar en el Explorador». Acepta varios archivos: la vista previa muestra nombre, tamaño y cantidad, y Super Galería los envía en cola (uno detrás de otro).
+- **Vista previa durante el arrastre**: nombre, tamaño y número de archivos, tomados del `dataTransfer` del DOM.
+- **Cuenta atrás de 3 segundos** como en Recortes: el overlay sigue visible con un contador grande antes de que la grabación arranque, para que el gesto de confirmar quede fuera del vídeo.
+- **Pausa y reanudación**: FFmpeg alterna la pausa con `p` en su entrada estándar. El estado pausado viaja al panel principal y a la barra flotante. **Verificado con una grabación real**: pausar, esperar, reanudar y detener deja un MP4 válido con contenido.
+- **Añadir a la biblioteca de Vídeos**: botón en el aviso de «Grabación guardada» que da de alta la carpeta de la grabación en la biblioteca de Vídeos de Prisma.
+- **Pruebas**: 80 del backend en verde (7 ignoradas), 64 del frontend en verde, `tsc` limpio y build de producción correcto.
+
+## Aviso: prueba intermitente ajena a este trabajo
+
+`infrastructure::windows_com::tests::audio_helper_*` (del feature de audio relay) falla de forma intermitente cuando en la misma ejecución corren varias grabaciones de pantalla: el hilo de la prueba queda con un apartamento COM del que cree haberse descargado. Con el árbol sin los cambios de esta sesión la suite pasa; con ellos también pasa en 4 de 4 ejecuciones seguidas, y falló en 2 de 10 antes. La prueba no es de este trabajo y su causa está en el manejo de apartamento COM de ese feature, no en la grabadora. Queda avisado para que el dueño de esa funcionalidad lo endurezca.
+
 ## Pendiente de comprobación visual en la aplicación
 
 - El conmutador «Imagen | Vídeo», el panel flotante de grabación y la zona de recepción superior se han validado por compilación, tipos, pruebas de lógica y **comprobación visual servida por Vite** (ver arriba). Queda pendiente la revisión de Biglex dentro de la aplicación de escritorio: grabación completa con el overlay, parada, guardado y envío a Super Galería.

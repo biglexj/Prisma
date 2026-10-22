@@ -33,6 +33,8 @@ export interface RecordingInfo {
   fps: number;
   width: number;
   height: number;
+  /** `true` cuando la grabación está en pausa. */
+  paused?: boolean;
   error?: string | null;
 }
 

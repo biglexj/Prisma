@@ -1313,6 +1313,54 @@
   50% { opacity: 0.35; transform: scale(0.75); }
 }
 
+/* ── Cuenta atrás de arranque de grabación ────────────────────────────── */
+.capture-countdown {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(8, 8, 12, 0.55);
+  backdrop-filter: blur(3px);
+  z-index: 30;
+  pointer-events: none;
+  animation: captureFadeIn 0.18s ease;
+}
+
+.capture-countdown-ring {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 82, 82, 0.55);
+  animation: captureCountdownPulse 1s ease-out infinite;
+}
+
+.capture-countdown-number {
+  position: relative;
+  font-size: 6.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #ff5252;
+  text-shadow: 0 6px 26px rgba(0, 0, 0, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+
+.capture-countdown-label {
+  position: relative;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.86);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+@keyframes captureCountdownPulse {
+  0% { transform: scale(0.82); opacity: 0.9; }
+  100% { transform: scale(1.08); opacity: 0.15; }
+}
+
 /* ── Indicador flotante de grabación ──────────────────────────────────── */
 .recording-hud-root {
   position: fixed;
@@ -1510,6 +1558,26 @@
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.recorder-bar-pause {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border-radius: 12px;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface);
+  color: var(--on-surface);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.recorder-bar-pause:hover {
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .recorder-bar-stop:hover:not(:disabled) {

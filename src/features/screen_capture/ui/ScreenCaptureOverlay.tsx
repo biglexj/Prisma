@@ -72,6 +72,8 @@ export function ScreenCaptureOverlay() {
   // Selector de color / Cuentagotas y retroalimentación Toast
   const [hoveredColor, setHoveredColor] = useState<{ hex: string; rgb: string; x: number; y: number } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // Cuenta atrás antes de empezar a grabar (3, 2, 1).
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   // Cuadro de texto interactivo in-situ (elegir marco de texto arrastrando o clic)
   const [activeTextBox, setActiveTextBox] = useState<ActiveTextBox | null>(null);
@@ -368,6 +370,14 @@ export function ScreenCaptureOverlay() {
     ++confirmRevisionRef.current;
     setToastMessage("Iniciando la grabación…");
     try {
+      // Cuenta atrás como en Recortes: el overlay sigue visible y avisa antes
+      // de que la grabación arranque, para que el gesto quede fuera del vídeo.
+      for (let remaining = 3; remaining > 0; remaining -= 1) {
+        setCountdown(remaining);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      setCountdown(null);
+
       const preferences = loadRecordingPreferences();
       const outputFolder = await resolveRecordingFolder();
       await screenCaptureClient.startRecording({
@@ -1733,6 +1743,15 @@ export function ScreenCaptureOverlay() {
             onCancel={() => void handleCancel()}
           />
         </>
+      )}
+
+      {/* Cuenta atrás de arranque de la grabación */}
+      {countdown !== null && (
+        <div className="capture-countdown" role="status" aria-live="assertive">
+          <span className="capture-countdown-ring" aria-hidden="true" />
+          <strong className="capture-countdown-number">{countdown}</strong>
+          <span className="capture-countdown-label">La grabación empieza en…</span>
+        </div>
       )}
 
       {/* Retroalimentación Toast Global (Fase 1 y Fase 2) */}

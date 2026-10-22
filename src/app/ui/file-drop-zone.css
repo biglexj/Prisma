@@ -98,3 +98,81 @@
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.025); }
 }
+
+/* ── Menú de destinos de la zona ──────────────────────────────────────── */
+.file-drop-zone-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 268px;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  animation: dropZoneRise 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.file-drop-zone-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 8px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--outline-variant);
+  color: var(--on-surface);
+  font-size: 0.8rem;
+}
+
+.file-drop-zone-menu-header strong {
+  max-width: 210px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-drop-zone-menu-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+}
+
+.file-drop-zone-menu-close:hover {
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+}
+
+.file-drop-zone-menu button[role="menuitem"] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--on-surface);
+  font-size: 0.83rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.file-drop-zone-menu button[role="menuitem"]:hover {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+.file-drop-zone-menu button[role="menuitem"] svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}

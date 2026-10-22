@@ -58,3 +58,13 @@ export function isClaimedDrop(paths: string[]): boolean {
     return true;
   });
 }
+
+/**
+ * Carpeta que contiene el archivo: es lo que se añade a las bibliotecas de
+ * Prisma, porque las bibliotecas guardan rutas de carpetas, no de archivos.
+ */
+export function folderForLibrary(path: string): string {
+  const normalized = path.replace(/\//g, "\\");
+  const index = normalized.lastIndexOf("\\");
+  return index > 0 ? normalized.slice(0, index) : normalized;
+}

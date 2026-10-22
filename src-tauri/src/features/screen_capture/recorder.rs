@@ -68,6 +68,9 @@ pub struct RecordingInfo {
     pub height: u32,
     #[serde(default)]
     pub error: Option<String>,
+    /// `true` cuando la grabación está en pausa.
+    #[serde(default)]
+    pub paused: bool,
 }
 
 /// Grabación en curso. El tipo es público porque aparece en el alias de estado
@@ -83,6 +86,8 @@ pub struct ActiveRecording {
     /// Tamaño final del vídeo, que puede diferir de la región si se escaló.
     output_width: u32,
     output_height: u32,
+    /// `true` mientras la grabación está en pausa.
+    paused: bool,
     /// Captura del audio del sistema, viva mientras dura la grabación.
     /// El campo existe para mantenerla viva: al soltar la grabación, su Drop
     /// cierra el canal de audio.
@@ -667,6 +672,7 @@ pub fn start_recording(
         fps,
         width: output_width,
         height: output_height,
+        paused: false,
         error: None,
     };
 
@@ -683,6 +689,7 @@ pub fn start_recording(
         fps,
         output_width,
         output_height,
+        paused: false,
         #[cfg(windows)]
         system_audio: system_audio_source,
         log,
@@ -704,8 +711,32 @@ pub fn recording_info(state: &SharedRecorderState) -> Option<RecordingInfo> {
         fps: active.fps,
         width: active.output_width,
         height: active.output_height,
+        paused: active.paused,
         error: None,
     })
+}
+
+/// Pausa o reanuda la grabación en curso.
+///
+/// FFmpeg interpreta «p» en su entrada estándar como alternar la pausa: el
+/// archivo sigue abierto y se cierra de forma reproducible al detener.
+pub fn toggle_pause(state: &SharedRecorderState) -> Result<bool, String> {
+    let mut guard = state
+        .lock()
+        .map_err(|_| "Error al acceder a la grabadora".to_string())?;
+    let active = guard
+        .as_mut()
+        .ok_or_else(|| "No hay ninguna grabación en curso".to_string())?;
+    let writer = active
+        .stdin
+        .as_mut()
+        .ok_or_else(|| "La grabación no acepta comandos".to_string())?;
+    writer
+        .write_all(b"p\n")
+        .and_then(|_| writer.flush())
+        .map_err(|error| format!("No se pudo pausar la grabación: {error}"))?;
+    active.paused = !active.paused;
+    Ok(active.paused)
 }
 
 /// Detiene la grabación y cierra el archivo para que quede reproducible.
@@ -790,6 +821,7 @@ pub fn stop_recording(state: &SharedRecorderState) -> Result<RecordingInfo, Stri
         height: output_height,
         region,
         fps,
+        paused: false,
         error: None,
     })
 }
@@ -914,6 +946,52 @@ mod tests {
                 "la barra de control ({x},{y}) caería dentro de la región grabada"
             );
         }
+    }
+
+    /// Pausar y reanudar una grabación real: el archivo debe seguir cerrando
+    /// bien y el estado debe reflejar la pausa.
+    #[test]
+    fn la_grabacion_se_pausa_y_se_reanuda() {
+        if find_ffmpeg_binary().is_none() {
+            eprintln!("[Grabadora] FFmpeg no disponible: se omite la prueba de pausa");
+            return;
+        }
+
+        let state: SharedRecorderState = Arc::new(Mutex::new(None));
+        let folder = std::env::temp_dir().join("prisma-recorder-pause");
+        let options = RecordingOptions {
+            region: RecordingRegion { x: 0, y: 0, width: 320, height: 240 },
+            fps: Some(15),
+            audio_device: None,
+            output_folder: Some(folder.to_string_lossy().into_owned()),
+            encoder: None,
+            quality: None,
+            max_height: None,
+            system_audio: Some(false),
+        };
+
+        if start_recording(&state, options).is_err() {
+            eprintln!("[Grabadora] Sin escritorio disponible: se omite la prueba de pausa");
+            return;
+        }
+
+        std::thread::sleep(Duration::from_millis(1200));
+        assert!(toggle_pause(&state).expect("debe pausar"), "la grabación debe quedar pausada");
+        assert!(recording_info(&state).map(|info| info.paused).unwrap_or(false));
+
+        std::thread::sleep(Duration::from_millis(800));
+        assert!(
+            !toggle_pause(&state).expect("debe reanudar"),
+            "la grabación debe volver a estar activa"
+        );
+
+        let finished = stop_recording(&state).expect("La grabación debe cerrarse");
+        let path = PathBuf::from(&finished.output_path);
+        let size = std::fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
+        assert!(size > 0, "El vídeo pausado debe tener contenido");
+
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_dir(&folder);
     }
 
     /// Grabación real con el audio del sistema: comprueba que el MP4 final

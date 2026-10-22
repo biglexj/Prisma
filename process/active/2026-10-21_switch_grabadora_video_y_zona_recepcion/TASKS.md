@@ -17,3 +17,8 @@
 - [x] Calidad (CRF) y límite de tamaño del vídeo.
 - [x] Audio del sistema por WASAPI loopback, con mezcla opcional del micrófono.
 - [x] Suite completa del backend en verde y build del frontend correcto.
+- [x] Zona de recepción con menú de destinos, varios archivos y vista previa al arrastrar.
+- [x] Cola de envío a Super Galería para varios archivos.
+- [x] Cuenta atrás de 3 segundos antes de grabar.
+- [x] Pausa y reanudación de la grabación, con estado en el panel y en la barra.
+- [x] Botón para añadir la grabación a la biblioteca de Vídeos de Prisma.

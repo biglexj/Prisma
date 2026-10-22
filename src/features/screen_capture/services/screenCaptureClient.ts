@@ -120,6 +120,11 @@ export const screenCaptureClient = {
     return invoke<void>("screen_recorder_cancel");
   },
 
+  /** Pausa o reanuda la grabación en curso. */
+  async togglePause(): Promise<RecordingInfo> {
+    return invoke<RecordingInfo>("screen_recorder_pause");
+  },
+
   /** Dispositivos de audio capturables (micrófono, cable de audio, mezcla estéreo). */
   async listAudioDevices(): Promise<string[]> {
     return invoke<string[]>("screen_recorder_list_audio_devices");

@@ -71,17 +71,38 @@ export function ScreenCaptureRecorderBar() {
     }
   }, []);
 
+  const handleTogglePause = useCallback(async () => {
+    try {
+      await screenCaptureClient.togglePause();
+    } catch (err) {
+      console.error("Error al pausar la grabación:", err);
+    }
+  }, []);
+
   if (!recording) return null;
+
+  const isPaused = Boolean(recording.paused);
 
   return (
     <div className="recorder-bar" role="toolbar" aria-label="Control de grabación">
       <span className="recorder-bar-dot" aria-hidden="true" />
       <div className="recorder-bar-body">
-        <strong className="recorder-bar-time">{formatElapsed(elapsedMs)}</strong>
+        <strong className="recorder-bar-time">
+          {isPaused ? "En pausa" : formatElapsed(elapsedMs)}
+        </strong>
         <span className="recorder-bar-meta">
           {recording.width}×{recording.height} · {recording.fps} fps
         </span>
       </div>
+      <button
+        type="button"
+        className="recorder-bar-pause"
+        onClick={() => void handleTogglePause()}
+        title={isPaused ? "Reanudar la grabación" : "Pausar la grabación"}
+      >
+        <Icon name={isPaused ? "play" : "pause"} width={14} height={14} />
+        <span>{isPaused ? "Reanudar" : "Pausar"}</span>
+      </button>
       <button
         type="button"
         className="recorder-bar-stop"

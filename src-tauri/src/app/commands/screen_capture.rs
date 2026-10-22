@@ -608,10 +608,28 @@ pub async fn screen_recorder_cancel(
             fps: 0,
             width: 0,
             height: 0,
+            paused: false,
             error: None,
         },
     );
     Ok(())
+}
+
+/// Pausa o reanuda la grabación en curso.
+#[tauri::command]
+pub async fn screen_recorder_pause(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, SharedRecorderState>,
+) -> Result<RecordingInfo, String> {
+    let recorder_state = state.inner().clone();
+    let paused = tauri::async_runtime::spawn_blocking(move || recorder::toggle_pause(&recorder_state))
+        .await
+        .map_err(|e| format!("Error pausando la grabación: {e}"))??;
+
+    let info = recorder::recording_info(&state).ok_or("No hay ninguna grabación en curso")?;
+    let _ = app.emit(RECORDING_STATE_EVENT, &info);
+    let _ = paused;
+    Ok(info)
 }
 
 /// Dispositivos de audio capturables (micrófono, cable de audio, mezcla estéreo).

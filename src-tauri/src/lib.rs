@@ -88,7 +88,7 @@ use app::commands::screen_capture::{
     screen_capture_detect_window_at, screen_capture_get_editor_payload,
     screen_capture_get_session, screen_capture_get_shortcut_status, screen_capture_pick_color,
     screen_capture_save_file, screen_capture_start, screen_recorder_cancel, screen_recorder_list_audio_devices,
-    screen_recorder_start, screen_recorder_status, screen_recorder_stop,
+    screen_recorder_pause, screen_recorder_start, screen_recorder_status, screen_recorder_stop,
 };
 use app::state::{
     FavoritesState, InitialFileState, InitialSynapseSendState, MusicLibraryState,
@@ -808,6 +808,7 @@ pub fn run() {
             screen_recorder_stop,
             screen_recorder_status,
             screen_recorder_cancel,
+            screen_recorder_pause,
             screen_recorder_list_audio_devices,
         ]);
 

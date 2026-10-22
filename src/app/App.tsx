@@ -34,6 +34,7 @@ import { AboutView } from "./ui/AboutView";
 import { SynapseToast, type SynapseReceivedFile } from "./ui/SynapseToast";
 import { SendToSuperGalleryModal } from "./ui/SendToSuperGalleryModal";
 import { FileDropZone } from "./ui/FileDropZone";
+import { folderForLibrary } from "../shared/dropRouter";
 import { addToHistory } from "../shared/useHistory";
 import { CustomLibraryView } from "../features/custom_libraries/ui/CustomLibraryView";
 import { DocumentViewer } from "../features/custom_libraries/ui/DocumentViewer";
@@ -124,6 +125,8 @@ function AppContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [synapseToastFile, setSynapseToastFile] = useState<SynapseReceivedFile | null>(null);
   const [sendModalFile, setSendModalFile] = useState<{ path: string; title?: string } | null>(null);
+  // Cola de archivos para Super Galería: al soltar varios, se envían uno a uno.
+  const sendQueueRef = useRef<string[]>([]);
   const {
     theme, resolvedTheme, setTheme, accentColor, setAccentColor, backgroundVariant, setBackgroundVariant,
     lightBackgroundVariant, darkBackgroundVariant,
@@ -1626,16 +1629,50 @@ function AppContent() {
         filePath={sendModalFile?.path ?? null}
         fileTitle={sendModalFile?.title}
         isOpen={Boolean(sendModalFile)}
-        onClose={() => setSendModalFile(null)}
+        onClose={() => {
+          setSendModalFile(null);
+          // Si quedaban archivos en la cola, se abre el siguiente.
+          const next = sendQueueRef.current.shift();
+          if (next) {
+            setSendModalFile({ path: next, title: next.replace(/.*[/\\]/, "") });
+          }
+        }}
       />
 
       {/* Indicador de grabación: vive en la ventana principal porque el overlay
           debe ocultarse durante la captura para no aparecer en el vídeo. */}
-      <RecordingHud />
+      <RecordingHud onAddToVideoLibrary={(folder) => void videoLibrary.addFolder(folder)} />
 
-      {/* Zona de recepción en la parte superior central: envía el archivo
-          arrastrado desde el Explorador al sistema de transferencias. */}
-      <FileDropZone />
+      {/* Zona de recepción en la parte superior central: el menú de destinos
+          decide si el archivo va a Super Galería, a una biblioteca o al
+          Explorador de archivos. */}
+      <FileDropZone
+        onSendToSuperGallery={(paths) => {
+          const [first, ...rest] = paths;
+          if (!first) return;
+          sendQueueRef.current = rest;
+          setSendModalFile({ path: first, title: first.replace(/.*[/\\]/, "") });
+        }}
+        onAddToLibrary={(kind, paths) => {
+          // A una biblioteca se añade la carpeta que contiene el archivo.
+          const folders = Array.from(new Set(paths.map(folderForLibrary)));
+          for (const folder of folders) {
+            if (kind === "images") void imageLibrary.addFolder(folder);
+            else if (kind === "videos") void videoLibrary.addFolder(folder);
+            else void library.addFolder(folder);
+          }
+        }}
+        onOpenWithDefaultApp={(paths) => {
+          for (const path of paths) {
+            void invoke("open_path_with_default_app", { path });
+          }
+        }}
+        onRevealInExplorer={(paths) => {
+          for (const path of paths) {
+            void invoke("open_in_file_manager", { path });
+          }
+        }}
+      />
 
       <DspEqualizerModal
         isOpen={isEqualizerModalOpen}
