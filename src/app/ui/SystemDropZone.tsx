@@ -52,6 +52,7 @@ function formatBytes(bytes: number): string {
 export function SystemDropZone() {
   const [items, setItems] = useState<VaultItem[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [folder, setFolder] = useState("");
   const isDragOverRef = useRef(false);
 
@@ -85,18 +86,26 @@ export function SystemDropZone() {
   }, []);
 
   // La ventana se dimensiona según lo que hay en la bóveda: una muesca de
-  // 80 × 3 px cuando está vacía, la estantería cuando tiene elementos.
+  // 80 × 3 px cuando está cerrada, la estantería cuando se abre.
+  const isShelfVisible = isOpen && items.length > 0;
   const shelfWidth = useMemo(
-    () => (items.length === 0 ? 80 : items.length * CARD_WIDTH + (items.length - 1) * CARD_GAP + 16),
-    [items.length]
+    () => (isShelfVisible ? items.length * CARD_WIDTH + (items.length - 1) * CARD_GAP + 16 : 80),
+    [isShelfVisible, items.length]
   );
-  const shelfHeight = items.length === 0 ? 3 : SHELF_HEIGHT;
+  const shelfHeight = isShelfVisible ? SHELF_HEIGHT : 3;
 
   useEffect(() => {
     void invoke("system_drop_zone_set_size", { width: shelfWidth, height: shelfHeight }).catch(
       () => {}
     );
   }, [shelfHeight, shelfWidth]);
+
+  // Al perder el foco, la bóveda se repliega: solo se ve mientras se está usando.
+  useEffect(() => {
+    const handleBlur = () => setIsOpen(false);
+    window.addEventListener("blur", handleBlur);
+    return () => window.removeEventListener("blur", handleBlur);
+  }, []);
 
   // Los eventos nativos son los que traen las rutas: el DOM no expone archivos
   // del sistema operativo.
@@ -129,6 +138,7 @@ export function SystemDropZone() {
                 await invoke("vault_add", { path, url: null }).catch(() => {});
               }
               await refresh();
+              setIsOpen(true);
             })();
           }
         })
@@ -175,12 +185,19 @@ export function SystemDropZone() {
   );
 
   return (
-    <div className={`vault-shelf ${isDragOver ? "is-drag-over" : ""}`}>
-      {items.length === 0 && (
+    <div className={`vault-shelf ${isDragOver ? "is-drag-over" : ""} ${isOpen ? "is-open" : ""}`}>
+      {/* La franja es el único punto visible: al pulsarla se despliega la bóveda. */}
+      <button
+        type="button"
+        className="vault-handle"
+        onClick={() => setIsOpen((value) => !value)}
+        title={isOpen ? "Ocultar la bóveda" : "Mostrar la bóveda"}
+        aria-expanded={isOpen}
+      >
         <span className="file-drop-zone-notch" aria-hidden="true" />
-      )}
+      </button>
 
-      {items.length > 0 && (
+      {isShelfVisible && (
         <div className="vault-items">
           {items.map((item) => (
             <div
@@ -246,7 +263,7 @@ export function SystemDropZone() {
         </div>
       )}
 
-      {isDragOver && items.length === 0 && (
+      {isDragOver && !isShelfVisible && (
         <div className="vault-drop-hint">Suelta el archivo para guardarlo aquí</div>
       )}
     </div>
