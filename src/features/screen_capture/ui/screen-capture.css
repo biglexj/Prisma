@@ -2,12 +2,125 @@
 .screen-capture-view {
   display: flex;
   flex-direction: column;
-  padding: 32px 40px;
-  max-width: 1040px;
-  margin: 0 auto;
-  gap: 28px;
+  gap: 20px;
   width: 100%;
+  min-height: 100%;
+  padding: clamp(14px, 2vw, 24px) clamp(16px, 3vw, 32px) 40px;
   animation: captureFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Cabecera compacta, sin bloques de texto. */
+.capture-topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.capture-topbar h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.capture-topbar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--primary);
+  color: var(--on-primary);
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--primary) 32%, transparent);
+}
+
+/* Dos columnas que ocupan todo el ancho, como el resto de pestañas. */
+.capture-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .capture-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.capture-card {
+  min-width: 0;
+}
+
+.capture-subheading {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+}
+
+.capture-option-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 620px) {
+  .capture-option-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.capture-option-cards .snapshot-format-chip {
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-height: 64px;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.capture-shortcut-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.capture-status-line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface-variant);
+  font-size: 0.8rem;
+}
+
+.capture-status-line svg {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.capture-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+@media (max-width: 620px) {
+  .capture-fields {
+    grid-template-columns: 1fr;
+  }
 }
 
 @keyframes captureFadeIn {
@@ -1102,80 +1215,20 @@
 }
 .capture-frame-handles.is-preview .capture-resize-handle { pointer-events: none; cursor: pointer; }
 
-/* ── Switch Imagen | Vídeo (estilo Recortes) ──────────────────────────── */
-.capture-kind-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.capture-kind-switch {
-  position: relative;
-  display: inline-grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  gap: 0;
-  padding: 4px;
-  border-radius: 14px;
-  background: var(--surface-container-high);
-  border: 1px solid var(--outline-variant);
-  isolation: isolate;
-}
-
-.capture-kind-switch-thumb {
-  position: absolute;
-  z-index: 0;
-  top: 4px;
-  left: 4px;
-  width: calc(50% - 4px);
-  height: calc(100% - 8px);
-  border-radius: 10px;
-  background: var(--surface);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease;
-  pointer-events: none;
-}
-
-.capture-kind-switch.is-video .capture-kind-switch-thumb {
-  transform: translateX(100%);
-  background: color-mix(in srgb, var(--error) 16%, var(--surface));
-}
-
-.capture-kind-option {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+/* ── Selector Imagen | Vídeo (tarjetas, estilo Configuración) ────────── */
+.capture-kind-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  min-width: 116px;
-  padding: 9px 18px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--on-surface-variant);
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: color 0.2s ease, transform 0.15s ease;
 }
 
-.capture-kind-option:hover:not(:disabled) {
-  color: var(--on-surface);
-}
-
-.capture-kind-option.is-active {
-  color: var(--on-surface);
-}
-
-.capture-kind-switch.is-video .capture-kind-option.is-active {
-  color: var(--error);
-}
-
-.capture-kind-option:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+.capture-kind-cards .snapshot-format-chip {
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-height: 64px;
+  padding: 8px 4px;
+  text-align: center;
 }
 
 .capture-kind-hint {

@@ -14,11 +14,11 @@
 /* Muesca discreta: ~50 px de ancho por 3 px de alto. */
 .file-drop-zone-notch {
   width: 80px;
-  height: 3px;
-  border-radius: 0 0 3px 3px;
-  background: var(--primary);
-  opacity: 0.35;
-  box-shadow: 0 1px 6px color-mix(in srgb, var(--primary) 45%, transparent);
+  height: 4px;
+  border-radius: 0 0 4px 4px;
+  background: var(--primary, #00c9b9);
+  opacity: 1;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary, #00c9b9) 60%, transparent);
   transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease,
     box-shadow 0.25s ease;
 }
@@ -108,30 +108,39 @@
   align-items: center;
   gap: 0;
   width: 100%;
-  padding-top: 0;
+  /* La franja de acento va unas píxeles más abajo: el borde superior de la
+     ventana queda recortado por el compositor. */
+  padding-top: 3px;
 }
 
-/* El asa es lo único que se ve: una franja en el borde superior. */
+/* El asa es lo único que se ve: una franja en el borde superior.
+   La ventana es más alta, pero el resto queda transparente.
+   El alto va explícito: con «100%» sobre un contenedor de altura automática
+   el asa se quedaba en cero y no se veía nada.
+   El acento va como borde del propio asa: un hijo con fondo propio no llega a
+   pintarse en una ventana tan pequeña. */
 .vault-handle {
   display: flex;
   align-items: flex-start;
   justify-content: center;
   width: 100%;
+  height: 8px;
   padding: 0;
   border: none;
+  border-bottom: 4px solid var(--primary, #00c9b9);
   background: transparent;
   cursor: pointer;
 }
 
 .vault-handle .file-drop-zone-notch {
-  opacity: 0.28;
+  opacity: 0.6;
   transition: opacity 0.2s ease, box-shadow 0.2s ease;
 }
 
 .vault-handle:hover .file-drop-zone-notch,
 .vault-shelf.is-open .file-drop-zone-notch {
-  opacity: 0.95;
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--primary) 70%, transparent);
+  opacity: 1;
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--primary) 85%, transparent);
 }
 
 .vault-items {
@@ -269,12 +278,15 @@
 }
 
 /* ── Zona del sistema: la muesca no debe robar el clic a la pantalla ─── */
+/* La ventana del sistema es opaca: una ventana transparente de este tamaño no
+   llega a componerse. El fondo toma el color de la app y DWM redondea solo
+   las esquinas de abajo, que es lo que hace de pestañita. */
 html.is-system-drop-zone,
 body.is-system-drop-zone {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: transparent;
+  background: var(--surface);
 }
 
 .system-drop-zone {

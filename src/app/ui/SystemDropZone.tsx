@@ -28,6 +28,10 @@ export interface VaultItem {
 const CARD_WIDTH = 78;
 const CARD_GAP = 8;
 const SHELF_HEIGHT = 76;
+/** Alto de la franja visible. El resto de la ventana queda transparente. */
+const HANDLE_HEIGHT = 4;
+/** Alto mínimo de la ventana: por debajo de 20 px el navegador no pinta. */
+const MIN_WINDOW_HEIGHT = 20;
 
 function formatBytes(bytes: number): string {
   if (!bytes) return "";
@@ -85,6 +89,31 @@ export function SystemDropZone() {
     };
   }, []);
 
+  // La ventana flotante no monta la aplicación, así que el tema hay que
+  // aplicarlo a mano: si no, la pestañita saldría del color que no es.
+  useEffect(() => {
+    const applyTheme = () => {
+      const root = document.documentElement;
+      const mode = localStorage.getItem("prisma_theme") ?? "system";
+      const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const isDark = mode === "system" ? systemDark : mode === "dark";
+      root.classList.toggle("dark", isDark);
+      root.setAttribute("data-theme", mode);
+      const accent = localStorage.getItem("prisma_accent");
+      if (accent) root.setAttribute("data-accent", accent);
+      const bg = localStorage.getItem("prisma_bg_variant");
+      if (bg) root.setAttribute("data-bg", bg);
+    };
+    applyTheme();
+    const onStorage = () => applyTheme();
+    window.addEventListener("storage", onStorage);
+    const timer = setInterval(applyTheme, 1500);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      clearInterval(timer);
+    };
+  }, []);
+
   // La ventana se dimensiona según lo que hay en la bóveda: una muesca de
   // 80 × 3 px cuando está cerrada, la estantería cuando se abre.
   const isShelfVisible = isOpen && items.length > 0;
@@ -92,7 +121,7 @@ export function SystemDropZone() {
     () => (isShelfVisible ? items.length * CARD_WIDTH + (items.length - 1) * CARD_GAP + 16 : 80),
     [isShelfVisible, items.length]
   );
-  const shelfHeight = isShelfVisible ? SHELF_HEIGHT : 3;
+  const shelfHeight = isShelfVisible ? SHELF_HEIGHT : MIN_WINDOW_HEIGHT;
 
   useEffect(() => {
     void invoke("system_drop_zone_set_size", { width: shelfWidth, height: shelfHeight }).catch(
@@ -185,7 +214,9 @@ export function SystemDropZone() {
   );
 
   return (
-    <div className={`vault-shelf ${isDragOver ? "is-drag-over" : ""} ${isOpen ? "is-open" : ""}`}>
+    <div
+      className={`vault-shelf ${isDragOver ? "is-drag-over" : ""} ${isOpen ? "is-open" : ""}`}
+    >
       {/* La franja es el único punto visible: al pulsarla se despliega la bóveda. */}
       <button
         type="button"
@@ -196,7 +227,6 @@ export function SystemDropZone() {
       >
         <span className="file-drop-zone-notch" aria-hidden="true" />
       </button>
-
       {isShelfVisible && (
         <div className="vault-items">
           {items.map((item) => (

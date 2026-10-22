@@ -1,12 +1,19 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use tauri::{AppHandle, Manager};
 
 use super::vault::{VaultItem, VaultState};
 
-/// Tamaño de la muesca replegada: 80 × 3 px, tal como se pidió.
-const ZONE_COLLAPSED: (i32, i32) = (80, 3);
+/// Tamaño de la muesca replegada.
+///
+/// La ventana necesita altura real: una ventana transparente de 3 px no llega a
+/// pintarse. La franja visible son los 4 px de arriba; el resto queda
+/// transparente y sirve de zona de pulsación.
+const ZONE_COLLAPSED: (i32, i32) = (80, 20);
+/// Alto de la franja visible.
+pub const ZONE_HANDLE_HEIGHT: i32 = 4;
 /// Tamaño del panel desplegado cuando entra un archivo arrastrado.
 const ZONE_EXPANDED: (i32, i32) = (320, 76);
 
@@ -38,6 +45,33 @@ fn place(zone: &tauri::WebviewWindow, width: i32, height: i32) {
     }));
 }
 
+/// Redondea SOLO las esquinas inferiores de la ventana.
+///
+/// La franja vive pegada al borde superior de la pantalla: arriba tiene que ir
+/// recta y abajo redondeada, como una pestañita. Windows 11 lo resuelve con la
+/// preferencia de esquinas de DWM.
+fn round_bottom_corners(zone: &tauri::WebviewWindow) {
+    #[cfg(windows)]
+    {
+        use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE};
+        // DWMWCP_ROUNDBOTTOM no está en la versión del crate: el valor es 4.
+        const DWMWCP_ROUNDBOTTOM: i32 = 4;
+        if let Ok(hwnd) = zone.hwnd() {
+            let raw = windows::Win32::Foundation::HWND(hwnd.0 as *mut std::ffi::c_void);
+            let preference: i32 = DWMWCP_ROUNDBOTTOM;
+            let result = unsafe {
+                DwmSetWindowAttribute(
+                    raw,
+                    DWMWA_WINDOW_CORNER_PREFERENCE,
+                    &preference as *const i32 as *const std::ffi::c_void,
+                    std::mem::size_of::<i32>() as u32,
+                )
+            };
+            eprintln!("[Barra Synapse] esquinas inferiores: {result:?}");
+        }
+    }
+}
+
 /// Deja la zona de recepción del sistema lista al arrancar.
 ///
 /// La ventana vive por encima de todas las demás: sirve desde el Explorador de
@@ -49,6 +83,13 @@ pub fn place_at_startup(app: &AppHandle) {
     let _ = zone.set_always_on_top(true);
     place(&zone, ZONE_COLLAPSED.0, ZONE_COLLAPSED.1);
     let _ = zone.show();
+    // La preferencia de esquinas se aplica después de mostrar: antes no surte efecto.
+    round_bottom_corners(&zone);
+    let late = zone.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(1500));
+        round_bottom_corners(&late);
+    });
 }
 
 /// Despliega o repliega la muesca.

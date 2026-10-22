@@ -7,7 +7,6 @@ import { FlyoutWindow } from "./features/playback/ui/FlyoutWindow";
 import { ScreenCaptureOverlay } from "./features/screen_capture/ui/ScreenCaptureOverlay";
 import { ScreenCaptureEditor } from "./features/screen_capture/ui/ScreenCaptureEditor";
 import { ScreenCaptureRecorderBar } from "./features/screen_capture/ui/ScreenCaptureRecorderBar";
-import { SystemDropZone } from "./app/ui/SystemDropZone";
 import "./app/styles.css";
 
 function isQuickLookWindow(): boolean {
@@ -93,7 +92,6 @@ const isFlyout = isFlyoutWindow();
 const isCaptureOverlay = isScreenCaptureOverlayWindow();
 const isCaptureEditor = isScreenCaptureEditorWindow();
 const isCaptureRecorder = isScreenCaptureRecorderWindow();
-const isSystemDropZone = isSystemDropZoneWindow();
 
 if (isQuickLook) {
   document.documentElement.classList.add("is-quicklook");
@@ -111,10 +109,6 @@ if (isQuickLook) {
   document.documentElement.classList.add("is-capture-recorder");
   document.documentElement.style.background = "transparent";
   document.body.style.background = "transparent";
-} else if (isSystemDropZone) {
-  document.documentElement.classList.add("is-system-drop-zone");
-  document.documentElement.style.background = "transparent";
-  document.body.style.background = "transparent";
 } else if (isCaptureEditor) {
   document.documentElement.classList.add("is-capture-editor");
 }
@@ -129,8 +123,6 @@ createRoot(document.getElementById("root")!).render(
       <ScreenCaptureOverlay />
     ) : isCaptureRecorder ? (
       <ScreenCaptureRecorderBar />
-    ) : isSystemDropZone ? (
-      <SystemDropZone />
     ) : isCaptureEditor ? (
       <ScreenCaptureEditor />
     ) : (

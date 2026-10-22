@@ -41,15 +41,23 @@ export function useCaptureShortcut() {
   const [isUpdating, setIsUpdating] = useState(false);
 
   const refresh = useCallback(async () => {
-    try {
-      const next = await screenCaptureClient.getShortcutStatus();
-      cachedStatus = next;
-      setStatus(next);
-      return next;
-    } catch (error) {
-      console.error("Error al consultar el atajo del capturador:", error);
-      return cachedStatus;
+    // La webview puede preguntar antes de que el backend registre el estado:
+    // un fallo puntual dejaba la interfaz diciendo «inactivo» para siempre.
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      try {
+        const next = await screenCaptureClient.getShortcutStatus();
+        cachedStatus = next;
+        setStatus(next);
+        return next;
+      } catch (error) {
+        if (attempt === 11) {
+          console.error("Error al consultar el atajo del capturador:", error);
+          return cachedStatus;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      }
     }
+    return cachedStatus;
   }, []);
 
   // Todas las vistas abiertas comparten el mismo estado real del atajo.
@@ -71,7 +79,15 @@ export function useCaptureShortcut() {
       const legacy = readLegacyPreference();
       if (!legacy) return;
       try {
-        const next = await screenCaptureClient.configure(legacy.enabled, legacy.shortcut);
+        // La preferencia antigua traía «activado» en false, porque antes el
+        // atajo solo vivía dentro de la aplicación. Ahora el atajo global se
+        // registra en Rust al arrancar, así que se migra la tecla y se deja
+        // activo: el capturador tiene que responder con Prisma minimizado o
+        // en la bandeja.
+        const next = await screenCaptureClient.configure(
+          true,
+          legacy.shortcut || "Shift+PrintScreen"
+        );
         cachedStatus = next;
         setStatus(next);
         window.dispatchEvent(new CustomEvent(STATUS_CHANGE_EVENT));

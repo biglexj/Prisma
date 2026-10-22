@@ -2,11 +2,17 @@
 
 ## Comprobado en la aplicación real
 
-- **La bóveda flota en el sistema**: ventana propia, siempre encima, en el borde superior central. Medido sobre la pantalla real de 1920×1080: la ventana aparece en `(827, 0)` con `266×76`, es decir, centrada de forma exacta ((1920 − 266) / 2 = 827).
-- **Replegada mide 80 × 3 px** cuando la bóveda está vacía, tal como se pidió.
-- **Los tres elementos se ven y el fijado va primero**: con la bóveda cargada con tres elementos (uno fijado), la estantería muestra las tres tarjetas en el borde superior de la pantalla, con el distintivo de candado en la primera.
-- **El tamaño se ajusta solo**: la ventana crece con el número de elementos y vuelve a 80 × 3 cuando se vacía.
-- **La bóveda sobrevive a un reinicio**: se verificó con un archivo `vault.json` escrito antes de arrancar, que la aplicación leyó con sus tres elementos.
+- **La bóveda flota en el sistema**: ventana propia, siempre encima, en el borde superior central. Medido sobre la pantalla real de 1920×1080: la ventana aparece en `(920, 0)` con `80×20`, es decir, centrada de forma exacta ((1920 − 80) / 2 = 920).
+- **La pestaña se ve y se despliega**: la franja aparece arriba al centro con el color de la app y una línea de acento. Al pulsarla se despliega la estantería con las tarjetas y se repliega sola al perder el foco.
+- **Esquinas rectas arriba y redondeadas abajo**: comprobado sobre la captura ampliada de la ventana, que es exactamente lo pedido. Se consigue con la preferencia de esquinas de DWM (`DWMWCP_ROUNDBOTTOM`), que Windows 11 respeta y devuelve con valor 4.
+- **Los elementos se ven y el fijado va primero**: con la bóveda cargada, la estantería muestra las tres tarjetas con el distintivo de candado en la primera.
+- **Los elementos se guardan y sobreviven a un reinicio**: se verificó con un `vault.json` escrito antes de arrancar, que la aplicación leyó con sus tres elementos.
+
+## Tres problemas reales encontrados por el camino
+
+1. **Una ventana transparente de 80 × 20 no se compone.** Con el fondo transparente la ventana no pintaba nada: se veía lo que hubiera detrás. Se comprobó pintando un color sólido y, después, redimensionando la ventana, que sí se componía. La solución: ventana opaca con el color de la app y esquinas redondeadas solo abajo por DWM.
+2. **La caché del WebView2 servía bundles viejos.** Una ventana podía quedarse con el contenido de otra (la barra llegó a mostrar el flyout). Se aisló con una entrada HTML propia (`zone.html` → `src/zone.tsx`) y, en desarrollo, limpiando los datos de navegación al arrancar.
+3. **El atajo global parecía inactivo cuando sí lo estaba.** La webview preguntaba el estado antes de que el backend registrase el estado: la consulta fallaba y la interfaz se quedaba diciendo «inactivo» para siempre, además de que la migración de la preferencia antigua lo desactivaba (traía `enabled: false` de cuando el atajo solo vivía dentro de la aplicación). Ahora la consulta reintenta y la migración deja el atajo **activo**, migrando solo la tecla.
 
 ## Pruebas automáticas
 
@@ -25,3 +31,11 @@
 ## Pendiente
 
 - Comprobar a mano el arrastre real desde el Explorador hasta la bóveda y el arrastre de vuelta hacia el Explorador: la ruta de eventos y los comandos están implementados y probados por separado, pero la maniobra física del ratón no se ha automatizado.
+- El audio del sistema sigue sin poder verificarse con sonido en este equipo (el dispositivo de salida no renderiza), igual que en la tanda anterior.
+
+## Capturador: rediseño de la vista
+
+- La vista pasa a ocupar **todo el ancho**, con dos columnas como el resto de pestañas, y sin los bloques de texto largo.
+- El selector **Imagen | Vídeo** y las opciones de modo son **tarjetitas** con el mismo lenguaje visual que las de Configuración.
+- El atajo global tiene su propio panel con las teclas disponibles y su estado real: «Atajo Activo» cuando el sistema lo aceptó.
+- Verificado en la aplicación: la vista se ve a todo el ancho, con el selector en tarjetitas y el distintivo de «Atajo Activo».

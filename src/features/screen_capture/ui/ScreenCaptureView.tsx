@@ -24,6 +24,13 @@ const LAST_KIND_KEY = "prisma.screen-capture.last-kind";
 const VIDEO_MODES: CaptureMode[] = ["rect", "window", "fullscreen"];
 const IMAGE_MODES: CaptureMode[] = ["window", "rect", "freeform", "fullscreen"];
 
+const MODE_OPTIONS: { id: CaptureMode; label: string; icon: "columns" | "crop" | "lasso" | "fullscreen" }[] = [
+  { id: "window", label: "Ventana", icon: "columns" },
+  { id: "rect", label: "Rectángulo", icon: "crop" },
+  { id: "freeform", label: "Lazo Libre", icon: "lasso" },
+  { id: "fullscreen", label: "Pantalla Completa", icon: "fullscreen" },
+];
+
 function loadLastKind(): CaptureIntent {
   try {
     return localStorage.getItem(LAST_KIND_KEY) === "video" ? "video" : "image";
@@ -48,6 +55,9 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
 
   const isVideo = captureKind === "video";
   const availableModes = isVideo ? VIDEO_MODES : IMAGE_MODES;
+  const shortcutLabel = shortcutStatus?.shortcut || "Shift+PrintScreen";
+  const shortcutIsActive = Boolean(shortcutStatus?.isRegistered);
+  const shortcutEnabled = shortcutStatus?.enabled ?? true;
 
   useEffect(() => {
     try {
@@ -77,16 +87,6 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
     };
   }, [isVideo]);
 
-  const shortcutLabel = shortcutStatus?.shortcut || "Shift+PrintScreen";
-  const shortcutIsActive = Boolean(shortcutStatus?.isRegistered);
-  const shortcutBadge = shortcutStatus?.error
-    ? shortcutIsActive ? "Atajo alternativo activo" : "Atajo no disponible"
-    : shortcutIsActive ? "Atajo Activo" : "Atajo inactivo";
-
-  const handleKindChange = (kind: CaptureIntent) => {
-    setCaptureKind(kind);
-  };
-
   const handleStart = async (mode: CaptureMode = selectedMode) => {
     setIsLaunching(true);
     try {
@@ -107,42 +107,67 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
     saveRecordingPreferences(next);
   };
 
+  const handleShortcutToggle = async (enabled: boolean) => {
+    try {
+      await configureShortcut(enabled, shortcutLabel);
+    } catch (err) {
+      console.error("Error al cambiar el atajo global:", err);
+    }
+  };
+
   return (
     <div className="screen-capture-view">
-      {/* ── Encabezado Principal ── */}
-      <section className="capture-hero">
-        <div className="capture-hero-icon">
-          <Icon name={isVideo ? "video" : "camera"} width={32} height={32} />
+      {/* ── Cabecera ── */}
+      <section className="capture-topbar">
+        <div className="capture-topbar-icon">
+          <Icon name={isVideo ? "video" : "camera"} width={26} height={26} />
         </div>
-        <div className="capture-hero-text">
-          <div className="capture-hero-title-row">
-            <h1>Capturador de Pantalla</h1>
-            <span className={`capture-badge ${shortcutStatus?.error ? "is-warning" : ""}`}>
-              <Icon name={shortcutStatus?.error ? "info" : shortcutIsActive ? "check" : "keyboard"} width={14} height={14} />
-              {shortcutBadge}
-            </span>
-          </div>
-          <p>
-            {isVideo
-              ? "Graba la ventana, el área o la pantalla completa que elijas. El vídeo se codifica en MP4 y se guarda en tu carpeta de capturas."
-              : "Captura instantánea de ventanas, áreas y monitores con contorno de alta precisión, anotaciones vectoriales, copia directa a memoria sin tocar disco y guardado PNG opcional."}
-          </p>
-        </div>
+        <h1>Capturador de Pantalla</h1>
+        <span className={`capture-badge ${shortcutStatus?.error ? "is-warning" : ""}`}>
+          <Icon
+            name={shortcutStatus?.error ? "info" : shortcutIsActive ? "check" : "keyboard"}
+            width={14}
+            height={14}
+          />
+          {shortcutStatus?.error
+            ? "Atajo con conflicto"
+            : shortcutIsActive
+              ? "Atajo Activo"
+              : "Atajo inactivo"}
+        </span>
       </section>
 
-      {/* ── Zona de Lanzamiento y Modos ── */}
-      <section className="capture-launch-section">
-        {/* Switch tipo Recortes: imagen o vídeo. */}
-        <div className="capture-kind-row">
-          <CaptureKindSwitch value={captureKind} onChange={handleKindChange} disabled={isLaunching} />
-          <span className="capture-kind-hint">
-            {isVideo
-              ? "Elige la zona y pulsa «Iniciar Grabación»."
-              : "Captura puntual con anotaciones."}
-          </span>
-        </div>
+      <div className="capture-columns">
+        {/* ── Tipo y modo ── */}
+        <section className="settings-card capture-card">
+          <div className="settings-card-header-row">
+            <div>
+              <h3>Tipo de captura</h3>
+            </div>
+          </div>
 
-        <div className="capture-actions-row">
+          <CaptureKindSwitch value={captureKind} onChange={setCaptureKind} disabled={isLaunching} />
+
+          <div className="settings-section-divider" style={{ margin: "14px 0 10px" }} />
+
+          <h3 className="capture-subheading">Modo</h3>
+          <div className="capture-option-cards">
+            {MODE_OPTIONS.filter((option) => availableModes.includes(option.id)).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`snapshot-format-chip ${selectedMode === option.id ? "is-selected" : ""}`}
+                onClick={() => setSelectedMode(option.id)}
+                title={option.label}
+              >
+                <Icon name={option.icon} width={18} height={18} />
+                <span className="snapshot-format-info">
+                  <strong>{option.label}</strong>
+                </span>
+              </button>
+            ))}
+          </div>
+
           <button
             type="button"
             className={`capture-btn-primary ${isVideo ? "is-video" : ""}`}
@@ -151,276 +176,182 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
           >
             <Icon name={isVideo ? "video" : "camera"} width={18} height={18} />
             <span>{isVideo ? "Iniciar Grabación" : "Iniciar Captura"}</span>
-            {!isVideo && (
-              <span className="capture-shortcut-pill">
-                {shortcutLabel}
-              </span>
-            )}
+            {!isVideo && <span className="capture-shortcut-pill">{shortcutLabel}</span>}
           </button>
-
-          <div className="capture-mode-selector" role="radiogroup" aria-label="Modo de captura">
-            {availableModes.includes("window") && (
-              <button
-                type="button"
-                className={`capture-mode-tab ${selectedMode === "window" ? "is-active" : ""}`}
-                onClick={() => setSelectedMode("window")}
-                title="Detecta automáticamente ventanas y áreas bajo el cursor (Predeterminado)"
-              >
-                <Icon name="columns" width={16} height={16} />
-                <span>Ventana</span>
-              </button>
-            )}
-            {availableModes.includes("rect") && (
-              <button
-                type="button"
-                className={`capture-mode-tab ${selectedMode === "rect" ? "is-active" : ""}`}
-                onClick={() => setSelectedMode("rect")}
-                title="Arrastra para seleccionar un área personalizada con tiradores"
-              >
-                <Icon name="crop" width={16} height={16} />
-                <span>Rectángulo</span>
-              </button>
-            )}
-            {availableModes.includes("freeform") && (
-              <button
-                type="button"
-                className={`capture-mode-tab ${selectedMode === "freeform" ? "is-active" : ""}`}
-                onClick={() => setSelectedMode("freeform")}
-                title="Dibuja un lazo a mano alzada para capturar cualquier forma personalizada"
-              >
-                <Icon name="lasso" width={16} height={16} />
-                <span>Lazo Libre</span>
-              </button>
-            )}
-            {availableModes.includes("fullscreen") && (
-              <button
-                type="button"
-                className={`capture-mode-tab ${selectedMode === "fullscreen" ? "is-active" : ""}`}
-                onClick={() => setSelectedMode("fullscreen")}
-                title="Captura el monitor completo bajo el cursor"
-              >
-                <Icon name="fullscreen" width={16} height={16} />
-                <span>Pantalla Completa</span>
-              </button>
-            )}
-          </div>
-        </div>
+        </section>
 
         {/* ── Ajustes de grabación ── */}
         {isVideo && (
-          <>
-            <div className="capture-recording-options">
-            <label className="capture-select-field">
-              <span className="capture-select-label">Fotogramas</span>
-              <select
-                className="capture-select"
-                value={recordingPreferences.fps}
-                onChange={(event) =>
-                  handlePreferencesChange({
-                    ...recordingPreferences,
-                    fps: Number(event.target.value),
-                  })
-                }
-              >
-                {RECORDING_FPS_OPTIONS.map((fps) => (
-                  <option key={fps} value={fps}>{fps} fps</option>
-                ))}
-              </select>
-            </label>
+          <section className="settings-card capture-card">
+            <div className="settings-card-header-row">
+              <div>
+                <h3>Ajustes de grabación</h3>
+              </div>
+            </div>
 
-            <label className="capture-select-field">
-              <span className="capture-select-label">Audio</span>
-              <select
-                className="capture-select"
-                value={recordingPreferences.audioDevice ?? ""}
-                onChange={(event) =>
-                  handlePreferencesChange({
-                    ...recordingPreferences,
-                    audioDevice: event.target.value || null,
-                  })
-                }
-              >
-                <option value="">Sin audio</option>
-                {audioDevices.map((device) => (
-                  <option key={device} value={device}>{device}</option>
-                ))}
-              </select>
-            </label>
+            <div className="capture-fields">
+              <label className="capture-select-field">
+                <span className="capture-select-label">Fotogramas</span>
+                <select
+                  className="capture-select"
+                  value={recordingPreferences.fps}
+                  onChange={(event) =>
+                    handlePreferencesChange({ ...recordingPreferences, fps: Number(event.target.value) })
+                  }
+                >
+                  {RECORDING_FPS_OPTIONS.map((fps) => (
+                    <option key={fps} value={fps}>{fps} fps</option>
+                  ))}
+                </select>
+              </label>
 
-            <label className="capture-select-field capture-checkbox-field">
-              <span className="capture-select-label">Audio del sistema</span>
-              <span className="capture-checkbox">
-                <input
-                  type="checkbox"
-                  checked={recordingPreferences.systemAudio}
+              <label className="capture-select-field">
+                <span className="capture-select-label">Calidad</span>
+                <select
+                  className="capture-select"
+                  value={recordingPreferences.quality}
                   onChange={(event) =>
                     handlePreferencesChange({
                       ...recordingPreferences,
-                      systemAudio: event.target.checked,
+                      quality: event.target.value as RecordingPreferences["quality"],
                     })
                   }
-                />
-                <span>Grabar lo que suena en el ordenador</span>
-              </span>
-            </label>
+                >
+                  <option value="high">Alta</option>
+                  <option value="medium">Media</option>
+                  <option value="low">Baja</option>
+                </select>
+              </label>
 
-            <label className="capture-select-field">
-              <span className="capture-select-label">Codificación</span>
-              <select
-                className="capture-select"
-                value={recordingPreferences.encoder}
-                onChange={(event) =>
-                  handlePreferencesChange({
-                    ...recordingPreferences,
-                    encoder: event.target.value as RecordingPreferences["encoder"],
-                  })
-                }
-              >
-                <option value="auto">Automática (GPU si hay)</option>
-                <option value="cpu">CPU (libx264)</option>
-                <option value="nvenc">NVIDIA (NVENC)</option>
-                <option value="qsv">Intel (QSV)</option>
-                <option value="amf">AMD (AMF)</option>
-              </select>
-            </label>
+              <label className="capture-select-field">
+                <span className="capture-select-label">Codificación</span>
+                <select
+                  className="capture-select"
+                  value={recordingPreferences.encoder}
+                  onChange={(event) =>
+                    handlePreferencesChange({
+                      ...recordingPreferences,
+                      encoder: event.target.value as RecordingPreferences["encoder"],
+                    })
+                  }
+                >
+                  <option value="auto">Automática</option>
+                  <option value="cpu">CPU</option>
+                  <option value="nvenc">NVIDIA</option>
+                  <option value="qsv">Intel</option>
+                  <option value="amf">AMD</option>
+                </select>
+              </label>
 
-            <label className="capture-select-field">
-              <span className="capture-select-label">Calidad</span>
-              <select
-                className="capture-select"
-                value={recordingPreferences.quality}
-                onChange={(event) =>
-                  handlePreferencesChange({
-                    ...recordingPreferences,
-                    quality: event.target.value as RecordingPreferences["quality"],
-                  })
-                }
-              >
-                <option value="high">Alta</option>
-                <option value="medium">Media</option>
-                <option value="low">Baja</option>
-              </select>
-            </label>
+              <label className="capture-select-field">
+                <span className="capture-select-label">Tamaño</span>
+                <select
+                  className="capture-select"
+                  value={recordingPreferences.maxHeight ?? ""}
+                  onChange={(event) =>
+                    handlePreferencesChange({
+                      ...recordingPreferences,
+                      maxHeight: event.target.value ? Number(event.target.value) : null,
+                    })
+                  }
+                >
+                  {RECORDING_SIZE_OPTIONS.map((option) => (
+                    <option key={option.label} value={option.value ?? ""}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
 
-            <label className="capture-select-field">
-              <span className="capture-select-label">Tamaño</span>
-              <select
-                className="capture-select"
-                value={recordingPreferences.maxHeight ?? ""}
-                onChange={(event) =>
-                  handlePreferencesChange({
-                    ...recordingPreferences,
-                    maxHeight: event.target.value ? Number(event.target.value) : null,
-                  })
-                }
-              >
-                {RECORDING_SIZE_OPTIONS.map((option) => (
-                  <option key={option.label} value={option.value ?? ""}>{option.label}</option>
-                ))}
-              </select>
-            </label>
+              <label className="capture-select-field">
+                <span className="capture-select-label">Audio</span>
+                <select
+                  className="capture-select"
+                  value={recordingPreferences.audioDevice ?? ""}
+                  onChange={(event) =>
+                    handlePreferencesChange({
+                      ...recordingPreferences,
+                      audioDevice: event.target.value || null,
+                    })
+                  }
+                >
+                  <option value="">Sin audio</option>
+                  {audioDevices.map((device) => (
+                    <option key={device} value={device}>{device}</option>
+                  ))}
+                </select>
+              </label>
 
-            {audioDevices.length === 0 && (
-              <span className="capture-recording-note">
-                No se detectaron dispositivos de audio: la grabación será muda.
-              </span>
-            )}
-          </div>
-
-          <div className="capture-recording-hint">
-            <Icon name="keyboard" width={14} height={14} />
-            <span>
-              Durante la grabación aparece una barra flotante con el cronómetro. Puedes detenerla
-              con <strong>Ctrl+Shift+R</strong> aunque Prisma esté minimizado o en la bandeja.
-            </span>
-          </div>
-          </>
+              <label className="capture-checkbox-field">
+                <span className="capture-select-label">Audio del sistema</span>
+                <span className="capture-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={recordingPreferences.systemAudio}
+                    onChange={(event) =>
+                      handlePreferencesChange({
+                        ...recordingPreferences,
+                        systemAudio: event.target.checked,
+                      })
+                    }
+                  />
+                  <span>Grabar lo que suena</span>
+                </span>
+              </label>
+            </div>
+          </section>
         )}
 
-        {/* ── Estado del Atajo Global ── */}
-        <div className={`capture-shortcut-alert ${shortcutStatus?.error ? "is-error" : ""}`}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Icon name={shortcutStatus?.error ? "info" : "keyboard"} width={18} height={18} />
+        {/* ── Atajo global ── */}
+        <section className="settings-card capture-card">
+          <div className="settings-card-header-row">
+            <div>
+              <h3>Atajo global</h3>
+            </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={shortcutEnabled}
+                onChange={(event) => void handleShortcutToggle(event.target.checked)}
+                disabled={isUpdatingShortcut}
+                aria-label="Atajo global de captura"
+              />
+              <span className="toggle-slider" />
+            </label>
+          </div>
+
+          <div className="capture-shortcut-chips">
+            {["PrintScreen", "Shift+PrintScreen"].map((candidate) => (
+              <button
+                key={candidate}
+                type="button"
+                className={`snapshot-format-chip ${shortcutLabel === candidate ? "is-selected" : ""}`}
+                onClick={() => void configureShortcut(true, candidate)}
+                disabled={isUpdatingShortcut}
+                title={`Registrar ${candidate} como atajo global`}
+              >
+                <Icon name="keyboard" width={18} height={18} />
+                <span className="snapshot-format-info">
+                  <strong>{candidate}</strong>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="capture-status-line">
+            <Icon
+              name={shortcutStatus?.error ? "info" : shortcutIsActive ? "check" : "keyboard"}
+              width={16}
+              height={16}
+            />
             <span>
-              {shortcutStatus?.error ? (
-                <>
-                  <strong>Conflicto de atajo:</strong> {shortcutStatus.error}
-                </>
-              ) : shortcutIsActive ? (
-                <>
-                  El atajo global <strong>{shortcutLabel}</strong> está activo incluso con Prisma minimizado o en bandeja.
-                </>
-              ) : (
-                <>
-                  No hay ningún atajo global activo. Actívalo en <strong>Configuración → Capturador de Pantalla</strong>.
-                </>
-              )}
+              {shortcutStatus?.error
+                ? shortcutStatus.error
+                : shortcutIsActive
+                  ? `Activo con «${shortcutLabel}». Funciona con Prisma minimizado o en la bandeja.`
+                  : "Sin atajo global activo."}
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {shortcutLabel !== "PrintScreen" && (
-              <button
-                type="button"
-                className="capture-pill-btn"
-                onClick={() => void configureShortcut(true, "PrintScreen")}
-                disabled={isUpdatingShortcut}
-                title="Intentar registrar la tecla Impr Pant estándar (si ShareX u otra app no la ocupan)"
-              >
-                Usar Impr Pant
-              </button>
-            )}
-            {shortcutLabel !== "Shift+PrintScreen" && (
-              <button
-                type="button"
-                className="capture-pill-btn"
-                onClick={() => void configureShortcut(true, "Shift+PrintScreen")}
-                disabled={isUpdatingShortcut}
-                title="Usar la combinación Shift + Impr Pant"
-              >
-                Usar Mayús + Impr Pant
-              </button>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Guía Rápida & Principios de Diseño ── */}
-      <section className="capture-guide-grid">
-        <div className="capture-guide-card">
-          <div className="capture-guide-header">
-            <Icon name="columns" width={20} height={20} />
-            <span>Borde Inteligente</span>
-          </div>
-          <p>
-            Al mover el cursor, un contorno cyan de alto contraste resalta con precisión la ventana visible.
-            La rueda del ratón permite alternar entre la ventana completa o subpaneles anidados.
-          </p>
-        </div>
-
-        <div className="capture-guide-card">
-          <div className="capture-guide-header">
-            <Icon name={isVideo ? "film" : "copy"} width={20} height={20} />
-            <span>{isVideo ? "Vídeo en MP4" : "Memoria Pura (Sin Basura)"}</span>
-          </div>
-          <p>
-            {isVideo
-              ? "La grabación se cierra de forma ordenada para que el MP4 quede reproducible, listo para abrirse, compartirse o enviarse a Super Galería."
-              : "Copiar al portapapeles (Ctrl+C) transfiere el PNG directamente a memoria sin generar archivos temporales, miniaturas ni historial en disco. Se pega al instante en cualquier aplicación."}
-          </p>
-        </div>
-
-        <div className="capture-guide-card">
-          <div className="capture-guide-header">
-            <Icon name={isVideo ? "pulse" : "edit"} width={20} height={20} />
-            <span>{isVideo ? "Selección antes de grabar" : "Editor y Anotaciones"}</span>
-          </div>
-          <p>
-            {isVideo
-              ? "Eliges la ventana o el área con el mismo contorno inteligente de la imagen. Al confirmar, el overlay se aparta y la grabación comienza sobre lo que hay en pantalla."
-              : "Ventana propia con lápiz, resaltador, texto y flechas. El archivo PNG solo se escribe en disco cuando eliges explícitamente «Guardar como…» (Ctrl+S)."}
-          </p>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

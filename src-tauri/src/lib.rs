@@ -404,6 +404,22 @@ pub fn run() {
             // arrastrar archivos desde el Explorador o cualquier aplicación.
             app::commands::drop_zone::place_at_startup(app.handle());
 
+            // En desarrollo, la caché del WebView2 puede servir un bundle viejo
+            // y la ventana se queda con el contenido de la versión anterior.
+            if is_dev_mode {
+                for label in [
+                    "main",
+                    "system_drop_zone",
+                    "screen_capture_overlay",
+                    "screen_capture_editor",
+                    "screen_capture_recorder",
+                ] {
+                    if let Some(window) = app.get_webview_window(label) {
+                        let _ = window.clear_all_browsing_data();
+                    }
+                }
+            }
+
             // Bóveda flotante: guarda hasta tres elementos, uno de ellos fijable.
             let vault_state = VaultState::new(data_directory.join("vault.json"));
             app.manage(vault_state);
