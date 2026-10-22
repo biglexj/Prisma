@@ -11,7 +11,16 @@
 
 ## Pendiente de comprobación visual en la aplicación
 
-- El conmutador «Imagen | Vídeo», el panel flotante de grabación y la zona de recepción superior se han validado por compilación, tipos y pruebas de lógica, pero **no se han visto todavía dentro de la aplicación en ejecución**. Queda pendiente la revisión visual del conmutador, de la muesca de 50 × 3 px, de la animación de recepción y del recorrido completo: grabar → detener → guardar → enviar a Super Galería.
+- El conmutador «Imagen | Vídeo», el panel flotante de grabación y la zona de recepción superior se han validado por compilación, tipos, pruebas de lógica y **comprobación visual servida por Vite** (ver arriba). Queda pendiente la revisión de Biglex dentro de la aplicación de escritorio: grabación completa con el overlay, parada, guardado y envío a Super Galería.
+
+## Verificación visual en la interfaz
+
+- La vista del Capturador se comprobó servida por Vite (el navegador no tiene el runtime de Tauri, así que los comandos `invoke` fallan y el atajo aparece como inactivo: es lo esperado fuera de la app).
+- Estado **Imagen**: el conmutador con «Imagen» activo, botón «Iniciar Captura» con la píldora `Shift+PrintScreen`, modos Ventana / Rectángulo / Lazo Libre / Pantalla Completa y aviso de atajo inactivo.
+- Estado **Vídeo**: el conmutador se desplaza a «Vídeo» y el indicador toma el tono de error; el botón pasa a «Iniciar Grabación» en rojo y pierde la píldora de atajo; **Lazo Libre desaparece** de los modos; aparecen los selectores de Fotogramas (24/30/60 fps) y Audio con el aviso «No se detectaron dispositivos de audio» (el navegador no expone dispositivos DirectShow).
+- La muesca de la zona de recepción se ve en el borde superior central de la ventana, con 50 px de ancho.
+- Nota del método: la animación de entrada de la vista queda congelada en una pestaña en segundo plano (el navegador no la ejecuta), por lo que la primera captura salió en blanco. Se desactivó la animación solo durante la comprobación y se revirtió después: `git checkout` deja el archivo idéntico al commiteado.
+- Pendiente: el recorrido completo dentro de la app de escritorio —seleccionar la región en el overlay, grabar, detener, guardar y enviar a Super Galería— requiere la app compilada con Tauri y un escritorio interactivo; no se ha ejecutado aquí.
 
 ## Notas de comportamiento
 
