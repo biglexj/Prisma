@@ -5,6 +5,7 @@ import type { CaptureIntent, CaptureMode } from "../model/types";
 import {
   DEFAULT_RECORDING_PREFERENCES,
   RECORDING_FPS_OPTIONS,
+  RECORDING_SIZE_OPTIONS,
   loadRecordingPreferences,
   saveRecordingPreferences,
   type RecordingPreferences,
@@ -207,7 +208,8 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
 
         {/* ── Ajustes de grabación ── */}
         {isVideo && (
-          <div className="capture-recording-options">
+          <>
+            <div className="capture-recording-options">
             <label className="capture-select-field">
               <span className="capture-select-label">Fotogramas</span>
               <select
@@ -245,12 +247,94 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
               </select>
             </label>
 
+            <label className="capture-select-field capture-checkbox-field">
+              <span className="capture-select-label">Audio del sistema</span>
+              <span className="capture-checkbox">
+                <input
+                  type="checkbox"
+                  checked={recordingPreferences.systemAudio}
+                  onChange={(event) =>
+                    handlePreferencesChange({
+                      ...recordingPreferences,
+                      systemAudio: event.target.checked,
+                    })
+                  }
+                />
+                <span>Grabar lo que suena en el ordenador</span>
+              </span>
+            </label>
+
+            <label className="capture-select-field">
+              <span className="capture-select-label">Codificación</span>
+              <select
+                className="capture-select"
+                value={recordingPreferences.encoder}
+                onChange={(event) =>
+                  handlePreferencesChange({
+                    ...recordingPreferences,
+                    encoder: event.target.value as RecordingPreferences["encoder"],
+                  })
+                }
+              >
+                <option value="auto">Automática (GPU si hay)</option>
+                <option value="cpu">CPU (libx264)</option>
+                <option value="nvenc">NVIDIA (NVENC)</option>
+                <option value="qsv">Intel (QSV)</option>
+                <option value="amf">AMD (AMF)</option>
+              </select>
+            </label>
+
+            <label className="capture-select-field">
+              <span className="capture-select-label">Calidad</span>
+              <select
+                className="capture-select"
+                value={recordingPreferences.quality}
+                onChange={(event) =>
+                  handlePreferencesChange({
+                    ...recordingPreferences,
+                    quality: event.target.value as RecordingPreferences["quality"],
+                  })
+                }
+              >
+                <option value="high">Alta</option>
+                <option value="medium">Media</option>
+                <option value="low">Baja</option>
+              </select>
+            </label>
+
+            <label className="capture-select-field">
+              <span className="capture-select-label">Tamaño</span>
+              <select
+                className="capture-select"
+                value={recordingPreferences.maxHeight ?? ""}
+                onChange={(event) =>
+                  handlePreferencesChange({
+                    ...recordingPreferences,
+                    maxHeight: event.target.value ? Number(event.target.value) : null,
+                  })
+                }
+              >
+                {RECORDING_SIZE_OPTIONS.map((option) => (
+                  <option key={option.label} value={option.value ?? ""}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+
             {audioDevices.length === 0 && (
               <span className="capture-recording-note">
                 No se detectaron dispositivos de audio: la grabación será muda.
               </span>
             )}
           </div>
+
+          <div className="capture-recording-hint">
+            <Icon name="keyboard" width={14} height={14} />
+            <span>
+              Durante la grabación aparece una barra flotante con el cronómetro. Puedes detenerla
+              con <strong>Ctrl+Shift+R</strong> aunque Prisma esté minimizado o en la bandeja.
+            </span>
+          </div>
+          </>
         )}
 
         {/* ── Estado del Atajo Global ── */}

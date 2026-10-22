@@ -377,6 +377,13 @@ pub fn run() {
                 std::sync::Arc::new(std::sync::Mutex::new(None));
             app.manage(recorder_state.clone());
 
+            // Atajo global para detener la grabación: la barra flotante cubre el
+            // caso normal, pero con Prisma en bandeja hace falta una tecla.
+            app::commands::screen_capture::apply_recorder_stop_shortcut(
+                app.handle(),
+                &recorder_state,
+            );
+
             // El atajo global del capturador queda activo desde el arranque: la
             // aplicación responde en segundo plano, en bandeja o minimizada,
             // sin depender de que el frontend abra alguna vista.

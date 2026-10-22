@@ -17,6 +17,10 @@ export interface RecordingOptions {
   fps?: number;
   audioDevice?: string | null;
   outputFolder?: string | null;
+  encoder?: "auto" | "cpu" | "nvenc" | "qsv" | "amf";
+  quality?: "high" | "medium" | "low";
+  maxHeight?: number | null;
+  systemAudio?: boolean;
 }
 
 /** Estado de la grabadora difundo por el backend. */

@@ -6,6 +6,7 @@ import { QuickLookWindow } from "./features/quick_look/ui/QuickLookWindow";
 import { FlyoutWindow } from "./features/playback/ui/FlyoutWindow";
 import { ScreenCaptureOverlay } from "./features/screen_capture/ui/ScreenCaptureOverlay";
 import { ScreenCaptureEditor } from "./features/screen_capture/ui/ScreenCaptureEditor";
+import { ScreenCaptureRecorderBar } from "./features/screen_capture/ui/ScreenCaptureRecorderBar";
 import "./app/styles.css";
 
 function isQuickLookWindow(): boolean {
@@ -60,10 +61,24 @@ function isScreenCaptureEditorWindow(): boolean {
   }
 }
 
+function isScreenCaptureRecorderWindow(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.location.hash === "#capture-recorder" || window.location.search.includes("capture-recorder=true")) {
+    return true;
+  }
+  try {
+    const win = getCurrentWebviewWindow();
+    return Boolean(win && typeof win.label === "string" && win.label.startsWith("screen_capture_recorder"));
+  } catch {
+    return false;
+  }
+}
+
 const isQuickLook = isQuickLookWindow();
 const isFlyout = isFlyoutWindow();
 const isCaptureOverlay = isScreenCaptureOverlayWindow();
 const isCaptureEditor = isScreenCaptureEditorWindow();
+const isCaptureRecorder = isScreenCaptureRecorderWindow();
 
 if (isQuickLook) {
   document.documentElement.classList.add("is-quicklook");
@@ -75,6 +90,10 @@ if (isQuickLook) {
   document.body.style.background = "transparent";
 } else if (isCaptureOverlay) {
   document.documentElement.classList.add("is-capture-overlay");
+  document.documentElement.style.background = "transparent";
+  document.body.style.background = "transparent";
+} else if (isCaptureRecorder) {
+  document.documentElement.classList.add("is-capture-recorder");
   document.documentElement.style.background = "transparent";
   document.body.style.background = "transparent";
 } else if (isCaptureEditor) {
@@ -89,6 +108,8 @@ createRoot(document.getElementById("root")!).render(
       <FlyoutWindow />
     ) : isCaptureOverlay ? (
       <ScreenCaptureOverlay />
+    ) : isCaptureRecorder ? (
+      <ScreenCaptureRecorderBar />
     ) : isCaptureEditor ? (
       <ScreenCaptureEditor />
     ) : (

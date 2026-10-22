@@ -11,3 +11,9 @@
 - [x] Coordinación con el manejador global de arrastre para que el archivo no se procese dos veces.
 - [x] Pruebas: tipos del frontend, pruebas unitarias del enrutador de arrastre y grabación real de extremo a extremo en Rust.
 - [x] Documentación del proceso y commit final.
+- [x] Barra flotante de control en ventana propia, colocada fuera de la región grabada.
+- [x] Atajo global `Ctrl+Shift+R` para detener la grabación con Prisma en bandeja.
+- [x] Codificador de hardware (NVENC/QSV/AMF) con modo automático y sonda de disponibilidad.
+- [x] Calidad (CRF) y límite de tamaño del vídeo.
+- [x] Audio del sistema por WASAPI loopback, con mezcla opcional del micrófono.
+- [x] Suite completa del backend en verde y build del frontend correcto.

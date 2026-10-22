@@ -375,6 +375,10 @@ export function ScreenCaptureOverlay() {
         fps: preferences.fps,
         audioDevice: preferences.audioDevice,
         outputFolder,
+        encoder: preferences.encoder,
+        quality: preferences.quality,
+        maxHeight: preferences.maxHeight,
+        systemAudio: preferences.systemAudio,
       });
       await handleCancel();
     } catch (err) {

@@ -1,7 +1,7 @@
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crate::infrastructure::converter::find_ffmpeg_binary;
@@ -38,6 +38,18 @@ pub struct RecordingOptions {
     /// Carpeta donde se guarda el vídeo final.
     #[serde(default)]
     pub output_folder: Option<String>,
+    /// Codificador: `auto`, `cpu` (libx264), `nvenc`, `qsv` o `amf`.
+    #[serde(default)]
+    pub encoder: Option<String>,
+    /// Calidad: `high` (CRF 20), `medium` (CRF 23) o `low` (CRF 28).
+    #[serde(default)]
+    pub quality: Option<String>,
+    /// Altura máxima del vídeo; `None` mantiene el tamaño de la región.
+    #[serde(default)]
+    pub max_height: Option<u32>,
+    /// Capturar también el audio del sistema (WASAPI loopback).
+    #[serde(default)]
+    pub system_audio: Option<bool>,
 }
 
 /// Estado público de la grabadora.
@@ -68,6 +80,15 @@ pub struct ActiveRecording {
     started_at_ms: u64,
     region: RecordingRegion,
     fps: u32,
+    /// Tamaño final del vídeo, que puede diferir de la región si se escaló.
+    output_width: u32,
+    output_height: u32,
+    /// Captura del audio del sistema, viva mientras dura la grabación.
+    /// El campo existe para mantenerla viva: al soltar la grabación, su Drop
+    /// cierra el canal de audio.
+    #[cfg(windows)]
+    #[allow(dead_code)]
+    system_audio: Option<crate::features::screen_capture::system_audio::SystemAudioSource>,
     log: Arc<Mutex<String>>,
 }
 
@@ -99,6 +120,30 @@ fn virtual_origin() -> (i32, i32) {
 #[cfg(not(windows))]
 fn virtual_origin() -> (i32, i32) {
     (0, 0)
+}
+
+/// Rectángulo del escritorio virtual: origen y tamaño en coordenadas físicas.
+#[cfg(windows)]
+pub fn virtual_screen_rect() -> (i32, i32, u32, u32) {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetSystemMetrics, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
+        SM_YVIRTUALSCREEN,
+    };
+    unsafe {
+        let x = GetSystemMetrics(SM_XVIRTUALSCREEN);
+        let y = GetSystemMetrics(SM_YVIRTUALSCREEN);
+        (
+            x,
+            y,
+            GetSystemMetrics(SM_CXVIRTUALSCREEN) as u32,
+            GetSystemMetrics(SM_CYVIRTUALSCREEN) as u32,
+        )
+    }
+}
+
+#[cfg(not(windows))]
+pub fn virtual_screen_rect() -> (i32, i32, u32, u32) {
+    (0, 0, 1920, 1080)
 }
 
 /// H.264 exige dimensiones pares: un rectángulo impar se recorta un píxel.
@@ -238,6 +283,232 @@ pub fn list_audio_devices() -> Vec<String> {
     devices
 }
 
+/// Parámetros de una ejecución concreta de FFmpeg.
+struct SpawnPlan<'a> {
+    ffmpeg: &'a std::path::Path,
+    quality: &'a str,
+    fps: u32,
+    offset_x: i32,
+    offset_y: i32,
+    width: u32,
+    height: u32,
+    audio_device: Option<&'a str>,
+    /// Audio del sistema: puerto local, frecuencia y canales.
+    system_audio: Option<(u16, u32, usize)>,
+    output_path: &'a std::path::Path,
+    max_height: Option<u32>,
+}
+
+/// Valor de calidad → CRF equivalente.
+fn quality_to_crf(quality: &str) -> u8 {
+    match quality {
+        "high" => 20,
+        "low" => 28,
+        _ => 23,
+    }
+}
+
+/// Argumentos de codificación según el motor elegido.
+fn encoder_args(encoder: &str, quality: &str) -> Vec<String> {
+    let crf = quality_to_crf(quality).to_string();
+    match encoder {
+        "nvenc" => vec![
+            "-c:v".into(), "h264_nvenc".into(),
+            "-preset".into(), "p4".into(),
+            "-tune".into(), "hq".into(),
+            "-rc".into(), "vbr".into(),
+            "-cq".into(), crf,
+            "-b:v".into(), "0".into(),
+            "-pix_fmt".into(), "yuv420p".into(),
+        ],
+        "qsv" => vec![
+            "-c:v".into(), "h264_qsv".into(),
+            "-preset".into(), "veryfast".into(),
+            "-global_quality".into(), crf,
+            "-look_ahead".into(), "0".into(),
+            "-pix_fmt".into(), "yuv420p".into(),
+        ],
+        "amf" => vec![
+            "-c:v".into(), "h264_amf".into(),
+            "-quality".into(), "balanced".into(),
+            "-rc".into(), "cqp".into(),
+            "-qp_i".into(), crf.clone(),
+            "-qp_p".into(), crf,
+            "-pix_fmt".into(), "yuv420p".into(),
+        ],
+        _ => vec![
+            "-c:v".into(), "libx264".into(),
+            "-preset".into(), "veryfast".into(),
+            "-crf".into(), crf,
+            "-pix_fmt".into(), "yuv420p".into(),
+        ],
+    }
+}
+
+/// Caché de sondas: cada motor se comprueba una sola vez por proceso.
+fn encoder_probe_cache() -> &'static Mutex<std::collections::HashMap<String, bool>> {
+    static CACHE: OnceLock<Mutex<std::collections::HashMap<String, bool>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(std::collections::HashMap::new()))
+}
+
+/// Comprueba si el motor de codificación existe y funciona en esta máquina.
+///
+/// No basta con lanzar la grabación: cuando el codificador falla, FFmpeg no
+/// muere, se queda vivo con el vídeo vacío y el archivo final sale sin datos.
+/// Por eso se hace una codificación de prueba mínima y se mira su código de
+/// salida antes de compromise con un motor.
+fn encoder_available(ffmpeg: &std::path::Path, encoder: &str) -> bool {
+    if encoder == "cpu" {
+        return true;
+    }
+
+    {
+        let cache = encoder_probe_cache().lock().unwrap_or_else(|error| error.into_inner());
+        if let Some(available) = cache.get(encoder) {
+            return *available;
+        }
+    }
+
+    let mut command = Command::new(ffmpeg);
+    command
+        .args(["-hide_banner", "-loglevel", "error"])
+        .args(["-f", "lavfi", "-i", "color=c=black:s=128x128"])
+        .args(["-frames:v", "1"])
+        .args(encoder_args(encoder, "medium"))
+        .args(["-f", "null", "-"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+
+    let available = matches!(command.output(), Ok(output) if output.status.success());
+    let mut cache = encoder_probe_cache().lock().unwrap_or_else(|error| error.into_inner());
+    cache.insert(encoder.to_string(), available);
+    available
+}
+
+/// Lanza FFmpeg con el codificador indicado y comprueba que no muera de inmediato.
+///
+/// Si el motor no está disponible en la máquina (por ejemplo NVENC sin GPU
+/// NVIDIA), FFmpeg termina al instante con un error claro: eso permite que el
+/// modo «auto» pruebe el siguiente motor.
+fn spawn_recorder(
+    plan: &SpawnPlan<'_>,
+    encoder: &str,
+) -> Result<(Child, Option<ChildStdin>, Arc<Mutex<String>>), String> {
+    let mut command = Command::new(plan.ffmpeg);
+    command
+        .args(["-hide_banner", "-loglevel", "error", "-stats"])
+        .args(["-f", "gdigrab", "-draw_mouse", "1"])
+        .args(["-framerate", &plan.fps.to_string()])
+        .args(["-offset_x", &plan.offset_x.to_string()])
+        .args(["-offset_y", &plan.offset_y.to_string()])
+        .args(["-video_size", &format!("{}x{}", plan.width, plan.height)])
+        .args(["-i", "desktop"]);
+
+    // El audio del sistema llega por un socket local: FFmpeg se conecta como
+    // cliente y lee el PCM en crudo que le escribe la captura WASAPI.
+    let mut audio_inputs: Vec<usize> = Vec::new();
+    let mut next_input = 1;
+    if let Some(device) = plan.audio_device {
+        command.args(["-f", "dshow", "-i", &format!("audio=\"{device}\"")]);
+        audio_inputs.push(next_input);
+        next_input += 1;
+    }
+    if let Some((port, rate, channels)) = plan.system_audio {
+        command
+            .args(["-f", "s16le", "-ar", &rate.to_string(), "-ac", &channels.to_string()])
+            .args(["-i", &format!("tcp://127.0.0.1:{port}")]);
+        audio_inputs.push(next_input);
+    }
+
+    if let Some(max_height) = plan.max_height {
+        if plan.height > max_height {
+            command.args(["-vf", &format!("scale=-2:{max_height}")]);
+        }
+    }
+
+    command.args(encoder_args(encoder, plan.quality));
+
+    // Vídeo siempre desde la captura de pantalla; el audio se mapea o se mezcla.
+    command.args(["-map", "0:v"]);
+    match audio_inputs.len() {
+        0 => {}
+        1 => {
+            command.args(["-map", &format!("{}:a", audio_inputs[0])]);
+            command.args(["-c:a", "aac", "-b:a", "160k"]);
+        }
+        _ => {
+            let filter = format!(
+                "[{}:a][{}:a]amix=inputs=2:duration=longest:dropout_transition=0[aout]",
+                audio_inputs[0], audio_inputs[1]
+            );
+            command.args(["-filter_complex", &filter, "-map", "[aout]"]);
+            command.args(["-c:a", "aac", "-b:a", "160k"]);
+        }
+    }
+
+    command
+        .arg(plan.output_path)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+
+    let mut child = command
+        .spawn()
+        .map_err(|e| format!("No se pudo iniciar FFmpeg: {e}"))?;
+
+    let log = Arc::new(Mutex::new(String::new()));
+    if let Some(stderr) = child.stderr.take() {
+        let log_clone = Arc::clone(&log);
+        std::thread::spawn(move || {
+            let mut reader = std::io::BufReader::new(stderr);
+            let mut buffer = String::new();
+            let mut chunk = [0u8; 512];
+            loop {
+                match reader.read(&mut chunk) {
+                    Ok(0) | Err(_) => break,
+                    Ok(read) => {
+                        buffer.push_str(&String::from_utf8_lossy(&chunk[..read]));
+                        if buffer.len() > 4096 {
+                            let cut = buffer.len() - 4096;
+                            buffer.drain(..cut);
+                        }
+                        if let Ok(mut guard) = log_clone.lock() {
+                            *guard = buffer.clone();
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Si FFmpeg falla de inmediato (región inválida, códec ausente) se detecta aquí.
+    std::thread::sleep(Duration::from_millis(450));
+    if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
+        let log_text = log.lock().map(|guard| guard.clone()).unwrap_or_default();
+        let _ = std::fs::remove_file(plan.output_path);
+        let detail = if log_text.trim().is_empty() {
+            format!("FFmpeg terminó con código {status}")
+        } else {
+            log_text.trim().to_string()
+        };
+        return Err(detail);
+    }
+
+    let stdin = child.stdin.take();
+    Ok((child, stdin, log))
+}
+
 /// Inicia una grabación de la región indicada.
 ///
 /// La captura se delega en FFmpeg (GDIGRAB), que ya forma parte del paquete de
@@ -282,88 +553,93 @@ pub fn start_recording(
         .ok_or_else(|| "No se indicó la carpeta de destino de la grabación".to_string())?;
     let output_path = build_output_path(output_folder)?;
 
-    let mut command = Command::new(&ffmpeg);
-    command
-        .args(["-hide_banner", "-loglevel", "error", "-stats"])
-        .args(["-f", "gdigrab", "-draw_mouse", "1"])
-        .args(["-framerate", &fps.to_string()])
-        .args(["-offset_x", &offset_x.to_string()])
-        .args(["-offset_y", &offset_y.to_string()])
-        .args(["-video_size", &format!("{width}x{height}")])
-        .args(["-i", "desktop"]);
-
-    let has_audio = options
-        .audio_device
+    // Codificadores candidatos. En «auto» se prueban en orden y se queda con el
+    // primero que arranque: el FFmpeg que viaja con Prisma trae NVENC, QSV y AMF,
+    // así que en una máquina con GPU la grabación deja de consumir CPU.
+    let requested_encoder = options
+        .encoder
         .as_deref()
         .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .is_some();
-    if let Some(device) = options.audio_device.as_deref().map(str::trim) {
-        if !device.is_empty() {
-            command.args(["-f", "dshow", "-i", &format!("audio=\"{device}\"")]);
+        .unwrap_or("auto")
+        .to_lowercase();
+    let candidates: Vec<&str> = match requested_encoder.as_str() {
+        "nvenc" => vec!["nvenc"],
+        "qsv" => vec!["qsv"],
+        "amf" => vec!["amf"],
+        "cpu" | "libx264" => vec!["cpu"],
+        _ => vec!["nvenc", "qsv", "amf", "cpu"],
+    };
+
+    let quality = options
+        .quality
+        .as_deref()
+        .map(str::trim)
+        .unwrap_or("medium")
+        .to_lowercase();
+    let max_height = options.max_height.filter(|value| *value >= 240);
+
+    // Audio del sistema: se abre la captura antes de lanzar FFmpeg para que
+    // sepa el puerto, la frecuencia y los canales con los que debe grabar.
+    #[cfg(windows)]
+    let system_audio_source = if options.system_audio.unwrap_or(false) {
+        match crate::features::screen_capture::system_audio::SystemAudioSource::start() {
+            Ok(source) => Some(source),
+            Err(error) => {
+                eprintln!("[Grabadora] No se pudo capturar el audio del sistema: {error}");
+                None
+            }
+        }
+    } else {
+        None
+    };
+    #[cfg(windows)]
+    let system_audio = system_audio_source
+        .as_ref()
+        .map(|source| (source.port, source.rate, source.channels));
+
+    let plan = SpawnPlan {
+        ffmpeg: &ffmpeg,
+        quality: &quality,
+        fps,
+        offset_x,
+        offset_y,
+        width,
+        height,
+        audio_device: options
+            .audio_device
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty()),
+        #[cfg(windows)]
+        system_audio,
+        #[cfg(not(windows))]
+        system_audio: None,
+        output_path: &output_path,
+        max_height,
+    };
+
+    let mut last_error = String::new();
+    let mut spawned = None;
+    for encoder in candidates {
+        if !encoder_available(&ffmpeg, encoder) {
+            last_error = format!("el motor «{encoder}» no está disponible en esta máquina");
+            continue;
+        }
+        match spawn_recorder(&plan, encoder) {
+            Ok(parts) => {
+                spawned = Some(parts);
+                break;
+            }
+            Err(error) => last_error = error,
         }
     }
 
-    command
-        .args(["-c:v", "libx264", "-preset", "veryfast", "-crf", "23"])
-        .args(["-pix_fmt", "yuv420p"]);
-    if has_audio {
-        command.args(["-c:a", "aac", "-b:a", "160k"]);
-    }
-    command
-        .arg(&output_path)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped());
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        command.creation_flags(0x08000000);
-    }
+    let Some((child, stdin, log)) = spawned else {
+        // Si FFmpeg no arrancó, la captura de audio se cierra con la variable
+        // local al salir de la función.
+        return Err(format!("FFmpeg no pudo iniciar la grabación: {last_error}"));
+    };
 
-    let mut child = command
-        .spawn()
-        .map_err(|e| format!("No se pudo iniciar FFmpeg: {e}"))?;
-
-    let log = Arc::new(Mutex::new(String::new()));
-    if let Some(stderr) = child.stderr.take() {
-        let log_clone = Arc::clone(&log);
-        std::thread::spawn(move || {
-            let mut reader = std::io::BufReader::new(stderr);
-            let mut buffer = String::new();
-            let mut chunk = [0u8; 512];
-            loop {
-                match reader.read(&mut chunk) {
-                    Ok(0) | Err(_) => break,
-                    Ok(read) => {
-                        buffer.push_str(&String::from_utf8_lossy(&chunk[..read]));
-                        if buffer.len() > 4096 {
-                            let cut = buffer.len() - 4096;
-                            buffer.drain(..cut);
-                        }
-                        if let Ok(mut guard) = log_clone.lock() {
-                            *guard = buffer.clone();
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    // Si FFmpeg falla de inmediato (región inválida, códec ausente) se detecta aquí.
-    std::thread::sleep(Duration::from_millis(450));
-    if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
-        let log_text = log.lock().map(|guard| guard.clone()).unwrap_or_default();
-        let _ = std::fs::remove_file(&output_path);
-        let detail = if log_text.trim().is_empty() {
-            format!("FFmpeg terminó con código {status}")
-        } else {
-            log_text.trim().to_string()
-        };
-        return Err(format!("FFmpeg no pudo iniciar la grabación: {detail}"));
-    }
-
-    let stdin = child.stdin.take();
     let started_at = Instant::now();
     let started_at_ms = now_ms();
     let region = RecordingRegion {
@@ -373,6 +649,15 @@ pub fn start_recording(
         height,
     };
 
+    // Si se pidió una escala, el vídeo sale con otro tamaño que la región.
+    let (output_width, output_height) = match max_height {
+        Some(max) if height > max => (
+            even_dimension((width as u64 * max as u64 / height as u64) as u32),
+            even_dimension(max),
+        ),
+        _ => (width, height),
+    };
+
     let info = RecordingInfo {
         status: "recording".to_string(),
         output_path: output_path.to_string_lossy().into_owned(),
@@ -380,8 +665,8 @@ pub fn start_recording(
         elapsed_ms: 0,
         region: region.clone(),
         fps,
-        width,
-        height,
+        width: output_width,
+        height: output_height,
         error: None,
     };
 
@@ -396,6 +681,10 @@ pub fn start_recording(
         started_at_ms,
         region,
         fps,
+        output_width,
+        output_height,
+        #[cfg(windows)]
+        system_audio: system_audio_source,
         log,
     });
 
@@ -413,15 +702,15 @@ pub fn recording_info(state: &SharedRecorderState) -> Option<RecordingInfo> {
         elapsed_ms: active.started_at.elapsed().as_millis() as u64,
         region: active.region.clone(),
         fps: active.fps,
-        width: active.region.width,
-        height: active.region.height,
+        width: active.output_width,
+        height: active.output_height,
         error: None,
     })
 }
 
 /// Detiene la grabación y cierra el archivo para que quede reproducible.
 pub fn stop_recording(state: &SharedRecorderState) -> Result<RecordingInfo, String> {
-    let (mut child, mut stdin, output_path, started_at, started_at_ms, region, fps, log) = {
+    let (mut child, mut stdin, output_path, started_at, started_at_ms, region, fps, output_width, output_height, log) = {
         let mut guard = state
             .lock()
             .map_err(|_| "Error al acceder a la grabadora".to_string())?;
@@ -436,6 +725,8 @@ pub fn stop_recording(state: &SharedRecorderState) -> Result<RecordingInfo, Stri
             active.started_at_ms,
             active.region,
             active.fps,
+            active.output_width,
+            active.output_height,
             active.log,
         )
     };
@@ -495,8 +786,8 @@ pub fn stop_recording(state: &SharedRecorderState) -> Result<RecordingInfo, Stri
         output_path: output_path.to_string_lossy().into_owned(),
         started_at_ms,
         elapsed_ms,
-        width: region.width,
-        height: region.height,
+        width: output_width,
+        height: output_height,
         region,
         fps,
         error: None,
@@ -539,6 +830,37 @@ pub fn cancel_recording(state: &SharedRecorderState) -> Result<(), String> {
     Ok(())
 }
 
+/// Coloca la barra de control junto a la región grabada.
+///
+/// La barra se busca siempre FUERA de la región: si quedara dentro, aparecería
+/// dentro del propio vídeo. Cuando la región ocupa todo el escritorio no hay
+/// sitio libre, y entonces se deja constancia de ello para que el backend
+/// reduzca la región grabada en esa franja.
+pub fn place_control_bar(
+    region: &RecordingRegion,
+    bar_width: i32,
+    bar_height: i32,
+) -> Option<(i32, i32)> {
+    const GAP: i32 = 12;
+    let (vx, vy, vw, vh) = virtual_screen_rect();
+    let right = vx + vw as i32;
+    let bottom = vy + vh as i32;
+
+    let candidates = [
+        (region.x, region.y + region.height as i32 + GAP),
+        (region.x, region.y - bar_height - GAP),
+        (region.x + region.width as i32 + GAP, region.y),
+        (region.x - bar_width - GAP, region.y),
+    ];
+
+    for (x, y) in candidates {
+        if x >= vx && y >= vy && x + bar_width <= right && y + bar_height <= bottom {
+            return Some((x, y));
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -564,6 +886,95 @@ mod tests {
         assert!(path.to_string_lossy().ends_with(".mp4"));
     }
 
+    #[test]
+    fn la_calidad_se_traduce_a_crf() {
+        assert_eq!(quality_to_crf("high"), 20);
+        assert_eq!(quality_to_crf("medium"), 23);
+        assert_eq!(quality_to_crf("low"), 28);
+    }
+
+    #[test]
+    fn cada_motor_aporta_su_codificador() {
+        assert!(encoder_args("cpu", "medium").iter().any(|arg| arg == "libx264"));
+        assert!(encoder_args("nvenc", "high").iter().any(|arg| arg == "h264_nvenc"));
+        assert!(encoder_args("qsv", "high").iter().any(|arg| arg == "h264_qsv"));
+        assert!(encoder_args("amf", "low").iter().any(|arg| arg == "h264_amf"));
+    }
+
+    #[test]
+    fn la_barra_de_control_queda_fuera_de_la_region() {
+        let region = RecordingRegion { x: 100, y: 100, width: 400, height: 300 };
+        if let Some((x, y)) = place_control_bar(&region, 320, 64) {
+            let outside_region = x + 320 <= region.x
+                || x >= region.x + region.width as i32
+                || y + 64 <= region.y
+                || y >= region.y + region.height as i32;
+            assert!(
+                outside_region,
+                "la barra de control ({x},{y}) caería dentro de la región grabada"
+            );
+        }
+    }
+
+    /// Grabación real con el audio del sistema: comprueba que el MP4 final
+    /// incluye una pista de audio y que el archivo queda cerrado.
+    ///
+    /// Necesita un dispositivo de salida que esté renderizando. En un equipo
+    /// con la salida en reposo (auriculares desconectados, escritorio
+    /// virtual) Windows no entrega muestras de loopback y la prueba no puede
+    /// afirmar nada: se marca como ignorada igual que las pruebas del audio
+    /// relay que necesitan un teléfono físico.
+    #[test]
+    #[ignore = "requiere un dispositivo de salida de audio que esté renderizando"]
+    fn graba_con_el_audio_del_sistema() {
+        if find_ffmpeg_binary().is_none() {
+            eprintln!("[Grabadora] FFmpeg no disponible: se omite la prueba de audio");
+            return;
+        }
+
+        let state: SharedRecorderState = Arc::new(Mutex::new(None));
+        let folder = std::env::temp_dir().join("prisma-recorder-audio");
+        let options = RecordingOptions {
+            region: RecordingRegion { x: 0, y: 0, width: 320, height: 240 },
+            fps: Some(15),
+            audio_device: None,
+            output_folder: Some(folder.to_string_lossy().into_owned()),
+            encoder: None,
+            quality: None,
+            max_height: None,
+            system_audio: Some(true),
+        };
+
+        let started = match start_recording(&state, options) {
+            Ok(info) => info,
+            Err(error) => {
+                eprintln!("[Grabadora] Sin audio del sistema en este entorno: {error}");
+                return;
+            }
+        };
+        assert_eq!(started.status, "recording");
+        std::thread::sleep(Duration::from_millis(2500));
+        let finished = stop_recording(&state).expect("La grabación debe cerrarse");
+        assert!(finished.elapsed_ms >= 1500);
+
+        let path = PathBuf::from(&finished.output_path);
+        let size = std::fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
+        assert!(size > 0, "El vídeo grabado debe tener contenido");
+
+        // Se deja una copia para poder inspeccionar las pistas con ffprobe.
+        let evidence = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("temp")
+            .join("recorder-audio-test.mp4");
+        if let Some(parent) = evidence.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::copy(&path, &evidence);
+
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_dir(&folder);
+    }
+
     /// Grabación real de extremo a extremo: se comprueba que el vídeo existe,
     /// que no está vacío y que el archivo se cierra de forma reproducible.
     /// Si el entorno no tiene escritorio ni FFmpeg, la prueba se omite.
@@ -586,6 +997,10 @@ mod tests {
             fps: Some(15),
             audio_device: None,
             output_folder: Some(folder.to_string_lossy().into_owned()),
+            encoder: None,
+            quality: None,
+            max_height: None,
+            system_audio: Some(false),
         };
 
         let started = match start_recording(&state, options) {

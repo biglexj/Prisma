@@ -9,6 +9,19 @@
 - **Pruebas del frontend**: `bun test tests/` — 61 pruebas superadas, 0 fallidas, incluidos los archivos nuevos del enrutador de arrastre y de las preferencias de grabación.
 - **Compilación del backend**: `cargo check --lib` sin errores; se añadió el rasgo `Win32_System_SystemInformation` para leer la hora local del sistema con la que se nombra el vídeo.
 
+## Segunda tanda: barra flotante, atajo de detiene, codificador de hardware y audio del sistema
+
+- **Barra flotante de control** (`screen_capture_recorder`): ventana propia, siempre encima, 320×64, que aparece al grabar con el cronómetro y el botón «Detener». Se coloca **fuera de la región grabada** (debajo, arriba, a la derecha o a la izquierda, en ese orden) para no aparecer en el vídeo; si la región ocupa todo el escritorio se reserva una franja inferior de 76 px y se graba el resto. Prueba unitaria que comprueba que la posición nunca cae dentro de la región.
+- **Atajo global para detener**: `Ctrl+Shift+R`, registrado al arrancar junto al atajo de captura. Cierra el archivo con la misma vía que el botón, así que el MP4 queda reproducible.
+- **Codificador de hardware**: selector Automático / CPU / NVIDIA / Intel / AMD. El FFmpeg que ya viaja con Prisma trae `h264_nvenc`, `h264_qsv` y `h264_amf`. En modo automático se prueban en orden hasta que uno arranca. **Comprobado en esta máquina**: NVENC y QSV no están disponibles (`Cannot load nvcuda.dll`), AMF sí — una grabación real con `h264_amf` produjo H.264 de 640×360, 85 fotogramas y 3,000 s.
+- **Sonda de motores**: FFmpeg no muere cuando el codificador falla, se queda vivo con el vídeo vacío y el archivo sale sin datos. Por eso cada motor se prueba antes con una codificación de un fotograma; el resultado se cachea por proceso. Esta lógica la detectó una prueba real: la primera versión creía que NVENC había arrancado y dejó el MP4 vacío.
+- **Calidad y tamaño**: presets Alta/Media/Baja (CRF 20/23/28) y límite de altura (Original / 1080p / 720p).
+- **Audio del sistema** por WASAPI loopback: se captura lo que suena en el ordenador y se entrega a FFmpeg por un socket local en PCM. Si además se elige un micrófono, ambos se mezclan con `amix`.
+  - En esta máquina **no se pudo verificar con sonido**: el capturador de loopback del propio audio relay de Prisma (código ya en producción) tampoco obtiene muestras, así que el dispositivo de salida no está renderizando. El MP4 resultante sale sin pista de audio y el resto de la grabación funciona con normalidad.
+  - Las dos pruebas que dependen de muestras reales quedan marcadas como ignoradas con el motivo, igual que las pruebas del audio relay que necesitan un teléfono físico.
+  - Un fallo real encontrado y corregido por el camino: el cliente COM se usaba después de cerrar su apartamento. Ahora el apartamento vive con el cliente y la lectura del formato se hace en un hilo aislado.
+- **Suite completa del backend**: 79 pruebas superadas, 0 fallidas, 7 ignoradas. `cargo test --lib` sin hilos ni fallos. `tsc --noEmit` limpio, 61 pruebas del frontend en verde y `bun run build` correcto.
+
 ## Pendiente de comprobación visual en la aplicación
 
 - El conmutador «Imagen | Vídeo», el panel flotante de grabación y la zona de recepción superior se han validado por compilación, tipos, pruebas de lógica y **comprobación visual servida por Vite** (ver arriba). Queda pendiente la revisión de Biglex dentro de la aplicación de escritorio: grabación completa con el overlay, parada, guardado y envío a Super Galería.

@@ -3,6 +3,8 @@ pub mod diagnostics;
 pub mod preferences;
 pub mod recorder;
 pub mod session;
+#[cfg(windows)]
+pub mod system_audio;
 pub mod windows;
 
 pub use preferences::*;
