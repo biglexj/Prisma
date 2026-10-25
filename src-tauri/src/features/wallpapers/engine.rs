@@ -29,9 +29,8 @@ impl VideoWallpaperEngine {
             // Prefetching masivo de playlist y caché de demuxer para pase fluido sin corte a negro
             let _ = initializer.set_property("prefetch-playlist", "yes");
             let _ = initializer.set_property("cache", "yes");
-            let _ = initializer.set_property("demuxer-max-bytes", "400M");
-            let _ = initializer.set_property("demuxer-readahead-secs", "20");
-            let _ = initializer.set_property("loop-playlist", "inf");
+            let _ = initializer.set_property("demuxer-readahead-secs", 5.0);
+            let _ = initializer.set_property("reset-on-next-file", "pause");
             Ok(())
         })
         .map_err(|e| format!("Error al inicializar sesión libmpv de fondo: {e:?}"))?;
@@ -47,60 +46,22 @@ impl VideoWallpaperEngine {
         Err("Soporte libmpv no compilado en esta versión".to_string())
     }
 
-    pub fn load_playlist(&mut self, videos: &[String], start_index: usize, fit: &str) -> Result<(), String> {
+    pub fn is_idle(&self) -> bool {
         #[cfg(feature = "mpv")]
         {
-            if videos.is_empty() {
-                return Ok(());
-            }
-
-            let panscan = if fit == "contain" { 0.0 } else { 1.0 };
-            let _ = self.mpv.set_property("panscan", panscan);
-
-            if videos.len() == 1 {
-                let _ = self.mpv.set_property("loop-file", "inf");
-                let _ = self.mpv.set_property("loop-playlist", "no");
-                let path = videos[0].strip_prefix(r"\\?\").unwrap_or(&videos[0]);
-                self.mpv
-                    .command("loadfile", &[path, "replace"])
-                    .map_err(|e| format!("Error cargando vídeo de fondo: {e:?}"))?;
-                self.current_path = Some(path.to_string());
-            } else {
-                let _ = self.mpv.set_property("loop-file", "no");
-                let _ = self.mpv.set_property("loop-playlist", "inf");
-
-                let first = videos[0].strip_prefix(r"\\?\").unwrap_or(&videos[0]);
-                self.mpv
-                    .command("loadfile", &[first, "replace"])
-                    .map_err(|e| format!("Error cargando primer vídeo de lista: {e:?}"))?;
-
-                for vid in &videos[1..] {
-                    let path = vid.strip_prefix(r"\\?\").unwrap_or(vid);
-                    let _ = self.mpv.command("loadfile", &[path, "append"]);
-                }
-
-                if start_index > 0 && start_index < videos.len() {
-                    let idx_str = start_index.to_string();
-                    let _ = self.mpv.command("playlist-play-index", &[&idx_str]);
-                }
-
-                let active_path = videos.get(start_index).unwrap_or(&videos[0]);
-                let clean = active_path.strip_prefix(r"\\?\").unwrap_or(active_path);
-                self.current_path = Some(clean.to_string());
-            }
-
-            let _ = self.mpv.set_property("pause", false);
-            Ok(())
+            self.mpv.get_property::<bool>("idle-active").unwrap_or(false)
         }
         #[cfg(not(feature = "mpv"))]
-        {
-            let _ = (videos, start_index, fit);
-            Err("libmpv desactivado".to_string())
-        }
+        false
     }
 
-    #[allow(dead_code)]
-    pub fn load_video(&mut self, raw_path: &str, loop_single: bool, fit: &str) -> Result<(), String> {
+    pub fn play_with_prefetch(
+        &mut self,
+        raw_path: &str,
+        next_path: Option<&str>,
+        loop_single: bool,
+        fit: &str,
+    ) -> Result<(), String> {
         #[cfg(feature = "mpv")]
         {
             let path = raw_path.strip_prefix(r"\\?\").unwrap_or(raw_path);
@@ -113,54 +74,44 @@ impl VideoWallpaperEngine {
                 .map_err(|e| format!("Error cargando vídeo de fondo: {e:?}"))?;
             let _ = self.mpv.set_property("pause", false);
             self.current_path = Some(path.to_string());
+
+            if let Some(next) = next_path {
+                let clean_next = next.strip_prefix(r"\\?\").unwrap_or(next);
+                let _ = self.mpv.command("loadfile", &[clean_next, "append"]);
+            }
             Ok(())
         }
         #[cfg(not(feature = "mpv"))]
         {
-            let _ = (raw_path, loop_single, fit);
+            let _ = (raw_path, next_path, loop_single, fit);
             Err("libmpv desactivado".to_string())
         }
     }
 
-    pub fn next(&mut self) -> Result<(), String> {
+    pub fn queue_next(&mut self, raw_path: &str) -> Result<(), String> {
         #[cfg(feature = "mpv")]
         {
-            self.mpv
-                .command("playlist-next", &[])
-                .map_err(|e| format!("Error avanzando en lista mpv: {e:?}"))?;
+            let path = raw_path.strip_prefix(r"\\?\").unwrap_or(raw_path);
+            let _ = self.mpv.command("loadfile", &[path, "append"]);
             Ok(())
         }
         #[cfg(not(feature = "mpv"))]
-        Ok(())
+        {
+            let _ = raw_path;
+            Ok(())
+        }
     }
 
-    pub fn prev(&mut self) -> Result<(), String> {
+    #[allow(dead_code)]
+    pub fn is_eof(&self) -> bool {
         #[cfg(feature = "mpv")]
         {
-            self.mpv
-                .command("playlist-prev", &[])
-                .map_err(|e| format!("Error retrocediendo en lista mpv: {e:?}"))?;
-            Ok(())
+            let eof = self.mpv.get_property::<bool>("eof-reached").unwrap_or(false);
+            let idle = self.mpv.get_property::<bool>("idle-active").unwrap_or(false);
+            eof || (idle && self.current_path.is_some())
         }
         #[cfg(not(feature = "mpv"))]
-        Ok(())
-    }
-
-    pub fn play_index(&mut self, index: usize) -> Result<(), String> {
-        #[cfg(feature = "mpv")]
-        {
-            let idx_str = index.to_string();
-            self.mpv
-                .command("playlist-play-index", &[&idx_str])
-                .map_err(|e| format!("Error saltando a índice de lista {index}: {e:?}"))?;
-            let _ = self.mpv.set_property("pause", false);
-            Ok(())
-        }
-        #[cfg(not(feature = "mpv"))]
-        {
-            let _ = index;
-            Ok(())
-        }
+        false
     }
 
     pub fn pause(&mut self) -> Result<(), String> {

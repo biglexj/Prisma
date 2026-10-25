@@ -156,29 +156,23 @@ pub fn load_video_thumbnail_data_url(path: &Path) -> Option<String> {
         let factory_result: windows::core::Result<IShellItemImageFactory> =
             SHCreateItemFromParsingName(&hstring_path, None);
 
-        let factory = match factory_result {
-            Ok(f) => f,
-            Err(_) => {
-                if should_uninit {
-                    CoUninitialize();
+        let result = if let Ok(factory) = factory_result {
+            let size = SIZE { cx: 360, cy: 240 };
+            let hbitmap_result = factory
+                .GetImage(size, SIIGBF_BIGGERSIZEOK)
+                .or_else(|_| factory.GetImage(size, SIIGBF_RESIZETOFIT))
+                .or_else(|_| factory.GetImage(size, SIIGBF_THUMBNAILONLY));
+
+            match hbitmap_result {
+                Ok(hbitmap) => {
+                    let res = convert_hbitmap_to_jpeg_data_url(hbitmap.0 as _);
+                    let _ = DeleteObject(hbitmap);
+                    res
                 }
-                return None;
+                Err(_) => None,
             }
-        };
-
-        let size = SIZE { cx: 360, cy: 240 };
-        let hbitmap_result = factory
-            .GetImage(size, SIIGBF_BIGGERSIZEOK)
-            .or_else(|_| factory.GetImage(size, SIIGBF_RESIZETOFIT))
-            .or_else(|_| factory.GetImage(size, SIIGBF_THUMBNAILONLY));
-
-        let result = match hbitmap_result {
-            Ok(hbitmap) => {
-                let res = convert_hbitmap_to_jpeg_data_url(hbitmap.0 as _);
-                let _ = DeleteObject(hbitmap);
-                res
-            }
-            Err(_) => None,
+        } else {
+            None
         };
 
         if should_uninit {
@@ -380,6 +374,26 @@ mod tests {
         let res = load_video_thumbnail_data_url(test_path);
         println!("Video thumbnail result length: {:?}", res.as_ref().map(|s| s.len()));
         assert!(res.is_some(), "Video thumbnail was successfully generated");
+    }
+
+    #[test]
+    fn test_load_lumi_video_thumbnails() {
+        use super::load_video_thumbnail_data_url;
+        use std::path::Path;
+
+        let path3 = Path::new(r"D:\Vídeos\Assets\05_Gaming & 3D\Lumi N0va\03. Who’s up for a Snowball Fight With Lumi.mkv");
+        if path3.exists() {
+            let res = load_video_thumbnail_data_url(path3);
+            println!("03.mkv thumbnail result: {:?}", res.as_ref().map(|s| s.len()));
+            assert!(res.is_some(), "Thumbnail for 03.mkv generated successfully");
+        }
+
+        let path5 = Path::new(r"D:\Vídeos\Assets\05_Gaming & 3D\Lumi N0va\05. Nothin Sa s S rin Like Bubbles and Blossoms.mp4");
+        if path5.exists() {
+            let res = load_video_thumbnail_data_url(path5);
+            println!("05.mp4 thumbnail result: {:?}", res.as_ref().map(|s| s.len()));
+            assert!(res.is_some(), "Thumbnail for 05.mp4 generated successfully");
+        }
     }
 
     #[test]

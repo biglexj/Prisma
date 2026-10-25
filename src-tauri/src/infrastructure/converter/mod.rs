@@ -77,10 +77,26 @@ pub struct ConversionJob {
 fn media_binary(name: &str) -> Option<PathBuf> {
     let mut roots = Vec::new();
     if let Ok(exe) = std::env::current_exe() {
-        if let Some(parent) = exe.parent() { roots.push(parent.join("ffmpeg")); }
+        if let Some(parent) = exe.parent() {
+            roots.push(parent.join("ffmpeg"));
+            roots.push(parent.to_path_buf());
+        }
     }
     roots.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("vendor/ffmpeg"));
-    roots.into_iter().map(|root| root.join(format!("{name}.exe"))).find(|path| path.is_file())
+    if let Some(found) = roots.into_iter().map(|root| root.join(format!("{name}.exe"))).find(|path| path.is_file()) {
+        return Some(found);
+    }
+
+    if let Some(path_var) = std::env::var_os("PATH") {
+        for p in std::env::split_paths(&path_var) {
+            let candidate = p.join(format!("{name}.exe"));
+            if candidate.is_file() {
+                return Some(candidate);
+            }
+        }
+    }
+
+    None
 }
 
 pub fn find_ffmpeg_binary() -> Option<PathBuf> { media_binary("ffmpeg") }

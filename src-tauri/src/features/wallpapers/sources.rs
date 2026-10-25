@@ -347,12 +347,22 @@ impl SourceManager {
         self.current_video()
     }
 
+    #[allow(dead_code)]
     pub fn queue(&self) -> &[String] {
         &self.queue
     }
 
+    #[allow(dead_code)]
     pub fn current_index(&self) -> usize {
         self.current_index
+    }
+
+    pub fn peek_next(&self) -> Option<String> {
+        if self.queue.len() <= 1 {
+            return None;
+        }
+        let next_idx = (self.current_index + 1) % self.queue.len();
+        self.queue.get(next_idx).cloned()
     }
 }
 

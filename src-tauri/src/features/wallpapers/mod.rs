@@ -69,9 +69,10 @@ impl WallpaperController {
             return Ok(self.build_snapshot(&inner));
         }
 
-        if inner.source_manager.total_videos() == 0 {
-            return Err("No hay vídeos válidos en las carpetas activas de Fondos Vivos".to_string());
-        }
+        let video_path = inner
+            .source_manager
+            .current_video()
+            .ok_or_else(|| "No hay vídeos válidos en las carpetas activas de Fondos Vivos".to_string())?;
 
         // 1. Crear ventana nativa en el escritorio de Windows
         let win = DesktopWallpaperWindow::create()?;
@@ -79,14 +80,14 @@ impl WallpaperController {
 
         // 2. Inicializar motor libmpv apuntando al HWND
         let mut eng = VideoWallpaperEngine::new(wid)?;
+        let single = inner.source_manager.total_videos() == 1;
         let fit_str = match inner.source_manager.settings().fit {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
-        let queue = inner.source_manager.queue().to_vec();
-        let cur_idx = inner.source_manager.current_index();
+        let peek = inner.source_manager.peek_next();
 
-        eng.load_playlist(&queue, cur_idx, fit_str)?;
+        eng.play_with_prefetch(&video_path, peek.as_deref(), single, fit_str)?;
 
         inner.window = Some(win);
         inner.engine = Some(eng);
@@ -102,24 +103,22 @@ impl WallpaperController {
         let clean = clean_path_str(path);
         inner.source_manager.set_current_video(&clean);
 
+        let single = inner.source_manager.total_videos() == 1;
         let fit_str = match inner.source_manager.settings().fit {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
-        let queue = inner.source_manager.queue().to_vec();
-        let cur_idx = inner.source_manager.current_index();
+        let peek = inner.source_manager.peek_next();
 
         if inner.engine.is_none() || inner.window.is_none() {
             let win = DesktopWallpaperWindow::create()?;
             let wid = win.raw_handle();
             let mut eng = VideoWallpaperEngine::new(wid)?;
-            eng.load_playlist(&queue, cur_idx, fit_str)?;
+            eng.play_with_prefetch(&clean, peek.as_deref(), single, fit_str)?;
             inner.window = Some(win);
             inner.engine = Some(eng);
         } else if let Some(engine) = &mut inner.engine {
-            if engine.play_index(cur_idx).is_err() {
-                let _ = engine.load_playlist(&queue, cur_idx, fit_str);
-            }
+            engine.play_with_prefetch(&clean, peek.as_deref(), single, fit_str)?;
         }
 
         inner.is_paused = false;
@@ -148,19 +147,17 @@ impl WallpaperController {
 
     pub fn next(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
-        let _next_vid = inner.source_manager.advance_next();
-        let cur_idx = inner.source_manager.current_index();
-        let queue = inner.source_manager.queue().to_vec();
+        let next_vid = inner.source_manager.advance_next();
+        let single = inner.source_manager.total_videos() == 1;
         let fit_str = match inner.source_manager.settings().fit {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
+        let peek = inner.source_manager.peek_next();
         let is_paused = inner.is_paused;
 
-        if let Some(engine) = &mut inner.engine {
-            if engine.next().is_err() {
-                let _ = engine.load_playlist(&queue, cur_idx, fit_str);
-            }
+        if let (Some(vid), Some(engine)) = (next_vid, &mut inner.engine) {
+            let _ = engine.play_with_prefetch(&vid, peek.as_deref(), single, fit_str);
             if is_paused {
                 let _ = engine.pause();
             }
@@ -170,19 +167,17 @@ impl WallpaperController {
 
     pub fn prev(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
-        let _prev_vid = inner.source_manager.advance_prev();
-        let cur_idx = inner.source_manager.current_index();
-        let queue = inner.source_manager.queue().to_vec();
+        let prev_vid = inner.source_manager.advance_prev();
+        let single = inner.source_manager.total_videos() == 1;
         let fit_str = match inner.source_manager.settings().fit {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
+        let peek = inner.source_manager.peek_next();
         let is_paused = inner.is_paused;
 
-        if let Some(engine) = &mut inner.engine {
-            if engine.prev().is_err() {
-                let _ = engine.load_playlist(&queue, cur_idx, fit_str);
-            }
+        if let (Some(vid), Some(engine)) = (prev_vid, &mut inner.engine) {
+            let _ = engine.play_with_prefetch(&vid, peek.as_deref(), single, fit_str);
             if is_paused {
                 let _ = engine.pause();
             }
@@ -207,15 +202,10 @@ impl WallpaperController {
         let curr = inner.source_manager.current_video();
         let source = inner.source_manager.add_folder(folder_path)?;
         inner.source_manager.rebuild_queue(curr.as_deref());
-        let queue = inner.source_manager.queue().to_vec();
-        let cur_idx = inner.source_manager.current_index();
-        let fit_str = match inner.source_manager.settings().fit {
-            WallpaperFit::Contain => "contain",
-            WallpaperFit::Cover => "cover",
-        };
+        let next_p = inner.source_manager.peek_next();
 
-        if let Some(engine) = &mut inner.engine {
-            let _ = engine.load_playlist(&queue, cur_idx, fit_str);
+        if let (Some(next_p), Some(engine)) = (next_p, &mut inner.engine) {
+            let _ = engine.queue_next(&next_p);
         }
 
         Ok(source)
@@ -226,15 +216,10 @@ impl WallpaperController {
         let curr = inner.source_manager.current_video();
         inner.source_manager.remove_folder(id);
         inner.source_manager.rebuild_queue(curr.as_deref());
-        let queue = inner.source_manager.queue().to_vec();
-        let cur_idx = inner.source_manager.current_index();
-        let fit_str = match inner.source_manager.settings().fit {
-            WallpaperFit::Contain => "contain",
-            WallpaperFit::Cover => "cover",
-        };
+        let next_p = inner.source_manager.peek_next();
 
-        if let Some(engine) = &mut inner.engine {
-            let _ = engine.load_playlist(&queue, cur_idx, fit_str);
+        if let (Some(next_p), Some(engine)) = (next_p, &mut inner.engine) {
+            let _ = engine.queue_next(&next_p);
         }
 
         Ok(self.build_snapshot(&inner))
@@ -245,15 +230,10 @@ impl WallpaperController {
         let curr = inner.source_manager.current_video();
         inner.source_manager.toggle_folder(id, enabled);
         inner.source_manager.rebuild_queue(curr.as_deref());
-        let queue = inner.source_manager.queue().to_vec();
-        let cur_idx = inner.source_manager.current_index();
-        let fit_str = match inner.source_manager.settings().fit {
-            WallpaperFit::Contain => "contain",
-            WallpaperFit::Cover => "cover",
-        };
+        let next_p = inner.source_manager.peek_next();
 
-        if let Some(engine) = &mut inner.engine {
-            let _ = engine.load_playlist(&queue, cur_idx, fit_str);
+        if let (Some(next_p), Some(engine)) = (next_p, &mut inner.engine) {
+            let _ = engine.queue_next(&next_p);
         }
 
         Ok(self.build_snapshot(&inner))
@@ -264,15 +244,10 @@ impl WallpaperController {
         let curr = inner.source_manager.current_video();
         inner.source_manager.refresh_all_sources();
         inner.source_manager.rebuild_queue(curr.as_deref());
-        let queue = inner.source_manager.queue().to_vec();
-        let cur_idx = inner.source_manager.current_index();
-        let fit_str = match inner.source_manager.settings().fit {
-            WallpaperFit::Contain => "contain",
-            WallpaperFit::Cover => "cover",
-        };
+        let next_p = inner.source_manager.peek_next();
 
-        if let Some(engine) = &mut inner.engine {
-            let _ = engine.load_playlist(&queue, cur_idx, fit_str);
+        if let (Some(next_p), Some(engine)) = (next_p, &mut inner.engine) {
+            let _ = engine.queue_next(&next_p);
         }
 
         Ok(self.build_snapshot(&inner))
@@ -283,15 +258,10 @@ impl WallpaperController {
         let curr = inner.source_manager.current_video();
         inner.source_manager.set_mode(mode);
         inner.source_manager.rebuild_queue(curr.as_deref());
-        let queue = inner.source_manager.queue().to_vec();
-        let cur_idx = inner.source_manager.current_index();
-        let fit_str = match inner.source_manager.settings().fit {
-            WallpaperFit::Contain => "contain",
-            WallpaperFit::Cover => "cover",
-        };
+        let next_p = inner.source_manager.peek_next();
 
-        if let Some(engine) = &mut inner.engine {
-            let _ = engine.load_playlist(&queue, cur_idx, fit_str);
+        if let (Some(next_p), Some(engine)) = (next_p, &mut inner.engine) {
+            let _ = engine.queue_next(&next_p);
         }
 
         Ok(self.build_snapshot(&inner))
@@ -345,16 +315,38 @@ impl WallpaperController {
 
         std::thread::spawn(move || {
             while running_flag.load(Ordering::Relaxed) {
-                // Monitor ligero cada 100ms: únicamente sincroniza la ruta en pantalla si mpv avanzó
                 std::thread::sleep(std::time::Duration::from_millis(100));
 
                 if let Ok(mut inner) = inner_clone.lock() {
                     if !inner.is_paused && inner.engine.is_some() {
-                        if let Some(engine) = &inner.engine {
-                            if let Some(current_path) = engine.get_current_path() {
-                                if inner.source_manager.current_video().as_deref() != Some(&current_path) {
-                                    inner.source_manager.set_current_video(&current_path);
+                        let (current_path, is_idle) = if let Some(engine) = &inner.engine {
+                            (engine.get_current_path(), engine.is_idle())
+                        } else {
+                            (None, false)
+                        };
+
+                        // 1. Si mpv avanzó de forma continua al siguiente vídeo pre-encolado
+                        if let Some(cp) = current_path {
+                            if inner.source_manager.current_video().as_deref() != Some(&cp) {
+                                inner.source_manager.set_current_video(&cp);
+                                let next_p = inner.source_manager.peek_next();
+                                if let (Some(next_p), Some(engine)) = (next_p, &mut inner.engine) {
+                                    let _ = engine.queue_next(&next_p);
                                 }
+                            }
+                        }
+
+                        // 2. Si el motor se quedó inactivo (idle) y se requiere reactivar la reproducción
+                        if is_idle {
+                            let single = inner.source_manager.total_videos() == 1;
+                            let fit_str = match inner.source_manager.settings().fit {
+                                WallpaperFit::Contain => "contain",
+                                WallpaperFit::Cover => "cover",
+                            };
+                            let next_vid = inner.source_manager.advance_next();
+                            let peek = inner.source_manager.peek_next();
+                            if let (Some(next_vid), Some(engine)) = (next_vid, &mut inner.engine) {
+                                let _ = engine.play_with_prefetch(&next_vid, peek.as_deref(), single, fit_str);
                             }
                         }
                     }
