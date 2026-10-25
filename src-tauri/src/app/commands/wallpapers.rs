@@ -143,3 +143,117 @@ pub async fn wallpaper_set_desktop(image_path: String) -> Result<SetWallpaperRes
     .await
     .map_err(|e| format!("Error interno al aplicar fondo: {e}"))?
 }
+
+
+// ── Comandos de Fondos Vivos (Fase 1: Vídeo multicarpeta local) ──
+
+use crate::features::wallpapers::{
+    sources::{FolderSource, WallpaperFit, WallpaperMode},
+    WallpaperController, WallpaperStateSnapshot,
+};
+use tauri::State;
+
+#[tauri::command]
+pub fn live_wallpaper_get_state(
+    controller: State<'_, WallpaperController>,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.get_state()
+}
+
+#[tauri::command]
+pub fn live_wallpaper_start(
+    controller: State<'_, WallpaperController>,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.start()
+}
+
+#[tauri::command]
+pub fn live_wallpaper_play_file(
+    controller: State<'_, WallpaperController>,
+    path: String,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.play_file(&path)
+}
+
+#[tauri::command]
+pub fn live_wallpaper_pause(
+    controller: State<'_, WallpaperController>,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.pause()
+}
+
+#[tauri::command]
+pub fn live_wallpaper_resume(
+    controller: State<'_, WallpaperController>,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.resume()
+}
+
+#[tauri::command]
+pub fn live_wallpaper_next(
+    controller: State<'_, WallpaperController>,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.next()
+}
+
+#[tauri::command]
+pub fn live_wallpaper_prev(
+    controller: State<'_, WallpaperController>,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.prev()
+}
+
+#[tauri::command]
+pub fn live_wallpaper_stop(
+    controller: State<'_, WallpaperController>,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.stop()
+}
+
+#[tauri::command]
+pub fn live_wallpaper_add_folder(
+    controller: State<'_, WallpaperController>,
+    path: String,
+) -> Result<FolderSource, String> {
+    controller.add_folder(&path)
+}
+
+#[tauri::command]
+pub fn live_wallpaper_remove_folder(
+    controller: State<'_, WallpaperController>,
+    id: String,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.remove_folder(&id)
+}
+
+#[tauri::command]
+pub fn live_wallpaper_toggle_folder(
+    controller: State<'_, WallpaperController>,
+    id: String,
+    enabled: bool,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.toggle_folder(&id, enabled)
+}
+
+#[tauri::command]
+pub fn live_wallpaper_refresh_sources(
+    controller: State<'_, WallpaperController>,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.refresh_sources()
+}
+
+#[tauri::command]
+pub fn live_wallpaper_set_mode(
+    controller: State<'_, WallpaperController>,
+    mode: WallpaperMode,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.set_mode(mode)
+}
+
+#[tauri::command]
+pub fn live_wallpaper_set_fit(
+    controller: State<'_, WallpaperController>,
+    fit: WallpaperFit,
+) -> Result<WallpaperStateSnapshot, String> {
+    controller.set_fit(fit)
+}

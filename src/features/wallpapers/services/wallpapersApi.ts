@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import { OFFICIAL_AURORA_ORIGIN, normalizeAuroraServerUrl } from "../../../shared/auroraServer";
 import type { AuroraWallpaper, AuroraWallpapersResponse, WallpaperFilterOptions } from "../model/types";
 
-const OFFICIAL_AURORA_ORIGIN = "https://www.biglexj.com";
 const WALLPAPERS_PATH = "/api/v1/wallpapers";
 const FAVORITE_PATH = "/api/v1/wallpapers/favorite";
 
@@ -26,7 +26,7 @@ function getAuroraServerUrl(): string {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed.auroraServerUrl) {
-        return parsed.auroraServerUrl.replace(/\/$/, "");
+        return normalizeAuroraServerUrl(parsed.auroraServerUrl);
       }
     }
   } catch {}

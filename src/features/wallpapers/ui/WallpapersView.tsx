@@ -24,8 +24,6 @@ export function WallpapersView() {
   const [error, setError] = useState<string | null>(null);
 
   const [selectedRatio, setSelectedRatio] = useState<string | undefined>(undefined);
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
   const [selectedSort, setSelectedSort] = useState<"recent" | "trending" | "views">("recent");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -60,20 +58,11 @@ export function WallpapersView() {
         page: 1,
         limit: 50,
         ratio: selectedRatio,
-        category: selectedCategory,
         sort: selectedSort,
         query: debouncedSearchQuery || undefined,
       }, controller.signal);
       const nextWallpapers = res.wallpapers || [];
       setWallpapers(nextWallpapers);
-      const responseCategories = nextWallpapers
-        .map((wallpaper) => wallpaper.category?.trim())
-        .filter((category): category is string => Boolean(category));
-      setAvailableCategories((current) =>
-        Array.from(new Set([...current, ...responseCategories])).sort((left, right) =>
-          left.localeCompare(right, "es"),
-        ),
-      );
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setError(err instanceof Error ? err.message : "Error al conectar con Aurora");
@@ -83,7 +72,7 @@ export function WallpapersView() {
         setLoading(false);
       }
     }
-  }, [auroraOnlineServicesEnabled, selectedRatio, selectedCategory, selectedSort, debouncedSearchQuery]);
+  }, [auroraOnlineServicesEnabled, selectedRatio, selectedSort, debouncedSearchQuery]);
 
   useEffect(() => {
     void loadData();
@@ -252,24 +241,12 @@ export function WallpapersView() {
           📱 Móvil (9:16)
         </button>
 
-        <span className="wallpaper-filter-divider" aria-hidden="true" />
-
         <button
           className={`wallpaper-filter-chip ${selectedSort === "trending" ? "is-active" : ""}`}
           onClick={() => setSelectedSort(selectedSort === "trending" ? "recent" : "trending")}
         >
           🔥 Tendencias
         </button>
-
-        {availableCategories.map((category) => (
-          <button
-            className={`wallpaper-filter-chip ${selectedCategory === category ? "is-active" : ""}`}
-            key={category}
-            onClick={() => setSelectedCategory(selectedCategory === category ? undefined : category)}
-          >
-            {category}
-          </button>
-        ))}
       </div>
 
       {/* Feedback Toast */}

@@ -58,7 +58,10 @@ use app::commands::quick_look::{
     window_hide_to_background, window_restore_from_background,
 };
 use app::commands::renamer::{
-    renamer_execute_batch, renamer_scan_folder, renamer_undo_batch, RenamerState,
+    renamer_execute_batch, renamer_scan_folder, renamer_scan_paths, renamer_undo_batch, RenamerState,
+};
+use app::commands::ecosystem::{
+    ecosystem_app_launch, ecosystem_apps_state, ecosystem_root_path,
 };
 use app::commands::synapse::{
     check_prisma_upscaler_engine, launch_gallery_dl, launch_luna_fetch, launch_prisma_upscaler,
@@ -82,7 +85,13 @@ use app::commands::video_takes::{
     video_delete_take_marker, video_get_take_marker, video_get_technical_metadata,
     video_list_take_markers, video_set_take_marker,
 };
-use app::commands::wallpapers::{wallpaper_save_and_apply, wallpaper_set_desktop};
+use app::commands::wallpapers::{
+    live_wallpaper_add_folder, live_wallpaper_get_state, live_wallpaper_next, live_wallpaper_prev,
+    live_wallpaper_pause, live_wallpaper_play_file, live_wallpaper_refresh_sources, live_wallpaper_remove_folder,
+    live_wallpaper_resume, live_wallpaper_set_fit, live_wallpaper_set_mode,
+    live_wallpaper_start, live_wallpaper_stop, live_wallpaper_toggle_folder,
+    wallpaper_save_and_apply, wallpaper_set_desktop,
+};
 use app::commands::screen_capture::{
     screen_capture_cancel, screen_capture_configure, screen_capture_confirm, screen_capture_detect_subregion,
     screen_capture_detect_window_at, screen_capture_get_editor_payload,
@@ -91,11 +100,12 @@ use app::commands::screen_capture::{
     screen_recorder_pause, screen_recorder_start, screen_recorder_status, screen_recorder_stop, screen_recorder_trim,
 };
 use app::commands::drop_zone::{
-    drop_zone_copy_file, drop_zone_default_folder, drop_zone_is_active, system_drop_zone_expand,
-    system_drop_zone_set_size, system_drop_zone_set_visible, vault_add, vault_list, vault_remove,
-    vault_toggle_pin,
+    drop_zone_copy_file, drop_zone_default_folder, drop_zone_is_active, drop_zone_pointer_inside,
+    system_drop_zone_set_active, system_drop_zone_set_size, system_drop_zone_set_visible,
+    vault_add, vault_list, vault_log, vault_remove, vault_toggle_pin,
 };
 use app::commands::vault::VaultState;
+use app::commands::vault_import::vault_import;
 use app::state::{
     FavoritesState, InitialFileState, InitialSynapseSendState, MusicLibraryState,
     PlaybackProbeState, VisualLibraryState,
@@ -277,7 +287,7 @@ pub fn run() {
                 .skip_initial_state("flyout")
                 .skip_initial_state("screen_capture_overlay")
                 .skip_initial_state("screen_capture_editor")
-                .with_denylist(&["quicklook", "flyout", "screen_capture_overlay", "screen_capture_editor"])
+                .with_denylist(&["quicklook", "flyout", "mobile-audio-toast", "screen_capture_overlay", "screen_capture_editor"])
                 .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
                 .build(),
         )
@@ -353,6 +363,8 @@ pub fn run() {
             app.manage(audio_relay);
             let synapse_state = features::synapse::SynapseState::load(data_directory.clone());
             app.manage(synapse_state);
+            let wallpaper_controller = features::wallpapers::WallpaperController::new(data_directory.clone());
+            app.manage(wallpaper_controller);
 
             // 2. Registro de esquema prisma:// y servicios de Aurora Synapse
             if !is_dev_mode {
@@ -403,6 +415,7 @@ pub fn run() {
             // central de la pantalla, por encima de cualquier ventana, para
             // arrastrar archivos desde el Explorador o cualquier aplicación.
             app::commands::drop_zone::place_at_startup(app.handle());
+            app::commands::drop_zone::apply_vault_shortcut(app.handle());
 
             // En desarrollo, la caché del WebView2 puede servir un bundle viejo
             // y la ventana se queda con el contenido de la versión anterior.
@@ -420,9 +433,20 @@ pub fn run() {
                 }
             }
 
-            // Bóveda flotante: guarda hasta tres elementos, uno de ellos fijable.
+            // Barra Synapse: cinco espacios; los fijados sobreviven a la rotación.
             let vault_state = VaultState::new(data_directory.join("vault.json"));
             app.manage(vault_state);
+            if let Some(zone) = app.get_webview_window("system_drop_zone") {
+                let _ = infrastructure::windows_file_drop::register_or_refresh(&zone);
+                let retry = zone.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(800));
+                    let target = retry.clone();
+                    let _ = retry.run_on_main_thread(move || {
+                        let _ = infrastructure::windows_file_drop::register_or_refresh(&target);
+                    });
+                });
+            }
 
             let quick_look_state = QuickLookState::new(app.handle().clone());
             quick_look_state.init();
@@ -490,12 +514,19 @@ pub fn run() {
             let show_item = MenuItemBuilder::with_id("show", "Mostrar Prisma").build(app)?;
             let equalizer_item = MenuItemBuilder::with_id("equalizer", "Ecualizador & DSP").build(app)?;
             let settings_item = MenuItemBuilder::with_id("settings", "Configuración").build(app)?;
+            let recording_stop_item = MenuItemBuilder::with_id("recording_stop", "Detener y guardar grabación (Ctrl+S)").enabled(false).build(app)?;
+            let recording_show_item = MenuItemBuilder::with_id("recording_show", "Mostrar controles de grabación").enabled(false).build(app)?;
+            app.manage(app::commands::screen_capture::RecorderTrayControls {
+                stop: recording_stop_item.clone(),
+                show: recording_show_item.clone(),
+                save_shortcut_registered: std::sync::atomic::AtomicBool::new(false),
+            });
             let separator = PredefinedMenuItem::separator(app)?;
             let restart_item = MenuItemBuilder::with_id("restart", "Reiniciar Prisma").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "Salir de Prisma").build(app)?;
 
             let tray_menu = MenuBuilder::new(app)
-                .items(&[&show_item, &equalizer_item, &settings_item, &separator, &restart_item, &quit_item])
+                .items(&[&show_item, &equalizer_item, &settings_item, &recording_stop_item, &recording_show_item, &separator, &restart_item, &quit_item])
                 .build()?;
 
             let _tray = TrayIconBuilder::new()
@@ -505,6 +536,8 @@ pub fn run() {
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| {
                     match event.id().as_ref() {
+                        "recording_stop" => app::commands::screen_capture::request_recording_stop(app),
+                        "recording_show" => app::commands::screen_capture::show_recording_controls(app),
                         "show" => {
                             if let Some(w) = app.get_webview_window("main") {
                                 let _ = w.unminimize();
@@ -567,6 +600,11 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
+            if window.label() == "system_drop_zone" && matches!(event, WindowEvent::Focused(true)) {
+                if let Some(zone) = window.app_handle().get_webview_window("system_drop_zone") {
+                    let _ = infrastructure::windows_file_drop::register_or_refresh(&zone);
+                }
+            }
             if window.label() == "main" {
                 if let WindowEvent::Resized(_) = event {
                     if let Ok(is_min) = window.is_minimized() {
@@ -675,6 +713,7 @@ pub fn run() {
             media_rename_item,
             media_save_image,
             media_get_default_pictures_dir,
+            app::commands::media::media_get_default_capture_folders,
             video_save_snapshot,
             show_in_file_manager,
             open_in_file_manager,
@@ -701,6 +740,7 @@ pub fn run() {
             app::commands::audio_relay::mobile_audio_status,
             app::commands::audio_relay::mobile_audio_select_phone,
             app::commands::audio_relay::mobile_audio_set_enabled,
+            app::commands::audio_relay::mobile_audio_toggle,
             app::commands::audio_relay::mobile_audio_configure,
             app::commands::audio_relay::mobile_audio_set_shortcut,
             playback_get_multi_output,
@@ -781,6 +821,9 @@ pub fn run() {
             launch_luna_fetch,
             launch_gallery_dl,
             launch_prisma_upscaler,
+            ecosystem_apps_state,
+            ecosystem_app_launch,
+            ecosystem_root_path,
             check_prisma_upscaler_engine,
             upscale_image_native,
             custom_libraries_get_all,
@@ -814,8 +857,26 @@ pub fn run() {
             image_read_exif,
             wallpaper_set_desktop,
             wallpaper_save_and_apply,
+            live_wallpaper_get_state,
+            live_wallpaper_start,
+            live_wallpaper_play_file,
+            live_wallpaper_pause,
+            live_wallpaper_resume,
+            live_wallpaper_next,
+            live_wallpaper_prev,
+            live_wallpaper_stop,
+            live_wallpaper_add_folder,
+            live_wallpaper_remove_folder,
+            live_wallpaper_toggle_folder,
+            live_wallpaper_refresh_sources,
+            live_wallpaper_set_mode,
+            live_wallpaper_set_fit,
             renamer_scan_folder,
+            renamer_scan_paths,
             renamer_execute_batch,
+            app::commands::renamer::renamer_validate_batch,
+            app::commands::renamer::renamer_can_undo,
+            app::commands::renamer::renamer_occupied_paths,
             renamer_undo_batch,
             video_get_technical_metadata,
             video_get_take_marker,
@@ -824,6 +885,7 @@ pub fn run() {
             video_delete_take_marker,
             screen_capture_start,
             app::commands::screen_capture::screen_capture_overlay_ready,
+            app::commands::screen_capture::screen_capture_set_intent,
             features::screen_capture::diagnostics::screen_capture_trace,
             screen_capture_detect_subregion,
             screen_capture_detect_window_at,
@@ -842,14 +904,19 @@ pub fn run() {
             screen_recorder_pause,
             screen_recorder_trim,
             screen_recorder_list_audio_devices,
-            system_drop_zone_expand,
+            system_drop_zone_set_active,
             system_drop_zone_set_size,
             system_drop_zone_set_visible,
             drop_zone_default_folder,
             drop_zone_copy_file,
             drop_zone_is_active,
+            drop_zone_pointer_inside,
             vault_list,
+            vault_log,
             vault_add,
+            vault_import,
+            app::commands::vault_import::vault_save_item,
+            app::commands::vault_import::vault_read_text,
             vault_remove,
             vault_toggle_pin,
         ]);
