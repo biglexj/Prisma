@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTheme } from "./useTheme";
+import { isMobileAudioShortcut } from "../features/dsp/mobileAudioShortcut";
 import { useSystemSettings } from "./useSystemSettings";
 
 import { HomeDashboard } from "../features/home/ui/HomeDashboard";
@@ -33,7 +34,7 @@ import { playlistsRead } from "../features/collections/tauri/client";
 import { AboutView } from "./ui/AboutView";
 import { SynapseToast, type SynapseReceivedFile } from "./ui/SynapseToast";
 import { SendToSuperGalleryModal } from "./ui/SendToSuperGalleryModal";
-import { VAULT_SEND_EVENT } from "./ui/SystemDropZone";
+import { VAULT_SEND_EVENT } from "./ui/synapse-notch/model";
 import { addToHistory } from "../shared/useHistory";
 import { CustomLibraryView } from "../features/custom_libraries/ui/CustomLibraryView";
 import { DocumentViewer } from "../features/custom_libraries/ui/DocumentViewer";
@@ -45,6 +46,7 @@ import { LunaFetchView } from "../features/luna_fetch/ui/LunaFetchView";
 import { GalleryDlView } from "../features/gallery_dl/ui/GalleryDlView";
 import { PrismaUpscalerView } from "../features/prisma_upscaler/ui/PrismaUpscalerView";
 import { WallpapersView } from "../features/wallpapers/ui/WallpapersView";
+import { LiveWallpapersView } from "../features/wallpapers/ui/LiveWallpapersView";
 import { ScreenCaptureView } from "../features/screen_capture";
 import { RecordingHud } from "../features/screen_capture/ui/RecordingHud";
 import { useCaptureShortcut } from "../features/screen_capture/useCaptureShortcut";
@@ -85,6 +87,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   gallery_dl: "Gallery-DL",
   prisma_upscaler: "Prisma Upscaler",
   wallpapers: "Wallpapers Aurora",
+  live_wallpapers: "Fondos Vivos",
   duplicates: "Buscador de Duplicados",
   screen_capture: "Capturador de Pantalla",
 };
@@ -153,6 +156,18 @@ function AppContent() {
   }, []);
 
   const mobileEnabledRef = useRef(mobileAudioOutput.status.enabled);
+  useEffect(() => {
+    const onAudioShortcut = (event: KeyboardEvent) => {
+      if (!isMobileAudioShortcut(event)) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void mobileAudioOutput.toggle();
+    };
+    window.addEventListener("keydown", onAudioShortcut, true);
+    return () => window.removeEventListener("keydown", onAudioShortcut, true);
+  }, [mobileAudioOutput.toggle]);
   useEffect(() => {
     const enabled = mobileAudioOutput.status.enabled;
     if (mobileEnabledRef.current !== enabled) {
@@ -895,12 +910,6 @@ function AppContent() {
         return;
       }
 
-      if (e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === "t") {
-        e.preventDefault();
-        if (!e.repeat) void mobileAudioOutput.toggle();
-        return;
-      }
-
       // Segundo plano sin pausar: H o Shift + H.
       if (
         (e.key.toLowerCase() === "h" && !e.ctrlKey && !e.altKey && !e.metaKey)
@@ -1320,9 +1329,10 @@ function AppContent() {
           </header>
         ) : null}
 
-        <main className={`studio-content ${isCinemaMode ? "is-cinema-mode" : ""}`}>
+        <main className={`studio-content ${activeView === "comparator" ? "is-comparison-view" : ""} ${activeView === "converter" ? "is-converter-view" : ""} ${isCinemaMode ? "is-cinema-mode" : ""}`}>
           {activeView === "home" ? (
             <HomeDashboard
+              musicPlayback={{ snapshot: playback.snapshot, onToggle: () => void playback.toggle(), onPrevious: () => playback.previous(), onNext: () => playback.next() }}
               error={library.error ?? imageLibrary.error ?? videoLibrary.error}
               imageFolders={imageLibrary.folders}
               images={imageLibrary.items}
@@ -1334,6 +1344,7 @@ function AppContent() {
               onOpenImages={() => navigateToView("images")}
               onOpenVideos={() => navigateToView("videos")}
               onOpenPlaylists={() => navigateToView("playlists")}
+              onOpenLiveWallpapers={() => navigateToView("live_wallpapers")}
               onOpenImage={handleOpenImage}
               onPlayMusic={(path, sessionItems, queueName) =>
                 playMusicItem(path, false, undefined, sessionItems, queueName)
@@ -1624,6 +1635,7 @@ function AppContent() {
           {activeView === "gallery_dl" ? <GalleryDlView onNavigate={navigateToView} /> : null}
           {activeView === "prisma_upscaler" ? <PrismaUpscalerView onNavigate={navigateToView} /> : null}
           {activeView === "wallpapers" ? <WallpapersView /> : null}
+          {activeView === "live_wallpapers" ? <LiveWallpapersView /> : null}
           {activeView === "screen_capture" ? <ScreenCaptureView /> : null}
         </main>
       </div>

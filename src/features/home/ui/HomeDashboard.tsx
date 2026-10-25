@@ -15,11 +15,16 @@ import type { PlaylistMeta } from "../../collections/model/types";
 import { handleNativeDragPointerDown } from "../../../shared/useNativeFileDrag";
 import { formatFriendlyErrorMessage } from "../../../shared/errorFormatters";
 import "./home-dashboard.css";
+import { HomeMusicWidget, type HomeMusicWidgetProps } from "./HomeMusicWidget";
+import { HomeWallpaperWidget } from "./HomeWallpaperWidget";
+import { liveWallpapersApi } from "../../wallpapers/services/liveWallpapersApi";
+import { listen } from "@tauri-apps/api/event";
 
 const HOME_ROW_ITEMS_LIMIT = 20;
 const HOME_VIDEO_ROW_LIMIT = 12;
 
 interface HomeDashboardProps {
+  musicPlayback?: HomeMusicWidgetProps;
   musicFolders: MusicFolderSource[];
   musicItems: MusicLibraryItem[];
   imageFolders: VisualFolderSource[];
@@ -33,6 +38,7 @@ interface HomeDashboardProps {
   onOpenImages: () => void;
   onOpenVideos: () => void;
   onOpenPlaylists?: () => void;
+  onOpenLiveWallpapers?: () => void;
   onOpenImage?: (path: string, sessionItems?: VisualLibraryItem[]) => void;
   onPlayMusic: (path: string, sessionItems?: MusicLibraryItem[], queueName?: string) => void;
   onPlayVideo: (path: string, sessionItems?: VisualLibraryItem[]) => void;
@@ -46,6 +52,7 @@ function normalizePath(p: string): string {
 }
 
 export function HomeDashboard({
+  musicPlayback,
   musicFolders,
   musicItems,
   imageFolders,
@@ -59,6 +66,7 @@ export function HomeDashboard({
   onOpenImages,
   onOpenVideos,
   onOpenPlaylists,
+  onOpenLiveWallpapers,
   onOpenImage,
   onPlayMusic,
   onPlayVideo,
@@ -69,6 +77,34 @@ export function HomeDashboard({
   useScrollRestoration("view:home", !loading);
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
   const [activatingPath, setActivatingPath] = useState<string | null>(null);
+  const [wallpaperCount, setWallpaperCount] = useState<number | null>(null);
+  const [widgetTab, setWidgetTab] = useState<"music" | "wallpaper">("music");
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    const fetchWallpaperStats = async () => {
+      try {
+        const snap = await liveWallpapersApi.getState();
+        setWallpaperCount(snap.totalVideos);
+      } catch {
+        // Silencioso si no está listo
+      }
+    };
+    fetchWallpaperStats();
+    listen("prisma://wallpaper-state-changed", () => {
+      fetchWallpaperStats();
+    }).then((dispose) => {
+      unlisten = dispose;
+    });
+    return () => {
+      unlisten?.();
+    };
+  }, []);
+
+  const hasMusicPlaying = Boolean(
+    musicPlayback?.snapshot?.path &&
+      (!musicPlayback.snapshot.session || musicPlayback.snapshot.session.family === "audio")
+  );
   const { store: historyStore } = useHistory();
   const { playlists } = usePlaylists();
 
@@ -176,7 +212,39 @@ export function HomeDashboard({
           <h1>Tu biblioteca,<br />en un solo lugar</h1>
           <p>Música, imágenes y vídeos de tus carpetas, con los archivos más recientes al frente.</p>
         </div>
-        <div className="home-orbit" aria-hidden="true"><i /><i /><i /><Icon name="layout" /></div>
+        <div className="home-welcome-widget-area">
+          {hasMusicPlaying ? (
+            <div className="home-dual-widgets">
+              <div className="home-widget-tab-bar" role="tablist" aria-label="Selector de widget">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={widgetTab === "music"}
+                  className={widgetTab === "music" ? "is-selected" : ""}
+                  onClick={() => setWidgetTab("music")}
+                >
+                  <Icon name="music" width={13} height={13} /> Música
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={widgetTab === "wallpaper"}
+                  className={widgetTab === "wallpaper" ? "is-selected" : ""}
+                  onClick={() => setWidgetTab("wallpaper")}
+                >
+                  <Icon name="sparkles" width={13} height={13} /> Fondos vivos
+                </button>
+              </div>
+              {widgetTab === "music" ? (
+                <HomeMusicWidget {...musicPlayback} />
+              ) : (
+                <HomeWallpaperWidget onOpenLiveWallpapers={onOpenLiveWallpapers} />
+              )}
+            </div>
+          ) : (
+            <HomeWallpaperWidget onOpenLiveWallpapers={onOpenLiveWallpapers} />
+          )}
+        </div>
       </header>
 
       {error ? (
@@ -201,6 +269,11 @@ export function HomeDashboard({
           <span><Icon name="image" /></span>
           <strong>{nonExcludedImages.length}</strong>
           <small>Imágenes</small>
+        </button>
+        <button onClick={onOpenLiveWallpapers} className="home-stat-wallpaper-btn">
+          <span><Icon name="sparkles" /></span>
+          <strong>{wallpaperCount ?? "—"}</strong>
+          <small>Fondos vivos</small>
         </button>
       </div>
 

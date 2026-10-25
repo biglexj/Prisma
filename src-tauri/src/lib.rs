@@ -88,7 +88,9 @@ use app::commands::video_takes::{
 use app::commands::wallpapers::{
     live_wallpaper_add_folder, live_wallpaper_get_state, live_wallpaper_next, live_wallpaper_prev,
     live_wallpaper_pause, live_wallpaper_play_file, live_wallpaper_refresh_sources, live_wallpaper_remove_folder,
-    live_wallpaper_resume, live_wallpaper_set_fit, live_wallpaper_set_mode,
+    live_wallpaper_resume, live_wallpaper_set_audio_enabled, live_wallpaper_set_fit,
+    live_wallpaper_set_folder_hidden,
+    live_wallpaper_set_mode, live_wallpaper_set_video_hidden,
     live_wallpaper_start, live_wallpaper_stop, live_wallpaper_toggle_folder,
     wallpaper_save_and_apply, wallpaper_set_desktop,
 };
@@ -111,10 +113,47 @@ use app::state::{
     PlaybackProbeState, VisualLibraryState,
 };
 use features::quick_look::QuickLookState;
-use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager, WindowEvent};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags};
+
+#[derive(Clone)]
+pub struct WallpaperTrayControls {
+    pub toggle: tauri::menu::MenuItem<tauri::Wry>,
+    pub pause: tauri::menu::MenuItem<tauri::Wry>,
+    pub sound: tauri::menu::MenuItem<tauri::Wry>,
+}
+
+pub fn update_wallpaper_tray_menu(app: &tauri::AppHandle) {
+    if let (Some(controller), Some(controls)) = (
+        app.try_state::<features::wallpapers::WallpaperController>(),
+        app.try_state::<WallpaperTrayControls>(),
+    ) {
+        if let Ok(state) = controller.get_state() {
+            let toggle_text = if state.is_active {
+                "Apagar fondo vivo"
+            } else {
+                "Encender fondo vivo"
+            };
+            let pause_text = if state.is_paused {
+                "Reanudar fondo"
+            } else {
+                "Pausar fondo"
+            };
+            let sound_text = if state.settings.audio_enabled {
+                "Quitar sonido del fondo"
+            } else {
+                "Activar sonido del fondo"
+            };
+            let _ = controls.toggle.set_text(toggle_text);
+            let _ = controls.pause.set_text(pause_text);
+            let _ = controls.pause.set_enabled(state.is_active);
+            let _ = controls.sound.set_text(sound_text);
+            let _ = controls.sound.set_enabled(state.is_active);
+        }
+    }
+}
 
 fn restart_application(app: &tauri::AppHandle) {
     // El evento de bandeja se ejecuta en el hilo principal. request_restart
@@ -364,6 +403,8 @@ pub fn run() {
             let synapse_state = features::synapse::SynapseState::load(data_directory.clone());
             app.manage(synapse_state);
             let wallpaper_controller = features::wallpapers::WallpaperController::new(data_directory.clone());
+            // Se conserva un clon para el menú de la bandeja: `manage` consume el valor.
+            let wallpaper_controller_for_tray = wallpaper_controller.clone();
             app.manage(wallpaper_controller);
 
             // 2. Registro de esquema prisma:// y servicios de Aurora Synapse
@@ -521,12 +562,72 @@ pub fn run() {
                 show: recording_show_item.clone(),
                 save_shortcut_registered: std::sync::atomic::AtomicBool::new(false),
             });
+            // Submenú de Fondos Vivos
+            let wp_snapshot = wallpaper_controller_for_tray.get_state().unwrap_or_else(|_| features::wallpapers::WallpaperStateSnapshot {
+                is_active: false,
+                is_paused: false,
+                current_video: None,
+                current_folder: None,
+                total_videos: 0,
+                settings: features::wallpapers::sources::WallpaperSettings::default(),
+                videos: Vec::new(),
+            });
+            let wp_toggle_label = if wp_snapshot.is_active { "Apagar fondo vivo" } else { "Encender fondo vivo" };
+            let wp_pause_label = if wp_snapshot.is_paused { "Reanudar fondo" } else { "Pausar fondo" };
+
+            let wallpaper_next_item = MenuItemBuilder::with_id("wallpaper_next", "Siguiente fondo").build(app)?;
+            let wallpaper_prev_item = MenuItemBuilder::with_id("wallpaper_prev", "Anterior fondo").build(app)?;
+            let wallpaper_pause_item = MenuItemBuilder::with_id("wallpaper_pause", wp_pause_label)
+                .enabled(wp_snapshot.is_active)
+                .build(app)?;
+            let wallpaper_toggle_item = MenuItemBuilder::with_id("wallpaper_toggle", wp_toggle_label).build(app)?;
+            let wp_sound_label = if wp_snapshot.settings.audio_enabled {
+                "Quitar sonido del fondo"
+            } else {
+                "Activar sonido del fondo"
+            };
+            let wallpaper_sound_item = MenuItemBuilder::with_id("wallpaper_sound", wp_sound_label)
+                .enabled(wp_snapshot.is_active)
+                .build(app)?;
+            let wallpaper_open_item = MenuItemBuilder::with_id("wallpaper_open", "Abrir Fondos Vivos").build(app)?;
+            let wp_sep = PredefinedMenuItem::separator(app)?;
+
+            let wallpaper_submenu = SubmenuBuilder::new(app, "Fondos en vivo")
+                .items(&[
+                    &wallpaper_next_item,
+                    &wallpaper_prev_item,
+                    &wallpaper_pause_item,
+                    &wallpaper_toggle_item,
+                    &wallpaper_sound_item,
+                    &wp_sep,
+                    &wallpaper_open_item,
+                ])
+                .build()?;
+
+            app.manage(WallpaperTrayControls {
+                toggle: wallpaper_toggle_item.clone(),
+                pause: wallpaper_pause_item.clone(),
+                sound: wallpaper_sound_item.clone(),
+            });
+
             let separator = PredefinedMenuItem::separator(app)?;
+            let separator2 = PredefinedMenuItem::separator(app)?;
             let restart_item = MenuItemBuilder::with_id("restart", "Reiniciar Prisma").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "Salir de Prisma").build(app)?;
 
             let tray_menu = MenuBuilder::new(app)
-                .items(&[&show_item, &equalizer_item, &settings_item, &recording_stop_item, &recording_show_item, &separator, &restart_item, &quit_item])
+                .items(&[
+                    &show_item,
+                    &equalizer_item,
+                    &settings_item,
+                    &recording_stop_item,
+                    &recording_show_item,
+                    &separator,
+                    &wallpaper_submenu,
+                    &separator2,
+                    &restart_item,
+                    &quit_item,
+                ])
                 .build()?;
 
             let _tray = TrayIconBuilder::new()
@@ -536,6 +637,64 @@ pub fn run() {
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| {
                     match event.id().as_ref() {
+                        "wallpaper_next" => {
+                            if let Some(controller) = app.try_state::<features::wallpapers::WallpaperController>() {
+                                let _ = controller.next();
+                                update_wallpaper_tray_menu(app);
+                                let _ = app.emit("prisma://wallpaper-state-changed", ());
+                            }
+                        }
+                        "wallpaper_prev" => {
+                            if let Some(controller) = app.try_state::<features::wallpapers::WallpaperController>() {
+                                let _ = controller.prev();
+                                update_wallpaper_tray_menu(app);
+                                let _ = app.emit("prisma://wallpaper-state-changed", ());
+                            }
+                        }
+                        "wallpaper_pause" => {
+                            if let Some(controller) = app.try_state::<features::wallpapers::WallpaperController>() {
+                                if let Ok(state) = controller.get_state() {
+                                    if state.is_paused {
+                                        let _ = controller.resume();
+                                    } else {
+                                        let _ = controller.pause();
+                                    }
+                                    update_wallpaper_tray_menu(app);
+                                    let _ = app.emit("prisma://wallpaper-state-changed", ());
+                                }
+                            }
+                        }
+                        "wallpaper_toggle" => {
+                            if let Some(controller) = app.try_state::<features::wallpapers::WallpaperController>() {
+                                if let Ok(state) = controller.get_state() {
+                                    if state.is_active {
+                                        let _ = controller.stop();
+                                    } else {
+                                        let _ = controller.start();
+                                    }
+                                    update_wallpaper_tray_menu(app);
+                                    let _ = app.emit("prisma://wallpaper-state-changed", ());
+                                }
+                            }
+                        }
+                        "wallpaper_sound" => {
+                            if let Some(controller) = app.try_state::<features::wallpapers::WallpaperController>() {
+                                if let Ok(state) = controller.get_state() {
+                                    let _ = controller.set_audio_enabled(!state.settings.audio_enabled);
+                                    update_wallpaper_tray_menu(app);
+                                    let _ = app.emit("prisma://wallpaper-state-changed", ());
+                                }
+                            }
+                        }
+                        "wallpaper_open" => {
+                            if let Some(w) = app.get_webview_window("main") {
+                                let _ = w.unminimize();
+                                let _ = w.show();
+                                let _ = w.maximize();
+                                let _ = w.set_focus();
+                                let _ = w.emit("prisma://navigate", "live_wallpapers");
+                            }
+                        }
                         "recording_stop" => app::commands::screen_capture::request_recording_stop(app),
                         "recording_show" => app::commands::screen_capture::show_recording_controls(app),
                         "show" => {
@@ -871,6 +1030,9 @@ pub fn run() {
             live_wallpaper_refresh_sources,
             live_wallpaper_set_mode,
             live_wallpaper_set_fit,
+            live_wallpaper_set_audio_enabled,
+            live_wallpaper_set_folder_hidden,
+            live_wallpaper_set_video_hidden,
             renamer_scan_folder,
             renamer_scan_paths,
             renamer_execute_batch,

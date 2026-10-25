@@ -151,7 +151,12 @@ use crate::features::wallpapers::{
     sources::{FolderSource, WallpaperFit, WallpaperMode},
     WallpaperController, WallpaperStateSnapshot,
 };
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
+
+fn notify_wallpaper_change(app: &AppHandle) {
+    crate::update_wallpaper_tray_menu(app);
+    let _ = app.emit("prisma://wallpaper-state-changed", ());
+}
 
 #[tauri::command]
 pub fn live_wallpaper_get_state(
@@ -162,98 +167,172 @@ pub fn live_wallpaper_get_state(
 
 #[tauri::command]
 pub fn live_wallpaper_start(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
 ) -> Result<WallpaperStateSnapshot, String> {
-    controller.start()
+    let res = controller.start();
+    notify_wallpaper_change(&app);
+    res
 }
 
 #[tauri::command]
 pub fn live_wallpaper_play_file(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
     path: String,
 ) -> Result<WallpaperStateSnapshot, String> {
-    controller.play_file(&path)
+    let res = controller.play_file(&path);
+    notify_wallpaper_change(&app);
+    res
 }
 
 #[tauri::command]
 pub fn live_wallpaper_pause(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
 ) -> Result<WallpaperStateSnapshot, String> {
-    controller.pause()
+    let res = controller.pause();
+    notify_wallpaper_change(&app);
+    res
 }
 
 #[tauri::command]
 pub fn live_wallpaper_resume(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
 ) -> Result<WallpaperStateSnapshot, String> {
-    controller.resume()
+    let res = controller.resume();
+    notify_wallpaper_change(&app);
+    res
 }
 
 #[tauri::command]
 pub fn live_wallpaper_next(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
 ) -> Result<WallpaperStateSnapshot, String> {
-    controller.next()
+    let res = controller.next();
+    notify_wallpaper_change(&app);
+    res
 }
 
 #[tauri::command]
 pub fn live_wallpaper_prev(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
 ) -> Result<WallpaperStateSnapshot, String> {
-    controller.prev()
+    let res = controller.prev();
+    notify_wallpaper_change(&app);
+    res
 }
 
 #[tauri::command]
 pub fn live_wallpaper_stop(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
 ) -> Result<WallpaperStateSnapshot, String> {
-    controller.stop()
+    let res = controller.stop();
+    notify_wallpaper_change(&app);
+    res
 }
 
 #[tauri::command]
 pub fn live_wallpaper_add_folder(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
     path: String,
 ) -> Result<FolderSource, String> {
-    controller.add_folder(&path)
+    let res = controller.add_folder(&path);
+    notify_wallpaper_change(&app);
+    res
 }
 
 #[tauri::command]
 pub fn live_wallpaper_remove_folder(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
     id: String,
 ) -> Result<WallpaperStateSnapshot, String> {
-    controller.remove_folder(&id)
+    let res = controller.remove_folder(&id);
+    notify_wallpaper_change(&app);
+    res
 }
 
 #[tauri::command]
 pub fn live_wallpaper_toggle_folder(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
     id: String,
     enabled: bool,
 ) -> Result<WallpaperStateSnapshot, String> {
-    controller.toggle_folder(&id, enabled)
+    let res = controller.toggle_folder(&id, enabled);
+    notify_wallpaper_change(&app);
+    res
 }
 
 #[tauri::command]
 pub fn live_wallpaper_refresh_sources(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
 ) -> Result<WallpaperStateSnapshot, String> {
-    controller.refresh_sources()
+    let res = controller.refresh_sources();
+    notify_wallpaper_change(&app);
+    res
 }
 
 #[tauri::command]
 pub fn live_wallpaper_set_mode(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
     mode: WallpaperMode,
 ) -> Result<WallpaperStateSnapshot, String> {
-    controller.set_mode(mode)
+    let res = controller.set_mode(mode);
+    notify_wallpaper_change(&app);
+    res
 }
 
 #[tauri::command]
 pub fn live_wallpaper_set_fit(
+    app: AppHandle,
     controller: State<'_, WallpaperController>,
     fit: WallpaperFit,
 ) -> Result<WallpaperStateSnapshot, String> {
-    controller.set_fit(fit)
+    let res = controller.set_fit(fit);
+    notify_wallpaper_change(&app);
+    res
+}
+
+#[tauri::command]
+pub fn live_wallpaper_set_audio_enabled(
+    app: AppHandle,
+    controller: State<'_, WallpaperController>,
+    enabled: bool,
+) -> Result<WallpaperStateSnapshot, String> {
+    let res = controller.set_audio_enabled(enabled);
+    notify_wallpaper_change(&app);
+    res
+}
+
+#[tauri::command]
+pub fn live_wallpaper_set_folder_hidden(
+    app: AppHandle,
+    controller: State<'_, WallpaperController>,
+    id: String,
+    hidden: bool,
+) -> Result<WallpaperStateSnapshot, String> {
+    let res = controller.set_folder_hidden(&id, hidden);
+    notify_wallpaper_change(&app);
+    res
+}
+
+#[tauri::command]
+pub fn live_wallpaper_set_video_hidden(
+    app: AppHandle,
+    controller: State<'_, WallpaperController>,
+    path: String,
+    hidden: bool,
+) -> Result<WallpaperStateSnapshot, String> {
+    let res = controller.set_video_hidden(&path, hidden);
+    notify_wallpaper_change(&app);
+    res
 }

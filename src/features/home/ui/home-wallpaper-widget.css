@@ -1,0 +1,255 @@
+.home-wallpaper-widget {
+  width: min(100%, 280px);
+  min-width: 0;
+  justify-self: center;
+  padding: 12px 14px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.home-wallpaper-widget.is-active {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--outline-variant));
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.home-wallpaper-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.home-wallpaper-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+  text-transform: uppercase;
+}
+
+.home-wallpaper-status-pill {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.home-wallpaper-status-pill .pill-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--success, #22c55e);
+  background: color-mix(in srgb, var(--success, #22c55e) 14%, transparent);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.home-wallpaper-status-pill .pill-indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+  animation: home-pill-dot-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes home-pill-dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.home-wallpaper-status-pill .pill-paused {
+  display: inline-flex;
+  align-items: center;
+  color: var(--warning, #eab308);
+  background: color-mix(in srgb, var(--warning, #eab308) 14%, transparent);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.home-wallpaper-status-pill .pill-idle {
+  display: inline-flex;
+  align-items: center;
+  color: var(--on-surface-variant);
+  opacity: 0.75;
+  padding: 2px 8px;
+}
+
+.home-wallpaper-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.home-wallpaper-preview {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  display: grid;
+  place-items: center;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease;
+}
+
+.home-wallpaper-preview:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.home-wallpaper-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.home-wallpaper-placeholder {
+  color: var(--primary);
+  opacity: 0.85;
+  display: grid;
+  place-items: center;
+}
+
+.home-wallpaper-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.home-wallpaper-info strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-wallpaper-info span {
+  font-size: 11px;
+  color: var(--on-surface-variant);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-wallpaper-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.home-wallpaper-controls button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--on-surface);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, color 0.15s ease;
+}
+
+.home-wallpaper-controls button:hover:not(:disabled) {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.home-wallpaper-controls button:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.home-wallpaper-controls button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.home-wallpaper-controls .home-wallpaper-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.home-wallpaper-controls .home-wallpaper-toggle:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--primary) 85%, white);
+  color: var(--on-primary);
+}
+
+.home-wallpaper-controls .home-wallpaper-power {
+  color: var(--on-surface-variant);
+}
+
+.home-wallpaper-controls .home-wallpaper-power.is-active {
+  color: var(--error, #ef4444);
+  background: color-mix(in srgb, var(--error, #ef4444) 12%, transparent);
+}
+
+.home-wallpaper-controls .home-wallpaper-power.is-active:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--error, #ef4444) 22%, transparent);
+  color: var(--error, #ef4444);
+}
+
+/* Selector dual cuando hay tanto música como wallpapers en el home */
+.home-dual-widgets {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.home-widget-tab-bar {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface-container-high) 85%, transparent);
+  border: 1px solid var(--outline-variant);
+  gap: 4px;
+}
+
+.home-widget-tab-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.home-widget-tab-bar button:hover {
+  color: var(--on-surface);
+}
+
+.home-widget-tab-bar button.is-selected {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
