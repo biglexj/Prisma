@@ -357,6 +357,7 @@ impl SourceManager {
         self.current_index
     }
 
+    #[allow(dead_code)]
     pub fn peek_next(&self) -> Option<String> {
         if self.queue.len() <= 1 {
             return None;

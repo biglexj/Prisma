@@ -85,9 +85,8 @@ impl WallpaperController {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
-        let peek = inner.source_manager.peek_next();
 
-        eng.play_with_prefetch(&video_path, peek.as_deref(), single, fit_str)?;
+        eng.load_video(&video_path, single, fit_str)?;
 
         inner.window = Some(win);
         inner.engine = Some(eng);
@@ -108,17 +107,16 @@ impl WallpaperController {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
-        let peek = inner.source_manager.peek_next();
 
         if inner.engine.is_none() || inner.window.is_none() {
             let win = DesktopWallpaperWindow::create()?;
             let wid = win.raw_handle();
             let mut eng = VideoWallpaperEngine::new(wid)?;
-            eng.play_with_prefetch(&clean, peek.as_deref(), single, fit_str)?;
+            eng.load_video(&clean, single, fit_str)?;
             inner.window = Some(win);
             inner.engine = Some(eng);
         } else if let Some(engine) = &mut inner.engine {
-            engine.play_with_prefetch(&clean, peek.as_deref(), single, fit_str)?;
+            engine.load_video(&clean, single, fit_str)?;
         }
 
         inner.is_paused = false;
@@ -153,11 +151,10 @@ impl WallpaperController {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
-        let peek = inner.source_manager.peek_next();
         let is_paused = inner.is_paused;
 
         if let (Some(vid), Some(engine)) = (next_vid, &mut inner.engine) {
-            let _ = engine.play_with_prefetch(&vid, peek.as_deref(), single, fit_str);
+            let _ = engine.load_video(&vid, single, fit_str);
             if is_paused {
                 let _ = engine.pause();
             }
@@ -173,11 +170,10 @@ impl WallpaperController {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
-        let peek = inner.source_manager.peek_next();
         let is_paused = inner.is_paused;
 
         if let (Some(vid), Some(engine)) = (prev_vid, &mut inner.engine) {
-            let _ = engine.play_with_prefetch(&vid, peek.as_deref(), single, fit_str);
+            let _ = engine.load_video(&vid, single, fit_str);
             if is_paused {
                 let _ = engine.pause();
             }
@@ -202,12 +198,6 @@ impl WallpaperController {
         let curr = inner.source_manager.current_video();
         let source = inner.source_manager.add_folder(folder_path)?;
         inner.source_manager.rebuild_queue(curr.as_deref());
-        let next_p = inner.source_manager.peek_next();
-
-        if let (Some(next_p), Some(engine)) = (next_p, &mut inner.engine) {
-            let _ = engine.queue_next(&next_p);
-        }
-
         Ok(source)
     }
 
@@ -216,12 +206,6 @@ impl WallpaperController {
         let curr = inner.source_manager.current_video();
         inner.source_manager.remove_folder(id);
         inner.source_manager.rebuild_queue(curr.as_deref());
-        let next_p = inner.source_manager.peek_next();
-
-        if let (Some(next_p), Some(engine)) = (next_p, &mut inner.engine) {
-            let _ = engine.queue_next(&next_p);
-        }
-
         Ok(self.build_snapshot(&inner))
     }
 
@@ -230,12 +214,6 @@ impl WallpaperController {
         let curr = inner.source_manager.current_video();
         inner.source_manager.toggle_folder(id, enabled);
         inner.source_manager.rebuild_queue(curr.as_deref());
-        let next_p = inner.source_manager.peek_next();
-
-        if let (Some(next_p), Some(engine)) = (next_p, &mut inner.engine) {
-            let _ = engine.queue_next(&next_p);
-        }
-
         Ok(self.build_snapshot(&inner))
     }
 
@@ -244,12 +222,6 @@ impl WallpaperController {
         let curr = inner.source_manager.current_video();
         inner.source_manager.refresh_all_sources();
         inner.source_manager.rebuild_queue(curr.as_deref());
-        let next_p = inner.source_manager.peek_next();
-
-        if let (Some(next_p), Some(engine)) = (next_p, &mut inner.engine) {
-            let _ = engine.queue_next(&next_p);
-        }
-
         Ok(self.build_snapshot(&inner))
     }
 
@@ -258,12 +230,6 @@ impl WallpaperController {
         let curr = inner.source_manager.current_video();
         inner.source_manager.set_mode(mode);
         inner.source_manager.rebuild_queue(curr.as_deref());
-        let next_p = inner.source_manager.peek_next();
-
-        if let (Some(next_p), Some(engine)) = (next_p, &mut inner.engine) {
-            let _ = engine.queue_next(&next_p);
-        }
-
         Ok(self.build_snapshot(&inner))
     }
 
@@ -315,38 +281,25 @@ impl WallpaperController {
 
         std::thread::spawn(move || {
             while running_flag.load(Ordering::Relaxed) {
-                std::thread::sleep(std::time::Duration::from_millis(100));
+                std::thread::sleep(std::time::Duration::from_millis(150));
 
                 if let Ok(mut inner) = inner_clone.lock() {
                     if !inner.is_paused && inner.engine.is_some() {
-                        let (current_path, is_idle) = if let Some(engine) = &inner.engine {
-                            (engine.get_current_path(), engine.is_idle())
+                        let is_eof = if let Some(engine) = &inner.engine {
+                            engine.is_eof()
                         } else {
-                            (None, false)
+                            false
                         };
 
-                        // 1. Si mpv avanzó de forma continua al siguiente vídeo pre-encolado
-                        if let Some(cp) = current_path {
-                            if inner.source_manager.current_video().as_deref() != Some(&cp) {
-                                inner.source_manager.set_current_video(&cp);
-                                let next_p = inner.source_manager.peek_next();
-                                if let (Some(next_p), Some(engine)) = (next_p, &mut inner.engine) {
-                                    let _ = engine.queue_next(&next_p);
-                                }
-                            }
-                        }
-
-                        // 2. Si el motor se quedó inactivo (idle) y se requiere reactivar la reproducción
-                        if is_idle {
+                        if is_eof {
                             let single = inner.source_manager.total_videos() == 1;
                             let fit_str = match inner.source_manager.settings().fit {
                                 WallpaperFit::Contain => "contain",
                                 WallpaperFit::Cover => "cover",
                             };
                             let next_vid = inner.source_manager.advance_next();
-                            let peek = inner.source_manager.peek_next();
                             if let (Some(next_vid), Some(engine)) = (next_vid, &mut inner.engine) {
-                                let _ = engine.play_with_prefetch(&next_vid, peek.as_deref(), single, fit_str);
+                                let _ = engine.load_video(&next_vid, single, fit_str);
                             }
                         }
                     }

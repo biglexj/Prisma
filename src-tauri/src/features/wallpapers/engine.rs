@@ -13,8 +13,7 @@ impl VideoWallpaperEngine {
         let mpv = Mpv::with_initializer(|initializer| {
             let _ = initializer.set_property("vo", "auto");
             let _ = initializer.set_property("hwdec", "auto-safe");
-            // "yes" mantiene el último fotograma congelado en pantalla sin resetear el contexto de swapchain
-            let _ = initializer.set_property("keep-open", "yes");
+            let _ = initializer.set_property("keep-open", "always");
             let _ = initializer.set_property("auto-window-resize", "no");
             let _ = initializer.set_property("wid", wid);
             let _ = initializer.set_property("audio-display", "no");
@@ -25,12 +24,8 @@ impl VideoWallpaperEngine {
             let _ = initializer.set_property("input-default-bindings", "no");
             let _ = initializer.set_property("input-vo-keyboard", "no");
             let _ = initializer.set_property("force-window", "yes");
-
-            // Prefetching masivo de playlist y caché de demuxer para pase fluido sin corte a negro
             let _ = initializer.set_property("prefetch-playlist", "yes");
-            let _ = initializer.set_property("cache", "yes");
-            let _ = initializer.set_property("demuxer-readahead-secs", 5.0);
-            let _ = initializer.set_property("reset-on-next-file", "pause");
+            let _ = initializer.set_property("video-sync", "audio");
             Ok(())
         })
         .map_err(|e| format!("Error al inicializar sesión libmpv de fondo: {e:?}"))?;
@@ -46,22 +41,7 @@ impl VideoWallpaperEngine {
         Err("Soporte libmpv no compilado en esta versión".to_string())
     }
 
-    pub fn is_idle(&self) -> bool {
-        #[cfg(feature = "mpv")]
-        {
-            self.mpv.get_property::<bool>("idle-active").unwrap_or(false)
-        }
-        #[cfg(not(feature = "mpv"))]
-        false
-    }
-
-    pub fn play_with_prefetch(
-        &mut self,
-        raw_path: &str,
-        next_path: Option<&str>,
-        loop_single: bool,
-        fit: &str,
-    ) -> Result<(), String> {
+    pub fn load_video(&mut self, raw_path: &str, loop_single: bool, fit: &str) -> Result<(), String> {
         #[cfg(feature = "mpv")]
         {
             let path = raw_path.strip_prefix(r"\\?\").unwrap_or(raw_path);
@@ -74,20 +54,16 @@ impl VideoWallpaperEngine {
                 .map_err(|e| format!("Error cargando vídeo de fondo: {e:?}"))?;
             let _ = self.mpv.set_property("pause", false);
             self.current_path = Some(path.to_string());
-
-            if let Some(next) = next_path {
-                let clean_next = next.strip_prefix(r"\\?\").unwrap_or(next);
-                let _ = self.mpv.command("loadfile", &[clean_next, "append"]);
-            }
             Ok(())
         }
         #[cfg(not(feature = "mpv"))]
         {
-            let _ = (raw_path, next_path, loop_single, fit);
+            let _ = (raw_path, loop_single, fit);
             Err("libmpv desactivado".to_string())
         }
     }
 
+    #[allow(dead_code)]
     pub fn queue_next(&mut self, raw_path: &str) -> Result<(), String> {
         #[cfg(feature = "mpv")]
         {
@@ -146,6 +122,7 @@ impl VideoWallpaperEngine {
         false
     }
 
+    #[allow(dead_code)]
     pub fn get_current_path(&self) -> Option<String> {
         #[cfg(feature = "mpv")]
         {

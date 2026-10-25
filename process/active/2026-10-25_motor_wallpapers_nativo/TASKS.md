@@ -14,7 +14,7 @@ Planificación en dos fases; implementación no iniciada.
 - [x] Eliminar pase a negro entre transiciones mediante playlist nativo libmpv (`prefetch-playlist=yes`, `cache=yes`, `demuxer-max-bytes=400M`, `keep-open=yes`, `auto-window-resize=no`).
 - [x] Añadir control bidireccional de transporte (Anterior y Siguiente) con salto prefetcheado instantáneo.
 - [x] Implementar cuadrícula de vídeos de 6 columnas con miniaturas nativas (`VideoThumbnail`), badges de formato y estado activo en pantalla.
-- [x] Resolver reproducción inmediata al hacer clic en cualquier tarjeta de vídeo (`play_with_prefetch`) resolviendo préstamos mutables de Rust y sincronización de índices.
+- [x] Resolver reproducción inmediata al hacer clic en cualquier tarjeta de vídeo (`load_video`) restaurando el pipeline canónico y eliminando opciones de pausa conflictivas de libmpv.
 - [x] Garantizar extracción y despliegue de miniaturas para todos los formatos (incluyendo contenedores .mkv y títulos con apóstrofes especiales Unicode) mediante fallback robusto con FFmpeg en `load_video_thumbnail_data_url`.
 - [ ] Validar flujo real con A/B/C y distribución nativa.
 
