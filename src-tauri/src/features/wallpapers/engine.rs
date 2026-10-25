@@ -5,6 +5,7 @@ pub struct VideoWallpaperEngine {
     #[cfg(feature = "mpv")]
     mpv: Mpv,
     current_path: Option<String>,
+    loaded_at: std::time::Instant,
 }
 
 impl VideoWallpaperEngine {
@@ -33,6 +34,7 @@ impl VideoWallpaperEngine {
         Ok(Self {
             mpv,
             current_path: None,
+            loaded_at: std::time::Instant::now(),
         })
     }
 
@@ -54,6 +56,7 @@ impl VideoWallpaperEngine {
                 .map_err(|e| format!("Error cargando vídeo de fondo: {e:?}"))?;
             let _ = self.mpv.set_property("pause", false);
             self.current_path = Some(path.to_string());
+            self.loaded_at = std::time::Instant::now();
             Ok(())
         }
         #[cfg(not(feature = "mpv"))]
@@ -78,13 +81,14 @@ impl VideoWallpaperEngine {
         }
     }
 
-    #[allow(dead_code)]
     pub fn is_eof(&self) -> bool {
         #[cfg(feature = "mpv")]
         {
-            let eof = self.mpv.get_property::<bool>("eof-reached").unwrap_or(false);
-            let idle = self.mpv.get_property::<bool>("idle-active").unwrap_or(false);
-            eof || (idle && self.current_path.is_some())
+            // Ignorar los primeros 2 segundos tras cargar para que mpv abra el contenedor y decodifique
+            if self.loaded_at.elapsed() < std::time::Duration::from_secs(2) {
+                return false;
+            }
+            self.mpv.get_property::<bool>("eof-reached").unwrap_or(false)
         }
         #[cfg(not(feature = "mpv"))]
         false
