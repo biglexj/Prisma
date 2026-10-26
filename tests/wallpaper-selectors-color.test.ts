@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "fs";
 import { AMBIENTS, DEFAULT_OVERLAY_PARTICLES, normalizeComposition, type CompositionConfig } from "../src/features/wallpapers/compositor/config";
 
 describe("Estilizado de selectores y color predefinido #00C9B9", () => {
@@ -35,7 +36,7 @@ describe("Estilizado de selectores y color predefinido #00C9B9", () => {
     expect(normalized.overlay.color).toBe("#00C9B9");
   });
 
-  test("normalizeComposition actualiza el antiguo valor por defecto #263b62 a #00C9B9", () => {
+  test("normalizeComposition actualiza el antiguo valor por defecto #263b62 y #691BDE a #00C9B9", () => {
     const raw: CompositionConfig = {
       ambient: "solid",
       ambientColor: "#263b62",
@@ -44,7 +45,7 @@ describe("Estilizado de selectores y color predefinido #00C9B9", () => {
       dynamic: "none",
       scenario: "none",
       particle: "none",
-      overlay: { ...DEFAULT_OVERLAY_PARTICLES, color: "#b8efff" },
+      overlay: { ...DEFAULT_OVERLAY_PARTICLES, color: "#691BDE" },
       intensity: 1,
       audioLevel: 0,
       paused: false,
@@ -57,6 +58,21 @@ describe("Estilizado de selectores y color predefinido #00C9B9", () => {
     const normalized = normalizeComposition(raw);
     expect(normalized.ambientColor).toBe("#00C9B9");
     expect(normalized.overlay.color).toBe("#00C9B9");
+  });
+
+  test("los controles UI (botones, switches, sliders) usan var(--primary) según las variantes del tema", () => {
+    const studioCss = readFileSync("src/features/wallpapers/ui/composition-studio.css", "utf8");
+    const liveCss = readFileSync("src/features/wallpapers/ui/live-wallpapers.css", "utf8");
+
+    // Switches usan var(--primary)
+    expect(studioCss).toContain(".scene-switch-control input:checked + .scene-switch-slider");
+    expect(studioCss).toContain("background-color: var(--primary);");
+    // Sliders usan var(--primary)
+    expect(studioCss).toContain(".scene-slider input { width: 100%; accent-color: var(--primary);");
+    // Botones activos usan var(--primary)
+    expect(studioCss).toContain("color: var(--primary); border-color: var(--primary);");
+    // Pestañas de categorías usan var(--primary)
+    expect(liveCss).toContain("border-color: color-mix(in srgb, var(--primary) 40%, var(--outline-variant, #ded5df));");
   });
 
   test("soporta switch de activación/desactivación preservando configuración", () => {
@@ -78,20 +94,21 @@ describe("Estilizado de selectores y color predefinido #00C9B9", () => {
       parallax: { enabled: true, strength: 0.75 },
     };
 
-    // Desactivar escenario y ambiente mediante switch
-    const deactivatedConfig: CompositionConfig = {
+    const nextConfig: CompositionConfig = {
       ...activeConfig,
       visibility: {
         ...activeConfig.visibility,
-        ambient: false,
         scenario: false,
+      },
+      overlay: {
+        ...activeConfig.overlay,
+        enabled: false,
       },
     };
 
-    const normalized = normalizeComposition(deactivatedConfig);
-    expect(normalized.visibility.ambient).toBe(false);
-    expect(normalized.visibility.scenario).toBe(false);
-    expect(normalized.ambientColor).toBe("#00C9B9");
-    expect(normalized.scenario).toBe("aurora");
+    expect(nextConfig.visibility.scenario).toBe(false);
+    expect(nextConfig.overlay.enabled).toBe(false);
+    expect(nextConfig.scenario).toBe("aurora");
+    expect(nextConfig.overlay.color).toBe("#00C9B9");
   });
 });

@@ -310,7 +310,7 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
             <ColorField
               label="Color"
               ariaLabel="Color de la partícula"
-              value={overlay.color}
+              value={(!overlay.color || overlay.color === "#b8efff" || overlay.color.toUpperCase() === "#691BDE") ? "#00C9B9" : overlay.color}
               onChange={color => patchOverlay({ color })}
             />
             <Slider label="Tamaño" min={0.25} max={4} value={overlay.size} onChange={size=>patchOverlay({size})}/>
@@ -403,7 +403,7 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
           return {...c,scenario:"none",dynamic:"none",particle:"none",[field]:type,
             visibility:{...c.visibility,[visibility]:type !== "none"}};
         },enabled || type === "none");
-        else void select(c=>({...c,overlay:{...c.overlay,...(type === "none" ? {enabled:false} : {shape:type as typeof c.overlay.shape,enabled:true,color:c.overlay.color||"#00C9B9"})}}),enabled || type === "none");
+        else void select(c=>({...c,overlay:{...c.overlay,...(type === "none" ? {enabled:false} : {shape:type as typeof c.overlay.shape,enabled:true,color:(!c.overlay.color || c.overlay.color === "#b8efff" || c.overlay.color.toUpperCase() === "#691BDE") ? "#00C9B9" : c.overlay.color})}}),enabled || type === "none");
       }}/>}
   </div>;
 }

@@ -1144,16 +1144,16 @@
 .wallpaper-category-tabs { flex-wrap: wrap; }
 .wallpaper-category-panel { display: grid; gap: 18px; min-width: 0; }
 .wallpaper-category-tabs .segmented-item { min-height: 44px; }
-.wallpaper-category-tabs .segmented-item:focus-visible { outline: 2px solid #00C9B9; outline-offset: 2px; }
+.wallpaper-category-tabs .segmented-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .wallpaper-category-tabs .segmented-item.is-selected {
   background: var(--surface-bright, #ffffff);
-  color: #00877c;
+  color: var(--primary);
   font-weight: 700;
-  border-color: color-mix(in srgb, #00C9B9 40%, var(--outline-variant, #ded5df));
-  box-shadow: 0 2px 8px color-mix(in srgb, #00C9B9 18%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--outline-variant, #ded5df));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 .dark .wallpaper-category-tabs .segmented-item.is-selected {
   background: var(--surface-container-highest, #36343b);
-  color: #00F5E1;
-  border-color: color-mix(in srgb, #00C9B9 45%, transparent);
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
 }

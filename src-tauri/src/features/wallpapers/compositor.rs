@@ -59,6 +59,12 @@ impl Default for CompositorConfig {
 
 impl CompositorConfig {
     pub fn migrate_layers(&mut self) {
+        if self.overlay.color == "#b8efff" || self.overlay.color.eq_ignore_ascii_case("#691bde") {
+            self.overlay.color = "#00C9B9".into();
+        }
+        if self.ambient_color == "#263b62" {
+            self.ambient_color = "#00C9B9".into();
+        }
         // La galería canónica elige un escenario. Evitar que perfiles de la UI
         // anterior sigan renderizando escenarios adicionales ocultos a la vez.
         if self.scenario != "none" { self.dynamic="none".into(); self.particle="none".into(); }

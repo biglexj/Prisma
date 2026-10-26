@@ -110,7 +110,7 @@ export function normalizeComposition(config: CompositionConfig): CompositionConf
     overlay: {
       ...overlay,
       shape: OVERLAY_SHAPES.some(item => item.value === overlay.shape) ? overlay.shape : DEFAULT_OVERLAY_PARTICLES.shape,
-      color: (!overlay.color || overlay.color === "#b8efff") ? "#00C9B9" : overlay.color,
+      color: (!overlay.color || overlay.color === "#b8efff" || overlay.color.toUpperCase() === "#691BDE") ? "#00C9B9" : overlay.color,
       direction: OVERLAY_DIRECTIONS.some(item => item.value === overlay.direction) ? overlay.direction : DEFAULT_OVERLAY_PARTICLES.direction,
       size: clamp(overlay.size, 0.25, 4, DEFAULT_OVERLAY_PARTICLES.size),
       density: clamp(overlay.density, 0.1, 3, DEFAULT_OVERLAY_PARTICLES.density),
