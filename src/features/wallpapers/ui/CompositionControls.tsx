@@ -1,45 +1,153 @@
-import { useEffect, useState } from "react";
-import { AMBIENTS, SCENARIOS, type CompositionConfig } from "../compositor/config";
-import { liveWallpapersApi } from "../services/liveWallpapersApi";
+import { useState } from "react";
+import { AMBIENTS, OVERLAY_DIRECTIONS, OVERLAY_SHAPES, SCENARIOS, BACKGROUND_MOTIONS, BACKGROUND_VIEWS,
+  DEFAULT_LAYER_CONTROLS, getLayerControls, layerKey,
+  type EffectLayer, type Layer, type LayerControls } from "../compositor/config";
+import { useCompositionConfig } from "./useCompositionConfig";
+import { SceneGallery, type GalleryKind } from "./SceneGallery";
 
-/** Los controles no importan el motor WebGL: vive en compositor.html. */
+/** Las capas del modelo: 2 ambiente · 3 planos · 4 escenarios 3D · 5 partículas 3D · 6 partículas 2D. */
+const LAYERS: { id: Layer; label: string; hint: string }[] = [
+  { id: "ambient", label: "Ambiente", hint: "Capa 2 · por sí solo ya es un fondo" },
+  { id: "dynamic", label: "Dinámicos", hint: "Capa 3 · fondo plano de pantalla completa" },
+  { id: "scene", label: "Escenarios 3D", hint: "Capa 4 · escenario con cámara" },
+  { id: "particles", label: "Partículas 3D", hint: "Capa 5 · partículas volumétricas" },
+  { id: "overlay", label: "Partículas 2D", hint: "Capa 6 · partículas dibujadas sobre el lienzo" },
+  { id: "parallax", label: "Parallax", hint: "Profundidad con el cursor" },
+];
+
+const LAYER_OF_KIND: Record<GalleryKind, EffectLayer | "overlay"> = {
+  ambient: "ambient", dynamic: "dynamic", scene: "scene", particles: "particles", overlay: "overlay",
+};
+
+function Slider({label,value,min,max,step=0.1,onChange}: {
+  label:string;value:number;min:number;max:number;step?:number;onChange(value:number):void;
+}) {
+  return <label className="scene-slider"><span>{label} <output>{Number(value.toFixed(2))}</output></span>
+    <input aria-label={label} type="range" min={min} max={max} step={step} value={value} onChange={e=>onChange(Number(e.target.value))}/>
+  </label>;
+}
+
 export function CompositionControls({ enabled }: { enabled: boolean }) {
-  const [config, setConfig] = useState<CompositionConfig | null>(null);
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    void liveWallpapersApi.getCompositorConfig()
-      .then(value => { if (alive) setConfig(value); })
-      .catch(reason => { if (alive) setError(String(reason)); });
-    return () => { alive = false; };
-  }, []);
-  const update = async (patch: Partial<CompositionConfig>) => {
-    if (!config || saving) return;
-    setSaving(true);
-    try {
-      const next = { ...config, ...patch };
-      await liveWallpapersApi.setCompositorConfig(next);
-      setConfig(next);
-      setError("");
-    } catch (reason) { setError(String(reason)); }
-    finally { setSaving(false); }
-  };
-  return <fieldset className="live-composition-controls" disabled={!config || saving}>
-    <legend>Escenarios de Aurora</legend>
-    <label>Ambiente
-      <select aria-label="Ambiente Aurora" value={config?.ambient ?? "original"}
-        onChange={event => { void update({ ambient: event.target.value }); }}>
-        {AMBIENTS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
-      </select>
-    </label>
-    <label>Escenario
-      <select aria-label="Escenario Aurora" value={config?.scenario ?? "prisma"}
-        onChange={event => { void update({ scenario: event.target.value }); }}>
-        {SCENARIOS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
-      </select>
-    </label>
-    <p>{enabled ? "Fondo 3D activo en el escritorio." : "Elige un escenario y pulsa Activar fondo para verlo en el escritorio."}</p>
-    {error && <p role="alert">{error}</p>}
-  </fieldset>;
+  const {config,error,update} = useCompositionConfig();
+  const [layer,setLayer] = useState<Layer>("scene");
+  if (!config) return <section className="composition-studio">{error ? <p role="alert">{error}</p> : <p>Cargando efectos de Aurora…</p>}</section>;
+  const controlLayer: EffectLayer = layer === "ambient" || layer === "dynamic" || layer === "scene" || layer === "particles" ? layer : "scene";
+  const settings = getLayerControls(config, controlLayer);
+  const overlay = config.overlay;
+  const selectedType = layer === "ambient" ? config.ambient : layer === "dynamic" ? config.dynamic
+    : layer === "scene" ? config.scenario : layer === "particles" ? config.particle : overlay.enabled ? overlay.shape : "none";
+  const selected = SCENARIOS.find(item=>item.type === selectedType);
+  const flatAmbient = config.ambient === "solid" || config.ambient === "gradient";
+  const spatial = (layer === "ambient" && !flatAmbient) || selected?.spatial === true;
+  const hasEffect = layer === "ambient" ? config.ambient !== "original"
+    : layer === "overlay" ? overlay.enabled
+    : layer === "dynamic" ? config.dynamic !== "none"
+    : layer === "scene" ? config.scenario !== "none" : config.particle !== "none";
+  const visibilityKey = layer === "scene" ? "scenario" : layer === "particles" ? "particles"
+    : layer === "dynamic" ? "dynamic" : "ambient";
+  const patch = (value:Partial<LayerControls>) => update(current => ({...current,
+    controls:{...current.controls,[layerKey(current,controlLayer)]:{...getLayerControls(current,controlLayer),...value}}}));
+  const patchOverlay = (value:Partial<typeof overlay>) => update(current => ({...current,overlay:{...current.overlay,...value}}));
+  const parallaxAvailable = (config.visibility.ambient && config.ambient !== "original") ||
+    SCENARIOS.some(item=>item.spatial && ((config.visibility.scenario && item.type===config.scenario) || (config.visibility.particles && item.type===config.particle)));
+  const title = layer === "ambient" ? "Fondo de ambiente" : layer === "dynamic" ? "Fondo plano"
+    : layer === "scene" ? (selected?.label ?? "Sin escenario") : layer === "particles" ? (selected?.label ?? "Sin partículas")
+    : layer === "overlay" ? "Partículas sobre el lienzo" : "Profundidad con el cursor";
+  const hint = LAYERS.find(item=>item.id===layer)?.hint ?? "";
+  return <div className="composition-studio">
+    <section className="composition-layer-panel">
+      <div className="composition-layer-tabs" role="tablist" aria-label="Capas del fondo" onKeyDown={event=>{
+        const index = LAYERS.findIndex(item=>item.id===layer);
+        const next = event.key==="ArrowRight" ? (index+1)%LAYERS.length : event.key==="ArrowLeft" ? (index+LAYERS.length-1)%LAYERS.length
+          : event.key==="Home" ? 0 : event.key==="End" ? LAYERS.length-1 : -1;
+        if(next<0)return;
+        event.preventDefault();setLayer(LAYERS[next].id);
+        document.getElementById(`layer-${LAYERS[next].id}`)?.focus();
+      }}>
+        {LAYERS.map(item=><button type="button" key={item.id} role="tab" id={`layer-${item.id}`}
+          aria-controls="layer-controls" aria-selected={layer===item.id} tabIndex={layer===item.id?0:-1} onClick={()=>setLayer(item.id)}>{item.label}</button>)}
+      </div>
+      <div id="layer-controls" role="tabpanel" aria-labelledby={`layer-${layer}`}>
+        <header className="scene-controls-heading">
+          <div><strong>{title}</strong>
+            <span>{hint} · {enabled ? "Aplicado en el escritorio" : "Configura el efecto y pulsa Activar fondo"}</span></div>
+          {layer !== "parallax" && <div className="scene-layer-actions">
+            {layer === "overlay"
+              ? <label><input type="checkbox" checked={overlay.enabled} onChange={e=>patchOverlay({enabled:e.target.checked})}/> Activar capa</label>
+              : <label><input type="checkbox" checked={config.visibility[visibilityKey]} onChange={e=>update(c=>({...c,visibility:{...c.visibility,[visibilityKey]:e.target.checked}}))}/> Visible</label>}
+            <button type="button" disabled={!hasEffect} aria-pressed={layer === "overlay" ? overlay.paused : settings.paused}
+              onClick={()=>layer === "overlay" ? patchOverlay({paused:!overlay.paused}) : patch({paused:!settings.paused})}>
+              {(layer === "overlay" ? overlay.paused : settings.paused) ? "Reanudar capa" : "Pausar capa"}</button>
+            {layer !== "overlay" && <button type="button" disabled={!hasEffect} onClick={()=>patch({...DEFAULT_LAYER_CONTROLS})}>Restablecer capa</button>}
+          </div>}
+        </header>
+        {layer === "parallax" ? <div className="scene-control-grid">
+          <label><input type="checkbox" checked={config.parallax.enabled}
+            onChange={e=>update(c=>({...c,parallax:{...c.parallax,enabled:e.target.checked}}))}/> Seguir el cursor</label>
+          <Slider label="Fuerza de profundidad" min={0} max={2} value={config.parallax.strength}
+            onChange={strength=>update(c=>({...c,parallax:{...c.parallax,strength}}))}/>
+          <label><input type="checkbox" checked={config.parallax.base ?? true} onChange={e=>update(c=>({...c,parallax:{...c.parallax,base:e.target.checked}}))}/> Aplicar también al vídeo o imagen</label>
+          <p>Desplaza el fondo y las capas con cámara al mover el cursor. Los clics del escritorio permanecen libres.
+            {!parallaxAvailable && " También funciona con una foto o un vídeo como base."}</p>
+        </div> : layer === "overlay" ? <div className="scene-control-grid">
+          <label>Forma<select aria-label="Forma de la partícula" value={overlay.shape} onChange={e=>patchOverlay({shape:e.target.value as typeof overlay.shape})}>
+            {OVERLAY_SHAPES.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
+          </select></label>
+          <label>Dirección<select aria-label="Dirección de la partícula" value={overlay.direction} onChange={e=>patchOverlay({direction:e.target.value as typeof overlay.direction})}>
+            {OVERLAY_DIRECTIONS.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
+          </select></label>
+          <label>Color<input aria-label="Color de la partícula" type="color" value={overlay.color} onChange={e=>patchOverlay({color:e.target.value})}/></label>
+          <Slider label="Tamaño" min={0.25} max={4} value={overlay.size} onChange={size=>patchOverlay({size})}/>
+          <Slider label="Densidad" min={0.1} max={3} value={overlay.density} onChange={density=>patchOverlay({density})}/>
+          <Slider label="Velocidad" min={0.1} max={3} value={overlay.speed} onChange={speed=>patchOverlay({speed})}/>
+          <Slider label="Opacidad" min={0} max={1} value={overlay.opacity} onChange={opacity=>patchOverlay({opacity})}/>
+          <p>Esta capa se dibuja sobre cualquier fondo: un vídeo, una foto o un escenario 3D.</p>
+        </div> : <>
+          {layer === "ambient" && <div className="scene-ambient-options" role="group" aria-label="Paletas de ambiente">
+            {AMBIENTS.map(item=><button type="button" key={item.value} aria-pressed={config.ambient===item.value}
+              onClick={()=>update(c=>({...c,ambient:item.value,visibility:{...c.visibility,ambient:true}}))}><i style={{background:item.colors}}/>{item.value==="original"?"Sin ambiente":item.label}</button>)}
+          </div>}
+          {layer === "ambient" && flatAmbient && <div className="scene-control-grid">
+            <label>Color<input aria-label="Color del ambiente" type="color" value={config.ambientColor} onChange={e=>update(c=>({...c,ambientColor:e.target.value}))}/></label>
+            {config.ambient === "gradient" && <label>Segundo color<input aria-label="Segundo color del ambiente" type="color" value={config.ambientColor2} onChange={e=>update(c=>({...c,ambientColor2:e.target.value}))}/></label>}
+            <Slider label="Opacidad del ambiente" min={0} max={1} step={0.05} value={config.ambientOpacity} onChange={ambientOpacity=>update(c=>({...c,ambientOpacity}))}/>
+          </div>}
+          {hasEffect && !flatAmbient ? <><div className="scene-control-grid">
+            {spatial && <>
+              <label>Vista de cámara<select aria-label="Vista de cámara" value={settings.view} onChange={e=>patch({view:e.target.value as LayerControls['view']})}>
+                {BACKGROUND_VIEWS.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
+              </select></label>
+              <label>Movimiento<select aria-label="Movimiento de cámara" value={settings.motion} onChange={e=>patch({motion:e.target.value as LayerControls['motion']})}>
+                {BACKGROUND_MOTIONS.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
+              </select></label>
+            </>}
+            <Slider label="Velocidad" min={0.1} max={3} value={settings.speed} onChange={speed=>patch({speed})}/>
+            <Slider label="Zoom" min={0.1} max={2.5} step={0.05} value={settings.zoom} onChange={zoom=>patch({zoom})}/>
+            <Slider label="Horizontal" min={-10} max={10} step={0.5} value={settings.panX} onChange={panX=>patch({panX})}/>
+            <Slider label="Vertical" min={-10} max={10} step={0.5} value={settings.panY} onChange={panY=>patch({panY})}/>
+            {spatial && <>
+              <Slider label="Giro" min={-180} max={180} step={1} value={settings.yaw} onChange={yaw=>patch({yaw})}/>
+              <Slider label="Inclinación" min={-80} max={80} step={1} value={settings.pitch} onChange={pitch=>patch({pitch})}/>
+            </>}
+          </div>
+          <div className="scene-control-extras">
+            <label><input type="checkbox" checked={settings.colorCycle} onChange={e=>patch({colorCycle:e.target.checked})}/> Colores cambiantes</label>
+            {layer === "scene" && selected?.type === "gargantua" && <label>Detalle<select aria-label="Detalle de Gargantúa" value={settings.quality} onChange={e=>patch({quality:Number(e.target.value) as 0|1|2})}>
+              <option value={0}>Ligero</option><option value={1}>Alto</option><option value={2}>Cine</option></select></label>}
+          </div>
+          </> : !hasEffect && <p>Elige un efecto para ajustar esta capa.</p>}
+        </>}
+        {error && <p className="live-wallpapers-error-banner" role="alert">{error}</p>}
+      </div>
+    </section>
+    {layer !== "parallax" && <SceneGallery layer={layer === "overlay" ? "overlay" : controlLayer} selected={selectedType}
+      onSelect={(kind,type)=>{
+        if(kind==="ambient") update(c=>({...c,ambient:type,visibility:{...c.visibility,ambient:true}}));
+        else if(kind==="dynamic") update(c=>({...c,dynamic:type,visibility:{...c.visibility,dynamic:true}}));
+        else if(kind==="scene") update(c=>({...c,scenario:type,visibility:{...c.visibility,scenario:true}}));
+        else if(kind==="particles") update(c=>({...c,particle:type,visibility:{...c.visibility,particles:true}}));
+        else update(c=>({...c,overlay:{...c.overlay,...(type === "none" ? {enabled:false} : {shape:type as typeof c.overlay.shape,enabled:true})}}));
+        setLayer(LAYER_OF_KIND[kind]);
+      }}/>}
+  </div>;
 }

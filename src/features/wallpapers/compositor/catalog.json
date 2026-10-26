@@ -1,0 +1,202 @@
+[
+  {
+    "type": "prisma",
+    "label": "Prisma",
+    "description": "Facetas de color en movimiento suave",
+    "category": "dynamic",
+    "spatial": false,
+    "preview": "/wallpapers/scenes/prisma.webp"
+  },
+  {
+    "type": "borealis",
+    "label": "Aurora Boreal",
+    "description": "Shaders fluidos de auroras cósmicas",
+    "category": "dynamic",
+    "spatial": false,
+    "preview": "/wallpapers/scenes/borealis.webp"
+  },
+  {
+    "type": "blackhole",
+    "label": "Lente Gravitacional",
+    "description": "Lente gravitacional y distorsión relativista",
+    "category": "dynamic",
+    "spatial": false,
+    "preview": "/wallpapers/scenes/blackhole.webp"
+  },
+  {
+    "type": "gargantua",
+    "label": "Gargantúa",
+    "description": "Raytracer de Agujero Negro masivo",
+    "category": "3d",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/gargantua.webp"
+  },
+  {
+    "type": "matrix",
+    "label": "Código Matrix",
+    "description": "Lluvia de terminal retro de los 90",
+    "category": "dynamic",
+    "spatial": false,
+    "preview": "/wallpapers/scenes/matrix.webp"
+  },
+  {
+    "type": "liquid",
+    "label": "Flujo Líquido",
+    "description": "Fluido procedural con remolinos",
+    "category": "dynamic",
+    "spatial": false,
+    "preview": "/wallpapers/scenes/liquid.webp"
+  },
+  {
+    "type": "tunnel",
+    "label": "Túnel Neón",
+    "description": "Warp-speed wireframe hiperespacial",
+    "category": "3d",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/tunnel.webp"
+  },
+  {
+    "type": "cybercity",
+    "label": "Holo Ciudad",
+    "description": "Ciudad de rascacielos wireframe 3D",
+    "category": "3d",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/cybercity.webp"
+  },
+  {
+    "type": "deepsea",
+    "label": "Abismo Marino",
+    "description": "God rays oceánicos y plancton 3D",
+    "category": "3d",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/deepsea.webp"
+  },
+  {
+    "type": "blackholepro",
+    "label": "Agujero Negro",
+    "description": "Agujero Negro: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/blackholepro.webp"
+  },
+  {
+    "type": "interstellarparticles",
+    "label": "Interestelar",
+    "description": "Interestelar: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/interstellarparticles.webp"
+  },
+  {
+    "type": "milkyway",
+    "label": "Vía Láctea",
+    "description": "Vía Láctea: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/milkyway.webp"
+  },
+  {
+    "type": "binarybh",
+    "label": "Doble Abismo",
+    "description": "Doble Abismo: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/binarybh.webp"
+  },
+  {
+    "type": "morphclick",
+    "label": "Nexo Cuántico",
+    "description": "Nexo Cuántico: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/morphclick.webp"
+  },
+  {
+    "type": "nebula",
+    "label": "Nebulosa Orión",
+    "description": "Nebulosa Orión: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/nebula.webp"
+  },
+  {
+    "type": "dnahelix",
+    "label": "ADN Cósmico",
+    "description": "ADN Cósmico: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/dnahelix.webp"
+  },
+  {
+    "type": "wormhole",
+    "label": "Agujero de Gusano",
+    "description": "Agujero de Gusano: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/wormhole.webp"
+  },
+  {
+    "type": "supernova",
+    "label": "Supernova Púlsar",
+    "description": "Supernova Púlsar: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/supernova.webp"
+  },
+  {
+    "type": "quasar",
+    "label": "Cuásar Hiperluminoso",
+    "description": "Cuásar Hiperluminoso: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/quasar.webp"
+  },
+  {
+    "type": "bubbles",
+    "label": "Burbujas Explosivas",
+    "description": "Burbujas Explosivas: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/bubbles.webp"
+  },
+  {
+    "type": "microbes",
+    "label": "Bio-Abisal",
+    "description": "Bio-Abisal: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/microbes.webp"
+  },
+  {
+    "type": "soundwave",
+    "label": "Pulso Musical 3D",
+    "description": "Pulso Musical 3D: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/soundwave.webp"
+  },
+  {
+    "type": "jellyfish",
+    "label": "Medusas Bioluminiscentes",
+    "description": "Medusas Bioluminiscentes: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/jellyfish.webp"
+  },
+  {
+    "type": "synapse",
+    "label": "Red Sinapsis Viva",
+    "description": "Red Sinapsis Viva: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/synapse.webp"
+  },
+  {
+    "type": "aurora",
+    "label": "Velos de Aurora",
+    "description": "Velos de Aurora: partículas volumétricas con movimiento procedural",
+    "category": "particles",
+    "spatial": true,
+    "preview": "/wallpapers/scenes/aurora.webp"
+  }
+]

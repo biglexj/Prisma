@@ -41,11 +41,11 @@ Fase 1 implementada con revisión técnica; fase 2 iniciada y parcialmente valid
       Resultado verificado: 15 archivos / 1.218 líneas bajo `dynamic-backgrounds/`, three.js puro, texturas 100 % procedurales, sin Supabase ni React Router. Bloqueos identificados: `LayeredThreeBackground.tsx` es React, `controls.ts` mezcla React, `vtuberAssets` hay que descartarlo, `BackgroundInteraction` no retira listeners, seis efectos leen `window.innerWidth/innerHeight`.
 - [x] Probar composición Aurora en superficie web nativa de Windows, sin carpeta ni mpv requeridos.
 - [ ] Integrar capas y presets pertinentes; avatar opcional, sin requerir conversación ni cuenta.
-- [ ] Compartir controles de fondo y garantizar exclusión entre vídeo y composición.
+- [ ] Compartir controles y combinar medio base y composición con apagado independiente.
 - [ ] Verificar pausa independiente, transparencia, cursor optativo, limpieza y recuperación de Explorer.
 - [ ] Medir CPU/GPU/RAM y comprobar recursos locales/distribución antes de ampliar efectos.
 
-## Modelo de capas (decidido por Biglex el 2026-10-25)
+## Modelo anterior de capas (sustituido por la aclaración del 2026-10-26)
 
 Sin capa cero. La numeración arranca en 1.
 
@@ -67,3 +67,16 @@ Sin capa cero. La numeración arranca en 1.
 - [x] Verificar Holo Ciudad sin fuentes locales en WebView2: animación, pausa y cierre de superficie.
 - [ ] Completar políticas automáticas de pausa y recuperación de Explorer de fase 1.
 - [ ] Integrar partículas independientes, ecualizador del audio del vídeo y parallax; medir recursos.
+
+## Catálogo completo y galería — implementación local
+
+- [x] Sincronizar los 25 efectos, dependencias y catálogo compartido UI/backend.
+- [x] Miniaturas reales, galería de 46 opciones con filtros y búsqueda, sin WebGL por tarjeta.
+- [x] Controles persistentes por efecto; visibilidad y pausa por capa.
+- [x] Ambiente como capa 2 independiente: solo o sobre imagen/vídeo; color sólido/degradado con opacidad.
+- [x] Dinámicos, escenarios, partículas 3D y partículas 2D independientes.
+- [x] Parallax opcional en capas con cámara y medio base; lectura nativa de cursor.
+- [x] Comprobar 25 efectos en WebView2; coexistencia de imagen/vídeo con capas, pausas y cierre.
+- [x] Exportar y comprobar 25 PNG a 1920 × 1080 para otras aplicaciones.
+- [ ] Verificar visualmente clics/orden frente a iconos en toda la composición final y recuperación de Explorer.
+- [ ] Medir CPU/GPU/RAM sostenidos y completar ecualizador real y políticas automáticas.

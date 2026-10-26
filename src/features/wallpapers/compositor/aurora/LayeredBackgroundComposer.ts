@@ -65,11 +65,14 @@ export class LayeredBackgroundComposer {
         if (this.disposed || version !== this.version) { effect.dispose(); return; }
         try {
             effect.setControls?.({ ...controls, ambient: 'original' });
-            effect.init(this.scenarioScene, this.camera, this.renderer);
+            const staged = new THREE.Scene();
+            effect.init(staged, this.camera, this.renderer);
             // El efecto saliente se libera cuando el entrante ya está listo: liberarlo
             // antes deja la capa de escenario vacía durante la carga y asoma el fondo
             // estático (o un vacío) mientras se cambia de escenario.
             previous?.dispose();
+            this.scenarioScene.clear();
+            this.scenarioScene.add(...staged.children);
             this.projection?.group.removeFromParent();
             this.projection = null;
             if (!effect.setControls) this.projection = new BackgroundProjection([...this.scenarioScene.children], this.camera, type);
@@ -82,7 +85,6 @@ export class LayeredBackgroundComposer {
             this.renderer.domElement.dataset.dynamicBackground = type;
         } catch (error) {
             effect.dispose();
-            this.scenarioScene.clear();
             throw error;
         }
     }
@@ -122,10 +124,12 @@ export class LayeredBackgroundComposer {
         }
     }
 
-    render(foreground: THREE.Scene): void {
+    render(foreground: THREE.Scene, dynamic?: THREE.Scene): void {
         if (this.disposed) return;
         this.renderer.clear();
         if (this.ambientScene.visible && this.ambient) this.renderer.render(this.ambientScene, this.camera);
+        this.renderer.clearDepth();
+        if (dynamic?.visible) this.renderer.render(dynamic, this.camera);
         this.renderer.clearDepth();
         if (this.scenarioScene.visible && this.effect) this.renderer.render(this.scenarioScene, this.camera);
         this.renderer.clearDepth();

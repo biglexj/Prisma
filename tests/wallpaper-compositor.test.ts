@@ -16,5 +16,10 @@ describe("Subconjunto Aurora distribuido por Prisma", () => {
         expect(createHash("sha256").update(readFileSync(upstream)).digest("hex")).toBe(sha);
       }
     }
+    for (const [file, entry] of Object.entries(provenance.external ?? {}) as [string,{source:string;sha256:string}][]) {
+      expect(existsSync(resolve(vendor,file))).toBe(true);
+      const upstream=resolve(import.meta.dir,"../../Aurora---Blog/frontend/src/features/Comunidad/EspacioVtuber/islands/three/dynamic-backgrounds",entry.source);
+      if(existsSync(upstream)) expect(createHash("sha256").update(readFileSync(upstream)).digest("hex")).toBe(entry.sha256);
+    }
   });
 });

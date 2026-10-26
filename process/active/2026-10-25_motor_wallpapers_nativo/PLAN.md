@@ -157,3 +157,23 @@ Esta sección sustituye las propuestas anteriores de «Combinado» y de exigir u
 - Integración verificada en WebView2 nativo a 1920×1080 con cero medios configurados: animación de Holo Ciudad, pausa estable, cambio de escenario y destrucción de la superficie al detener.
 - La base de fase 1 permite continuar. Aún deben completarse pausa automática por pantalla completa/bloqueo y recuperación tras reiniciar Explorer: el bucle actual controla final de medios, no esas políticas.
 - Siguen pendientes partículas como capa independiente, ecualizador del audio del fondo, parallax de cursor y medición sostenida de consumo. No considerar cerrada la fase 2.
+
+## Ampliación autorizada — catálogo y controles por capas
+
+Biglex solicita copiar los efectos de Aurora, mostrarlos como galería dentro de Fondos 3D y ofrecer arriba sus controles por capas. Se importa el catálogo completo de 25 efectos y su cierre de dependencias (46 archivos de motor; UI/store React excluidos). Se generan miniaturas del propio renderizador, no imágenes ilustrativas.
+
+La interfaz tendrá filtros por categoría, selección visual y controles persistentes por efecto: ambiente, escenario, partículas independientes y parallax opcional. Cámara/rotación y detalle se ofrecen solo cuando el motor los admite. No capturar audio del sistema ni presentar un nivel simulado como ecualizador real.
+
+La implementación debe conservar un único contexto WebGL de escritorio, cargas dinámicas con protección frente a selecciones tardías y liberación al cambiar/detener. La galería usa miniaturas estáticas para evitar un contexto de renderizado por tarjeta.
+
+## Modelo vigente — aclaraciones de Biglex, 2026-10-26
+
+Este bloque sustituye la exclusión entre medio y compositor y la numeración anterior.
+Capa 1: imagen/vídeo. Capa 2: ambiente independiente, utilizable solo o sobre el medio.
+Después: dinámicos planos, escenarios 3D, partículas volumétricas y partículas 2D.
+Parallax es una transformación opcional de la base y de las capas con cámara.
+El ecualizador real sigue pendiente; no se sustituye por datos simulados.
+
+Vídeos, Imágenes y Fondos y efectos navegan el catálogo sin apagar capas. Los controles y la galería están disponibles también con medios locales.
+Ambiente incluye color sólido/degradado con opacidad, además de las paletas originales. Cada efecto conserva sus controles.
+Se autoriza generar los mismos recursos a 1920 × 1080 para reutilizarlos: se entregan 25 PNG en assets/wallpapers/scenes-1080, separados de las miniaturas de producción.

@@ -110,3 +110,17 @@ Este bloque describe comprobaciones de esta revisión; los bloques anteriores so
 - [ ] Medición sostenida CPU/GPU/RAM y adopción de las capas independientes de partículas, audio del vídeo y parallax.
 
 Visto bueno a la base técnica para continuar; fase 2 abierta. La prueba del protocolo usa el backend real en la instancia dev, sin simular sus comandos; la prueba de navegador sí usa un puente de configuración simulado y solo acredita renderizado web.
+
+## Catálogo completo y capas independientes — 2026-10-26
+
+- Build web TypeScript/Vite correcto. Advertencias de tamaño de chunks existentes.
+- 14 pruebas Bun de colas y procedencia; sin fallos. Hashes y copia local de 46 archivos del motor más componente 2D.
+- Prueba UI aislada con backend simulado: 46 opciones, ningún canvas por tarjeta, persistencia del último slider y de ajustes por efecto, dos sistemas de partículas, ambiente sólido con opacidad, parallax y ancho 375 sin desbordamiento. Cero errores de página.
+- Instancia nativa propia con perfil `wallpaper-layers-probe`, WebView2/CDP 9334. Los 25 efectos renderizaron sin errores de página/GLSL. Ambiente sin base, partículas 2D animadas con 3D pausado, pausa estable de todas las capas y destrucción del webview al detener.
+- Imagen PNG y vídeo MP4 de prueba reproducidos por mpv con compositor activo. Quitar solo la base conserva compositor; pausa/reanudación global correctas. API de cursor devuelve valores normalizados y acepta aplicar parallax a la base.
+- Evidencias locales: temp/wallpaper-native-gallery.png, temp/wallpaper-native-layers.png; scripts puntuales en temp/test-wallpaper-layers-native.cjs y temp/test-wallpaper-video-native.cjs.
+- Capturas internas del webview y estado nativo no prueban por sí solos la composición visual final contra iconos, clics físicos ni movimiento físico del cursor. Esas comprobaciones, recuperación de Explorer y medición sostenida siguen pendientes.
+- 25 PNG de assets/wallpapers/scenes-1080 comprobados con Pillow: todos 1920 × 1080, suma 18.279.719 bytes. Vista de Holo Ciudad inspeccionada; generación del motor real, no ampliación de miniaturas.
+- No se sustituyó la instalación de Prisma ni se usaron sus preferencias para las pruebas.
+
+- Comprobación final: 20 pruebas Rust y 14 pruebas Bun correctas; build web y prueba UI repetida después de los ajustes finales, sin fallos. Instancia de prueba cerrada tras detener el fondo.

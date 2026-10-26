@@ -55,6 +55,7 @@ export interface WallpaperSettings {
 
 export interface WallpaperStateSnapshot {
   isActive: boolean;
+  baseActive: boolean;
   isPaused: boolean;
   currentMedia: string | null;
   currentFolder: string | null;
@@ -140,6 +141,7 @@ export const liveWallpapersApi = {
   next: () => invoke<WallpaperStateSnapshot>("live_wallpaper_next"),
   prev: () => invoke<WallpaperStateSnapshot>("live_wallpaper_prev"),
   stop: () => invoke<WallpaperStateSnapshot>("live_wallpaper_stop"),
+  stopBase: () => invoke<WallpaperStateSnapshot>("live_wallpaper_stop_base"),
   addFolder: (path: string) => invoke<FolderSource>("live_wallpaper_add_folder", { path }),
   removeFolder: (id: string) => invoke<WallpaperStateSnapshot>("live_wallpaper_remove_folder", { id }),
   toggleFolder: (id: string, enabled: boolean) =>

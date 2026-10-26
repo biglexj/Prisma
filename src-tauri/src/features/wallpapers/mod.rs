@@ -1,4 +1,5 @@
 pub mod compositor;
+pub mod composition_settings;
 pub mod engine;
 pub mod sources;
 pub mod window;
@@ -32,6 +33,7 @@ use window::{DesktopWallpaperWindow, ScreenGeometry};
 pub struct WallpaperStateSnapshot {
     pub is_active: bool,
     pub is_paused: bool,
+    pub base_active: bool,
     /// Ruta del medio que está en pantalla.
     pub current_media: Option<String>,
     /// Carpeta a la que pertenece el medio en pantalla.
@@ -54,6 +56,7 @@ struct InnerState {
     compositor_enabled: bool,
     compositor_config: compositor::CompositorConfig,
     compositor_app: Option<AppHandle>,
+    compositor_epoch: u64,
 }
 
 impl Drop for InnerState {
@@ -74,12 +77,15 @@ impl Drop for InnerState {
 pub struct WallpaperController {
     inner: Arc<Mutex<InnerState>>,
     monitor_running: Arc<AtomicBool>,
+    compositor_lifecycle: Arc<Mutex<()>>,
+    pub composition_transition: Arc<AtomicBool>,
 }
 
 impl WallpaperController {
     pub fn new(app_data_dir: PathBuf) -> Self {
         let source_manager = SourceManager::new(app_data_dir);
-        let compositor_config = source_manager.settings().composition.clone();
+        let mut compositor_config = source_manager.settings().composition.clone();
+        compositor_config.migrate_layers();
         let compositor_config = if compositor_config.validate().is_ok() {
             compositor_config
         } else { compositor::CompositorConfig::default() };
@@ -92,8 +98,11 @@ impl WallpaperController {
                 compositor_enabled: false,
                 compositor_config,
                 compositor_app: None,
+                compositor_epoch: 0,
             })),
             monitor_running: Arc::new(AtomicBool::new(false)),
+            compositor_lifecycle: Arc::new(Mutex::new(())),
+            composition_transition: Arc::new(AtomicBool::new(false)),
         };
 
         controller.start_monitor_loop();
@@ -123,16 +132,14 @@ impl WallpaperController {
             return Ok(self.build_snapshot(&inner));
         }
 
-        Self::close_compositor(&mut inner);
-
         let media_path = inner
             .source_manager
             .current_media()
             .ok_or_else(|| "No hay medios válidos en las carpetas activas de Fondos Vivos".to_string())?;
 
         // 1. Crear ventana nativa en el escritorio de Windows
-        let win = DesktopWallpaperWindow::create()?;
-        let wid = win.raw_handle();
+        if inner.window.is_none() { inner.window = Some(DesktopWallpaperWindow::create()?); }
+        let wid = inner.window.as_ref().unwrap().raw_handle();
 
         // 2. Inicializar motor libmpv apuntando al HWND
         let mut eng = MediaWallpaperEngine::new(wid, inner.source_manager.settings().audio_enabled)?;
@@ -145,7 +152,6 @@ impl WallpaperController {
 
         eng.load_media(&media_path, single, fit_str)?;
 
-        inner.window = Some(win);
         inner.engine = Some(eng);
         inner.is_paused = false;
         inner.source_manager.settings_mut().is_active = true;
@@ -166,13 +172,11 @@ impl WallpaperController {
         };
 
         if inner.engine.is_none() || inner.window.is_none() {
-            Self::close_compositor(&mut inner);
-            let win = DesktopWallpaperWindow::create()?;
-            let wid = win.raw_handle();
+            if inner.window.is_none() { inner.window = Some(DesktopWallpaperWindow::create()?); }
+            let wid = inner.window.as_ref().unwrap().raw_handle();
             let mut eng = MediaWallpaperEngine::new(wid, inner.source_manager.settings().audio_enabled)?;
             eng.set_image_duration(inner.source_manager.settings().image_duration_sec);
             eng.load_media(&clean, single, fit_str)?;
-            inner.window = Some(win);
             inner.engine = Some(eng);
         } else if let Some(engine) = &mut inner.engine {
             engine.load_media(&clean, single, fit_str)?;
@@ -317,12 +321,10 @@ impl WallpaperController {
         inner.source_manager.set_media_kind_mode(mode);
 
         if inner.source_manager.total_media() == 0 {
-            Self::close_compositor(&mut inner);
             if let Some(mut engine) = inner.engine.take() {
                 let _ = engine.stop();
             }
-            inner.window = None;
-            inner.is_paused = false;
+            if !inner.compositor_enabled { inner.window = None; }
             inner.source_manager.settings_mut().is_active = false;
             let _ = inner.source_manager.save_to_disk();
             return Err(format!(
@@ -358,12 +360,10 @@ impl WallpaperController {
 
         let current = inner.source_manager.current_media();
         let Some(current) = current else {
-            Self::close_compositor(inner);
             if let Some(mut engine) = inner.engine.take() {
                 let _ = engine.stop();
             }
-            inner.window = None;
-            inner.is_paused = false;
+            if !inner.compositor_enabled { inner.window = None; }
             inner.source_manager.settings_mut().is_active = false;
             inner.source_manager.save_to_disk()?;
             return Ok(());
@@ -449,50 +449,63 @@ impl WallpaperController {
         app: &AppHandle,
         enabled: bool,
     ) -> Result<WallpaperStateSnapshot, String> {
-        let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
-        if enabled {
-            if inner.window.is_none() {
-                inner.window = Some(compositor::create_host(app)?);
-            }
-            let parent = inner
-                .window
-                .as_ref()
-                .map(|window| window.host_handle())
-                .ok_or_else(|| {
-                    "Activa primero el fondo de escritorio: la composición se monta encima."
-                        .to_string()
-                })?;
-            let geo = ScreenGeometry::current();
-            if let Err(error) = compositor::create(
-                app,
-                parent,
-                geo.width.max(0) as u32,
-                geo.height.max(0) as u32,
-            ) {
-                if inner.engine.is_none() {
-                    let host = inner.window.take();
-                    let _ = app.run_on_main_thread(move || drop(host));
-                }
-                return Err(error);
-            }
-            inner.compositor_enabled = true;
-            inner.compositor_app = Some(app.clone());
-        } else {
-            Self::close_compositor(&mut inner);
-            if inner.engine.is_none() {
-                inner.is_paused = false;
-                let host = inner.window.take();
-                app.run_on_main_thread(move || drop(host)).map_err(|e| e.to_string())?;
-            }
+        let _lifecycle = self.compositor_lifecycle.lock().map_err(|e| e.to_string())?;
+        let (epoch, parent) = {
+            let mut inner = self.inner.lock().map_err(|e|e.to_string())?;
+            inner.compositor_epoch += 1;
+            (inner.compositor_epoch, inner.window.as_ref().map(|w|w.host_handle()))
+        };
+        if !enabled {
+            let host = {
+                let mut inner = self.inner.lock().map_err(|e|e.to_string())?;
+                Self::close_compositor(&mut inner);
+                if inner.engine.is_none() { inner.is_paused=false; inner.window.take() } else { None }
+            };
+            app.run_on_main_thread(move||drop(host)).map_err(|e|e.to_string())?;
+            return self.get_state();
         }
+        let parent = if let Some(parent)=parent { parent } else {
+            let host = compositor::create_host(app)?;
+            let parent = host.host_handle();
+            let mut inner = self.inner.lock().map_err(|e|e.to_string())?;
+            if inner.compositor_epoch!=epoch {
+                let _=app.run_on_main_thread(move||drop(host));
+                return Err("Activación de capas cancelada".into());
+            }
+            inner.window=Some(host);
+            parent
+        };
+        let geo=ScreenGeometry::current();
+        // Nunca mantener el mutex de estado mientras el hilo UI crea una ventana.
+        let created=compositor::create(app,parent,geo.width.max(0) as u32,geo.height.max(0) as u32);
+        let mut inner=self.inner.lock().map_err(|e|e.to_string())?;
+        if inner.compositor_epoch!=epoch || created.is_err() {
+            let handle=app.clone();
+            let host=if inner.engine.is_none() && inner.window.as_ref().is_some_and(|w|w.host_handle()==parent) { inner.window.take() } else {None};
+            let _=app.run_on_main_thread(move||{compositor::destroy(&handle);drop(host);});
+            return Err(created.err().unwrap_or_else(||"Activación de capas cancelada".into()));
+        }
+        inner.compositor_enabled=true;
+        inner.compositor_app=Some(app.clone());
         Ok(self.build_snapshot(&inner))
     }
 
     fn close_compositor(inner: &mut InnerState) {
-        if let Some(app) = inner.compositor_app.take() {
-            compositor::destroy(&app);
+        inner.compositor_epoch += 1;
+        if let Some(app)=inner.compositor_app.take() {
+            let handle=app.clone();
+            let _=app.run_on_main_thread(move||compositor::destroy(&handle));
         }
-        inner.compositor_enabled = false;
+        inner.compositor_enabled=false;
+    }
+
+    pub fn stop_base(&self) -> Result<WallpaperStateSnapshot,String> {
+        let mut inner=self.inner.lock().map_err(|e|e.to_string())?;
+        if let Some(mut engine)=inner.engine.take() { let _=engine.stop(); }
+        if !inner.compositor_enabled { inner.window=None; }
+        inner.source_manager.settings_mut().is_active=false;
+        inner.source_manager.save_to_disk()?;
+        Ok(self.build_snapshot(&inner))
     }
 
     pub fn compositor_config(&self) -> Result<compositor::CompositorConfig, String> {
@@ -505,7 +518,17 @@ impl WallpaperController {
         Ok(config)
     }
 
+    pub fn update_base_parallax(&self, position: [f32;2]) -> Result<(),String> {
+        let mut inner=self.inner.lock().map_err(|e|e.to_string())?;
+        if inner.is_paused { return Ok(()); }
+        let config=&inner.compositor_config;
+        let strength=if config.parallax.enabled && config.parallax.base { config.parallax.strength } else {0.0};
+        if let Some(engine)=inner.engine.as_mut() { engine.set_parallax(position[0],position[1],strength)?; }
+        Ok(())
+    }
+
     pub fn set_compositor_config(&self, mut config: compositor::CompositorConfig) -> Result<(), String> {
+        config.migrate_layers();
         config.validate()?;
         config.enabled = false;
         config.paused = false;
@@ -516,6 +539,9 @@ impl WallpaperController {
         if let Err(error) = inner.source_manager.save_to_disk() {
             inner.source_manager.settings_mut().composition = previous;
             return Err(error);
+        }
+        if !config.parallax.enabled || !config.parallax.base {
+            if let Some(engine)=inner.engine.as_mut() { let _=engine.set_parallax(0.0,0.0,0.0); }
         }
         inner.compositor_config = config;
         Ok(())
@@ -535,6 +561,7 @@ impl WallpaperController {
         WallpaperStateSnapshot {
             is_active: inner.window.is_some() && (inner.engine.is_some() || inner.compositor_enabled),
             is_paused: inner.is_paused,
+            base_active: inner.engine.is_some(),
             current_media,
             current_folder,
             total_media: inner.source_manager.total_media(),

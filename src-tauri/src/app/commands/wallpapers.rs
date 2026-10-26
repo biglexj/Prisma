@@ -158,9 +158,42 @@ fn notify_wallpaper_change(app: &AppHandle) {
     if let Some(controller) = app.try_state::<WallpaperController>() {
         if let Ok(config) = controller.compositor_config() {
             crate::features::wallpapers::compositor::push_config(app, &config);
+            if let Ok(state)=controller.get_state() {
+                let desired=config.has_layers();
+                if state.is_active && desired!=state.compositor_enabled
+                    && !controller.composition_transition.swap(true,std::sync::atomic::Ordering::SeqCst) {
+                    let handle=app.clone();let owned=controller.inner().clone();
+                    tauri::async_runtime::spawn_blocking(move||{
+                        let mut applied=None;
+                        if let (Ok(state),Ok(config))=(owned.get_state(),owned.compositor_config()) {
+                            if state.is_active {
+                                let desired=config.has_layers();
+                                match owned.set_compositor_enabled(&handle,desired) {
+                                    Ok(_)=>applied=Some(desired),
+                                    Err(error)=>{let _=handle.emit("prisma://compositor-error",error);}
+                                }
+                            }
+                        }
+                        owned.composition_transition.store(false,std::sync::atomic::Ordering::SeqCst);
+                        if let Ok(config)=owned.compositor_config(){crate::features::wallpapers::compositor::push_config(&handle,&config);}
+                        crate::update_wallpaper_tray_menu(&handle);
+                        let _=handle.emit("prisma://wallpaper-state-changed",());
+                        // Un ajuste puede llegar mientras se está creando la superficie.
+                        if let (Some(applied),Ok(latest))=(applied,owned.compositor_config()) {
+                            if applied!=latest.has_layers() { notify_wallpaper_change(&handle); }
+                        }
+                    });
+                }
+                if state.compositor_enabled { crate::features::wallpapers::compositor::raise(app); }
+            }
         }
     }
     let _ = app.emit("prisma://wallpaper-state-changed", ());
+}
+
+#[tauri::command]
+pub fn live_wallpaper_stop_base(app:AppHandle,controller:State<'_,WallpaperController>) -> Result<WallpaperStateSnapshot,String> {
+    let result=controller.stop_base();notify_wallpaper_change(&app);result
 }
 
 #[tauri::command]
@@ -391,6 +424,30 @@ pub fn live_wallpaper_compositor_config_get(
     controller: State<'_, WallpaperController>,
 ) -> Result<crate::features::wallpapers::compositor::CompositorConfig, String> {
     controller.compositor_config()
+}
+
+/// Lectura de posición; no instala hooks ni intercepta clics del escritorio.
+#[tauri::command]
+pub fn live_wallpaper_compositor_pointer(
+    controller: State<'_, WallpaperController>,
+) -> Result<[f32; 2], String> {
+    let config = controller.compositor_config()?;
+    if !config.enabled || config.paused || !config.parallax.enabled { return Ok([0.0, 0.0]); }
+    #[cfg(windows)]
+    {
+        use windows::Win32::{Foundation::POINT, UI::WindowsAndMessaging::GetCursorPos};
+        let mut point = POINT::default();
+        unsafe { GetCursorPos(&mut point).map_err(|e| e.to_string())?; }
+        let screen = crate::features::wallpapers::window::ScreenGeometry::current();
+        let position = [
+            (((point.x - screen.x) as f32 / screen.width.max(1) as f32) * 2.0 - 1.0).clamp(-1.0, 1.0),
+            (1.0 - ((point.y - screen.y) as f32 / screen.height.max(1) as f32) * 2.0).clamp(-1.0, 1.0),
+        ];
+        controller.update_base_parallax(position)?;
+        return Ok(position);
+    }
+    #[cfg(not(windows))]
+    Ok([0.0, 0.0])
 }
 
 #[tauri::command]

@@ -1,5 +1,6 @@
 //! Superficie transparente sobre el medio base y debajo de los iconos.
 use tauri::{AppHandle, Manager};
+use super::composition_settings::{LayerControls, LayerVisibility, ParallaxSettings, OverlayParticles, valid_scene, validate_controls, valid_color};
 
 pub const COMPOSITOR_LABEL: &str = "wallpaper-compositor";
 pub const COMPOSITOR_EVENT: &str = "prisma://compositor-config";
@@ -22,28 +23,90 @@ pub struct CompositorConfig {
     pub paused: bool,
     #[serde(default)]
     pub enabled: bool,
+    #[serde(default = "no_particles")]
+    pub particle: String,
+    #[serde(default)]
+    pub controls: std::collections::BTreeMap<String, LayerControls>,
+    #[serde(default)]
+    pub visibility: LayerVisibility,
+    #[serde(default)]
+    pub parallax: ParallaxSettings,
+    #[serde(default = "no_particles")]
+    pub dynamic: String,
+    #[serde(default)]
+    pub overlay: OverlayParticles,
+    #[serde(default = "default_color")]
+    pub ambient_color: String,
+    #[serde(default = "default_color2")]
+    pub ambient_color2: String,
+    #[serde(default = "full_opacity")]
+    pub ambient_opacity: f32,
 }
+
+fn no_particles() -> String { "none".into() }
+fn default_color() -> String { "#263b62".into() }
+fn default_color2() -> String { "#703ca5".into() }
+fn full_opacity() -> f32 { 1.0 }
 
 impl Default for CompositorConfig {
     fn default() -> Self {
-        Self { scenario: "prisma".into(), ambient: "original".into(), intensity: 0.5,
-            audio_level: 0.0, paused: false, enabled: false }
+        Self { scenario: "none".into(), ambient: "original".into(), intensity: 0.5,
+            audio_level: 0.0, paused: false, enabled: false, particle: no_particles(),
+            controls: Default::default(), visibility: Default::default(), parallax: Default::default(),
+            dynamic:no_particles(), overlay:Default::default(), ambient_color:default_color(), ambient_color2:default_color2(), ambient_opacity:1.0 }
     }
 }
 
 impl CompositorConfig {
+    pub fn migrate_layers(&mut self) {
+        let prefix=match super::composition_settings::scene_category(&self.scenario) {
+            Some("dynamic") if self.dynamic=="none" => { self.dynamic=self.scenario.clone(); "dynamic:" },
+            Some("particles") if self.particle=="none" => { self.particle=self.scenario.clone(); "particles:" },
+            _=>return,
+        };
+        if let Some(value)=self.controls.remove(&format!("scene:{}",self.scenario)) {
+            self.controls.insert(format!("{prefix}{}",self.scenario),value);
+        }
+        self.scenario="none".into();
+    }
     pub fn validate(&self) -> Result<(), String> {
-        if !["none", "prisma", "borealis", "cybercity"].contains(&self.scenario.as_str()) {
+        if !valid_scene(&self.scenario) || !valid_scene(&self.particle) || !valid_scene(&self.dynamic) {
             return Err("Escenario no disponible en esta entrega".into());
         }
-        if !["original", "violet", "warm", "bio", "deep", "stars"].contains(&self.ambient.as_str()) {
+        if !["original", "violet", "warm", "bio", "deep", "stars", "solid", "gradient"].contains(&self.ambient.as_str()) {
             return Err("Ambiente no disponible".into());
         }
         if !self.intensity.is_finite() || !(0.0..=1.0).contains(&self.intensity) {
             return Err("La intensidad debe estar entre 0 y 1".into());
         }
+        validate_controls(&self.controls)?;
+        self.overlay.validate()?;
+        if !valid_color(&self.ambient_color) || !valid_color(&self.ambient_color2)
+            || !self.ambient_opacity.is_finite() || !(0.0..=1.0).contains(&self.ambient_opacity) { return Err("Color de ambiente no válido".into()); }
+        if !self.parallax.strength.is_finite() || !(0.0..=2.0).contains(&self.parallax.strength) {
+            return Err("Intensidad de parallax fuera de rango".into());
+        }
         Ok(())
     }
+
+    pub fn has_layers(&self) -> bool {
+        (self.visibility.ambient && self.ambient!="original") || (self.visibility.dynamic && self.dynamic!="none")
+            || (self.visibility.scenario && self.scenario!="none") || (self.visibility.particles && self.particle!="none")
+            || self.overlay.enabled || self.parallax.enabled
+    }
+}
+
+pub fn raise(app:&AppHandle) {
+    let handle=app.clone();
+    let _=app.run_on_main_thread(move||{
+        #[cfg(windows)]
+        if let Some(window)=handle.get_webview_window(COMPOSITOR_LABEL) {
+            if let Ok(raw)=window.hwnd() {
+                use windows::Win32::{Foundation::HWND,UI::WindowsAndMessaging::{SetWindowPos,HWND_TOP,SWP_NOMOVE,SWP_NOSIZE,SWP_NOACTIVATE}};
+                let _=unsafe{SetWindowPos(HWND(raw.0 as *mut _),HWND_TOP,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE)};
+            }
+        }
+    });
 }
 
 // Se llama desde spawn_blocking. Crear y alojar el webview corresponde al hilo UI;
@@ -135,10 +198,70 @@ mod tests {
         config.audio_level = 0.8;
         controller.set_compositor_config(config).unwrap();
         let restored = WallpaperController::new(root).compositor_config().unwrap();
-        assert_eq!(restored.scenario, "borealis");
+        assert_eq!(restored.scenario, "none");
+        assert_eq!(restored.dynamic, "borealis");
         assert_eq!(restored.ambient, "bio");
         assert!(!restored.enabled);
         assert!(!restored.paused);
         assert_eq!(restored.audio_level, 0.0);
+    }
+
+    #[test]
+    fn layer_parameters_are_validated_and_round_trip_independently() {
+        let mut config = CompositorConfig::default();
+        config.scenario = "gargantua".into();
+        config.particle = "nebula".into();
+        let mut scene = LayerControls::default();
+        scene.speed = 1.8;
+        let mut particles = LayerControls::default();
+        particles.speed = 0.2;
+        particles.paused = true;
+        config.controls.insert("scene:gargantua".into(), scene);
+        config.controls.insert("particles:nebula".into(), particles);
+        config.parallax.enabled = true;
+        assert!(config.validate().is_ok());
+        let restored: CompositorConfig = serde_json::from_str(&serde_json::to_string(&config).unwrap()).unwrap();
+        assert_eq!(restored.controls["scene:gargantua"].speed, 1.8);
+        assert_eq!(restored.controls["particles:nebula"].speed, 0.2);
+        assert!(restored.controls["particles:nebula"].paused);
+        config.controls.get_mut("scene:gargantua").unwrap().zoom = f32::INFINITY;
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn legacy_composition_loads_with_independent_layers_enabled() {
+        let old = r#"{"scenario":"cybercity","ambient":"original","intensity":0.5,"audioLevel":0,"paused":false}"#;
+        let config: CompositorConfig = serde_json::from_str(old).unwrap();
+        assert!(config.validate().is_ok());
+        assert_eq!(config.particle, "none");
+        assert!(config.visibility.scenario);
+        assert!(!config.parallax.enabled);
+    }
+
+    #[test]
+    fn legacy_scene_moves_to_its_own_layer_with_saved_controls() {
+        let mut config=CompositorConfig::default();
+        config.scenario="nebula".into();
+        let mut controls=LayerControls::default();controls.speed=1.7;
+        config.controls.insert("scene:nebula".into(),controls);
+        config.migrate_layers();
+        assert_eq!(config.scenario,"none");
+        assert_eq!(config.particle,"nebula");
+        assert_eq!(config.controls["particles:nebula"].speed,1.7);
+        config.migrate_layers();
+        assert_eq!(config.particle,"nebula");
+    }
+
+    #[test]
+    fn ambient_and_overlay_are_valid_without_a_scenario() {
+        let mut config=CompositorConfig::default();
+        assert!(!config.has_layers());
+        config.ambient="solid".into();config.ambient_opacity=0.5;
+        assert!(config.has_layers());assert!(config.validate().is_ok());
+        config.ambient="original".into();config.overlay.enabled=true;
+        assert!(config.has_layers());assert!(config.validate().is_ok());
+        config.overlay.shape="invalid".into();assert!(config.validate().is_err());
+        config.overlay.shape="snow".into();config.ambient_color="url(...)".into();
+        assert!(config.validate().is_err());
     }
 }

@@ -197,7 +197,6 @@ export function LiveWallpapersView() {
    */
   const handleSetMediaKindMode = async (mode: MediaKindMode) => {
     try {
-      if (state?.compositorEnabled) await liveWallpapersApi.stop();
       setScenesTab(false);
       const snap = await liveWallpapersApi.setMediaKindMode(mode);
       setState(snap);
@@ -383,16 +382,11 @@ export function LiveWallpapersView() {
                 type="button"
                 className={`segmented-item ${showScenes ? "is-selected" : ""}`}
                 aria-pressed={showScenes}
-                onClick={async () => {
-                  try {
-                    if (isActive && !compositorEnabled) setState(await liveWallpapersApi.stop());
-                    setScenesTab(true);
-                  } catch (reason) { setError(String(reason)); }
-                }}
+                onClick={() => setScenesTab(true)}
                 title="Elegir escenarios y fondos de Aurora"
               >
                 <Icon name="layers" width={14} height={14} />
-                <span>Fondos 3D</span>
+                <span>Fondos y efectos</span>
               </button>
             </div>
           </div>
@@ -450,7 +444,7 @@ export function LiveWallpapersView() {
               type="button"
               className="live-btn-secondary"
               onClick={handlePrev}
-              disabled={showScenes || !isActive || totalMedia <= 1}
+              disabled={!state?.baseActive || totalMedia <= 1}
               title="Volver al medio anterior"
             >
               <Icon name="arrow-left" width={16} height={16} />
@@ -461,7 +455,7 @@ export function LiveWallpapersView() {
               type="button"
               className="live-btn-secondary"
               onClick={handleNext}
-              disabled={showScenes || !isActive || totalMedia <= 1}
+              disabled={!state?.baseActive || totalMedia <= 1}
               title="Avanzar al siguiente medio sin cortes"
             >
               <Icon name="arrow-right" width={16} height={16} />
@@ -547,7 +541,6 @@ export function LiveWallpapersView() {
           </div>}
         </div>
 
-        {showScenes && <CompositionControls enabled={compositorEnabled} />}
 
         {/* Now Playing Strip */}
         {isActive && state?.currentMedia && (
@@ -572,6 +565,14 @@ export function LiveWallpapersView() {
           </div>
         )}
       </section>
+
+      {state?.baseActive && <button type="button" className="live-btn-secondary" onClick={async()=>{
+        try { setState(await liveWallpapersApi.stopBase()); } catch(reason) { setError(String(reason)); }
+      }}>Quitar vídeo o imagen y conservar efectos</button>}
+      {!showScenes && !state?.baseActive && compositorEnabled && totalMedia > 0 && <button type="button" className="live-btn-secondary" onClick={async()=>{
+        try { setState(await liveWallpapersApi.start()); } catch(reason) { setError(String(reason)); }
+      }}>Añadir {kindMode === "image" ? "imágenes" : "vídeos"} al fondo actual</button>}
+      <CompositionControls enabled={compositorEnabled} />
 
       {!showScenes && <>
       {/* ── Upper Section: Carpetas en Fila Delgada (hasta 5 por fila) ── */}

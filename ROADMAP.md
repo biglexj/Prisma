@@ -8,7 +8,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [ ] **Fondos vivos — vídeos y capas Aurora**: base de medios multicarpeta revisada. Fase 2 iniciada: selector Vídeos / Imágenes / Fondos 3D, compositor Aurora con ambiente, Prisma, Borealis y Holo Ciudad; escena sin carpeta, pausa y cierre probados en WebView2. Pendientes políticas automáticas, recuperación de Explorer, capas independientes de partículas/audio/parallax y rendimiento. [Proceso](process/active/2026-10-25_motor_wallpapers_nativo/PLAN.md).
+- [ ] **Fondos vivos — vídeos y capas Aurora**: catálogo de 25 efectos, galería, controles por efecto, ambiente independiente como capa 2, dinámicos, escenarios, partículas 3D/2D y parallax opcional. Coexistencia con imagen/vídeo y pausas comprobadas en WebView2; capturas PNG 1080p reutilizables. Pendientes ecualizador real, políticas automáticas, recuperación de Explorer, aceptación física final y rendimiento. [Proceso](process/active/2026-10-25_motor_wallpapers_nativo/PLAN.md).
 
 - [ ] **Capturador de Pantalla — Extractor de Texto (OCR)**: Reconocimiento óptico de caracteres directamente sobre la captura de pantalla en memoria para copiar texto al portapapeles con un solo clic.
 

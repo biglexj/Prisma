@@ -88,6 +88,8 @@ use app::commands::video_takes::{
 use app::commands::wallpapers::{
     live_wallpaper_add_folder, live_wallpaper_compositor_set, live_wallpaper_get_state,
     live_wallpaper_compositor_config_get, live_wallpaper_compositor_config_set,
+    live_wallpaper_compositor_pointer,
+    live_wallpaper_stop_base,
     live_wallpaper_next, live_wallpaper_prev,
     live_wallpaper_pause, live_wallpaper_play_file, live_wallpaper_refresh_sources, live_wallpaper_remove_folder,
     live_wallpaper_resume, live_wallpaper_set_audio_enabled, live_wallpaper_set_fit,
@@ -212,12 +214,17 @@ pub fn run() {
         || std::env::var("PRISMA_DEV").is_ok()
         || std::env::var("PRISMA_MULTI_INSTANCE").is_ok();
 
+    // Las pruebas nativas pueden usar datos y WebView2 propios sin tocar la sesión dev abierta.
+    let dev_profile_name = std::env::var("PRISMA_DEV_PROFILE_NAME").ok().filter(|value| {
+        !value.is_empty() && value.len() <= 40 && value.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
+    });
+
     #[cfg(target_os = "windows")]
     if is_dev_mode {
         if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
-            let dev_udf = std::path::PathBuf::from(local_app_data)
-                .join("com.biglexj.prisma.dev")
-                .join("EBWebView");
+            let mut dev_udf = std::path::PathBuf::from(local_app_data).join("com.biglexj.prisma.dev");
+            if let Some(name) = &dev_profile_name { dev_udf = dev_udf.join(name); }
+            let dev_udf = dev_udf.join("EBWebView");
             let _ = std::fs::create_dir_all(&dev_udf);
             unsafe {
                 std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", dev_udf);
@@ -576,6 +583,7 @@ pub fn run() {
                 current_folder: None,
                 total_media: 0,
                 compositor_enabled: false,
+                base_active: false,
                 settings: features::wallpapers::sources::WallpaperSettings::default(),
                 media: Vec::new(),
             });
@@ -1048,6 +1056,8 @@ pub fn run() {
             live_wallpaper_compositor_set,
             live_wallpaper_compositor_config_get,
             live_wallpaper_compositor_config_set,
+            live_wallpaper_compositor_pointer,
+            live_wallpaper_stop_base,
             renamer_scan_folder,
             renamer_scan_paths,
             renamer_execute_batch,
@@ -1100,7 +1110,10 @@ pub fn run() {
 
         let mut context = tauri::generate_context!();
         if is_dev_mode {
-            context.config_mut().identifier = "com.biglexj.prisma.dev".to_string();
+            context.config_mut().identifier = match &dev_profile_name {
+                Some(name) => format!("com.biglexj.prisma.dev.{name}"),
+                None => "com.biglexj.prisma.dev".to_string(),
+            };
         }
 
         builder

@@ -246,6 +246,19 @@ impl MediaWallpaperEngine {
         self.image_duration = std::time::Duration::from_secs(seconds as u64);
     }
 
+    pub fn set_parallax(&mut self, x: f32, y: f32, strength: f32) -> Result<(), String> {
+        #[cfg(feature = "mpv")]
+        {
+            let strength = strength.clamp(0.0, 2.0) as f64;
+            for (name, value) in [("video-zoom", (1.0 + strength * 0.08).log2()),
+                ("video-pan-x", x as f64 * strength * 0.025),
+                ("video-pan-y", -y as f64 * strength * 0.025)] {
+                self.mpv.set_property(name, value).map_err(|e| format!("Parallax: {e:?}"))?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn pause(&mut self) -> Result<(), String> {
         self.paused_at = Some(std::time::Instant::now());
         #[cfg(feature = "mpv")]
