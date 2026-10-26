@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "sourceCommit": "4794ab5812554f1d348cc0ad9ea925929c650f91",
+  "applicationSourceCommit": "92638f7af376516c5af98414342efed0e0a197b3",
+  "sha256": "624127ed238d535e81dc460ea625a451f86a67cb0c9bb57e6ce31290912ec28b",
+  "bytes": 169248540,
+  "uncommittedSourceHashes": {},
+  "packagingSourceHashes": {
+    "packaging/windows/setup.iss": "8da552740b3b4f2da54cab51b09d9e6661e930dcc3f265dbbd617f760d95a797",
+    "packaging/windows/BiglexModernUI.iss": "e3716eaa0547b8699449ed158d38cc7b0fc08a0a19f688c903ef9bbad2f9f423",
+    "packaging/windows/PrismaInstallerUI.iss": "4992130dd74a8d6d11b46316438edd2968dbb77118a4d94d43654c316cdeef15",
+    "packaging/windows/template-lock.json": "31c7c3125112e89aa0a3c3fef46d0ffdb245820c674dc5115806319ebd18637e",
+    "packaging/windows/icon.ico": "1b5c544936fd7913f17fcce1376e2ef029001af4859f3e8162c5b04b794585d6",
+    "src-tauri/target/inno/staging/prisma.exe": "09d395b888e44b71996ff341204113b6d58f918a1a9bc0648bdaf4253297f1d5"
+  },
+  "validation": [
+    "160 unit tests passed",
+    "new application build passed",
+    "isolated installer compiled",
+    "reviewed template hash verified"
+  ]
+}
