@@ -41,7 +41,8 @@ mod tests {
     use super::*;
     use windows::Win32::System::{
         Com::{
-            CoGetApartmentType, APTTYPE, APTTYPEQUALIFIER, APTTYPE_MAINSTA, APTTYPE_MTA, APTTYPE_NA,
+            CoGetApartmentType, APTTYPE, APTTYPEQUALIFIER, APTTYPEQUALIFIER_IMPLICIT_MTA,
+            APTTYPE_MAINSTA, APTTYPE_MTA,
             APTTYPE_STA,
         },
         Ole::{OleInitialize, OleUninitialize},
@@ -53,10 +54,12 @@ mod tests {
         unsafe {
             CoGetApartmentType(&mut kind, &mut qualifier).ok()?;
         }
-        // APTTYPE_NA significa que el hilo no tiene apartamento: después de
-        // un OleUninitialize la API lo informa así, en vez de devolver un
-        // error, y el resultado cambia según la carga de la máquina.
-        if kind == APTTYPE_NA {
+        // Otro hilo puede mantener el MTA del proceso: CoGetApartmentType
+        // informa IMPLICIT_MTA aunque este hilo no tenga inicialización propia.
+        // Las comprobaciones de balance deben distinguirlo de un MTA explícito.
+        // APTTYPE_NA es un apartamento neutral, no ausencia de inicialización.
+        // https://learn.microsoft.com/windows/win32/api/objidlbase/ne-objidlbase-apttypequalifier
+        if qualifier == APTTYPEQUALIFIER_IMPLICIT_MTA {
             return None;
         }
         Some(kind)

@@ -532,6 +532,21 @@ export function LiveWallpapersView() {
           </div>
 
           {!showScenes && <div className="control-options-group">
+            {activeTab === "video" && <div className="control-segmented-block">
+              <span className="segmented-label">Sonido</span>
+              <button
+                type="button"
+                className={`sound-toggle ${audioEnabled ? "is-on" : ""} ${soundApplies ? "" : "is-disabled"}`}
+                onClick={() => handleSetAudioEnabled(!audioEnabled)}
+                aria-pressed={audioEnabled}
+                disabled={!soundApplies}
+                title={soundTitle}
+              >
+                <Icon name={audioEnabled ? "volume" : "volume-mute"} width={14} height={14} />
+                <span>{audioEnabled ? "Encendido" : "Apagado"}</span>
+              </button>
+            </div>}
+
             <div className="control-segmented-block">
               <span className="segmented-label">Modo</span>
               <div className="segmented-control" role="group" aria-label="Modo de reproducción">
@@ -574,23 +589,6 @@ export function LiveWallpapersView() {
                   <span>Ajustar</span>
                 </button>
               </div>
-            </div>
-
-            <div className="control-segmented-block">
-              <span className="segmented-label">Sonido</span>
-              <button
-                type="button"
-                className={`sound-toggle ${audioEnabled ? "is-on" : ""} ${
-                  soundApplies ? "" : "is-disabled"
-                }`}
-                onClick={() => handleSetAudioEnabled(!audioEnabled)}
-                aria-pressed={audioEnabled}
-                disabled={!soundApplies}
-                title={soundTitle}
-              >
-                <Icon name={audioEnabled ? "volume" : "volume-mute"} width={14} height={14} />
-                <span>{audioEnabled ? "Encendido" : "Apagado"}</span>
-              </button>
             </div>
 
             <div className="control-segmented-block">
