@@ -1171,3 +1171,12 @@
   color: var(--primary);
   border-color: color-mix(in srgb, var(--primary) 45%, transparent);
 }
+.live-wallpapers-controls { display: contents; }
+.live-wallpapers-controls:disabled button { cursor: not-allowed; }
+.live-wallpapers-handoff {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  font-size: 0.85rem;
+}

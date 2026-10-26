@@ -56,6 +56,8 @@ export interface WallpaperSettings {
 }
 
 export interface WallpaperStateSnapshot {
+  controlBlocked?: boolean;
+  controlMessage?: string | null;
   isActive: boolean;
   baseActive: boolean;
   isPaused: boolean;

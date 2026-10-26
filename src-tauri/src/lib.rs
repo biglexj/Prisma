@@ -126,6 +126,8 @@ use tauri_plugin_window_state::{AppHandleExt, StateFlags};
 
 #[derive(Clone)]
 pub struct WallpaperTrayControls {
+    pub next: tauri::menu::MenuItem<tauri::Wry>,
+    pub previous: tauri::menu::MenuItem<tauri::Wry>,
     pub toggle: tauri::menu::MenuItem<tauri::Wry>,
     pub pause: tauri::menu::MenuItem<tauri::Wry>,
     pub sound: tauri::menu::MenuItem<tauri::Wry>,
@@ -153,10 +155,13 @@ pub fn update_wallpaper_tray_menu(app: &tauri::AppHandle) {
                 "Activar sonido del fondo"
             };
             let _ = controls.toggle.set_text(toggle_text);
+            let _ = controls.toggle.set_enabled(!state.control_blocked);
+            let _ = controls.next.set_enabled(state.base_active && !state.control_blocked);
+            let _ = controls.previous.set_enabled(state.base_active && !state.control_blocked);
             let _ = controls.pause.set_text(pause_text);
-            let _ = controls.pause.set_enabled(state.is_active);
+            let _ = controls.pause.set_enabled(state.is_active && !state.control_blocked);
             let _ = controls.sound.set_text(sound_text);
-            let _ = controls.sound.set_enabled(state.is_active);
+            let _ = controls.sound.set_enabled(state.is_active && !state.control_blocked);
         }
     }
 }
@@ -210,10 +215,20 @@ pub fn run() {
     };
 
     let is_autostart = std::env::args().any(|a| a == "--autostart");
-    let is_dev_mode = cfg!(debug_assertions)
+    let handoff_diagnostics = all_args.iter().any(|a| a == "--wallpaper-handoff-diagnostics");
+    let is_dev_mode = (!handoff_diagnostics && cfg!(debug_assertions))
         || std::env::args().any(|a| a == "--dev" || a == "--multi-instance" || a == "-d")
         || std::env::var("PRISMA_DEV").is_ok()
         || std::env::var("PRISMA_MULTI_INSTANCE").is_ok();
+    let handoff_diagnostics_root = if handoff_diagnostics {
+        Some(std::path::PathBuf::from(std::env::var_os("PRISMA_HANDOFF_DIAGNOSTICS_DIR")
+            .expect("PRISMA_HANDOFF_DIAGNOSTICS_DIR requerido para la prueba aislada")))
+    } else { None };
+    if let Some(root) = &handoff_diagnostics_root {
+        let webview = root.join(if is_dev_mode { "dev-webview" } else { "stable-webview" });
+        std::fs::create_dir_all(&webview).expect("No se pudo crear el perfil de prueba");
+        unsafe { std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", webview); }
+    }
 
     // Las pruebas nativas pueden usar datos y WebView2 propios sin tocar la sesión dev abierta.
     let dev_profile_name = std::env::var("PRISMA_DEV_PROFILE_NAME").ok().filter(|value| {
@@ -221,7 +236,7 @@ pub fn run() {
     });
 
     #[cfg(target_os = "windows")]
-    if is_dev_mode {
+    if is_dev_mode && !handoff_diagnostics {
         if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
             let mut dev_udf = std::path::PathBuf::from(local_app_data).join("com.biglexj.prisma.dev");
             if let Some(name) = &dev_profile_name { dev_udf = dev_udf.join(name); }
@@ -235,7 +250,7 @@ pub fn run() {
 
     let mut builder = tauri::Builder::default();
 
-    if !is_dev_mode {
+    if !is_dev_mode && !handoff_diagnostics {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             let incoming_args: Vec<String> = args;
 
@@ -386,6 +401,10 @@ pub fn run() {
                 }
             }
             let mut data_directory = app.path().app_data_dir()?;
+            if let Some(root) = &handoff_diagnostics_root {
+                data_directory = root.join(if is_dev_mode { "dev-profile" } else { "stable-profile" });
+                std::fs::create_dir_all(&data_directory)?;
+            }
             if is_dev_mode {
                 data_directory = data_directory.join("dev_profile");
                 let _ = std::fs::create_dir_all(&data_directory);
@@ -414,22 +433,22 @@ pub fn run() {
             let synapse_state = features::synapse::SynapseState::load(data_directory.clone());
             app.manage(synapse_state);
             let wallpaper_controller = features::wallpapers::WallpaperController::new(data_directory.clone());
-            if wallpaper_controller.should_auto_start() {
-                // El fallo del autoarranque se registra: si el fondo no levanta
-                // solo, el usuario tiene que poder saber por qué.
-                if let Err(error) = wallpaper_controller.start() {
-                    eprintln!("[Fondos Vivos] No se pudo iniciar el fondo al arrancar: {error}");
-                }
+            if let Some(root) = &handoff_diagnostics_root {
+                features::wallpapers::handoff_diagnostics::prepare(&wallpaper_controller, root).map_err(std::io::Error::other)?;
+            }
+            wallpaper_controller.configure_handoff(app.handle().clone(), is_dev_mode);
+            if let Some(root) = &handoff_diagnostics_root {
+                features::wallpapers::handoff_diagnostics::observe(app.handle().clone(), wallpaper_controller.clone(), root.clone(), is_dev_mode);
             }
             // Se conserva un clon para el menú de la bandeja: `manage` consume el valor.
             let wallpaper_controller_for_tray = wallpaper_controller.clone();
             app.manage(wallpaper_controller);
 
             // 2. Registro de esquema prisma:// y servicios de Aurora Synapse
-            if !is_dev_mode {
+            if !is_dev_mode && !handoff_diagnostics {
                 features::synapse::register_windows_deep_link();
             }
-            infrastructure::file_associations::register_file_associations();
+            if !handoff_diagnostics { infrastructure::file_associations::register_file_associations(); }
             let beacon_service = features::synapse::SynapseBeaconService::start();
             app.manage(beacon_service);
             // Read only the known phone address from each profile. Availability is checked
@@ -508,7 +527,7 @@ pub fn run() {
             }
 
             let quick_look_state = QuickLookState::new(app.handle().clone());
-            quick_look_state.init();
+            if !handoff_diagnostics { quick_look_state.init(); }
 
             if let Some(ref file_path) = initial_file_clone {
                 if is_explicit_quicklook {
@@ -582,6 +601,7 @@ pub fn run() {
             });
             // Submenú de Fondos Vivos
             let wp_snapshot = wallpaper_controller_for_tray.get_state().unwrap_or_else(|_| features::wallpapers::WallpaperStateSnapshot {
+                    control_blocked: false, control_message: None,
                 is_active: false,
                 is_paused: false,
                 current_media: None,
@@ -625,6 +645,8 @@ pub fn run() {
                 .build()?;
 
             app.manage(WallpaperTrayControls {
+                next: wallpaper_next_item.clone(),
+                previous: wallpaper_prev_item.clone(),
                 toggle: wallpaper_toggle_item.clone(),
                 pause: wallpaper_pause_item.clone(),
                 sound: wallpaper_sound_item.clone(),

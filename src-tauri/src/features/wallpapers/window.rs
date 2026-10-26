@@ -68,6 +68,17 @@ unsafe impl Send for DesktopWallpaperWindow {}
 unsafe impl Sync for DesktopWallpaperWindow {}
 
 impl DesktopWallpaperWindow {
+    /// Se ejecuta en el hilo que crea las superficies de la aplicación.
+    pub fn destroy_for_handoff(mut self) -> bool {
+        #[cfg(windows)]
+        unsafe {
+            use windows::Win32::UI::WindowsAndMessaging::IsWindow;
+            if self.hwnd.is_invalid() || !IsWindow(self.hwnd).as_bool() { return true; }
+            if DestroyWindow(self.hwnd).is_err() { return false; }
+            self.hwnd = HWND::default();
+        }
+        true
+    }
     #[cfg(windows)]
     pub fn create() -> Result<Self, String> {
         let parent = unsafe { find_or_spawn_desktop_host() }
@@ -181,6 +192,33 @@ impl DesktopWallpaperWindow {
             let _ = ShowWindow(self.hwnd, SW_SHOW);
         }
     }
+}
+
+/// Detecta anfitriones de versiones anteriores que no usan el protocolo.
+pub fn has_foreign_wallpaper_host() -> bool {
+    #[cfg(windows)]
+    unsafe {
+        use windows::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId;
+        unsafe extern "system" fn inspect(hwnd: HWND, data: LPARAM) -> BOOL {
+            let mut name = [0u16; 128];
+            let len = unsafe { GetClassNameW(hwnd, &mut name) };
+            if String::from_utf16_lossy(&name[..len.max(0) as usize]) == "PrismaDesktopWallpaperHost" {
+                let mut pid = 0;
+                unsafe { GetWindowThreadProcessId(hwnd, Some(&mut pid)); }
+                if pid != std::process::id() { unsafe { *(data.0 as *mut bool) = true; } }
+            }
+            BOOL(1)
+        }
+        unsafe extern "system" fn top(hwnd: HWND, data: LPARAM) -> BOOL {
+            unsafe { let _ = inspect(hwnd, data); let _ = EnumChildWindows(hwnd, Some(inspect), data); }
+            BOOL(1)
+        }
+        let mut found = false;
+        let _ = EnumWindows(Some(top), LPARAM((&mut found as *mut bool) as isize));
+        return found;
+    }
+    #[cfg(not(windows))]
+    false
 }
 
 impl Drop for DesktopWallpaperWindow {

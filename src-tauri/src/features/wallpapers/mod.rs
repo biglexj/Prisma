@@ -4,6 +4,9 @@ pub mod engine;
 pub mod interaction;
 pub mod sources;
 pub mod window;
+mod desktop_lease;
+mod handoff;
+pub mod handoff_diagnostics;
 
 /// Serializa las pruebas que crean una ventana del escritorio y una sesión de
 /// libmpv: dos instancias concurrentes sobre el mismo WorkerW chocan al
@@ -32,6 +35,8 @@ use window::{DesktopWallpaperWindow, ScreenGeometry};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WallpaperStateSnapshot {
+    pub control_blocked: bool,
+    pub control_message: Option<String>,
     pub is_active: bool,
     pub is_paused: bool,
     pub base_active: bool,
@@ -76,6 +81,7 @@ impl Drop for InnerState {
 
 #[derive(Clone)]
 pub struct WallpaperController {
+    handoff: Arc<handoff::Handoff>,
     inner: Arc<Mutex<InnerState>>,
     monitor_running: Arc<AtomicBool>,
     compositor_lifecycle: Arc<Mutex<()>>,
@@ -91,6 +97,7 @@ impl WallpaperController {
             compositor_config
         } else { compositor::CompositorConfig::default() };
         let controller = Self {
+            handoff: Arc::new(handoff::Handoff::default()),
             inner: Arc::new(Mutex::new(InnerState {
                 source_manager,
                 window: None,
@@ -120,7 +127,13 @@ impl WallpaperController {
     }
 
     pub fn start(&self) -> Result<WallpaperStateSnapshot, String> {
+        self.ensure_wallpaper_control()?;
+        self.start_internal(false)
+    }
+
+    fn start_internal(&self, restoring: bool) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        if !restoring { self.ensure_wallpaper_control()?; }
 
         // Si ya está activo, reanudar
         if inner.engine.is_some() && inner.window.is_some() {
@@ -163,6 +176,7 @@ impl WallpaperController {
 
     pub fn play_file(&self, path: &str) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         let clean = clean_path_str(path);
         inner.source_manager.set_current_media(&clean);
 
@@ -191,6 +205,7 @@ impl WallpaperController {
 
     pub fn pause(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         if let Some(engine) = &mut inner.engine {
             engine.pause()?;
         }
@@ -201,6 +216,7 @@ impl WallpaperController {
 
     pub fn resume(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         if let Some(engine) = &mut inner.engine {
             engine.resume()?;
         }
@@ -210,6 +226,7 @@ impl WallpaperController {
 
     pub fn next(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         let next_media = inner.source_manager.advance_next();
         let single = inner.source_manager.total_media() == 1;
         let fit_str = match inner.source_manager.settings().fit {
@@ -229,6 +246,7 @@ impl WallpaperController {
 
     pub fn prev(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         let prev_media = inner.source_manager.advance_prev();
         let single = inner.source_manager.total_media() == 1;
         let fit_str = match inner.source_manager.settings().fit {
@@ -248,6 +266,7 @@ impl WallpaperController {
 
     pub fn stop(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         Self::close_compositor(&mut inner);
         if let Some(mut engine) = inner.engine.take() {
             let _ = engine.stop();
@@ -261,17 +280,26 @@ impl WallpaperController {
 
     /// Cierre del proceso sin cambiar la intención persistida de restaurar el fondo.
     pub fn shutdown(&self) {
+        self.handoff.blocked.store(true, Ordering::SeqCst);
+        self.handoff.running.store(false, Ordering::SeqCst);
         if let Ok(mut inner) = self.inner.lock() {
-            Self::close_compositor(&mut inner);
+            interaction::disable();
+            inner.compositor_epoch += 1;
+            // RunEvent::Exit se ejecuta en el hilo UI: destruir antes de liberar la reserva.
+            if let Some(app) = inner.compositor_app.take() { compositor::destroy(&app); }
+            inner.compositor_enabled = false;
             if let Some(mut engine) = inner.engine.take() {
                 let _ = engine.stop();
             }
             inner.window = None;
         }
+        // Mantener la reserva hasta terminar el proceso: Tauri puede tener
+        // todavía una destrucción de WebView encolada durante RunEvent::Exit.
     }
 
     pub fn add_folder(&self, folder_path: &str) -> Result<FolderSource, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         let curr = inner.source_manager.current_media();
         let source = inner.source_manager.add_folder(folder_path)?;
         inner.source_manager.rebuild_queue(curr.as_deref());
@@ -280,6 +308,7 @@ impl WallpaperController {
 
     pub fn remove_folder(&self, id: &str) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         let curr = inner.source_manager.current_media();
         inner.source_manager.remove_folder(id);
         inner.source_manager.rebuild_queue(curr.as_deref());
@@ -288,6 +317,7 @@ impl WallpaperController {
 
     pub fn toggle_folder(&self, id: &str, enabled: bool) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         let curr = inner.source_manager.current_media();
         inner.source_manager.toggle_folder(id, enabled);
         inner.source_manager.rebuild_queue(curr.as_deref());
@@ -297,6 +327,7 @@ impl WallpaperController {
     /// Oculta o muestra una carpeta: sus medios dejan de listarse y de reproducirse.
     pub fn set_folder_hidden(&self, id: &str, hidden: bool) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         if !inner.source_manager.set_folder_hidden(id, hidden) {
             return Err("No se encontró la carpeta indicada.".to_string());
         }
@@ -308,6 +339,7 @@ impl WallpaperController {
     /// marcado como oculto y sale de la cola de reproducción.
     pub fn set_media_hidden(&self, path: &str, hidden: bool) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         inner.source_manager.set_media_hidden(path, hidden);
         Self::sync_engine(&mut inner)?;
         Ok(self.build_snapshot(&inner))
@@ -320,6 +352,7 @@ impl WallpaperController {
     /// claro y el estado queda coherente (cola vacía, fondo parado).
     pub fn set_media_kind_mode(&self, mode: MediaKindMode) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         inner.source_manager.set_media_kind_mode(mode);
 
         if inner.source_manager.total_media() == 0 {
@@ -341,6 +374,7 @@ impl WallpaperController {
     /// Segundos que una imagen estática permanece en pantalla.
     pub fn set_image_duration(&self, seconds: u32) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         let clamped = seconds.clamp(MIN_IMAGE_DURATION_SEC, MAX_IMAGE_DURATION_SEC);
         inner.source_manager.set_image_duration(clamped);
         if let Some(engine) = &mut inner.engine {
@@ -391,6 +425,7 @@ impl WallpaperController {
 
     pub fn refresh_sources(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         let curr = inner.source_manager.current_media();
         inner.source_manager.refresh_all_sources();
         inner.source_manager.rebuild_queue(curr.as_deref());
@@ -399,6 +434,7 @@ impl WallpaperController {
 
     pub fn set_mode(&self, mode: WallpaperMode) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         let curr = inner.source_manager.current_media();
         inner.source_manager.set_mode(mode);
         inner.source_manager.rebuild_queue(curr.as_deref());
@@ -407,6 +443,7 @@ impl WallpaperController {
 
     pub fn set_fit(&self, fit: WallpaperFit) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         inner.source_manager.set_fit(fit.clone());
         if let Some(engine) = &mut inner.engine {
             let fit_str = match fit {
@@ -424,6 +461,7 @@ impl WallpaperController {
     /// y el fondo nunca toma el dispositivo de audio en modo exclusivo.
     pub fn set_audio_enabled(&self, enabled: bool) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         inner.source_manager.settings_mut().audio_enabled = enabled;
         let _ = inner.source_manager.save_to_disk();
         if let Some(engine) = &mut inner.engine {
@@ -448,7 +486,14 @@ impl WallpaperController {
         app: &AppHandle,
         enabled: bool,
     ) -> Result<WallpaperStateSnapshot, String> {
+        self.set_compositor_enabled_internal(app, enabled, false)
+    }
+
+    fn set_compositor_enabled_internal(
+        &self, app: &AppHandle, enabled: bool, handoff_restore: bool,
+    ) -> Result<WallpaperStateSnapshot, String> {
         let _lifecycle = self.compositor_lifecycle.lock().map_err(|e| e.to_string())?;
+        if !handoff_restore { self.ensure_wallpaper_control()?; }
         let (epoch, parent) = {
             let mut inner = self.inner.lock().map_err(|e|e.to_string())?;
             inner.compositor_epoch += 1;
@@ -501,6 +546,7 @@ impl WallpaperController {
 
     pub fn stop_base(&self) -> Result<WallpaperStateSnapshot,String> {
         let mut inner=self.inner.lock().map_err(|e|e.to_string())?;
+        self.ensure_wallpaper_control()?;
         if let Some(mut engine)=inner.engine.take() { let _=engine.stop(); }
         if !inner.compositor_enabled { inner.window=None; }
         inner.source_manager.settings_mut().is_active=false;
@@ -540,6 +586,7 @@ impl WallpaperController {
         config.paused = false;
         config.audio_level = 0.0;
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        self.ensure_wallpaper_control()?;
         let previous = inner.source_manager.settings().composition.clone();
         inner.source_manager.settings_mut().composition = config.clone();
         if let Err(error) = inner.source_manager.save_to_disk() {
@@ -566,6 +613,8 @@ impl WallpaperController {
         let media = inner.source_manager.get_all_media();
 
         WallpaperStateSnapshot {
+            control_blocked: self.handoff.enabled.load(Ordering::SeqCst) && self.handoff.blocked.load(Ordering::SeqCst),
+            control_message: self.handoff.message.lock().ok().and_then(|m| m.clone()),
             is_active: inner.window.is_some() && (inner.engine.is_some() || inner.compositor_enabled),
             is_paused: inner.is_paused,
             base_active: inner.engine.is_some(),

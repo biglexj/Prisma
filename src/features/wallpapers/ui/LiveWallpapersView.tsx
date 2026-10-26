@@ -425,6 +425,10 @@ export function LiveWallpapersView() {
         </div>
       )}
 
+      {state?.controlBlocked && <div className="live-wallpapers-handoff" role="status">
+        {state.controlMessage ?? "Esperando el control de los fondos…"}
+      </div>}
+      <fieldset className="live-wallpapers-controls" disabled={Boolean(state?.controlBlocked)}>
       {/* ── Control Hero Card ── */}
       <section className="live-wallpapers-control-card">
         {/* Categorías de fondo. Los escenarios tienen su propio espacio. */}
@@ -571,28 +575,6 @@ export function LiveWallpapersView() {
             </div>
 
             <div className="control-segmented-block">
-              <span className="segmented-label">Encuadre</span>
-              <div className="segmented-control" role="group" aria-label="Encuadre de vídeo">
-                <button
-                  type="button"
-                  className={`segmented-item ${currentFit === "cover" ? "is-selected" : ""}`}
-                  onClick={() => handleSetFit("cover")}
-                >
-                  <Icon name="crop" width={14} height={14} />
-                  <span>Cubrir</span>
-                </button>
-                <button
-                  type="button"
-                  className={`segmented-item ${currentFit === "contain" ? "is-selected" : ""}`}
-                  onClick={() => handleSetFit("contain")}
-                >
-                  <Icon name="fit-screen" width={14} height={14} />
-                  <span>Ajustar</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="control-segmented-block">
               <span className="segmented-label">Mezcla</span>
               <div className="segmented-control" role="group" aria-label="Combinar vídeos e imágenes">
                 <button
@@ -612,6 +594,28 @@ export function LiveWallpapersView() {
                 >
                   <Icon name="shuffle" width={14} height={14} />
                   <span>Combinar</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="control-segmented-block">
+              <span className="segmented-label">Encuadre</span>
+              <div className="segmented-control" role="group" aria-label="Encuadre de vídeo">
+                <button
+                  type="button"
+                  className={`segmented-item ${currentFit === "cover" ? "is-selected" : ""}`}
+                  onClick={() => handleSetFit("cover")}
+                >
+                  <Icon name="crop" width={14} height={14} />
+                  <span>Cubrir</span>
+                </button>
+                <button
+                  type="button"
+                  className={`segmented-item ${currentFit === "contain" ? "is-selected" : ""}`}
+                  onClick={() => handleSetFit("contain")}
+                >
+                  <Icon name="fit-screen" width={14} height={14} />
+                  <span>Ajustar</span>
                 </button>
               </div>
             </div>
@@ -936,6 +940,7 @@ export function LiveWallpapersView() {
       </section>
       </>}
       </div>
+      </fieldset>
     </div>
   );
 }

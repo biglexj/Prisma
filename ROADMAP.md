@@ -8,6 +8,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [ ] **Cesión de fondos Stable / Dev — 2.0.1 local**: coordinación exclusiva del escritorio, suspensión de Stable mientras Dev está abierto y recuperación al salir de Dev. Implementación y compilación en validación; pendiente de aceptación en las ediciones actualizadas. [Proceso](process/active/2026-10-26_cesion_fondos_stable_dev/PLAN.md).
+
 - [ ] **Fondos vivos — vídeos y capas Aurora**: catálogo de 25 efectos, galería, controles por efecto, ambiente independiente como capa 2, dinámicos, escenarios, partículas 3D/2D y parallax opcional. Coexistencia con imagen/vídeo y pausas comprobadas en WebView2; capturas PNG 1080p reutilizables. Pendientes ecualizador real, políticas automáticas, recuperación de Explorer, aceptación física final y rendimiento. [Proceso](process/active/2026-10-25_motor_wallpapers_nativo/PLAN.md).
 
 - [ ] **Capturadora compacta y movimiento Synapse**: selector por iconos de imagen/vídeo, recortes en una pill desplegable y cuentagotas; cierre de captura antes de limpiar el lienzo y transiciones nativas desactivadas. Synapse incorpora apertura continua, entrada escalonada y señal al guardar. Control de grabación movible centrado abajo, con iconos; carpetas predeterminadas Prisma en Imágenes/Vídeos y tres rutas independientes. Build y pruebas correctos; grabación real 1080p con audio y controles verificada en Windows tras corregir tamaño de ventana y bloqueo por silencio. Pendientes el zoom intermitente, arrastre y exclusión visual de la barra. [Proceso](process/active/2026-10-25_capturadora_y_movimiento_synapse/PLAN.md).

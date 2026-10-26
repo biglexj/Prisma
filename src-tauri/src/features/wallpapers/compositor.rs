@@ -208,6 +208,17 @@ pub fn destroy(app: &AppHandle) {
     }
 }
 
+pub fn request_destroy(app: &AppHandle) -> Result<Option<isize>, String> {
+    if let Some(window) = app.get_webview_window(COMPOSITOR_LABEL) {
+        #[cfg(windows)]
+        let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+        window.destroy().map_err(|e| e.to_string())?;
+        #[cfg(windows)]
+        return Ok(Some(hwnd.0 as isize));
+    }
+    Ok(None)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

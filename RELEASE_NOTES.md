@@ -2,6 +2,12 @@
 
 Registro de cambios y versiones de Prisma.
 
+## [2.0.1] - 2026-10-26 · Compilación local, no publicada
+
+Fondos Vivos incorpora la cesión automática del escritorio entre las ediciones Stable y Dev. Al abrir Dev, Stable suspende su fondo y deshabilita temporalmente sus controles; al salir de Dev, recupera el medio y la composición que tenía activos. Ambas ediciones deben estar actualizadas para utilizar esta coordinación.
+
+Quick Look añade el total de archivos y subcarpetas, tamaño, fecha de creación y desglose de imágenes, vídeos y documentos. Los controles de fondos mantienen su posición con un interruptor de sonido de ancho fijo y el nuevo orden de Mezcla y Encuadre.
+
 ## [2.0.0] - 2026-10-26
 
 Fondos Vivos permite reproducir vídeos, imágenes y GIF desde varias carpetas detrás de los iconos del escritorio. La composición de Aurora incorpora 17 escenarios y 8 efectos, ambientes y partículas independientes, controles por capa, efectos que responden al clic y Parallax. Vídeos e imágenes pueden mantenerse separados o combinarse en la rotación.
