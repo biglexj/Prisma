@@ -86,11 +86,14 @@ use app::commands::video_takes::{
     video_list_take_markers, video_set_take_marker,
 };
 use app::commands::wallpapers::{
-    live_wallpaper_add_folder, live_wallpaper_get_state, live_wallpaper_next, live_wallpaper_prev,
+    live_wallpaper_add_folder, live_wallpaper_compositor_set, live_wallpaper_get_state,
+    live_wallpaper_compositor_config_get, live_wallpaper_compositor_config_set,
+    live_wallpaper_next, live_wallpaper_prev,
     live_wallpaper_pause, live_wallpaper_play_file, live_wallpaper_refresh_sources, live_wallpaper_remove_folder,
     live_wallpaper_resume, live_wallpaper_set_audio_enabled, live_wallpaper_set_fit,
-    live_wallpaper_set_folder_hidden,
-    live_wallpaper_set_mode, live_wallpaper_set_video_hidden,
+    live_wallpaper_set_folder_hidden, live_wallpaper_set_image_duration,
+    live_wallpaper_set_media_hidden, live_wallpaper_set_media_kind_mode,
+    live_wallpaper_set_mode,
     live_wallpaper_start, live_wallpaper_stop, live_wallpaper_toggle_folder,
     wallpaper_save_and_apply, wallpaper_set_desktop,
 };
@@ -569,11 +572,12 @@ pub fn run() {
             let wp_snapshot = wallpaper_controller_for_tray.get_state().unwrap_or_else(|_| features::wallpapers::WallpaperStateSnapshot {
                 is_active: false,
                 is_paused: false,
-                current_video: None,
+                current_media: None,
                 current_folder: None,
-                total_videos: 0,
+                total_media: 0,
+                compositor_enabled: false,
                 settings: features::wallpapers::sources::WallpaperSettings::default(),
-                videos: Vec::new(),
+                media: Vec::new(),
             });
             let wp_toggle_label = if wp_snapshot.is_active { "Apagar fondo vivo" } else { "Encender fondo vivo" };
             let wp_pause_label = if wp_snapshot.is_paused { "Reanudar fondo" } else { "Pausar fondo" };
@@ -1038,7 +1042,12 @@ pub fn run() {
             live_wallpaper_set_fit,
             live_wallpaper_set_audio_enabled,
             live_wallpaper_set_folder_hidden,
-            live_wallpaper_set_video_hidden,
+            live_wallpaper_set_media_hidden,
+            live_wallpaper_set_media_kind_mode,
+            live_wallpaper_set_image_duration,
+            live_wallpaper_compositor_set,
+            live_wallpaper_compositor_config_get,
+            live_wallpaper_compositor_config_set,
             renamer_scan_folder,
             renamer_scan_paths,
             renamer_execute_batch,
@@ -1109,6 +1118,9 @@ pub fn run() {
                 }
             }
             if matches!(event, tauri::RunEvent::Exit) {
+                if let Some(controller) = app.try_state::<features::wallpapers::WallpaperController>() {
+                    controller.shutdown();
+                }
                 if let Some(relay) = app.try_state::<std::sync::Arc<features::audio_relay::AudioRelayService>>() { relay.shutdown(); }
                 let service = app.state::<std::sync::Arc<infrastructure::media::passthru::PassthruService>>();
                 let _ = service.stop();

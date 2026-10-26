@@ -1,0 +1,30 @@
+{
+  "source": "Aurora---Blog/frontend/src/features/Comunidad/EspacioVtuber/islands/three/dynamic-backgrounds",
+  "adaptations": [
+    "index.ts: Prisma, Borealis y CyberCity",
+    "controls.ts: tipos y valores por defecto sin store React",
+    "catalog.ts: capacidades del subconjunto importado",
+    "fábricas JS: extensión TS sin checkJs; lógica original"
+  ],
+  "sha256": {
+    "LayeredBackgroundComposer.ts": "bb490926fe588aac3a996710b55889a5871adb400d9cde8d3159373ab636e32c",
+    "index.ts": "637368a1ea5a7185513d0624f14098f69a6c25bed9aacc2a47b9d2e8da2e7e28",
+    "controls.ts": "3090ea1b079c5a601fce6b7090d15c57d497a86577024992c3703916704ca820",
+    "Backgrounds/themes.ts": "d6dc380f2d54eca6e39017fa42b3a1a1ab3e8485956b9ef9461a07c6b1e2602f",
+    "prisma/PrismaBackground.ts": "9febcd589328b17b487edc8a3a962b000b397c48f3ef59ca2e98fd08fec1eaaa",
+    "borealis/BorealisBackground.ts": "03b8f4e3e3efd4c93f96b82e707674cce18213024e2116fc1e4316baf4c105cd",
+    "cybercity/CyberCityBackground.ts": "b3a338ed30b59b1151aa13b4d50c4e468d371339dcf48727aadfbb4f8dbf6b51",
+    "ParticleBackground.ts": "2352ba8c059a1124dbe6ec4751b95f10f1d3195de816864c4338eb7074539aad",
+    "particleTextures.ts": "f3e581a762df8b0e3a777c31b1ddf89841839ec855a376728766488ae2fe268d",
+    "Interaction/textures.ts": "658bc2032d8efb832bd01a9edfebad25ba81fdd58614d09ebe2df96508e9bbb3",
+    "BackgroundCamera.ts": "800e12c3818c250f5f2a5f1fa56d2635b3d80910436fa547e87603e8c7cc43c1",
+    "resources.ts": "fde88eb468c867e5868eeab739d97cc812feabdcaf54f23add42383a203c9492",
+    "cybercity/createCityScene.js": "724f00bbdb97eafc74bf246e64b51b25b5c1f9d5dc6821b8535a9ba03af28eda",
+    "Backgrounds/AmbientBackground.ts": "5b63cac7760b5f8262e0637d751ae5f17363312507319c374fe949c2aa944660",
+    "Backgrounds/sky.frag.ts": "cbd73844030997e64fc76ae0e3a32166257e7368db3ecc118aaa7f8e4b899651",
+    "BackgroundProjection.ts": "ce876d9df35e5f10c1d44c5eb923fe8034a24a17e18925efa529cdeccb2bcffc",
+    "catalog.ts": "93dda8f9f00307289461d47028aef7424c8f88ae40f06f5762fcfdcf3d8a77c1",
+    "Interaction/BackgroundInteraction.ts": "4f934c6337e8e414f7a13890f3a6ea79a3f6329df2b20e11cef6b6db49754457",
+    "Interaction/ClickEffects.ts": "c19b9ebbb08bc5623050eac9c73e5c556882c78290196fa23d8dec9209e507c4"
+  }
+}

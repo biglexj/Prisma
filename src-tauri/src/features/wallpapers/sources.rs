@@ -3,7 +3,97 @@ use std::cmp::Ordering;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// Extensiones que el fondo reproduce como vídeo.
 const VIDEO_EXTENSIONS: &[&str] = &["mp4", "webm", "mkv", "mov", "avi", "m4v"];
+
+/// Extensiones que el fondo reproduce como imagen estática.
+/// mpv las decodifica con su demuxer de imagen: se pintan como un fotograma
+/// y, con "keep-open=always", se quedan en la ventana del escritorio.
+const IMAGE_EXTENSIONS: &[&str] = &[
+    "jpg", "jpeg", "png", "webp", "bmp", "gif", "tif", "tiff", "avif",
+];
+
+/// Segundos que una imagen estática permanece en pantalla por defecto.
+pub const DEFAULT_IMAGE_DURATION_SEC: u32 = 20;
+/// Rango aceptado para la duración de una imagen estática, en segundos.
+pub const MIN_IMAGE_DURATION_SEC: u32 = 5;
+pub const MAX_IMAGE_DURATION_SEC: u32 = 600;
+
+/// Tipo de medio de un archivo de Fondos Vivos.
+/// El usuario no distingue entre vídeo e imagen: para la app son "medios",
+/// pero el motor necesita saber cuál es cuál para saber cómo termina.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MediaKind {
+    Video,
+    Image,
+}
+
+impl MediaKind {
+    /// Deduce el tipo de un archivo por su extensión.
+    /// Lo que no sea una imagen conocida se trata como vídeo: es el
+    /// comportamiento que ya tenía la aplicación.
+    pub fn from_path(path: &str) -> MediaKind {
+        let ext = Path::new(path)
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_lowercase())
+            .unwrap_or_default();
+        if IMAGE_EXTENSIONS.contains(&ext.as_str()) {
+            MediaKind::Image
+        } else {
+            MediaKind::Video
+        }
+    }
+}
+
+/// Qué tipos de medio entran en la cola de reproducción y en la cuadrícula.
+/// Por defecto solo hay vídeos: es lo que hacía la aplicación antes de que
+/// existieran las imágenes, así que un archivo de configuración antiguo sigue
+/// funcionando igual al abrirse.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum MediaKindMode {
+    /// Solo vídeos.
+    #[default]
+    Video,
+    /// Solo imágenes estáticas.
+    Image,
+    /// Vídeos e imágenes intercalados.
+    Mixed,
+}
+
+impl MediaKindMode {
+    /// Convierte el texto que llega del frontend en un modo válido.
+    pub fn parse(value: &str) -> Result<MediaKindMode, String> {
+        match value.trim().to_lowercase().as_str() {
+            "video" => Ok(MediaKindMode::Video),
+            "image" => Ok(MediaKindMode::Image),
+            "mixed" => Ok(MediaKindMode::Mixed),
+            other => Err(format!(
+                "Modo de medio desconocido: '{other}'. Usa 'video', 'image' o 'mixed'."
+            )),
+        }
+    }
+
+    /// ¿Este tipo de medio es elegible en este modo?
+    pub fn accepts(&self, kind: MediaKind) -> bool {
+        match self {
+            MediaKindMode::Video => kind == MediaKind::Video,
+            MediaKindMode::Image => kind == MediaKind::Image,
+            MediaKindMode::Mixed => true,
+        }
+    }
+
+    /// Nombre legible del modo, para los mensajes de diagnóstico.
+    pub fn label(&self) -> &'static str {
+        match self {
+            MediaKindMode::Video => "vídeos",
+            MediaKindMode::Image => "imágenes",
+            MediaKindMode::Mixed => "medios",
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -12,17 +102,30 @@ pub struct FolderSource {
     pub path: String,
     pub name: String,
     pub enabled: bool,
-    pub video_count: usize,
+    /// Archivos de medio hallados en la carpeta (vídeos e imágenes).
+    /// Es el dato real de la carpeta: no depende del modo de medio activo.
+    /// Las configuraciones antiguas guardaban este dato como "videoCount".
+    #[serde(alias = "videoCount")]
+    pub media_count: usize,
     pub available: bool,
+    /// Oculta la carpeta: sus medios no se listan ni entran en la cola.
+    #[serde(default)]
+    pub hidden: bool,
 }
 
+/// Un medio de la cuadrícula: un vídeo o una imagen estática.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct WallpaperVideoItem {
+pub struct WallpaperMediaItem {
     pub path: String,
     pub name: String,
     pub folder_id: String,
     pub folder_name: String,
+    /// Tipo del medio: "video" o "image".
+    pub kind: MediaKind,
+    /// Oculto individualmente: no se reproduce ni sale de la cuadrícula.
+    #[serde(default)]
+    pub hidden: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -48,6 +151,27 @@ pub struct WallpaperSettings {
     pub fit: WallpaperFit,
     pub auto_start: bool,
     pub is_active: bool,
+    /// Rutas de medios ocultados individualmente (vídeos e imágenes).
+    /// Las configuraciones antiguas guardaban esta lista como "hiddenVideos".
+    #[serde(default, alias = "hiddenVideos")]
+    pub hidden_media: Vec<String>,
+    /// Sonido del fondo vivo. Es independiente del reproductor de la app:
+    /// activarlo o desactivarlo nunca toca la música que esté sonando.
+    #[serde(default)]
+    pub audio_enabled: bool,
+    /// Segundos que una imagen estática permanece en pantalla.
+    #[serde(default = "default_image_duration")]
+    pub image_duration_sec: u32,
+    /// Qué tipos de medio entran en la cola y en la cuadrícula.
+    /// Las configuraciones antiguas (sin este campo) se abren en modo vídeo.
+    #[serde(default)]
+    pub media_kind_mode: MediaKindMode,
+    #[serde(default)]
+    pub composition: super::compositor::CompositorConfig,
+}
+
+fn default_image_duration() -> u32 {
+    DEFAULT_IMAGE_DURATION_SEC
 }
 
 impl Default for WallpaperSettings {
@@ -59,6 +183,11 @@ impl Default for WallpaperSettings {
             fit: WallpaperFit::Cover,
             auto_start: false,
             is_active: false,
+            hidden_media: Vec::new(),
+            audio_enabled: false,
+            image_duration_sec: DEFAULT_IMAGE_DURATION_SEC,
+            media_kind_mode: MediaKindMode::Video,
+            composition: super::compositor::CompositorConfig::default(),
         }
     }
 }
@@ -136,7 +265,7 @@ impl SourceManager {
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| canonical_str.clone());
 
-        let (count, available) = scan_folder_videos(&canonical);
+        let (count, available) = scan_folder_media(&canonical);
         let id = format!("src_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
 
         let source = FolderSource {
@@ -144,8 +273,9 @@ impl SourceManager {
             path: canonical_str,
             name,
             enabled: true,
-            video_count: count,
+            media_count: count,
             available,
+            hidden: false,
         };
 
         self.settings.sources.push(source.clone());
@@ -177,12 +307,67 @@ impl SourceManager {
         }
     }
 
+    /// Oculta o muestra una carpeta. Oculta excluye sus medios de la lista
+    /// y de la cola de reproducción.
+    pub fn set_folder_hidden(&mut self, id: &str, hidden: bool) -> bool {
+        let current = self.current_media();
+        let found = if let Some(src) = self.settings.sources.iter_mut().find(|s| s.id == id) {
+            src.hidden = hidden;
+            true
+        } else {
+            false
+        };
+        if found {
+            let _ = self.save_to_disk();
+            self.rebuild_queue(current.as_deref());
+        }
+        found
+    }
+
+    /// Oculta o muestra un medio concreto (vídeo o imagen). Oculto lo saca
+    /// de la cola y lo marca en la cuadrícula.
+    pub fn set_media_hidden(&mut self, path: &str, hidden: bool) -> bool {
+        let clean = clean_path_str(path);
+        let current = self.current_media();
+        if hidden {
+            if !self.settings.hidden_media.iter().any(|p| p == &clean) {
+                self.settings.hidden_media.push(clean);
+            }
+        } else {
+            self.settings.hidden_media.retain(|p| p != &clean);
+        }
+        let _ = self.save_to_disk();
+        self.rebuild_queue(current.as_deref());
+        true
+    }
+
+    pub fn is_media_hidden(&self, path: &str) -> bool {
+        let clean = clean_path_str(path);
+        self.settings.hidden_media.iter().any(|p| p == &clean)
+    }
+
+    /// Cambia el tipo de medio que entra en la cola y en la cuadrícula.
+    /// Si el medio en pantalla sigue siendo elegible se conserva; si no, la
+    /// cola arranca por el primer elemento elegible del modo nuevo.
+    pub fn set_media_kind_mode(&mut self, mode: MediaKindMode) {
+        let current = self.current_media();
+        self.settings.media_kind_mode = mode;
+        let _ = self.save_to_disk();
+        self.rebuild_queue(current.as_deref());
+    }
+
+    /// Segundos que una imagen estática permanece en pantalla.
+    pub fn set_image_duration(&mut self, seconds: u32) {
+        self.settings.image_duration_sec = seconds.clamp(MIN_IMAGE_DURATION_SEC, MAX_IMAGE_DURATION_SEC);
+        let _ = self.save_to_disk();
+    }
+
     pub fn refresh_all_sources(&mut self) {
         for src in &mut self.settings.sources {
             src.path = clean_path_str(&src.path);
             let p = Path::new(&src.path);
-            let (count, available) = scan_folder_videos(p);
-            src.video_count = count;
+            let (count, available) = scan_folder_media(p);
+            src.media_count = count;
             src.available = available;
         }
         let _ = self.save_to_disk();
@@ -200,16 +385,27 @@ impl SourceManager {
     }
 
     pub fn rebuild_queue(&mut self, preserve_current: Option<&str>) {
+        let kind_mode = self.settings.media_kind_mode;
         let mut collected = Vec::new();
 
         for source in &self.settings.sources {
-            if !source.enabled || !source.available {
+            if !source.enabled || !source.available || source.hidden {
                 continue;
             }
             let p = Path::new(&source.path);
-            let mut vids = list_folder_videos(p);
-            vids.sort_by(|a, b| natural_cmp(a, b));
-            collected.extend(vids);
+            let mut items = list_folder_media(p);
+            // Orden natural por nombre: "2" va antes que "10". Vídeos e
+            // imágenes se intercalan en una sola lista.
+            items.sort_by(|a, b| natural_cmp(a, b));
+            for item in items {
+                if self.is_media_hidden(&item) {
+                    continue;
+                }
+                if !kind_mode.accepts(MediaKind::from_path(&item)) {
+                    continue;
+                }
+                collected.push(item);
+            }
         }
 
         let mut unique: Vec<String> = Vec::new();
@@ -249,15 +445,15 @@ impl SourceManager {
         self.current_index = 0;
     }
 
-    pub fn current_video(&self) -> Option<String> {
+    pub fn current_media(&self) -> Option<String> {
         self.queue.get(self.current_index).cloned()
     }
 
-    pub fn total_videos(&self) -> usize {
+    pub fn total_media(&self) -> usize {
         self.queue.len()
     }
 
-    pub fn set_current_video(&mut self, path: &str) -> bool {
+    pub fn set_current_media(&mut self, path: &str) -> bool {
         let clean = clean_path_str(path);
         if let Some(idx) = self.queue.iter().position(|p| p == &clean) {
             self.current_index = idx;
@@ -269,26 +465,35 @@ impl SourceManager {
         }
     }
 
-    pub fn get_all_videos(&self) -> Vec<WallpaperVideoItem> {
+    /// Medios del modo activo: la cuadrícula muestra lo mismo que la cola.
+    pub fn get_all_media(&self) -> Vec<WallpaperMediaItem> {
+        let kind_mode = self.settings.media_kind_mode;
         let mut all = Vec::new();
         for source in &self.settings.sources {
-            if !source.enabled || !source.available {
+            if !source.enabled || !source.available || source.hidden {
                 continue;
             }
             let p = Path::new(&source.path);
-            let mut vids = list_folder_videos(p);
-            vids.sort_by(|a, b| natural_cmp(a, b));
-            for v in vids {
-                let clean_p = clean_path_str(&v);
+            let mut items = list_folder_media(p);
+            items.sort_by(|a, b| natural_cmp(a, b));
+            for item in items {
+                let clean_p = clean_path_str(&item);
+                let kind = MediaKind::from_path(&clean_p);
+                if !kind_mode.accepts(kind) {
+                    continue;
+                }
                 let name = Path::new(&clean_p)
                     .file_name()
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_else(|| clean_p.clone());
-                all.push(WallpaperVideoItem {
+                let hidden = self.is_media_hidden(&clean_p);
+                all.push(WallpaperMediaItem {
                     path: clean_p,
                     name,
                     folder_id: source.id.clone(),
                     folder_name: source.name.clone(),
+                    kind,
+                    hidden,
                 });
             }
         }
@@ -300,7 +505,7 @@ impl SourceManager {
             return None;
         }
 
-        if let Some(curr) = self.current_video() {
+        if let Some(curr) = self.current_media() {
             self.last_played = Some(curr);
         }
 
@@ -326,7 +531,7 @@ impl SourceManager {
             self.current_index = 0;
         }
 
-        self.current_video()
+        self.current_media()
     }
 
     pub fn advance_prev(&mut self) -> Option<String> {
@@ -344,7 +549,7 @@ impl SourceManager {
             self.current_index -= 1;
         }
 
-        self.current_video()
+        self.current_media()
     }
 
     #[allow(dead_code)]
@@ -375,15 +580,19 @@ pub fn clean_path_str(s: &str) -> String {
     }
 }
 
-fn scan_folder_videos(dir: &Path) -> (usize, bool) {
+/// Cuenta los medios de una carpeta (vídeos e imágenes) y dice si es
+/// accesible. El recuento no depende del modo de medio activo: es el dato
+/// real de la carpeta.
+fn scan_folder_media(dir: &Path) -> (usize, bool) {
     if !dir.is_dir() {
         return (0, false);
     }
-    let list = list_folder_videos(dir);
+    let list = list_folder_media(dir);
     (list.len(), true)
 }
 
-fn list_folder_videos(dir: &Path) -> Vec<String> {
+/// Enumera los medios de una carpeta (vídeos e imágenes), sin subcarpetas.
+fn list_folder_media(dir: &Path) -> Vec<String> {
     let mut results = Vec::new();
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
@@ -395,7 +604,9 @@ fn list_folder_videos(dir: &Path) -> Vec<String> {
         if path.is_file() {
             if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
                 let ext_lower = ext.to_lowercase();
-                if VIDEO_EXTENSIONS.contains(&ext_lower.as_str()) {
+                if VIDEO_EXTENSIONS.contains(&ext_lower.as_str())
+                    || IMAGE_EXTENSIONS.contains(&ext_lower.as_str())
+                {
                     let clean = clean_path_str(&path.to_string_lossy());
                     results.push(clean);
                 }

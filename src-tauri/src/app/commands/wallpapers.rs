@@ -148,13 +148,18 @@ pub async fn wallpaper_set_desktop(image_path: String) -> Result<SetWallpaperRes
 // ── Comandos de Fondos Vivos (Fase 1: Vídeo multicarpeta local) ──
 
 use crate::features::wallpapers::{
-    sources::{FolderSource, WallpaperFit, WallpaperMode},
+    sources::{FolderSource, MediaKindMode, WallpaperFit, WallpaperMode},
     WallpaperController, WallpaperStateSnapshot,
 };
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 fn notify_wallpaper_change(app: &AppHandle) {
     crate::update_wallpaper_tray_menu(app);
+    if let Some(controller) = app.try_state::<WallpaperController>() {
+        if let Ok(config) = controller.compositor_config() {
+            crate::features::wallpapers::compositor::push_config(app, &config);
+        }
+    }
     let _ = app.emit("prisma://wallpaper-state-changed", ());
 }
 
@@ -325,14 +330,76 @@ pub fn live_wallpaper_set_folder_hidden(
     res
 }
 
+/// Oculta o muestra un medio concreto (vídeo o imagen).
 #[tauri::command]
-pub fn live_wallpaper_set_video_hidden(
+pub fn live_wallpaper_set_media_hidden(
     app: AppHandle,
     controller: State<'_, WallpaperController>,
     path: String,
     hidden: bool,
 ) -> Result<WallpaperStateSnapshot, String> {
-    let res = controller.set_video_hidden(&path, hidden);
+    let res = controller.set_media_hidden(&path, hidden);
     notify_wallpaper_change(&app);
     res
+}
+
+/// Cambia el tipo de medio que entra en la cola y en la cuadrícula.
+/// Valores admitidos: "video" (por defecto), "image" y "mixed".
+#[tauri::command]
+pub fn live_wallpaper_set_media_kind_mode(
+    app: AppHandle,
+    controller: State<'_, WallpaperController>,
+    mode: String,
+) -> Result<WallpaperStateSnapshot, String> {
+    let parsed = MediaKindMode::parse(&mode)?;
+    let res = controller.set_media_kind_mode(parsed);
+    notify_wallpaper_change(&app);
+    res
+}
+
+/// Segundos que una imagen estática permanece en pantalla.
+#[tauri::command]
+pub fn live_wallpaper_set_image_duration(
+    app: AppHandle,
+    controller: State<'_, WallpaperController>,
+    seconds: u32,
+) -> Result<WallpaperStateSnapshot, String> {
+    let res = controller.set_image_duration(seconds);
+    notify_wallpaper_change(&app);
+    res
+}
+
+/// Monta o desmonta la composición de escritorio (capas 2 a 6 del modelo).
+/// La superficie web se cuelga del contenedor del escritorio: queda por encima
+/// de la capa de vídeo y por debajo de la capa de iconos.
+#[tauri::command]
+pub async fn live_wallpaper_compositor_set(
+    app: AppHandle,
+    controller: State<'_, WallpaperController>,
+    enabled: bool,
+) -> Result<WallpaperStateSnapshot, String> {
+    let owned = controller.inner().clone();
+    let handle = app.clone();
+    let res = tauri::async_runtime::spawn_blocking(move || owned.set_compositor_enabled(&handle, enabled))
+        .await.map_err(|e| e.to_string())?;
+    notify_wallpaper_change(&app);
+    res
+}
+
+#[tauri::command]
+pub fn live_wallpaper_compositor_config_get(
+    controller: State<'_, WallpaperController>,
+) -> Result<crate::features::wallpapers::compositor::CompositorConfig, String> {
+    controller.compositor_config()
+}
+
+#[tauri::command]
+pub fn live_wallpaper_compositor_config_set(
+    app: AppHandle,
+    controller: State<'_, WallpaperController>,
+    config: crate::features::wallpapers::compositor::CompositorConfig,
+) -> Result<(), String> {
+    controller.set_compositor_config(config)?;
+    notify_wallpaper_change(&app);
+    Ok(())
 }

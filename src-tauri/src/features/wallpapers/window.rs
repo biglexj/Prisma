@@ -135,6 +135,20 @@ impl DesktopWallpaperWindow {
         0
     }
 
+    /// Identificador del HWND del contenedor como entero opaco.
+    /// Sirve para colgar ventanas hijas encima de la capa de vídeo, como la
+    /// superficie web de la composición. Se devuelve como entero para no
+    /// arrastrar el crate `windows` (solo disponible en Windows) a las firmas
+    /// compartidas entre plataformas.
+    pub fn host_handle(&self) -> isize {
+        #[cfg(windows)]
+        {
+            self.hwnd.0 as isize
+        }
+        #[cfg(not(windows))]
+        0
+    }
+
     #[allow(dead_code)]
     pub fn resize_to_desktop(&self) {
         #[cfg(windows)]

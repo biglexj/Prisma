@@ -84,7 +84,7 @@ export function HomeDashboard({
     const fetchWallpaperStats = async () => {
       try {
         const snap = await liveWallpapersApi.getState();
-        setWallpaperCount(snap.totalVideos);
+        setWallpaperCount(snap.totalMedia);
       } catch {
         // Silencioso si no está listo
       }

@@ -1,13 +1,9 @@
 # Decisión y alcance
 
-Dirección de producto confirmada por Biglex el 2026-10-25:
+Biglex autoriza revisar la implementación existente y comenzar la fase 2 el 2026-10-25. Su aclaración establece Vídeos · Imágenes · Fondos 3D en el selector superior; se retira Combinado de la interfaz y los escenarios se ubican en Fondos 3D.
 
-- Fase 1: vídeos desde varias carpetas locales (A/B/C…), con reproducción continua en orden o aleatoria como fondo de escritorio.
-- Fase 2: utilizar el sistema de composición por capas ya existente en Aurora.
-- Aura: referencia conceptual exclusivamente, sin usar su código.
+**Visto bueno técnico a la base de fase 1 para continuar**, con defectos corregidos de compilación y liberación al vaciar la cola. No equivale a cierre completo: las políticas automáticas de pausa y recuperación tras reiniciar Explorer siguen pendientes de implementación/verificación actual.
 
-Planificación y ajuste documental autorizados y realizados. La dirección de estas dos fases está confirmada; no constituye aceptación funcional de una implementación.
+**Fase 2: IN PROGRESS.** Compositor Aurora adaptado, ambiente y tres efectos disponibles, incluido Holo Ciudad 3D. Prueba nativa sin carpetas: animación, pausa y destrucción al detener verificadas. Partículas independientes, audio reactivo, parallax y medición sostenida pendientes.
 
-Implementación: no iniciada, pendiente de indicación de ejecutar. Validación nativa y aceptación funcional: pendientes. Publicación: fuera del encargo actual.
-
-El proceso permanece en `active` con PLAN, TASKS y VALIDATION preparados para continuar.
+La autorización del usuario cubre el trabajo local. No se atribuye aceptación visual/funcional final a Biglex ni se publica o sustituye su instalación. La instancia instalada se conserva y el perfil de desarrollo usado para las pruebas se restaura.

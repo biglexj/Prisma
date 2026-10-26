@@ -9,6 +9,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL("./index.html", import.meta.url)),
+        compositor: fileURLToPath(new URL("./compositor.html", import.meta.url)),
         // Entrada propia de la barra superior Synapse: así esa ventana no
         // comparte caché con el resto de ventanas de la aplicación.
         zone: fileURLToPath(new URL("./zone.html", import.meta.url)),

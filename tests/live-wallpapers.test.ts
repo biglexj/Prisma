@@ -1,5 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { selectVisibleVideos } from "../src/features/wallpapers/services/liveWallpapersApi";
+import {
+  selectVisibleMedia,
+  mediaCountLabel,
+  mediaKindLabel,
+  mediaNoun,
+  mediaNounPlural,
+  audioToggleApplies,
+  type WallpaperMediaItem,
+} from "../src/features/wallpapers/services/liveWallpapersApi";
 
 function naturalCompare(a: string, b: string): number {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
@@ -38,7 +46,7 @@ describe("Fondos Vivos — Lógica de colas y ordenación", () => {
     expect(unique).toEqual(["C:/Videos/1.mp4", "C:/Videos/2.mp4", "C:/Videos/3.mp4"]);
   });
 
-  it("desactivar una carpeta excluye sus vídeos de la cola activa", () => {
+  it("desactivar una carpeta excluye sus medios de la cola activa", () => {
     const sources = [
       { id: "A", enabled: true, videos: ["A1.mp4", "A2.mp4"] },
       { id: "B", enabled: false, videos: ["B1.mp4", "B2.mp4"] },
@@ -55,32 +63,67 @@ describe("Fondos Vivos — Lógica de colas y ordenación", () => {
 });
 
 describe("Fondos Vivos — Ocultar con el botón de ojo", () => {
-  const videos = [
-    { path: "C:/V/1.mp4", name: "1.mp4", folderId: "A", folderName: "V", hidden: false },
-    { path: "C:/V/2.mp4", name: "2.mp4", folderId: "A", folderName: "V", hidden: true },
-    { path: "C:/W/3.mp4", name: "3.mp4", folderId: "B", folderName: "W", hidden: false },
+  const media: WallpaperMediaItem[] = [
+    { path: "C:/V/1.mp4", name: "1.mp4", folderId: "A", folderName: "V", kind: "video", hidden: false },
+    { path: "C:/V/2.mp4", name: "2.mp4", folderId: "A", folderName: "V", kind: "video", hidden: true },
+    { path: "C:/W/3.png", name: "3.png", folderId: "B", folderName: "W", kind: "image", hidden: false },
   ];
 
-  it("los vídeos ocultados no se muestran por defecto", () => {
-    const visible = selectVisibleVideos(videos, { showHidden: false });
-    expect(visible.map((v) => v.name)).toEqual(["1.mp4", "3.mp4"]);
+  it("los medios ocultados no se muestran por defecto", () => {
+    const visible = selectVisibleMedia(media, { showHidden: false });
+    expect(visible.map((item) => item.name)).toEqual(["1.mp4", "3.png"]);
   });
 
-  it("con 'Mostrar ocultos' los vídeos ocultados reaparecen marcados", () => {
-    const visible = selectVisibleVideos(videos, { showHidden: true });
-    expect(visible.map((v) => v.name)).toEqual(["1.mp4", "2.mp4", "3.mp4"]);
-    expect(visible.find((v) => v.name === "2.mp4")?.hidden).toBe(true);
+  it("con 'Mostrar ocultos' los medios ocultados reaparecen marcados", () => {
+    const visible = selectVisibleMedia(media, { showHidden: true });
+    expect(visible.map((item) => item.name)).toEqual(["1.mp4", "2.mp4", "3.png"]);
+    expect(visible.find((item) => item.name === "2.mp4")?.hidden).toBe(true);
   });
 
   it("el buscador también respeta el estado de ocultar", () => {
-    const visible = selectVisibleVideos(videos, { showHidden: false, query: "2.mp4" });
+    const visible = selectVisibleMedia(media, { showHidden: false, query: "2.mp4" });
     expect(visible).toHaveLength(0);
 
-    const visibleWithHidden = selectVisibleVideos(videos, { showHidden: true, query: "2.mp4" });
-    expect(visibleWithHidden.map((v) => v.name)).toEqual(["2.mp4"]);
+    const visibleWithHidden = selectVisibleMedia(media, { showHidden: true, query: "2.mp4" });
+    expect(visibleWithHidden.map((item) => item.name)).toEqual(["2.mp4"]);
   });
 });
 
+describe("Fondos Vivos — Tipo de medio de la capa 1", () => {
+  it("el modo por defecto son vídeos: no se mezclan con las imágenes", () => {
+    expect(mediaKindLabel("video")).toBe("Vídeos");
+    expect(mediaKindLabel("image")).toBe("Imágenes");
+    expect(mediaKindLabel("mixed")).toBe("Combinado");
+  });
+
+  it("el sustantivo acompaña al tipo activo y se pluraliza bien", () => {
+    expect(mediaNoun("video")).toBe("vídeo");
+    expect(mediaNoun("image")).toBe("imagen");
+    expect(mediaNoun("mixed")).toBe("medio");
+    expect(mediaNounPlural("video")).toBe("vídeos");
+    expect(mediaNounPlural("image")).toBe("imágenes");
+    expect(mediaNounPlural("mixed")).toBe("medios");
+  });
+
+  it("el contador de cola usa el sustantivo del tipo activo", () => {
+    expect(mediaCountLabel("video", 1)).toBe("1 vídeo");
+    expect(mediaCountLabel("video", 3)).toBe("3 vídeos");
+    expect(mediaCountLabel("image", 1)).toBe("1 imagen");
+    expect(mediaCountLabel("image", 4)).toBe("4 imágenes");
+    expect(mediaCountLabel("mixed", 7)).toBe("7 medios");
+  });
+
+  it("el interruptor de sonido solo aplica cuando hay vídeo en juego", () => {
+    // Con el tipo en vídeos o combinado, el sonido importa.
+    expect(audioToggleApplies("video", "video")).toBe(true);
+    expect(audioToggleApplies("mixed", "video")).toBe(true);
+    // Con el tipo en imágenes no hay ningún vídeo en la cola.
+    expect(audioToggleApplies("image", null)).toBe(false);
+    // Y si lo que está en pantalla es una imagen, tampoco hay audio.
+    expect(audioToggleApplies("mixed", "image")).toBe(false);
+    expect(audioToggleApplies("video", "image")).toBe(false);
+  });
+});
 
 describe("Fondos Vivos — Control en Bandeja del Sistema y Widget de Inicio", () => {
   it("calcula etiquetas del menú de bandeja según estado activo y pausado", () => {
@@ -108,14 +151,15 @@ describe("Fondos Vivos — Control en Bandeja del Sistema y Widget de Inicio", (
     });
   });
 
-  it("extrae el nombre de vídeo limpio sin extensión para el widget de Inicio", () => {
-    const formatVideoTitle = (currentPath: string | null) => {
+  it("extrae el nombre del medio limpio sin extensión para el widget de Inicio", () => {
+    const formatMediaTitle = (currentPath: string | null) => {
       if (!currentPath) return "Sin reproducción";
       return currentPath.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || "Fondo de escritorio";
     };
 
-    expect(formatVideoTitle("D:/Wallpapers/Neon_Cyberpunk.mp4")).toBe("Neon_Cyberpunk");
-    expect(formatVideoTitle("C:\\Users\\Media\\Nature 4K.mkv")).toBe("Nature 4K");
-    expect(formatVideoTitle(null)).toBe("Sin reproducción");
+    expect(formatMediaTitle("D:/Wallpapers/Neon_Cyberpunk.mp4")).toBe("Neon_Cyberpunk");
+    expect(formatMediaTitle("C:\\Users\\Media\\Nature 4K.mkv")).toBe("Nature 4K");
+    expect(formatMediaTitle("C:/Wallpapers/Cielo_Estrellado.png")).toBe("Cielo_Estrellado");
+    expect(formatMediaTitle(null)).toBe("Sin reproducción");
   });
 });

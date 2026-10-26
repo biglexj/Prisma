@@ -171,6 +171,17 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
+/* Fila superior de la cajita de control: selector de tipo de medio y,
+   cuando toca, duración de la imagen estática. */
+.control-media-kind-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--outline-variant, #ded5df);
+}
+
 .control-card-main {
   display: flex;
   align-items: center;
@@ -322,6 +333,47 @@
   color: var(--on-surface, #29242b);
   border-color: var(--outline-variant, #ded5df);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Interruptor de sonido del fondo: estado tonal cuando está encendido */
+.sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 34px;
+  padding: 0 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid var(--outline-variant, #ded5df);
+  background: var(--surface-container, #f3edf4);
+  color: var(--on-surface-variant, #6b616d);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.sound-toggle:hover {
+  background: var(--surface-container-high, #e9e2e9);
+  border-color: var(--outline, #958995);
+}
+
+/* El sonido solo aplica a los vídeos: con imágenes el botón queda apagado
+   y sin efecto, para no prometer audio que no existe. */
+.sound-toggle.is-disabled,
+.sound-toggle.is-disabled:hover {
+  background: transparent;
+  border-color: var(--outline-variant, #ded5df);
+  color: var(--on-surface-variant, #49454f);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sound-toggle.is-on {
+  background: var(--primary-container, #ffd9df);
+  color: var(--primary, #8f003a);
+  border-color: var(--primary, #8f003a);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary, #8f003a) 18%, transparent);
 }
 
 /* ── Now Playing Strip ── */
@@ -617,6 +669,43 @@
   background: color-mix(in srgb, var(--error, #ba1a1a) 15%, transparent);
 }
 
+/* Botón de ojo: oculta o muestra la carpeta y sus vídeos */
+.chip-eye-btn {
+  background: transparent;
+  border: none;
+  color: var(--on-surface-variant, #6b616d);
+  padding: 0.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: all 0.12s ease;
+}
+
+.chip-eye-btn:hover {
+  opacity: 1;
+  color: var(--primary, #6366f1);
+  background: color-mix(in srgb, var(--primary, #6366f1) 14%, transparent);
+}
+
+/* Carpeta oculta: estado gris, sin reproducción */
+.compact-folder-chip.is-hidden {
+  background: var(--surface-container, #f3edf4);
+  border-style: dashed;
+  border-color: var(--outline-variant, #ded5df);
+  opacity: 0.62;
+  filter: grayscale(1);
+}
+
+.compact-folder-chip.is-hidden .chip-name {
+  color: var(--on-surface-variant, #6b616d);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
 /* ── Main Section: Lista de Vídeos ── */
 .live-videos-list-section {
   display: flex;
@@ -691,6 +780,54 @@
   padding: 0.15rem;
   display: flex;
   align-items: center;
+}
+
+/* Interruptor "Mostrar ocultos" */
+.videos-visibility-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.8rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--surface-container, #f3edf4);
+  border: 1px solid var(--outline-variant, #ded5df);
+  color: var(--on-surface-variant, #6b616d);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.videos-visibility-toggle:hover {
+  background: var(--surface-container-high, #e9e2e9);
+  border-color: var(--outline, #958995);
+  color: var(--on-surface, #29242b);
+}
+
+.videos-visibility-toggle.is-active {
+  background: var(--primary-container);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.videos-visibility-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  background: var(--surface-container-highest, #e1d9e2);
+  color: var(--on-surface-variant, #6b616d);
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.videos-visibility-toggle.is-active .videos-visibility-count {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
 }
 
 /* ── Cuadrícula de 6 columnas de Vídeos con Miniaturas ── */
@@ -885,6 +1022,77 @@
   white-space: nowrap;
 }
 
+/* Botón de ojo sobre la miniatura */
+.live-video-card-eye {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(0, 0, 0, 0.62);
+  color: #ffffff;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition: opacity 0.16s ease, transform 0.16s ease, background-color 0.16s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.live-video-card:hover .live-video-card-eye,
+.live-video-card:focus-visible .live-video-card-eye,
+.live-video-card.is-hidden .live-video-card-eye {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.live-video-card-eye:hover {
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.live-video-card-hidden-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.5rem;
+  border-radius: 9999px;
+  background: rgba(98, 98, 110, 0.9);
+  color: #ffffff;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Vídeo oculto: estado gris y fuera de la cola de reproducción */
+.live-video-card.is-hidden {
+  cursor: default;
+  filter: grayscale(1);
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+.live-video-card.is-hidden:hover {
+  transform: none;
+  box-shadow: none;
+  background: var(--surface-container, #f3edf4);
+  border-color: var(--outline-variant, #ded5df);
+}
+
+.live-video-card.is-hidden .live-video-card-title {
+  color: var(--on-surface-variant, #6b616d);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
 /* Empty states */
 .videos-empty-state {
   display: flex;
@@ -924,3 +1132,24 @@
   margin: 0.4rem 0 0 0;
   line-height: 1.5;
 }
+
+.live-composition-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin: 12px 0;
+  padding: 16px;
+  border: 1px solid var(--outline-variant, rgba(128, 128, 128, 0.25));
+  border-radius: 20px;
+}
+.live-composition-controls label { display: flex; align-items: center; gap: 8px; }
+.live-composition-controls select {
+  color: var(--on-surface, #29242b);
+  background: var(--surface-container, #f3edf4);
+  border: 1px solid var(--outline-variant, rgba(128, 128, 128, 0.3));
+  border-radius: 12px;
+  padding: 8px 12px;
+  font: inherit;
+}
+.live-composition-controls p { flex-basis: 100%; margin: 0; font-size: 0.85rem; }

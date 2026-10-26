@@ -1,3 +1,4 @@
+pub mod compositor;
 pub mod engine;
 pub mod sources;
 pub mod window;
@@ -12,38 +13,52 @@ mod sources_tests;
 #[cfg(test)]
 mod controller_tests;
 
-use engine::VideoWallpaperEngine;
+use engine::MediaWallpaperEngine;
 use serde::{Deserialize, Serialize};
 use sources::{
-    clean_path_str, FolderSource, SourceManager, WallpaperFit, WallpaperMode, WallpaperSettings,
-    WallpaperVideoItem,
+    clean_path_str, FolderSource, MediaKindMode, SourceManager, WallpaperFit, WallpaperMediaItem,
+    WallpaperMode, WallpaperSettings, MAX_IMAGE_DURATION_SEC, MIN_IMAGE_DURATION_SEC,
 };
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use window::DesktopWallpaperWindow;
+use tauri::AppHandle;
+use window::{DesktopWallpaperWindow, ScreenGeometry};
 
+/// Estado del fondo vivo que ve la interfaz.
+/// "Medio" es un vídeo o una imagen estática: para el usuario es lo mismo.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WallpaperStateSnapshot {
     pub is_active: bool,
     pub is_paused: bool,
-    pub current_video: Option<String>,
+    /// Ruta del medio que está en pantalla.
+    pub current_media: Option<String>,
+    /// Carpeta a la que pertenece el medio en pantalla.
     pub current_folder: Option<String>,
-    pub total_videos: usize,
+    /// Medios elegibles en el modo activo (vídeos, imágenes o ambos).
+    pub total_media: usize,
+    /// Si la composición de escritorio (capas 2 a 6) está montada.
+    pub compositor_enabled: bool,
     pub settings: WallpaperSettings,
-    pub videos: Vec<WallpaperVideoItem>,
+    /// Medios elegibles del modo activo, para la cuadrícula.
+    pub media: Vec<WallpaperMediaItem>,
 }
 
 struct InnerState {
     source_manager: SourceManager,
     window: Option<DesktopWallpaperWindow>,
-    engine: Option<VideoWallpaperEngine>,
+    engine: Option<MediaWallpaperEngine>,
     is_paused: bool,
+    /// Si la superficie web de la composición está montada sobre el escritorio.
+    compositor_enabled: bool,
+    compositor_config: compositor::CompositorConfig,
+    compositor_app: Option<AppHandle>,
 }
 
 impl Drop for InnerState {
     fn drop(&mut self) {
+        WallpaperController::close_compositor(self);
         // El motor debe cerrarse ANTES que la ventana: libmpv sigue usando el
         // HWND del escritorio al destruirse y, si la ventana desaparece antes,
         // el cierre de la aplicación termina en un fallo de acceso.
@@ -64,12 +79,19 @@ pub struct WallpaperController {
 impl WallpaperController {
     pub fn new(app_data_dir: PathBuf) -> Self {
         let source_manager = SourceManager::new(app_data_dir);
+        let compositor_config = source_manager.settings().composition.clone();
+        let compositor_config = if compositor_config.validate().is_ok() {
+            compositor_config
+        } else { compositor::CompositorConfig::default() };
         let controller = Self {
             inner: Arc::new(Mutex::new(InnerState {
                 source_manager,
                 window: None,
                 engine: None,
                 is_paused: false,
+                compositor_enabled: false,
+                compositor_config,
+                compositor_app: None,
             })),
             monitor_running: Arc::new(AtomicBool::new(false)),
         };
@@ -81,7 +103,7 @@ impl WallpaperController {
     pub fn should_auto_start(&self) -> bool {
         if let Ok(inner) = self.inner.lock() {
             let settings = inner.source_manager.settings();
-            (settings.auto_start || settings.is_active) && inner.source_manager.total_videos() > 0
+            (settings.auto_start || settings.is_active) && inner.source_manager.total_media() > 0
         } else {
             false
         }
@@ -101,24 +123,27 @@ impl WallpaperController {
             return Ok(self.build_snapshot(&inner));
         }
 
-        let video_path = inner
+        Self::close_compositor(&mut inner);
+
+        let media_path = inner
             .source_manager
-            .current_video()
-            .ok_or_else(|| "No hay vídeos válidos en las carpetas activas de Fondos Vivos".to_string())?;
+            .current_media()
+            .ok_or_else(|| "No hay medios válidos en las carpetas activas de Fondos Vivos".to_string())?;
 
         // 1. Crear ventana nativa en el escritorio de Windows
         let win = DesktopWallpaperWindow::create()?;
         let wid = win.raw_handle();
 
         // 2. Inicializar motor libmpv apuntando al HWND
-        let mut eng = VideoWallpaperEngine::new(wid, inner.source_manager.settings().audio_enabled)?;
-        let single = inner.source_manager.total_videos() == 1;
+        let mut eng = MediaWallpaperEngine::new(wid, inner.source_manager.settings().audio_enabled)?;
+        eng.set_image_duration(inner.source_manager.settings().image_duration_sec);
+        let single = inner.source_manager.total_media() == 1;
         let fit_str = match inner.source_manager.settings().fit {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
 
-        eng.load_video(&video_path, single, fit_str)?;
+        eng.load_media(&media_path, single, fit_str)?;
 
         inner.window = Some(win);
         inner.engine = Some(eng);
@@ -132,23 +157,25 @@ impl WallpaperController {
     pub fn play_file(&self, path: &str) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
         let clean = clean_path_str(path);
-        inner.source_manager.set_current_video(&clean);
+        inner.source_manager.set_current_media(&clean);
 
-        let single = inner.source_manager.total_videos() == 1;
+        let single = inner.source_manager.total_media() == 1;
         let fit_str = match inner.source_manager.settings().fit {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
 
         if inner.engine.is_none() || inner.window.is_none() {
+            Self::close_compositor(&mut inner);
             let win = DesktopWallpaperWindow::create()?;
             let wid = win.raw_handle();
-            let mut eng = VideoWallpaperEngine::new(wid, inner.source_manager.settings().audio_enabled)?;
-            eng.load_video(&clean, single, fit_str)?;
+            let mut eng = MediaWallpaperEngine::new(wid, inner.source_manager.settings().audio_enabled)?;
+            eng.set_image_duration(inner.source_manager.settings().image_duration_sec);
+            eng.load_media(&clean, single, fit_str)?;
             inner.window = Some(win);
             inner.engine = Some(eng);
         } else if let Some(engine) = &mut inner.engine {
-            engine.load_video(&clean, single, fit_str)?;
+            engine.load_media(&clean, single, fit_str)?;
         }
 
         inner.is_paused = false;
@@ -161,8 +188,8 @@ impl WallpaperController {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
         if let Some(engine) = &mut inner.engine {
             engine.pause()?;
-            inner.is_paused = true;
         }
+        if inner.window.is_some() { inner.is_paused = true; }
         Ok(self.build_snapshot(&inner))
     }
 
@@ -170,23 +197,23 @@ impl WallpaperController {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
         if let Some(engine) = &mut inner.engine {
             engine.resume()?;
-            inner.is_paused = false;
         }
+        inner.is_paused = false;
         Ok(self.build_snapshot(&inner))
     }
 
     pub fn next(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
-        let next_vid = inner.source_manager.advance_next();
-        let single = inner.source_manager.total_videos() == 1;
+        let next_media = inner.source_manager.advance_next();
+        let single = inner.source_manager.total_media() == 1;
         let fit_str = match inner.source_manager.settings().fit {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
         let is_paused = inner.is_paused;
 
-        if let (Some(vid), Some(engine)) = (next_vid, &mut inner.engine) {
-            let _ = engine.load_video(&vid, single, fit_str);
+        if let (Some(media), Some(engine)) = (next_media, &mut inner.engine) {
+            let _ = engine.load_media(&media, single, fit_str);
             if is_paused {
                 let _ = engine.pause();
             }
@@ -196,16 +223,16 @@ impl WallpaperController {
 
     pub fn prev(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
-        let prev_vid = inner.source_manager.advance_prev();
-        let single = inner.source_manager.total_videos() == 1;
+        let prev_media = inner.source_manager.advance_prev();
+        let single = inner.source_manager.total_media() == 1;
         let fit_str = match inner.source_manager.settings().fit {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
         let is_paused = inner.is_paused;
 
-        if let (Some(vid), Some(engine)) = (prev_vid, &mut inner.engine) {
-            let _ = engine.load_video(&vid, single, fit_str);
+        if let (Some(media), Some(engine)) = (prev_media, &mut inner.engine) {
+            let _ = engine.load_media(&media, single, fit_str);
             if is_paused {
                 let _ = engine.pause();
             }
@@ -215,6 +242,7 @@ impl WallpaperController {
 
     pub fn stop(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        Self::close_compositor(&mut inner);
         if let Some(mut engine) = inner.engine.take() {
             let _ = engine.stop();
         }
@@ -225,9 +253,20 @@ impl WallpaperController {
         Ok(self.build_snapshot(&inner))
     }
 
+    /// Cierre del proceso sin cambiar la intención persistida de restaurar el fondo.
+    pub fn shutdown(&self) {
+        if let Ok(mut inner) = self.inner.lock() {
+            Self::close_compositor(&mut inner);
+            if let Some(mut engine) = inner.engine.take() {
+                let _ = engine.stop();
+            }
+            inner.window = None;
+        }
+    }
+
     pub fn add_folder(&self, folder_path: &str) -> Result<FolderSource, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
-        let curr = inner.source_manager.current_video();
+        let curr = inner.source_manager.current_media();
         let source = inner.source_manager.add_folder(folder_path)?;
         inner.source_manager.rebuild_queue(curr.as_deref());
         Ok(source)
@@ -235,7 +274,7 @@ impl WallpaperController {
 
     pub fn remove_folder(&self, id: &str) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
-        let curr = inner.source_manager.current_video();
+        let curr = inner.source_manager.current_media();
         inner.source_manager.remove_folder(id);
         inner.source_manager.rebuild_queue(curr.as_deref());
         Ok(self.build_snapshot(&inner))
@@ -243,13 +282,13 @@ impl WallpaperController {
 
     pub fn toggle_folder(&self, id: &str, enabled: bool) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
-        let curr = inner.source_manager.current_video();
+        let curr = inner.source_manager.current_media();
         inner.source_manager.toggle_folder(id, enabled);
         inner.source_manager.rebuild_queue(curr.as_deref());
         Ok(self.build_snapshot(&inner))
     }
 
-    /// Oculta o muestra una carpeta: sus vídeos dejan de listarse y de reproducirse.
+    /// Oculta o muestra una carpeta: sus medios dejan de listarse y de reproducirse.
     pub fn set_folder_hidden(&self, id: &str, hidden: bool) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
         if !inner.source_manager.set_folder_hidden(id, hidden) {
@@ -259,26 +298,74 @@ impl WallpaperController {
         Ok(self.build_snapshot(&inner))
     }
 
-    /// Oculta o muestra un vídeo concreto: deja de listarse y de reproducirse.
-    pub fn set_video_hidden(&self, path: &str, hidden: bool) -> Result<WallpaperStateSnapshot, String> {
+    /// Oculta o muestra un medio concreto (vídeo o imagen): deja de listarse
+    /// marcado como oculto y sale de la cola de reproducción.
+    pub fn set_media_hidden(&self, path: &str, hidden: bool) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
-        inner.source_manager.set_video_hidden(path, hidden);
+        inner.source_manager.set_media_hidden(path, hidden);
         Self::sync_engine(&mut inner)?;
         Ok(self.build_snapshot(&inner))
     }
 
-    /// Mantiene el motor alineado con el vídeo actual de la cola.
-    /// Si el vídeo en reproducción fue ocultado, se carga el siguiente disponible.
+    /// Cambia el tipo de medio que entra en la cola y en la cuadrícula.
+    /// Si el medio en pantalla sigue siendo elegible se conserva; si no, se
+    /// arranca por el primer elemento elegible del modo nuevo. Si el modo
+    /// nuevo no deja nada elegible, el fondo se detiene con un diagnóstico
+    /// claro y el estado queda coherente (cola vacía, fondo parado).
+    pub fn set_media_kind_mode(&self, mode: MediaKindMode) -> Result<WallpaperStateSnapshot, String> {
+        let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        inner.source_manager.set_media_kind_mode(mode);
+
+        if inner.source_manager.total_media() == 0 {
+            Self::close_compositor(&mut inner);
+            if let Some(mut engine) = inner.engine.take() {
+                let _ = engine.stop();
+            }
+            inner.window = None;
+            inner.is_paused = false;
+            inner.source_manager.settings_mut().is_active = false;
+            let _ = inner.source_manager.save_to_disk();
+            return Err(format!(
+                "No hay {} en las carpetas activas de Fondos Vivos. El fondo queda detenido.",
+                mode.label()
+            ));
+        }
+
+        // Si el medio en pantalla dejó de ser elegible, el motor carga el
+        // primero del modo nuevo; si sigue siendo elegible, no se toca.
+        Self::sync_engine(&mut inner)?;
+        Ok(self.build_snapshot(&inner))
+    }
+
+    /// Segundos que una imagen estática permanece en pantalla.
+    pub fn set_image_duration(&self, seconds: u32) -> Result<WallpaperStateSnapshot, String> {
+        let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        let clamped = seconds.clamp(MIN_IMAGE_DURATION_SEC, MAX_IMAGE_DURATION_SEC);
+        inner.source_manager.set_image_duration(clamped);
+        if let Some(engine) = &mut inner.engine {
+            engine.set_image_duration(clamped);
+        }
+        Ok(self.build_snapshot(&inner))
+    }
+
+    /// Mantiene el motor alineado con el medio actual de la cola.
+    /// Si el medio en reproducción fue ocultado o dejó de ser elegible, se
+    /// carga el siguiente disponible.
     fn sync_engine(inner: &mut InnerState) -> Result<(), String> {
         if inner.engine.is_none() || inner.window.is_none() {
             return Ok(());
         }
 
-        let current = inner.source_manager.current_video();
+        let current = inner.source_manager.current_media();
         let Some(current) = current else {
-            if let Some(engine) = &mut inner.engine {
+            Self::close_compositor(inner);
+            if let Some(mut engine) = inner.engine.take() {
                 let _ = engine.stop();
             }
+            inner.window = None;
+            inner.is_paused = false;
+            inner.source_manager.settings_mut().is_active = false;
+            inner.source_manager.save_to_disk()?;
             return Ok(());
         };
 
@@ -292,20 +379,20 @@ impl WallpaperController {
             return Ok(());
         }
 
-        let single = inner.source_manager.total_videos() == 1;
+        let single = inner.source_manager.total_media() == 1;
         let fit_str = match inner.source_manager.settings().fit {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
         if let Some(engine) = &mut inner.engine {
-            engine.load_video(&current, single, fit_str)?;
+            engine.load_media(&current, single, fit_str)?;
         }
         Ok(())
     }
 
     pub fn refresh_sources(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
-        let curr = inner.source_manager.current_video();
+        let curr = inner.source_manager.current_media();
         inner.source_manager.refresh_all_sources();
         inner.source_manager.rebuild_queue(curr.as_deref());
         Ok(self.build_snapshot(&inner))
@@ -313,7 +400,7 @@ impl WallpaperController {
 
     pub fn set_mode(&self, mode: WallpaperMode) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
-        let curr = inner.source_manager.current_video();
+        let curr = inner.source_manager.current_media();
         inner.source_manager.set_mode(mode);
         inner.source_manager.rebuild_queue(curr.as_deref());
         Ok(self.build_snapshot(&inner))
@@ -351,23 +438,109 @@ impl WallpaperController {
         Ok(self.build_snapshot(&inner))
     }
 
+    /// Monta o desmonta la composición de escritorio (capas 2 a 6).
+    ///
+    /// La superficie web se cuelga del contenedor del escritorio, así que
+    /// queda por encima de la capa de vídeo y por debajo de la capa de
+    /// iconos. Exige que el fondo de escritorio esté activo: sin él no hay
+    /// contenedor donde colgarla.
+    pub fn set_compositor_enabled(
+        &self,
+        app: &AppHandle,
+        enabled: bool,
+    ) -> Result<WallpaperStateSnapshot, String> {
+        let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        if enabled {
+            if inner.window.is_none() {
+                inner.window = Some(compositor::create_host(app)?);
+            }
+            let parent = inner
+                .window
+                .as_ref()
+                .map(|window| window.host_handle())
+                .ok_or_else(|| {
+                    "Activa primero el fondo de escritorio: la composición se monta encima."
+                        .to_string()
+                })?;
+            let geo = ScreenGeometry::current();
+            if let Err(error) = compositor::create(
+                app,
+                parent,
+                geo.width.max(0) as u32,
+                geo.height.max(0) as u32,
+            ) {
+                if inner.engine.is_none() {
+                    let host = inner.window.take();
+                    let _ = app.run_on_main_thread(move || drop(host));
+                }
+                return Err(error);
+            }
+            inner.compositor_enabled = true;
+            inner.compositor_app = Some(app.clone());
+        } else {
+            Self::close_compositor(&mut inner);
+            if inner.engine.is_none() {
+                inner.is_paused = false;
+                let host = inner.window.take();
+                app.run_on_main_thread(move || drop(host)).map_err(|e| e.to_string())?;
+            }
+        }
+        Ok(self.build_snapshot(&inner))
+    }
+
+    fn close_compositor(inner: &mut InnerState) {
+        if let Some(app) = inner.compositor_app.take() {
+            compositor::destroy(&app);
+        }
+        inner.compositor_enabled = false;
+    }
+
+    pub fn compositor_config(&self) -> Result<compositor::CompositorConfig, String> {
+        let inner = self.inner.lock().map_err(|e| e.to_string())?;
+        let mut config = inner.compositor_config.clone();
+        config.paused = inner.is_paused;
+        config.enabled = inner.compositor_enabled && inner.window.is_some();
+        // Esta entrega no fabrica un nivel de audio: la capa reactiva sigue pendiente.
+        config.audio_level = 0.0;
+        Ok(config)
+    }
+
+    pub fn set_compositor_config(&self, mut config: compositor::CompositorConfig) -> Result<(), String> {
+        config.validate()?;
+        config.enabled = false;
+        config.paused = false;
+        config.audio_level = 0.0;
+        let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        let previous = inner.source_manager.settings().composition.clone();
+        inner.source_manager.settings_mut().composition = config.clone();
+        if let Err(error) = inner.source_manager.save_to_disk() {
+            inner.source_manager.settings_mut().composition = previous;
+            return Err(error);
+        }
+        inner.compositor_config = config;
+        Ok(())
+    }
+
     fn build_snapshot(&self, inner: &InnerState) -> WallpaperStateSnapshot {
-        let current_vid = inner.source_manager.current_video();
-        let current_folder = current_vid.as_ref().and_then(|p| {
+        let current_media = if inner.compositor_enabled && inner.engine.is_none() {
+            None
+        } else { inner.source_manager.current_media() };
+        let current_folder = current_media.as_ref().and_then(|p| {
             Path::new(p)
                 .parent()
                 .map(|dir| dir.to_string_lossy().to_string())
         });
-        let videos = inner.source_manager.get_all_videos();
+        let media = inner.source_manager.get_all_media();
 
         WallpaperStateSnapshot {
-            is_active: inner.engine.is_some() && inner.window.is_some(),
+            is_active: inner.window.is_some() && (inner.engine.is_some() || inner.compositor_enabled),
             is_paused: inner.is_paused,
-            current_video: current_vid,
+            current_media,
             current_folder,
-            total_videos: inner.source_manager.total_videos(),
+            total_media: inner.source_manager.total_media(),
+            compositor_enabled: inner.compositor_enabled,
             settings: inner.source_manager.settings().clone(),
-            videos,
+            media,
         }
     }
 
@@ -393,21 +566,24 @@ impl WallpaperController {
 
                 if let Ok(mut inner) = inner_arc.lock() {
                     if !inner.is_paused && inner.engine.is_some() {
-                        let is_eof = if let Some(engine) = &inner.engine {
-                            engine.is_eof()
+                        // El motor decide si el medio actual ya terminó: un
+                        // vídeo cuando mpv llega al final, una imagen cuando se
+                        // cumple su duración en pantalla.
+                        let finished = if let Some(engine) = &inner.engine {
+                            engine.is_finished()
                         } else {
                             false
                         };
 
-                        if is_eof {
-                            let single = inner.source_manager.total_videos() == 1;
+                        if finished {
+                            let single = inner.source_manager.total_media() == 1;
                             let fit_str = match inner.source_manager.settings().fit {
                                 WallpaperFit::Contain => "contain",
                                 WallpaperFit::Cover => "cover",
                             };
-                            let next_vid = inner.source_manager.advance_next();
-                            if let (Some(next_vid), Some(engine)) = (next_vid, &mut inner.engine) {
-                                let _ = engine.load_video(&next_vid, single, fit_str);
+                            let next_media = inner.source_manager.advance_next();
+                            if let (Some(next_media), Some(engine)) = (next_media, &mut inner.engine) {
+                                let _ = engine.load_media(&next_media, single, fit_str);
                             }
                         }
                     }

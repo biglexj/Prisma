@@ -9,7 +9,7 @@ Fase 1: reproducir vídeos de varias carpetas locales como fondo de escritorio, 
 
 Fase 2: adaptar el sistema de composición por capas ya existente en Aurora para ofrecer fondos de escena. Aprovechar nuestros componentes y experiencia; no construir otro motor de escenas desde cero.
 
-El encargo actual es dejar definido el plan. No iniciar implementación todavía.
+El encargo vigente autoriza revisar la fase 1 e iniciar la fase 2. Implementación local en curso; sin publicación.
 
 ## CONTEXTO
 
@@ -79,13 +79,56 @@ Herramienta React → gestor de fuentes y cola Rust → superficie Windows + ses
 
 Hitos internos de fase 1: prueba nativa → fuentes/cola → vista y bandeja → pruebas Windows. La fase termina cuando funciona con varias carpetas sin conexión ni Wallpaper Engine.
 
+### Modelo de capas (definido por Biglex el 2026-10-25)
+
+El fondo de escritorio se compone por capas apiladas. **No existe una capa cero**: la numeración arranca en la capa 1.
+
+| Capa | Contenido | Estado |
+|---|---|---|
+| 1 | Medios base: vídeo o imagen estática, desde carpetas locales | En construcción |
+| 2 | Fondos dinámicos | Pendiente |
+| 3 | Fondos y escenarios 3D | Pendiente |
+| 4 | Partículas | Pendiente |
+| 5 | Ecualizador: efectos que dan vida al fondo según el audio | Pendiente |
+| 6 | Parallax | Pendiente |
+
+La capa 1 es el medio que se reproduce detrás de los iconos. Las capas 2 a 6 se superponen sobre ella y comparten sus controles de activación, pausa y detención. La capa 5 reacciona al audio: el ecualizador aporta el movimiento reactivo sin exigir un motor de escenas propio.
+
+#### Capa 1 — medios base
+
+La capa 1 acepta vídeo e imagen estática de forma indistinguible para el usuario: la misma carpeta puede mezclar ambos, y se importa también una carpeta que contenga solo imágenes.
+
+- Extensiones de vídeo: mp4, webm, mkv, mov, avi, m4v. Extensiones de imagen: jpg, jpeg, png, webp, bmp, gif, tif, tiff, avif.
+- **El tipo se elige con un switch arriba de la cajita de controles: por defecto no se mezclan.** Con el switch en «Vídeos» la cola y la cuadrícula contienen solo vídeos; en «Imágenes», solo imágenes; «Combinado» es la opción separada y explícita para mezclarlos. El valor por defecto es «Vídeos».
+- Una imagen se muestra durante un tiempo configurable (`imageDurationSec`, 20 s por defecto) y después la cola avanza. Un único elemento en la cola nunca avanza: el vídeo se repite en bucle y la imagen se queda fija.
+- Solo el vídeo tiene audio; con el switch en «Imágenes» el control de sonido queda sin efecto y así se indica.
+- Las imágenes se reproducen en la misma sesión de libmpv que el vídeo, con el mismo encuadre (cover/contain) y la misma ventana detrás de los iconos.
+
 ### Fase 2 — reutilizar las capas de Aurora
 
 La decisión de aprovechar Aurora está confirmada por Biglex. Antes de adaptar, revisar dependencias y consumidores vigentes y elegir una unidad reutilizable con un origen mantenible; evitar copias divergentes del compositor.
 
+Base Aurora inspeccionada el 2026-10-25 (resultado verificado, no supuesto):
+
+- **El compositor es three.js puro y portable.** `dynamic-backgrounds/` (58 archivos, 6.484 líneas) no importa React, React Router, i18n ni Supabase. Cero `fetch`, cero URLs externas: todas las texturas son `CanvasTexture` generadas en runtime. No hay HDRI ni texturas remotas.
+- **Unidad mínima reutilizable: 15 archivos, 1.218 líneas** bajo `dynamic-backgrounds/`: `LayeredBackgroundComposer.ts`, `index.ts`, `controls.ts`, `catalog.ts`, `particleScenes.ts`, `particleTextures.ts`, `ParticleBackground.ts`, `resources.ts`, `BackgroundProjection.ts`, `BackgroundCamera.ts`, `Backgrounds/{AmbientBackground.ts, themes.ts, sky.frag.ts}`, `Interaction/{BackgroundInteraction.ts, ClickEffects.ts, textures.ts}`.
+- **Dependencias:** `three` 0.185.1 instalado (el `package.json` declara `^0.186.0`: el lockfile está desfasado). Frontend de Aurora sobre Astro 7.3.2 + React 19.2.8. El compositor no necesita Astro: es TS + three, con `import()` dinámico para cargar un escenario a la vez.
+- **Lo que bloquea la reutilización no es el compositor, es su andamiaje:**
+  1. `LayeredThreeBackground.tsx` es un componente React: hay que reescribirlo como TypeScript vanilla para montarlo en un webview de escritorio.
+  2. `controls.ts` mezcla los valores por defecto con un store de React (`useSyncExternalStore` + `localStorage`): hay que separarlo.
+  3. `vtuberAssets` (Supabase) es la única ruta que hay que descartar, junto con `ThreeBackground.tsx` y `StaticBackgroundFallback.tsx`. `LayeredThreeBackground.tsx` ya recibe la imagen por prop y no lo necesita.
+  4. `BackgroundInteraction` registra listeners de `window` sin retirarlos si el host no llama a `dispose()`, y usa selectores propios de Aurora: hay que redefinirlos.
+  5. Seis efectos leen `window.innerWidth/innerHeight` en su `init`: el tamaño debe inyectarse en un webview redimensionable.
+  6. `visualRenderer` es una fábrica, no un singleton: se puede instanciar, pero cada instancia es un contexto WebGL (WebView2 tiene límites de contexto).
+
 - Adaptar Three.js/WebGL, compositor, catálogo de efectos y controles que resulten pertinentes. No migrar automáticamente a otro motor ni reescribir shaders y efectos ya disponibles.
-- Conservar las seis capas como modelo de referencia. El avatar es opcional para un fondo; no obligar a incluir personaje ni servicios de conversación.
+- Conservar las seis capas como modelo de referencia. El modelo vigente de Prisma es el de sus seis capas indicado arriba; no exige avatar ni servicios de conversación.
 - Incorporar progresivamente imagen estática, ambiente, escenario 3D, escenografía y partículas mediante sus controles existentes. Parallax se aprovecha si el efecto ya lo implementa; comprobar lo disponible antes de añadirlo.
+
+Decisiones de Biglex tomadas el 2026-10-25:
+
+1. **Alojamiento de la composición**: un webview de escritorio dentro de Prisma, detrás de los iconos, con el compositor vendorizado en Prisma (los 15 archivos de `dynamic-backgrounds/` con su origen declarado y un script de sincronización desde Aurora). No se toca el pipeline de build de Aurora ni se crea un paquete compartido.
+2. **Alimento de la capa 5 (ecualizador)**: el audio del propio fondo, es decir, la pista del vídeo que está en pantalla. No se captura el audio del sistema ni el DSP de la app: mpv ya expone el análisis de audio de la sesión.
 - Alojar la composición en una superficie web de escritorio detrás de iconos y evaluar transparencia, aceleración, consumo y ciclo de vida. Decidir la integración concreta después del prototipo: reutilizar el compositor no resuelve automáticamente su alojamiento Windows.
 - Compartir con fase 1 los controles de activación, pausa y detención. Solo un modo de fondo activo por destino: vídeo o composición Aurora, sin dos motores renderizando ocultos a la vez.
 - Interacción con el cursor optativa: comprobar recepción sin interceptar clics del escritorio ni robar foco. Un efecto con ratón dentro de una página no prueba interacción detrás de iconos.
@@ -97,8 +140,20 @@ No incluye construir un editor general nuevo, formatos de Wallpaper Engine o pub
 ## RESTRICCIONES
 
 - Aura es referencia conceptual; nuestro sistema de capas procede de Aurora.
-- Fase 1 exclusivamente vídeos. Fase 2 aprovecha composición Aurora existente.
+- Fase 1 con medios locales ya implementada (vídeos e imágenes). Fase 2 aprovecha composición Aurora existente.
 - Sin dependencias de Wallpaper Engine/Steam ni control de procesos ajenos.
 - Sin prometer consumo cero, transiciones sin cortes o compatibilidad universal. Medir rendimiento y verificar escritorio real; un build no demuestra funcionamiento.
 - Verificar distribución de dependencias nativas y recursos web concretos al implementar.
-- Este encargo deja el plan documentado: no modifica código, instala, compila ni publica.
+- El encargo actual incluye código y verificación local. No incluye publicación ni reemplazar la instalación del usuario.
+
+## Dirección e implementación vigentes — revisión del 2026-10-25
+
+Esta sección sustituye las propuestas anteriores de «Combinado» y de exigir un medio base para activar escenarios:
+
+- Selector superior **Vídeos · Imágenes · Fondos 3D**. Los escenarios y su ambiente se eligen dentro de Fondos 3D. Las carpetas y opciones de cola se muestran solo para medios locales. El backend mantiene `mixed` como contrato legado, sin ofrecerlo como pestaña.
+- Fondos 3D puede crear su host sin carpeta ni sesión mpv; el cambio desde un medio detiene la sesión anterior. Se mantienen los controles comunes de activar, pausar, reanudar y detener.
+- Primer subconjunto vendorizado: ambiente, Prisma, Aurora Boreal y Holo Ciudad 3D. Sincronización explícita con `scripts/sync-aurora-wallpapers.ts`, 19 originales y hashes en `provenance.json`; build independiente del repositorio Aurora.
+- Escenario y ambiente persisten en `live_wallpapers.json`; la composición se activa manualmente en esta entrega. No se fabrica un nivel de audio.
+- Integración verificada en WebView2 nativo a 1920×1080 con cero medios configurados: animación de Holo Ciudad, pausa estable, cambio de escenario y destrucción de la superficie al detener.
+- La base de fase 1 permite continuar. Aún deben completarse pausa automática por pantalla completa/bloqueo y recuperación tras reiniciar Explorer: el bucle actual controla final de medios, no esas políticas.
+- Siguen pendientes partículas como capa independiente, ecualizador del audio del fondo, parallax de cursor y medición sostenida de consumo. No considerar cerrada la fase 2.

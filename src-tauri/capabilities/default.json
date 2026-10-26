@@ -2,7 +2,17 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
   "description": "Permisos para la aplicación de escritorio Prisma.",
-  "windows": ["main", "quicklook", "quicklook-*", "flyout", "flyout-*", "screen_capture_overlay", "screen_capture_editor", "screen_capture_*"],
+  "windows": [
+    "main",
+    "quicklook",
+    "quicklook-*",
+    "flyout",
+    "flyout-*",
+    "screen_capture_overlay",
+    "screen_capture_editor",
+    "screen_capture_*",
+    "wallpaper-compositor"
+  ],
   "permissions": [
     "core:default",
     "core:window:default",

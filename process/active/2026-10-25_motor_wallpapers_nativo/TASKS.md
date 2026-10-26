@@ -1,6 +1,6 @@
 # Tareas técnicas
 
-Planificación en dos fases; implementación no iniciada.
+Fase 1 implementada con revisión técnica; fase 2 iniciada y parcialmente validada en Windows.
 
 ## Fase 1 — vídeos de varias carpetas
 
@@ -26,14 +26,44 @@ Planificación en dos fases; implementación no iniciada.
 - [x] Exponer el interruptor de sonido en la vista de Fondos Vivos y en el submenú de la bandeja del sistema.
 - [x] Añadir controles de Fondos Vivos en el menú de la bandeja del sistema (System Tray) con submenú interactivo: Siguiente, Anterior, Pausar/Reanudar, Encender/Apagar y Abrir.
 - [x] Añadir widget de Fondos Vivos en la vista de Inicio (HomeDashboard) con controles de transporte y estado en vivo.
-- [ ] Validar flujo real con A/B/C y distribución nativa.
+- [x] Validar flujo real con A/B/C y distribución nativa.
+- [x] Capa 1: admitir imágenes estáticas además de vídeos, con carpetas que mezclen ambos.
+- [x] Capa 1: switch de tipo arriba de la cajita (Vídeos por defecto / Imágenes / Combinado), sin mezclar por defecto.
+- [x] Capa 1: duración de imagen configurable (`imageDurationSec`, 20 s por defecto) con avance de cola al cumplirse.
+- [x] Capa 1: miniaturas de imagen en la cuadrícula y textos coherentes con el tipo activo.
+- [x] Capa 1: registrar el error del autoarranque en vez de descartarlo en silencio.
+- [x] Cerrado ordenado de la sesión de mpv al soltar el motor (fin del `STATUS_ACCESS_VIOLATION`).
 
 ## Fase 2 — composición Aurora
 
-- [ ] Revisar compositor Three.js, efectos, controles, recursos y consumidores vigentes de Aurora.
-- [ ] Definir unidad de reutilización y mantenimiento sin duplicación divergente.
-- [ ] Probar composición Aurora en superficie web detrás de iconos de Windows.
+- [x] Revisar compositor Three.js, efectos, controles, recursos y consumidores vigentes de Aurora.
+- [x] Definir unidad de reutilización y mantenimiento sin duplicación divergente.
+      Resultado verificado: 15 archivos / 1.218 líneas bajo `dynamic-backgrounds/`, three.js puro, texturas 100 % procedurales, sin Supabase ni React Router. Bloqueos identificados: `LayeredThreeBackground.tsx` es React, `controls.ts` mezcla React, `vtuberAssets` hay que descartarlo, `BackgroundInteraction` no retira listeners, seis efectos leen `window.innerWidth/innerHeight`.
+- [x] Probar composición Aurora en superficie web nativa de Windows, sin carpeta ni mpv requeridos.
 - [ ] Integrar capas y presets pertinentes; avatar opcional, sin requerir conversación ni cuenta.
 - [ ] Compartir controles de fondo y garantizar exclusión entre vídeo y composición.
 - [ ] Verificar pausa independiente, transparencia, cursor optativo, limpieza y recuperación de Explorer.
 - [ ] Medir CPU/GPU/RAM y comprobar recursos locales/distribución antes de ampliar efectos.
+
+## Modelo de capas (decidido por Biglex el 2026-10-25)
+
+Sin capa cero. La numeración arranca en 1.
+
+- [x] Capa 1 · Medios base: vídeo o imagen estática.
+- [ ] Capa 2 · Fondos dinámicos.
+- [ ] Capa 3 · Fondos y escenarios 3D.
+- [ ] Capa 4 · Partículas.
+- [ ] Capa 5 · Ecualizador: efectos reactivos al audio.
+- [ ] Capa 6 · Parallax.
+
+## Revisión e inicio de fase 2
+
+- [x] Corregir campo omitido de snapshot que impedía compilar el árbol recibido.
+- [x] Detener y liberar el fondo al ocultar la última carpeta elegible.
+- [x] Evitar interbloqueo al crear el webview desde un comando síncrono; creación y alojamiento en el hilo principal.
+- [x] Sustituir malla de prueba por compositor Aurora y subconjunto de efectos trazable.
+- [x] Añadir Fondos 3D en el selector superior en lugar de Combinado, con controles propios y sin carpetas de medios.
+- [x] Guardar escena y ambiente, coordinar pausa y liberar WebGL/listeners al cerrar.
+- [x] Verificar Holo Ciudad sin fuentes locales en WebView2: animación, pausa y cierre de superficie.
+- [ ] Completar políticas automáticas de pausa y recuperación de Explorer de fase 1.
+- [ ] Integrar partículas independientes, ecualizador del audio del vídeo y parallax; medir recursos.

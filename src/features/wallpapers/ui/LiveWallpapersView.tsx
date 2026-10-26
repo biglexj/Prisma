@@ -2,26 +2,38 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../../shared/ui/Icon";
 import { VideoThumbnail } from "../../visual_library/ui/VideoThumbnail";
+import { toSafeAssetUrl } from "../../../shared/mediaTree";
 import {
   liveWallpapersApi,
+  selectVisibleMedia,
+  mediaCountLabel,
+  mediaKindLabel,
+  mediaNoun,
+  mediaNounPlural,
+  audioToggleApplies,
   type WallpaperStateSnapshot,
   type WallpaperMode,
   type WallpaperFit,
-  type WallpaperVideoItem,
+  type WallpaperMediaItem,
+  type MediaKindMode,
 } from "../services/liveWallpapersApi";
 import "./live-wallpapers.css";
+import { CompositionControls } from "./CompositionControls";
+
+/** Duraciones ofrecidas para una imagen estática, en segundos. */
+const IMAGE_DURATION_OPTIONS = [10, 20, 30, 60];
 
 function formatDisplayPath(rawPath: string): string {
   return rawPath.replace(/^\\\\\?\\/, "");
 }
 
-function cleanVideoTitle(fileName: string): string {
+function cleanMediaTitle(fileName: string): string {
   return fileName.replace(/\.[a-zA-Z0-9]+$/, "");
 }
 
 function getFileExtension(fileName: string): string {
   const ext = fileName.split(".").pop();
-  return ext && ext !== fileName ? ext.toUpperCase() : "VÍDEO";
+  return ext && ext !== fileName ? ext.toUpperCase() : "";
 }
 
 export function LiveWallpapersView() {
@@ -30,6 +42,8 @@ export function LiveWallpapersView() {
   const [error, setError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showHidden, setShowHidden] = useState(false);
+  const [scenesTab, setScenesTab] = useState<boolean | null>(null);
 
   const refreshState = useCallback(async () => {
     try {
@@ -53,7 +67,9 @@ export function LiveWallpapersView() {
 
   const handleStart = async () => {
     try {
-      const snap = await liveWallpapersApi.start();
+      const snap = showScenes
+        ? await liveWallpapersApi.setCompositorEnabled(true)
+        : await liveWallpapersApi.start();
       setState(snap);
       setError(null);
     } catch (err) {
@@ -154,6 +170,54 @@ export function LiveWallpapersView() {
     }
   };
 
+  const handleToggleFolderHidden = async (id: string, hidden: boolean) => {
+    try {
+      const snap = await liveWallpapersApi.setFolderHidden(id, hidden);
+      setState(snap);
+      setError(null);
+    } catch (err) {
+      setError(String(err));
+    }
+  };
+
+  const handleToggleMediaHidden = async (path: string, hidden: boolean) => {
+    try {
+      const snap = await liveWallpapersApi.setMediaHidden(path, hidden);
+      setState(snap);
+      setError(null);
+    } catch (err) {
+      setError(String(err));
+    }
+  };
+
+  /**
+   * Cambia el tipo de medio de la cola. El backend aplica el modo aunque no
+   * haya medios elegibles (en ese caso detiene el fondo y avisa), así que
+   * después de un error hay que releer el estado para no mostrar el modo viejo.
+   */
+  const handleSetMediaKindMode = async (mode: MediaKindMode) => {
+    try {
+      if (state?.compositorEnabled) await liveWallpapersApi.stop();
+      setScenesTab(false);
+      const snap = await liveWallpapersApi.setMediaKindMode(mode);
+      setState(snap);
+      setError(null);
+    } catch (err) {
+      setError(String(err));
+      await refreshState();
+    }
+  };
+
+  const handleSetImageDuration = async (seconds: number) => {
+    try {
+      const snap = await liveWallpapersApi.setImageDuration(seconds);
+      setState(snap);
+      setError(null);
+    } catch (err) {
+      setError(String(err));
+    }
+  };
+
   const handleRefreshSources = async () => {
     try {
       const snap = await liveWallpapersApi.refreshSources();
@@ -181,24 +245,64 @@ export function LiveWallpapersView() {
     }
   };
 
+  const handleSetAudioEnabled = async (enabled: boolean) => {
+    try {
+      const snap = await liveWallpapersApi.setAudioEnabled(enabled);
+      setState(snap);
+    } catch (err) {
+      setError(String(err));
+    }
+  };
+
   const isActive = state?.isActive ?? false;
   const isPaused = state?.isPaused ?? false;
   const sources = state?.settings.sources ?? [];
   const currentMode = state?.settings.mode ?? "sequential";
   const currentFit = state?.settings.fit ?? "cover";
-  const totalVideos = state?.totalVideos ?? 0;
-  const currentVideoPath = state?.currentVideo ? formatDisplayPath(state.currentVideo) : null;
-  const allVideos = state?.videos ?? [];
+  const audioEnabled = state?.settings.audioEnabled ?? false;
+  const kindMode = state?.settings.mediaKindMode ?? "video";
+  const imageDuration = state?.settings.imageDurationSec ?? 20;
+  const compositorEnabled = state?.compositorEnabled ?? false;
+  const showScenes = scenesTab ?? compositorEnabled;
+  const totalMedia = state?.totalMedia ?? 0;
+  const currentMediaPath = state?.currentMedia ? formatDisplayPath(state.currentMedia) : null;
+  const allMedia = state?.media ?? [];
 
-  const filteredVideos = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return allVideos;
-    return allVideos.filter(
-      (v) =>
-        v.name.toLowerCase().includes(q) ||
-        v.folderName.toLowerCase().includes(q)
+  const hiddenMediaCount = useMemo(
+    () => allMedia.filter((item) => item.hidden).length,
+    [allMedia]
+  );
+
+  // El medio que está en pantalla: sirve para saber si tiene audio y para
+  // marcar la tarjeta correspondiente en la cuadrícula.
+  const currentMediaItem: WallpaperMediaItem | null = useMemo(() => {
+    if (!currentMediaPath) return null;
+    return (
+      allMedia.find(
+        (item) =>
+          formatDisplayPath(item.path) === currentMediaPath ||
+          currentMediaPath.endsWith(item.name)
+      ) ?? null
     );
-  }, [allVideos, searchQuery]);
+  }, [allMedia, currentMediaPath]);
+
+  // Los medios ocultados no se muestran ni se reproducen; solo se listan
+  // en gris cuando el usuario activa el interruptor "Mostrar ocultos".
+  const filteredMedia = useMemo(
+    () => selectVisibleMedia(allMedia, { showHidden, query: searchQuery }),
+    [allMedia, showHidden, searchQuery]
+  );
+
+  const listedCount = showHidden
+    ? allMedia.length
+    : allMedia.filter((item) => !item.hidden).length;
+
+  const soundApplies = audioToggleApplies(kindMode, currentMediaItem?.kind ?? null);
+  const soundTitle = soundApplies
+    ? audioEnabled
+      ? "Quitar el sonido del fondo. La música de Prisma sigue sonando igual."
+      : "Activar el sonido del fondo. No afecta a la música de Prisma."
+    : "Las imágenes no tienen audio: este control solo aplica a vídeos.";
 
   return (
     <div className="live-wallpapers-view">
@@ -214,7 +318,7 @@ export function LiveWallpapersView() {
               <span className="live-wallpapers-badge">Windows</span>
             </div>
             <p className="live-wallpapers-subtitle">
-              Vídeos continuos en tu escritorio detrás de los iconos
+              Vídeos, imágenes y fondos 3D en tu escritorio detrás de los iconos
             </p>
           </div>
         </div>
@@ -250,6 +354,73 @@ export function LiveWallpapersView() {
 
       {/* ── Control Hero Card ── */}
       <section className="live-wallpapers-control-card">
+        {/* Categorías de fondo. Los escenarios tienen su propio espacio. */}
+        <div className="control-media-kind-row">
+          <div className="control-segmented-block">
+            <span className="segmented-label">Tipo</span>
+            <div className="segmented-control" role="group" aria-label="Tipo de medio del fondo">
+              <button
+                type="button"
+                className={`segmented-item ${!showScenes && kindMode === "video" ? "is-selected" : ""}`}
+                aria-pressed={!showScenes && kindMode === "video"}
+                onClick={() => handleSetMediaKindMode("video")}
+                title="Reproducir solo vídeos"
+              >
+                <Icon name="film" width={14} height={14} />
+                <span>Vídeos</span>
+              </button>
+              <button
+                type="button"
+                className={`segmented-item ${!showScenes && kindMode === "image" ? "is-selected" : ""}`}
+                aria-pressed={!showScenes && kindMode === "image"}
+                onClick={() => handleSetMediaKindMode("image")}
+                title="Reproducir solo imágenes estáticas"
+              >
+                <Icon name="image" width={14} height={14} />
+                <span>Imágenes</span>
+              </button>
+              <button
+                type="button"
+                className={`segmented-item ${showScenes ? "is-selected" : ""}`}
+                aria-pressed={showScenes}
+                onClick={async () => {
+                  try {
+                    if (isActive && !compositorEnabled) setState(await liveWallpapersApi.stop());
+                    setScenesTab(true);
+                  } catch (reason) { setError(String(reason)); }
+                }}
+                title="Elegir escenarios y fondos de Aurora"
+              >
+                <Icon name="layers" width={14} height={14} />
+                <span>Fondos 3D</span>
+              </button>
+            </div>
+          </div>
+
+          {!showScenes && kindMode !== "video" && (
+            <div className="control-segmented-block">
+              <span className="segmented-label">Duración</span>
+              <div
+                className="segmented-control"
+                role="group"
+                aria-label="Segundos que una imagen permanece en pantalla"
+              >
+                {IMAGE_DURATION_OPTIONS.map((seconds) => (
+                  <button
+                    key={seconds}
+                    type="button"
+                    className={`segmented-item ${imageDuration === seconds ? "is-selected" : ""}`}
+                    onClick={() => handleSetImageDuration(seconds)}
+                    title={`La imagen permanece ${seconds} segundos en pantalla`}
+                  >
+                    <span>{seconds} s</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="control-card-main">
           <div className="control-transport-group">
             {!isActive || isPaused ? (
@@ -257,7 +428,7 @@ export function LiveWallpapersView() {
                 type="button"
                 className="live-btn-primary"
                 onClick={isActive ? handleResume : handleStart}
-                disabled={totalVideos === 0 && !isActive}
+                disabled={!showScenes && totalMedia === 0 && !isActive}
                 title={isActive ? "Reanudar reproducción de fondo" : "Activar fondo en el escritorio"}
               >
                 <Icon name="play" width={18} height={18} />
@@ -279,8 +450,8 @@ export function LiveWallpapersView() {
               type="button"
               className="live-btn-secondary"
               onClick={handlePrev}
-              disabled={!isActive || totalVideos <= 1}
-              title="Volver al vídeo anterior"
+              disabled={showScenes || !isActive || totalMedia <= 1}
+              title="Volver al medio anterior"
             >
               <Icon name="arrow-left" width={16} height={16} />
               <span>Anterior</span>
@@ -290,8 +461,8 @@ export function LiveWallpapersView() {
               type="button"
               className="live-btn-secondary"
               onClick={handleNext}
-              disabled={!isActive || totalVideos <= 1}
-              title="Avanzar al siguiente vídeo sin cortes"
+              disabled={showScenes || !isActive || totalMedia <= 1}
+              title="Avanzar al siguiente medio sin cortes"
             >
               <Icon name="arrow-right" width={16} height={16} />
               <span>Siguiente</span>
@@ -310,7 +481,7 @@ export function LiveWallpapersView() {
             )}
           </div>
 
-          <div className="control-options-group">
+          {!showScenes && <div className="control-options-group">
             <div className="control-segmented-block">
               <span className="segmented-label">Modo</span>
               <div className="segmented-control" role="group" aria-label="Modo de reproducción">
@@ -354,11 +525,32 @@ export function LiveWallpapersView() {
                 </button>
               </div>
             </div>
-          </div>
+
+            <div className="control-segmented-block">
+              <span className="segmented-label">Sonido</span>
+              <button
+                type="button"
+                className={`sound-toggle ${audioEnabled ? "is-on" : ""} ${
+                  soundApplies ? "" : "is-disabled"
+                }`}
+                onClick={() => handleSetAudioEnabled(!audioEnabled)}
+                aria-pressed={audioEnabled}
+                disabled={!soundApplies}
+                title={soundTitle}
+              >
+                <Icon name={audioEnabled ? "volume" : "volume-mute"} width={14} height={14} />
+                <span>{audioEnabled ? "Encendido" : "Apagado"}</span>
+              </button>
+            </div>
+
+
+          </div>}
         </div>
 
+        {showScenes && <CompositionControls enabled={compositorEnabled} />}
+
         {/* Now Playing Strip */}
-        {isActive && state?.currentVideo && (
+        {isActive && state?.currentMedia && (
           <div className="live-now-playing-strip">
             <div className="now-playing-indicator">
               <span className="pulse-dot" />
@@ -366,7 +558,7 @@ export function LiveWallpapersView() {
             </div>
             <div className="now-playing-details">
               <span className="now-playing-name">
-                {state.currentVideo.split(/[/\\]/).pop()}
+                {state.currentMedia.split(/[/\\]/).pop()}
               </span>
               {state.currentFolder && (
                 <span className="now-playing-folder">
@@ -375,12 +567,13 @@ export function LiveWallpapersView() {
               )}
             </div>
             <span className="now-playing-queue-count">
-              {totalVideos} vídeo{totalVideos !== 1 ? "s" : ""} en cola activa
+              {mediaCountLabel(kindMode, totalMedia)} en cola activa
             </span>
           </div>
         )}
       </section>
 
+      {!showScenes && <>
       {/* ── Upper Section: Carpetas en Fila Delgada (hasta 5 por fila) ── */}
       <section className="live-folders-compact-section">
         <div className="compact-folders-header">
@@ -422,12 +615,12 @@ export function LiveWallpapersView() {
                 key={source.id}
                 className={`compact-folder-chip ${source.enabled ? "is-enabled" : "is-disabled"} ${
                   !source.available ? "is-unavailable" : ""
-                }`}
-                title={`${formatDisplayPath(source.path)} (${source.videoCount} vídeos)`}
+                } ${source.hidden ? "is-hidden" : ""}`}
+                title={`${formatDisplayPath(source.path)} (${source.mediaCount} medios)`}
               >
                 <span className="chip-letter">{String.fromCharCode(65 + (index % 26))}</span>
                 <span className="chip-name">{source.name}</span>
-                <span className="chip-count">({source.videoCount})</span>
+                <span className="chip-count">({source.mediaCount})</span>
                 <label className="chip-toggle-switch" title={source.enabled ? "Desactivar" : "Activar"}>
                   <input
                     type="checkbox"
@@ -436,6 +629,20 @@ export function LiveWallpapersView() {
                   />
                   <span className="chip-toggle-slider" />
                 </label>
+                <button
+                  type="button"
+                  className="chip-eye-btn"
+                  onClick={() => handleToggleFolderHidden(source.id, !source.hidden)}
+                  title={
+                    source.hidden
+                      ? "Mostrar esta carpeta y sus medios"
+                      : "Ocultar esta carpeta y sus medios"
+                  }
+                  aria-label={source.hidden ? "Mostrar carpeta" : "Ocultar carpeta"}
+                  aria-pressed={source.hidden}
+                >
+                  <Icon name={source.hidden ? "eye-slash" : "eye"} width={13} height={13} />
+                </button>
                 <button
                   type="button"
                   className="chip-remove-btn"
@@ -454,9 +661,18 @@ export function LiveWallpapersView() {
       <section className="live-videos-list-section">
         <div className="videos-list-header">
           <div className="videos-header-title-block">
-            <h2 className="videos-list-title">Vídeos disponibles ({allVideos.length})</h2>
+            <h2 className="videos-list-title">
+              {mediaKindLabel(kindMode) === "Combinado"
+                ? "Medios disponibles"
+                : `${mediaKindLabel(kindMode)} disponibles`}{" "}
+              ({listedCount})
+            </h2>
             <p className="videos-list-subtitle">
-              Haz clic en cualquier vídeo para reproducirlo de inmediato en tu fondo de pantalla
+              Haz clic en cualquier {mediaNoun(kindMode)} para reproducirlo de inmediato en tu
+              fondo de pantalla
+              {hiddenMediaCount > 0 && (
+                <> · {hiddenMediaCount} oculto{hiddenMediaCount !== 1 ? "s" : ""}</>
+              )}
             </p>
           </div>
 
@@ -464,7 +680,7 @@ export function LiveWallpapersView() {
             <Icon name="search" width={15} height={15} />
             <input
               type="text"
-              placeholder="Buscar en la lista de vídeos..."
+              placeholder={`Buscar en la lista de ${mediaNounPlural(kindMode)}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -479,60 +695,131 @@ export function LiveWallpapersView() {
               </button>
             )}
           </div>
+
+          <button
+            type="button"
+            className={`videos-visibility-toggle ${showHidden ? "is-active" : ""}`}
+            onClick={() => setShowHidden((value) => !value)}
+            title={
+              showHidden
+                ? "Dejar de mostrar los medios ocultados"
+                : "Mostrar los medios ocultados en gris"
+            }
+            aria-pressed={showHidden}
+          >
+            <Icon name={showHidden ? "eye" : "eye-slash"} width={15} height={15} />
+            <span>{showHidden ? "Ocultos visibles" : "Mostrar ocultos"}</span>
+            {hiddenMediaCount > 0 && (
+              <span className="videos-visibility-count">{hiddenMediaCount}</span>
+            )}
+          </button>
         </div>
 
-        {allVideos.length === 0 ? (
+        {allMedia.length === 0 ? (
           <div className="videos-empty-state">
             <div className="empty-icon-circle">
               <Icon name="video" width={32} height={32} />
             </div>
-            <h3 className="empty-title">No hay vídeos disponibles</h3>
+            <h3 className="empty-title">No hay {mediaNounPlural(kindMode)} disponibles</h3>
             <p className="empty-desc">
-              Las carpetas activas no contienen vídeos compatibles (.mp4, .webm, .mkv) o están desactivadas.
+              Las carpetas activas no contienen medios compatibles (.mp4, .webm, .mkv, .jpg,
+              .png) o están desactivadas.
             </p>
           </div>
-        ) : filteredVideos.length === 0 ? (
+        ) : filteredMedia.length === 0 ? (
           <div className="videos-empty-state">
-            <p className="empty-desc">No se encontraron vídeos que coincidan con &ldquo;{searchQuery}&rdquo;.</p>
+            <p className="empty-desc">
+              {searchQuery
+                ? `No se encontraron ${mediaNounPlural(kindMode)} que coincidan con “${searchQuery}”.`
+                : `Todos los ${mediaNounPlural(kindMode)} están ocultos. Activa “Mostrar ocultos” para verlos en gris.`}
+            </p>
           </div>
         ) : (
           <div className="live-videos-grid">
-            {filteredVideos.map((video, idx) => {
+            {filteredMedia.map((item, idx) => {
               const isCurrent =
                 isActive &&
-                currentVideoPath !== null &&
-                (formatDisplayPath(video.path) === currentVideoPath ||
-                  currentVideoPath.endsWith(video.name));
+                currentMediaPath !== null &&
+                (formatDisplayPath(item.path) === currentMediaPath ||
+                  currentMediaPath.endsWith(item.name));
 
               return (
                 <div
-                  key={`${video.folderId}_${video.path}_${idx}`}
-                  className={`live-video-card ${isCurrent ? "is-currently-playing" : ""}`}
-                  onClick={() => handlePlayVideo(video.path)}
-                  title={`Reproducir "${video.name}" en el fondo de pantalla`}
+                  key={`${item.folderId}_${item.path}_${idx}`}
+                  className={`live-video-card ${isCurrent ? "is-currently-playing" : ""} ${
+                    item.hidden ? "is-hidden" : ""
+                  } ${item.kind === "image" ? "is-image" : ""}`}
+                  onClick={() => {
+                    if (item.hidden) return;
+                    void handlePlayVideo(item.path);
+                  }}
+                  title={
+                    item.hidden
+                      ? `"${item.name}" está oculto y no se reproduce`
+                      : `Reproducir "${item.name}" en el fondo de pantalla`
+                  }
                   role="button"
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      void handlePlayVideo(video.path);
+                      if (!item.hidden) {
+                        void handlePlayVideo(item.path);
+                      }
                     }
                   }}
                 >
                   <div className="live-video-card-frame">
-                    <VideoThumbnail
-                      className="live-video-card-thumb"
-                      path={video.path}
-                      title={video.name}
-                    />
+                    {item.kind === "image" ? (
+                      <img
+                        className="live-video-card-thumb"
+                        src={toSafeAssetUrl(item.path)}
+                        alt={item.name}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <VideoThumbnail
+                        className="live-video-card-thumb"
+                        path={item.path}
+                        title={item.name}
+                      />
+                    )}
                     <div className="live-video-card-overlay">
                       <span className="live-card-play-btn" title="Reproducir en fondo de pantalla">
-                        <Icon name={isCurrent ? "volume" : "play"} width={18} height={18} />
+                        <Icon
+                          name={item.hidden ? "eye-slash" : isCurrent ? "volume" : "play"}
+                          width={18}
+                          height={18}
+                        />
                       </span>
                     </div>
                     <span className="live-video-card-format">
-                      {getFileExtension(video.name)}
+                      {getFileExtension(item.name) || (item.kind === "image" ? "IMG" : "VÍDEO")}
                     </span>
+                    <button
+                      type="button"
+                      className="live-video-card-eye"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleToggleMediaHidden(item.path, !item.hidden);
+                      }}
+                      title={
+                        item.hidden
+                          ? "Mostrar este medio y volver a la cola"
+                          : "Ocultar este medio y sacarlo de la cola"
+                      }
+                      aria-label={item.hidden ? "Mostrar medio" : "Ocultar medio"}
+                      aria-pressed={item.hidden}
+                    >
+                      <Icon
+                        name={item.hidden ? "eye-slash" : "eye"}
+                        width={14}
+                        height={14}
+                      />
+                    </button>
+                    {item.hidden && (
+                      <span className="live-video-card-hidden-badge">Oculto</span>
+                    )}
                     {isCurrent && (
                       <span className="live-video-card-active-badge">
                         <span className="pulse-dot" />
@@ -541,12 +828,12 @@ export function LiveWallpapersView() {
                     )}
                   </div>
                   <div className="live-video-card-info">
-                    <strong className="live-video-card-title" title={video.name}>
-                      {cleanVideoTitle(video.name)}
+                    <strong className="live-video-card-title" title={item.name}>
+                      {cleanMediaTitle(item.name)}
                     </strong>
-                    <span className="live-video-card-folder" title={video.folderName}>
+                    <span className="live-video-card-folder" title={item.folderName}>
                       <Icon name="folder" width={11} height={11} />
-                      <span>{video.folderName}</span>
+                      <span>{item.folderName}</span>
                     </span>
                   </div>
                 </div>
@@ -555,6 +842,7 @@ export function LiveWallpapersView() {
           </div>
         )}
       </section>
+      </>}
     </div>
   );
 }

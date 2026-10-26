@@ -36,6 +36,52 @@
 - [x] Pruebas unitarias de bandeja y widget en `tests/live-wallpapers.test.ts` (9 pass, 0 fail).
 - [ ] Prueba interactiva en vivo en Windows (foco de iconos, menú contextual, atajo Win+D Mostrar escritorio).
 
+## Verificación en vivo del 2026-10-25 (sesión de cierre de fase 1)
+
+- [x] **Estructura real del escritorio con el fondo activo**: recorrido recursivo de ventanas confirmado — `Progman` (visible, 1920×1080) → `WorkerW` (visible, 1920×1080) → `PrismaDesktopWallpaperHost` (visible, 1920×1080) → `mpv` (visible, 1920×1080). La capa de iconos `SHELLDLL_DefView` es **hija directa de `Progman` y hermana por encima** del `WorkerW`: el vídeo queda detrás de los iconos y del taskbar.
+- [x] **Prueba de fotograma real** (sin robar el foco): captura con `PrintWindow` de la ventana `mpv` devuelve imagen real, no negro. El fotograma capturado corresponde a un vídeo MMD de la carpeta «Hatsune Miku». Colores dominantes del fotograma: blanco (255,255,255) y verde agua (132,200,186).
+- [x] Reproducción en vivo con dos carpetas reales registradas (Lumi N0va: 42 vídeos; Hatsune Miku: 37 vídeos), modo aleatorio, con 3 vídeos ocultados de forma individual.
+- [x] **Distribución nativa a nivel de empaquetado**: instalador reconstruido con el código vigente (`bun run build:installer`), `release/Prisma_1.2.0-setup.exe`, 161,1 MB, SHA-256 `405582653f98227f00444ca9cbcf6e1def59069b4a295ec165d9eb00a5372bbb`. El staging incluye `libmpv-2.dll`, `libunwind.dll` y `ffmpeg`: la dependencia nativa que exige el motor de fondos viaja en el instalador. `Cargo.toml` deja `default = ["mpv"]`, así que la build de release incluye la feature.
+- [ ] **Pendiente**: instalación silenciosa del setup y arranque desde `%LOCALAPPDATA%\Programs\Prisma` (la app instalada ya está en la máquina, versión 1.2.0) con las tres carpetas configuradas, incluida una carpeta de imágenes.
+- [ ] **Pendiente**: la prueba interactiva de Win+D y del menú contextual sobre un icono del escritorio requiere poner el escritorio en primer plano. No se automatiza el ratón sobre la sesión del usuario: la comprobación se hace con la persona delante.
+- [x] **Mapa de reutilización de Aurora verificado** (no supuesto): el compositor de `dynamic-backgrounds/` es three.js puro, sin Supabase, sin React Router, sin i18n, sin `fetch` y sin texturas remotas; 15 archivos y 1.218 líneas son la unidad mínima reutilizable. `three` instalado 0.185.1 (el `package.json` de Aurora declara `^0.186.0`: lockfile desfasado). El bloqueo real es el andamiaje React, no el motor.
+
+## Capa 1 con vídeos e imágenes (implementación del 2026-10-25)
+
+- [x] Backend Rust: `MediaKind` (vídeo/imagen por extensión) y `MediaKindMode` (`video` por defecto / `image` / `mixed`). Extensiones de imagen: jpg, jpeg, png, webp, bmp, gif, tif, tiff, avif.
+- [x] La imagen se reproduce en la misma sesión de libmpv que el vídeo (misma ventana del escritorio) y permanece `imageDurationSec` (20 s por defecto, 5..600) antes de que la cola avance. La espera vive en el motor, no en un temporizador suelto; el tiempo en pausa no cuenta.
+- [x] Con un único medio en la cola nunca se avanza: el vídeo se repite en bucle y la imagen se queda fija.
+- [x] Solo el vídeo tiene audio: con una imagen cargada la sesión no abre dispositivo de audio (`ao=null`) y la preferencia de sonido se recuerda para el siguiente vídeo.
+- [x] Contrato JSON migrado sin romper la configuración existente: `videoCount`→`mediaCount`, `hiddenVideos`→`hiddenMedia`, `currentVideo`→`currentMedia`, `totalVideos`→`totalMedia`, `videos`→`media`. Un `live_wallpapers.json` antiguo se sigue leyendo y, al no tener `mediaKindMode`, arranca en vídeos: el comportamiento previo no cambia para nadie.
+- [x] Frontend: switch de tipo arriba de la cajita de control con el mismo estilo segmentado de «Cubrir / Ajustar» (iconos `film`, `image`, `layers`), miniaturas de imagen por protocolo de assets con respaldo, textos según el tipo activo, control de duración de imagen (solo cuando hay imágenes) y sonido deshabilitado con explicación cuando no hay vídeo en juego.
+- [x] Pruebas: 13 tests de Rust de wallpapers en verde (7 previos + 6 nuevos) y 13 tests de frontend en verde (`tests/live-wallpapers.test.ts`, antes 9).
+- [x] **Defecto corregido**: la sesión de mpv se cerraba con `mpv_destroy` (lo que hace libmpv2 al soltar el handle), que no espera a que terminen los hilos de vídeo y audio. Al soltar el motor con reproducción viva, esos hilos seguían escribiendo en memoria liberada y el proceso terminaba con `STATUS_ACCESS_VIOLATION`. Ahora el motor cierra el core con el comando `quit` y espera al evento de apagado antes de soltar el handle (lo que hace internamente `mpv_terminate_destroy`). Verificado: la suite completa ya no revienta al cerrarse.
+- [ ] **Pendiente**: los 2 tests de `infrastructure::windows_com` siguen fallando en la suite completa. Son preexistentes y ajenos a esta feature: fallan igual con `--skip wallpapers` (120 pass / 2 fail) y pasan aislados. Su propio código admite que el resultado «cambia según la carga de la máquina». No se tocan aquí.
+
+### Validación en vivo de la capa 1 (app dev, 2026-10-25)
+
+Configuración probada con tres carpetas reales registradas (A: Lumi N0va, 46 vídeos; B: Hatsune Miku, 42 vídeos; C: carpeta de 4 imágenes PNG de prueba) y el tipo elegido en la configuración.
+
+- [x] **Tipo «Imágenes»**: la cola contiene solo las 4 imágenes de la carpeta C. Capturas del fondo con `PrintWindow` a T+0 s, T+12 s y T+24 s muestran, en ese orden, la imagen 1 (magenta), la 2 (azul) y la 3 (ámbar): la imagen permanece el tiempo configurado (10 s) y la cola avanza sola. El fotograma capturado es la imagen real a 1920×1080.
+- [x] **Tipo «Vídeos»**: con el tipo en vídeos, la cola vuelve a componerse con los vídeos de las carpetas A y B y el fondo reproduce un vídeo real a pantalla completa (fotograma de la carpeta Lumi N0va). El modo persistido se respeta al arrancar la app.
+- [x] **Capa del escritorio**: en ambos modos la jerarquía es `Progman` → `WorkerW` (visible) → `PrismaDesktopWallpaperHost` (visible, 1920×1080) → `mpv` (visible), con la capa de iconos `SHELLDLL_DefView` como hermana por encima.
+- [x] **Cierre limpio**: al cerrar la app con el fondo en marcha no hay ningún evento de error en el registro de Windows (antes, soltar el motor con reproducción viva podía dejar hilos de mpv sobre memoria liberada).
+- [x] **Comprobaciones interactivas** (con el permiso de Biglex, 2026-10-25):
+  - **Win+D**: al traer el escritorio al frente, el fondo sigue reproduciéndose detrás de los iconos y de la barra de tareas. Captura del escritorio a pantalla completa con la imagen de prueba como fondo.
+  - **Menú contextual**: el clic derecho sobre el fondo del escritorio abre el menú del shell («Ver», «Ordenar por», «Actualizar», «Terminal», «Configuración de pantalla», «Personalizar») por encima del fondo: la capa del wallpaper no bloquea la del escritorio. El menú se cierra con ESC sin dejar restos.
+  - **Switch de tipo**: pulsado con UIAutomation sobre el botón «Vídeos» del grupo «Tipo de medio del fondo» de la app instalada. El efecto es real y visible: el control «Duración» desaparece (solo aplica a imágenes), el listado pasa a «Vídeos disponibles (79)» (42 de Lumi N0va + 37 de Hatsune Miku) y el fondo en pantalla cambia de la imagen de prueba a un vídeo real.
+  - La app instalada se dejó limpia: con las dos carpetas reales (42 y 37 vídeos), tipo «Vídeos», y el fondo reproduciéndose.
+
+### Distribución nativa verificada (2026-10-25)
+
+- [x] Instalador reconstruido con el código vigente: `release/Prisma_1.2.0-setup.exe` (161,1 MB), generado a las 20:22 con la implementación de imágenes y el cierre ordenado de mpv.
+- [x] Instalación silenciosa (`/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS`) con **código de salida 0** y sin privilegios de administrador (`PrivilegesRequired=lowest`).
+- [x] Contenido instalado en `%LOCALAPPDATA%\Programs\Prisma`: `prisma.exe` (33,57 MB, 20:19), `libmpv-2.dll` (114,18 MB), `libunwind.dll` y la carpeta `ffmpeg`. La dependencia nativa que exige el motor de fondos viaja en el instalador.
+- [x] Arranque de la app instalada por `explorer.exe`, igual que hace la entrada `[Run]` del instalador (evita el fallo `STATUS_REDIRECTION_TRUST_FAILURE`): proceso vivo con 143 MB de memoria.
+- [x] Fondo de la app **instalada** verificado en vivo: la jerarquía de ventanas es la misma (`WorkerW` → `PrismaDesktopWallpaperHost` → `mpv`, con la capa de iconos por encima) y el fondo reproduce la cola de imágenes avanzando sola (azul → ámbar → lima) con la duración configurada de 15 s.
+- [x] La app instalada recalculó los recuentos reales de las carpetas (42 y 37 vídeos) y persistió el formato nuevo (`mediaKindMode`, `imageDurationSec`, `hiddenMedia`, `mediaCount`).
+- [x] Sin errores de aplicación en el registro de Windows durante la sesión.
+
 ## Fase 2 — pendiente
 
 - [ ] Procedencia Aurora y unidad de reutilización documentadas; dependencias/recursos comprobados.
@@ -47,3 +93,20 @@
 - [ ] Recursos locales funcionan desconectados; consumo medido y cierre sin fugas.
 
 Registrar Windows, commit, pantalla/DPI, contenido y resultado. Compilar no sustituye las pruebas de escritorio real.
+## Revisión técnica e inicio de fase 2 — 2026-10-25
+
+Este bloque describe comprobaciones de esta revisión; los bloques anteriores son evidencia de sesiones previas.
+
+- [x] `bun run build`: TypeScript y Vite correctos; motor Three.js en entrada separada y efectos con importación dinámica. Advertencias de tamaño de chunks conservadas.
+- [x] `bun test tests/live-wallpapers.test.ts tests/wallpaper-compositor.test.ts`: 14 pruebas, 0 fallos (13 de la base y 1 de trazabilidad de los originales vendorizados).
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-wallpapers.ps1`: 16 pruebas Rust, 0 fallos. Incluye validación de configuración, contrato camelCase, persistencia sin restaurar flags de ejecución y apagado al ocultar la última fuente.
+- [x] Detectado `STATUS_ENTRYPOINT_NOT_FOUND` antes del harness: el ejecutable libtest sin recursos no resolvía `comctl32.dll!TaskDialogIndirect`. Causa comprobada con tabla de importaciones/GetProcAddress. Añadir el manifiesto Common Controls v6 al ejecutable generado mediante `mt.exe` permite ejecutarlo. El script aplica la corrección solo al harness; no cambia el binario instalado.
+- [x] Prueba WebGL en navegador real: Prisma/Borealis animados, fotogramas idénticos con pausa, sin errores WebGL; sin escenario/ambiente deja ver el fondo de prueba magenta. Evidencia local en `temp/aurora-*-preview.png`.
+- [x] Prueba nativa en instancia dev separada (WebView2): composición sobre PNG de prueba, animación, pausa estable y destrucción del webview al detener. No se infiere orden de iconos ni recuperación de Explorer a partir de una captura interna del webview.
+- [x] Prueba nativa posterior con **cero carpetas y cero medios**: Holo Ciudad 3D anima sin sesión mpv, pausa estable, cambio a Borealis y cierre efectivo. `currentMedia=null`, composición apagada tras detener y página del compositor cerrada. Captura real del render en `temp/aurora-native-city.png`.
+- [x] Selector superior comprobado en la app: **Vídeos / Imágenes / Fondos 3D**, sin Combinado. En Fondos 3D no se muestran carpetas de origen; escena/ambiente y transporte presentes. Captura `temp/aurora-native-scenes-ui.png`.
+- [x] Perfil dev restaurado desde copia previa y procesos de prueba cerrados después de detener el fondo. La instancia instalada conserva su proceso y no se reinstala ni reemplaza.
+- [ ] Prueba nativa de Explorer reiniciado, suspensión, bloqueo, oclusión y varias pantallas con la nueva superficie. La política automática aún no está implementada en el bucle de monitorización inspeccionado.
+- [ ] Medición sostenida CPU/GPU/RAM y adopción de las capas independientes de partículas, audio del vídeo y parallax.
+
+Visto bueno a la base técnica para continuar; fase 2 abierta. La prueba del protocolo usa el backend real en la instancia dev, sin simular sus comandos; la prueba de navegador sí usa un puente de configuración simulado y solo acredita renderizado web.

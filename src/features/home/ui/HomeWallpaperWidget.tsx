@@ -2,9 +2,13 @@ import { useEffect, useState, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import {
   liveWallpapersApi,
+  mediaCountLabel,
+  mediaNoun,
+  mediaNounPlural,
   type WallpaperStateSnapshot,
 } from "../../wallpapers/services/liveWallpapersApi";
 import { VideoThumbnail } from "../../visual_library/ui/VideoThumbnail";
+import { toSafeAssetUrl } from "../../../shared/mediaTree";
 import { Icon } from "../../../shared/ui/Icon";
 import "./home-wallpaper-widget.css";
 
@@ -104,23 +108,34 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
 
   const isActive = Boolean(snapshot?.isActive);
   const isPaused = Boolean(snapshot?.isPaused);
-  const totalVideos = snapshot?.totalVideos ?? 0;
-  const hasVideos = totalVideos > 0;
-  const currentPath = snapshot?.currentVideo;
+  const totalMedia = snapshot?.totalMedia ?? 0;
+  const hasMedia = totalMedia > 0;
+  const currentPath = snapshot?.currentMedia;
+  const kindMode = snapshot?.settings.mediaKindMode ?? "video";
 
-  const videoName = currentPath
+  const mediaName = currentPath
     ? currentPath.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || "Fondo de escritorio"
     : isActive
     ? "Reproduciendo fondo"
     : "Fondo vivo apagado";
 
+  // Una imagen estática se muestra con su propio archivo; un vídeo usa la
+  // miniatura que extrae el sistema.
+  const currentIsImage = currentPath
+    ? /\.(jpe?g|png|webp|bmp|gif|tiff?|avif)$/i.test(currentPath)
+    : false;
+
   const folderSubtitle = isActive
     ? snapshot?.currentFolder
       ? `Carpeta: ${snapshot.currentFolder}`
       : "Fondo activo en escritorio"
-    : hasVideos
-    ? `${totalVideos} vídeo${totalVideos === 1 ? "" : "s"} configurado${totalVideos === 1 ? "" : "s"} en tus carpetas`
-    : "Sin vídeos configurados. Añade una carpeta de vídeos para comenzar.";
+    : hasMedia
+    ? `${mediaCountLabel(kindMode, totalMedia)} configurado${
+        totalMedia === 1 ? "" : "s"
+      } en tus carpetas`
+    : `Sin ${mediaNounPlural(kindMode)} configurados. Añade una carpeta de ${
+        mediaNounPlural(kindMode)
+      } para comenzar.`;
 
   return (
     <section
@@ -138,12 +153,20 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
           title="Abrir galería de fondos vivos"
         >
           {currentPath ? (
-            <VideoThumbnail
-              path={currentPath}
-              title={videoName}
-              className="home-wallpaper-thumbnail"
-              fit="cover"
-            />
+            currentIsImage ? (
+              <img
+                className="home-wallpaper-thumbnail"
+                src={toSafeAssetUrl(currentPath)}
+                alt={mediaName}
+              />
+            ) : (
+              <VideoThumbnail
+                path={currentPath}
+                title={mediaName}
+                className="home-wallpaper-thumbnail"
+                fit="cover"
+              />
+            )
           ) : (
             <div className="home-wallpaper-placeholder">
               <Icon name="sparkles" width={26} height={26} />
@@ -177,8 +200,8 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
             </div>
           </div>
 
-          <strong className="home-wallpaper-title" title={videoName}>
-            {videoName}
+          <strong className="home-wallpaper-title" title={mediaName}>
+            {mediaName}
           </strong>
           <span className="home-wallpaper-subtitle" title={folderSubtitle}>
             {folderSubtitle}
@@ -195,7 +218,7 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
             aria-label="Fondo anterior"
             title="Fondo anterior"
             onClick={handlePrev}
-            disabled={loading || !isActive || totalVideos <= 1}
+            disabled={loading || !isActive || totalMedia <= 1}
           >
             <Icon name="chevron-left" width={20} height={20} />
           </button>
@@ -219,7 +242,7 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
             aria-label="Fondo siguiente"
             title="Fondo siguiente"
             onClick={handleNext}
-            disabled={loading || !isActive || totalVideos <= 1}
+            disabled={loading || !isActive || totalMedia <= 1}
           >
             <Icon name="chevron-right" width={20} height={20} />
           </button>
@@ -231,7 +254,7 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
             aria-label={isActive ? "Apagar fondo vivo" : "Encender fondo vivo"}
             title={isActive ? "Apagar fondo vivo" : "Encender fondo vivo"}
             onClick={handleTogglePower}
-            disabled={loading || (!isActive && !hasVideos)}
+            disabled={loading || (!isActive && !hasMedia)}
           >
             <Icon name={isActive ? "close" : "sparkles"} width={18} height={18} />
           </button>
