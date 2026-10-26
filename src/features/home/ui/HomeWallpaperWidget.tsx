@@ -107,6 +107,7 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
   };
 
   const isActive = Boolean(snapshot?.isActive);
+  const controlBlocked = Boolean(snapshot?.controlBlocked);
   const isPaused = Boolean(snapshot?.isPaused);
   const totalMedia = snapshot?.totalMedia ?? 0;
   const hasMedia = totalMedia > 0;
@@ -125,7 +126,9 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
     ? /\.(jpe?g|png|webp|bmp|gif|tiff?|avif)$/i.test(currentPath)
     : false;
 
-  const folderSubtitle = isActive
+  const folderSubtitle = controlBlocked
+    ? snapshot?.controlMessage ?? "Dev tiene el control de los fondos"
+    : isActive
     ? snapshot?.currentFolder
       ? `Carpeta: ${snapshot.currentFolder}`
       : "Fondo activo en escritorio"
@@ -186,7 +189,7 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
               FONDOS VIVOS PRISMA
             </span>
             <div className="home-wallpaper-status-pill">
-              {isActive ? (
+              {controlBlocked ? <span className="pill-idle">En espera</span> : isActive ? (
                 isPaused ? (
                   <span className="pill-paused">En pausa</span>
                 ) : (
@@ -218,7 +221,7 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
             aria-label="Fondo anterior"
             title="Fondo anterior"
             onClick={handlePrev}
-            disabled={loading || !isActive || totalMedia <= 1}
+            disabled={loading || controlBlocked || !isActive || totalMedia <= 1}
           >
             <Icon name="chevron-left" width={20} height={20} />
           </button>
@@ -230,7 +233,7 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
             aria-label={isPaused ? "Reanudar fondo vivo" : "Pausar fondo vivo"}
             title={isPaused ? "Reanudar fondo vivo" : "Pausar fondo vivo"}
             onClick={handleTogglePause}
-            disabled={loading || !isActive}
+            disabled={loading || controlBlocked || !isActive}
           >
             <Icon name={isPaused ? "play" : "pause"} width={20} height={20} />
           </button>
@@ -242,7 +245,7 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
             aria-label="Fondo siguiente"
             title="Fondo siguiente"
             onClick={handleNext}
-            disabled={loading || !isActive || totalMedia <= 1}
+            disabled={loading || controlBlocked || !isActive || totalMedia <= 1}
           >
             <Icon name="chevron-right" width={20} height={20} />
           </button>
@@ -254,7 +257,7 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
             aria-label={isActive ? "Apagar fondo vivo" : "Encender fondo vivo"}
             title={isActive ? "Apagar fondo vivo" : "Encender fondo vivo"}
             onClick={handleTogglePower}
-            disabled={loading || (!isActive && !hasMedia)}
+            disabled={loading || controlBlocked || (!isActive && !hasMedia)}
           >
             <Icon name={isActive ? "close" : "sparkles"} width={18} height={18} />
           </button>

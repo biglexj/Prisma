@@ -4,7 +4,9 @@ use std::{path::Path, time::Duration};
 use tauri::{AppHandle, Manager};
 
 pub fn prepare(controller: &WallpaperController, root: &Path) -> Result<(), String> {
-    controller.add_folder(root.join("media").to_str().ok_or("Ruta de prueba inválida")?)?;
+    if controller.get_state()?.settings.sources.is_empty() {
+        controller.add_folder(root.join("media").to_str().ok_or("Ruta de prueba inválida")?)?;
+    }
     controller.set_media_kind_mode(MediaKindMode::Image)?;
     let mut config = controller.compositor_config()?;
     config.dynamic = "borealis".into();

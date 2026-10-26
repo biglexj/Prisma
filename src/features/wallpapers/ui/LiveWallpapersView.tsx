@@ -50,7 +50,7 @@ export function LiveWallpapersView() {
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showHidden, setShowHidden] = useState(false);
-  const [tab, setTab] = useState<WallpaperTab | null>(null);
+  const [tab, setTab] = useState<WallpaperTab>("video");
 
   const refreshState = useCallback(async () => {
     try {
@@ -271,7 +271,7 @@ export function LiveWallpapersView() {
   const isMixed = kindMode === "mixed";
   const imageDuration = state?.settings.imageDurationSec ?? 20;
   const compositorEnabled = state?.compositorEnabled ?? false;
-  const activeTab = tab ?? (compositorEnabled ? "ambient" : kindMode === "image" ? "image" : "video");
+  const activeTab = tab;
   const showScenes = activeTab !== "video" && activeTab !== "image";
 
   const selectTab = (next: WallpaperTab) => {
@@ -428,7 +428,7 @@ export function LiveWallpapersView() {
       {state?.controlBlocked && <div className="live-wallpapers-handoff" role="status">
         {state.controlMessage ?? "Esperando el control de los fondos…"}
       </div>}
-      <fieldset className="live-wallpapers-controls" disabled={Boolean(state?.controlBlocked)}>
+      <fieldset className="live-wallpapers-controls" aria-label="Controles de Fondos Vivos" disabled={Boolean(state?.controlBlocked)}>
       {/* ── Control Hero Card ── */}
       <section className="live-wallpapers-control-card">
         {/* Categorías de fondo. Los escenarios tienen su propio espacio. */}
