@@ -195,3 +195,9 @@ El clic en una tarjeta de efecto debe guardar la configuración antes de activar
 ## Incidencia abierta: composición no visible sobre medios — 2026-10-26
 
 Biglex confirma que la corrección anterior no muestra escenarios ni partículas sobre la imagen. No considerar resuelto por isVisible o capturas internas. Revisar WS_EX_LAYERED añadido por set_ignore_cursor_events, inicialización de alfa nativo y orden de show/SetParent/estilos. Verificar lectura de atributos de capa, además del motor y su selección.
+
+## Zoom primero — petición de Biglex, 2026-10-26
+
+Alcance inmediato: corregir zoom en los fondos planos compartidos con el frontend Aurora. No tocar Gargantúa ni optimizar rendimiento; Biglex lo ha diferido expresamente. No cambiar encuadre inicial de Lente Gravitacional: después del arreglo el usuario indicará el valor deseado. Activadores de imágenes/vídeos y semántica de ambiente quedan para después.
+
+Reproducción en motor real congelado a zoom 0,5/1/2: Prisma y Lente Gravitacional no cambian en ninguna dirección porque el mínimo de cobertura geométrica supera los valores del control. Cambiar muestreo UV en lugar de escala del quad permite alejar/acercar manteniendo cobertura y el resultado original a zoom 1. La fuente es BackgroundProjection.ts en Aurora; Prisma recibe su copia mediante el sincronizador.

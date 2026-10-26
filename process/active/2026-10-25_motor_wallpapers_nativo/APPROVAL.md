@@ -22,3 +22,5 @@ Pulido autorizado por Biglex: aplicación inmediata de tarjetas, GIF animado, es
 Incidencia reabierta por Biglex: los efectos no se veían sobre la imagen. Corregida inicialización nativa de opacidad de WS_EX_LAYERED y orden show/SetParent. Atributos verificados antes/después; confirmación visual solicitada y todavía pendiente. No cerrar la incidencia por isVisible/capturas internas.
 
 Incidencia de capas invisibles: CERRADA con confirmación visual de Biglex el 2026-10-26: «Sí, ahora aparece». La fase 2 conserva los demás pendientes registrados.
+
+Zoom corregido en el adaptador compartido de fondos planos (Aurora y Prisma), conservando zoom inicial 1. Biglex indicará después el encuadre deseado de Lente Gravitacional. No se aplican cambios de rendimiento ni de Gargantúa.

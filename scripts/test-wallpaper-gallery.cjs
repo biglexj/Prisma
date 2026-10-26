@@ -53,6 +53,8 @@ function assert(value,message){if(!value)throw Error(message)}
   assert(await page.evaluate(()=>window.savedConfig.controls['scene:cybercity'].speed===2.9),'Se pierde el último slider');
   await card('Aurora Boreal').click();
   assert(await page.getByLabel('Vista de cámara',{exact:true}).count()===0,'Cámara en efecto plano');
+  await page.getByRole('slider',{name:'Zoom',exact:true}).fill('0.5');await page.waitForTimeout(250);
+  assert(await page.evaluate(()=>window.savedConfig.controls['dynamic:borealis'].zoom===0.5),'El slider no guarda el zoom del efecto seleccionado');
   await card('Holo Ciudad').click();
   assert(await page.getByRole('slider',{name:'Velocidad',exact:true}).inputValue()==='2.9','Controles no persisten por efecto');
   await page.waitForTimeout(200);await page.screenshot({path:path.join(root,'temp/wallpaper-aurora-groups.png'),fullPage:true});

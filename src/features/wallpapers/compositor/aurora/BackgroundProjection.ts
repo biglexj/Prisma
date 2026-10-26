@@ -35,6 +35,7 @@ export class BackgroundProjection {
     private readonly camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
     private readonly transform = { value: new THREE.Vector3(1, 0, 0) };
     private readonly spatial: boolean;
+    private readonly sampleZoom = { value: 1 };
     /** Escala mínima para que un fondo plano siga cubriendo el viewport. */
     private readonly minScale: number = 1;
 
@@ -53,7 +54,10 @@ export class BackgroundProjection {
                 material.onBeforeCompile = (shader, renderer) => {
                     compile.call(material, shader, renderer);
                     shader.uniforms.vtuberBackgroundTransform = this.transform;
-                    shader.vertexShader = 'uniform vec3 vtuberBackgroundTransform;\n' + shader.vertexShader.replace(/gl_Position\s*=\s*[^;]+;/g, '$& gl_Position.xy = gl_Position.xy * vtuberBackgroundTransform.x + vtuberBackgroundTransform.yz * gl_Position.w;');
+                    shader.uniforms.vtuberBackgroundZoom = this.sampleZoom;
+                    shader.vertexShader = 'uniform float vtuberBackgroundZoom;\nuniform vec3 vtuberBackgroundTransform;\n' + shader.vertexShader
+                        .replace(/\bvUv\s*=\s*uv\s*;/g, 'vUv = (uv - vec2(0.5)) / vtuberBackgroundZoom + vec2(0.5);')
+                        .replace(/gl_Position\s*=\s*[^;]+;/g, '$& gl_Position.xy = gl_Position.xy * vtuberBackgroundTransform.x + vtuberBackgroundTransform.yz * gl_Position.w;');
                 };
                 material.needsUpdate = true;
             }
@@ -80,9 +84,11 @@ export class BackgroundProjection {
 
     update(controls: Readonly<BackgroundControls>, time: number, delta = 0): void {
         if (!this.spatial) {
-            // Un fondo plano no puede mostrar su borde: el zoom se detiene al llegar al borde.
+            // El quad conserva la cobertura; el zoom cambia el muestreo procedural,
+            // por lo que alejar no queda bloqueado por el tamaño mínimo del quad.
             const margin = Math.max(1 + Math.abs(controls.panX) / 10, 1 + Math.abs(controls.panY) / 10);
-            this.transform.value.set(Math.max(controls.zoom, this.minScale * margin), controls.panX / 10, controls.panY / 10);
+            this.sampleZoom.value = controls.zoom;
+            this.transform.value.set(Math.max(1, this.minScale * margin), controls.panX / 10, controls.panY / 10);
             return;
         }
         this.transform.value.set(controls.zoom, controls.panX / 10, controls.panY / 10);

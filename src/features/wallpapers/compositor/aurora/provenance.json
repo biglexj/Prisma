@@ -36,7 +36,7 @@
     "synapse/SynapseBackground.js": "e7fdd9950c3b8eeace94da1168596b6a64ea6f202bd7b4d16e4ca1c1a5ec624d",
     "aurora/AuroraCurtainsBackground.js": "ee716363a49c1a1d8c6cc3c75404253b1afa063f85e19220b1610dd8c40c6a87",
     "BackgroundLayer.ts": "0d1a91fe87ebcb2a92b3202bd850eebe82e75423027b0ee43becafda35ebe9ba",
-    "BackgroundProjection.ts": "ce876d9df35e5f10c1d44c5eb923fe8034a24a17e18925efa529cdeccb2bcffc",
+    "BackgroundProjection.ts": "6aa8799891a22491987675505ee292bf56f7d3eaa2c21a8c865bb6be3d7df749",
     "Backgrounds/AmbientBackground.ts": "5b63cac7760b5f8262e0637d751ae5f17363312507319c374fe949c2aa944660",
     "Backgrounds/sky.frag.ts": "cbd73844030997e64fc76ae0e3a32166257e7368db3ecc118aaa7f8e4b899651",
     "Interaction/BackgroundInteraction.ts": "4f934c6337e8e414f7a13890f3a6ea79a3f6329df2b20e11cef6b6db49754457",

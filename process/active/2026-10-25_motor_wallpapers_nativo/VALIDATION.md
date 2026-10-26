@@ -173,3 +173,13 @@ Resultado final automatizado de esta corrección: 23 pruebas Rust correctas. La 
 ## Confirmación visual del usuario — 2026-10-26
 
 Biglex responde «Sí, ahora aparece» a la prueba de partícula o escenario sobre imagen en Prisma Dev. Se confirma la aparición visible en el escritorio tras inicializar la opacidad nativa. Esta confirmación cierra la incidencia de capas invisibles; no se extiende a recuperación de Explorer, rendimiento sostenido ni las demás funciones pendientes.
+
+## Zoom de fondos planos — 2026-10-26
+
+Reproducción anterior con motor Three.js congelado: Prisma y Lente Gravitacional producían imágenes idénticas a zoom 0,5, 1 y 2. El adaptador imponía Math.max(zoom,minScale*margin) a geometrías cuyo mínimo de cobertura superaba el rango visible del control.
+
+La fuente BackgroundProjection.ts en Aurora separa ahora cobertura geométrica de zoom del muestreo UV. Se sincroniza Prisma y se actualiza hash de procedencia. No se altera BackgroundCamera ni ningún archivo de Gargantúa. Se conserva encuadre a zoom 1 y desplazamientos existentes.
+
+scripts/test-wallpaper-zoom.cjs usa el renderizador real y shaders originales, con tiempo pausado: compara los cinco fondos planos (Prisma, Borealis, Lente Gravitacional, Matrix y Flujo Líquido), verifica cambios al alejar/acercar y recuperación exacta al volver a 1. Baseline anterior guardado en temp/wallpaper-zoom-baseline.json: hashes de zoom 1 idénticos tras la corrección. Incluye extremos 0,1 y 2,5. Capturas inspeccionadas de Lente Gravitacional: temp/zoom-blackhole-normal.png y temp/zoom-blackhole-far.png. La prueba de galería verifica también persistencia del slider Zoom en el efecto seleccionado.
+
+La fuente Aurora modificada se prueba mediante su copia sincronizada en Prisma; no se afirma un build completo de la aplicación Aurora ni despliegue remoto. Activadores y semántica de ambiente permanecen diferidos a petición de Biglex; el rendimiento de Gargantúa no se modifica.

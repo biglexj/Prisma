@@ -114,3 +114,12 @@ Sin capa cero. La numeración arranca en 1.
 - [x] Inicializar/verificar alfa global 255 y aplicar estilos de hija después de mostrar mediante Tauri.
 - [x] Probar coexistencia de PNG, partículas y escenario en instancia aislada.
 - [x] Confirmación visual de Biglex sobre imagen en el escritorio: «Sí, ahora aparece» (2026-10-26).
+
+## Corrección prioritaria del zoom
+
+- [x] Reproducir control sin efecto en Lente Gravitacional y Prisma antes de modificarlo.
+- [x] Corregir muestreo UV en BackgroundProjection compartido de Aurora y sincronizar copia Prisma.
+- [x] Probar render real a zoom 0,1/0,5/1/2/2,5; preservar encuadre exacto a zoom 1.
+- [x] Conservar lógica espacial y Gargantúa sin modificaciones.
+- [ ] Biglex indica el nuevo zoom inicial deseado de Lente Gravitacional; se mantiene en 1 por ahora.
+- [ ] Activadores de imagen/vídeo y ajustes de ambiente: diferidos hasta terminar zoom.
