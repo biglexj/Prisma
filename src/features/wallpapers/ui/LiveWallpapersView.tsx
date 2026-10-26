@@ -18,10 +18,16 @@ import {
   type MediaKindMode,
 } from "../services/liveWallpapersApi";
 import "./live-wallpapers.css";
-import { CompositionControls } from "./CompositionControls";
+import { CompositionControls, type CompositionCategory } from "./CompositionControls";
 
 /** Duraciones ofrecidas para una imagen estática, en segundos. */
 const IMAGE_DURATION_OPTIONS = [10, 20, 30, 60];
+type WallpaperTab = "video" | "image" | CompositionCategory;
+const WALLPAPER_TABS: {id: WallpaperTab; label: string}[] = [
+  {id:"video",label:"Vídeos"}, {id:"image",label:"Imágenes"}, {id:"ambient",label:"Ambiente"},
+  {id:"dynamic",label:"Dinámicos"}, {id:"scene",label:"Escenarios 3D"},
+  {id:"particles",label:"Partículas"}, {id:"parallax",label:"Parallax"},
+];
 
 function formatDisplayPath(rawPath: string): string {
   return rawPath.replace(/^\\\\\?\\/, "");
@@ -43,7 +49,7 @@ export function LiveWallpapersView() {
   const [isAdding, setIsAdding] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showHidden, setShowHidden] = useState(false);
-  const [scenesTab, setScenesTab] = useState<boolean | null>(null);
+  const [tab, setTab] = useState<WallpaperTab | null>(null);
 
   const refreshState = useCallback(async () => {
     try {
@@ -197,7 +203,7 @@ export function LiveWallpapersView() {
    */
   const handleSetMediaKindMode = async (mode: MediaKindMode) => {
     try {
-      setScenesTab(false);
+      setTab(mode === "image" ? "image" : "video");
       const snap = await liveWallpapersApi.setMediaKindMode(mode);
       setState(snap);
       setError(null);
@@ -262,7 +268,12 @@ export function LiveWallpapersView() {
   const kindMode = state?.settings.mediaKindMode ?? "video";
   const imageDuration = state?.settings.imageDurationSec ?? 20;
   const compositorEnabled = state?.compositorEnabled ?? false;
-  const showScenes = scenesTab ?? compositorEnabled;
+  const activeTab = tab ?? (compositorEnabled ? "ambient" : kindMode === "image" ? "image" : "video");
+  const showScenes = activeTab !== "video" && activeTab !== "image";
+  const selectTab = (next: WallpaperTab) => {
+    setTab(next);
+    if ((next === "video" || next === "image") && next !== kindMode) void handleSetMediaKindMode(next);
+  };
   const totalMedia = state?.totalMedia ?? 0;
   const currentMediaPath = state?.currentMedia ? formatDisplayPath(state.currentMedia) : null;
   const allMedia = state?.media ?? [];
@@ -357,37 +368,19 @@ export function LiveWallpapersView() {
         <div className="control-media-kind-row">
           <div className="control-segmented-block">
             <span className="segmented-label">Tipo</span>
-            <div className="segmented-control" role="group" aria-label="Tipo de medio del fondo">
-              <button
-                type="button"
-                className={`segmented-item ${!showScenes && kindMode === "video" ? "is-selected" : ""}`}
-                aria-pressed={!showScenes && kindMode === "video"}
-                onClick={() => handleSetMediaKindMode("video")}
-                title="Reproducir solo vídeos"
-              >
-                <Icon name="film" width={14} height={14} />
-                <span>Vídeos</span>
-              </button>
-              <button
-                type="button"
-                className={`segmented-item ${!showScenes && kindMode === "image" ? "is-selected" : ""}`}
-                aria-pressed={!showScenes && kindMode === "image"}
-                onClick={() => handleSetMediaKindMode("image")}
-                title="Reproducir solo imágenes estáticas"
-              >
-                <Icon name="image" width={14} height={14} />
-                <span>Imágenes</span>
-              </button>
-              <button
-                type="button"
-                className={`segmented-item ${showScenes ? "is-selected" : ""}`}
-                aria-pressed={showScenes}
-                onClick={() => setScenesTab(true)}
-                title="Elegir escenarios y fondos de Aurora"
-              >
-                <Icon name="layers" width={14} height={14} />
-                <span>Fondos y efectos</span>
-              </button>
+            <div className="segmented-control wallpaper-category-tabs" role="tablist" aria-label="Categorías de fondos" onKeyDown={event=>{
+              const index=WALLPAPER_TABS.findIndex(item=>item.id===activeTab);
+              const next=event.key==="ArrowRight" ? (index+1)%WALLPAPER_TABS.length : event.key==="ArrowLeft" ? (index+WALLPAPER_TABS.length-1)%WALLPAPER_TABS.length
+                : event.key==="Home" ? 0 : event.key==="End" ? WALLPAPER_TABS.length-1 : -1;
+              if(next<0)return;
+              event.preventDefault();selectTab(WALLPAPER_TABS[next].id);
+              document.getElementById(`wallpaper-tab-${WALLPAPER_TABS[next].id}`)?.focus();
+            }}>
+              {WALLPAPER_TABS.map(item=><button key={item.id} type="button" role="tab"
+                id={`wallpaper-tab-${item.id}`} aria-controls="wallpaper-category-panel"
+                aria-selected={activeTab===item.id} tabIndex={activeTab===item.id?0:-1}
+                className={`segmented-item ${activeTab===item.id ? "is-selected" : ""}`}
+                onClick={()=>selectTab(item.id)}>{item.label}</button>)}
             </div>
           </div>
 
@@ -566,13 +559,14 @@ export function LiveWallpapersView() {
         )}
       </section>
 
-      {state?.baseActive && <button type="button" className="live-btn-secondary" onClick={async()=>{
+      <div id="wallpaper-category-panel" role="tabpanel" aria-labelledby={`wallpaper-tab-${activeTab}`} className="wallpaper-category-panel">
+      {!showScenes && state?.baseActive && <button type="button" className="live-btn-secondary" onClick={async()=>{
         try { setState(await liveWallpapersApi.stopBase()); } catch(reason) { setError(String(reason)); }
       }}>Quitar vídeo o imagen y conservar efectos</button>}
       {!showScenes && !state?.baseActive && compositorEnabled && totalMedia > 0 && <button type="button" className="live-btn-secondary" onClick={async()=>{
         try { setState(await liveWallpapersApi.start()); } catch(reason) { setError(String(reason)); }
       }}>Añadir {kindMode === "image" ? "imágenes" : "vídeos"} al fondo actual</button>}
-      <CompositionControls enabled={compositorEnabled} />
+      {activeTab !== "video" && activeTab !== "image" && <CompositionControls enabled={compositorEnabled} category={activeTab} />}
 
       {!showScenes && <>
       {/* ── Upper Section: Carpetas en Fila Delgada (hasta 5 por fila) ── */}
@@ -844,6 +838,7 @@ export function LiveWallpapersView() {
         )}
       </section>
       </>}
+      </div>
     </div>
   );
 }

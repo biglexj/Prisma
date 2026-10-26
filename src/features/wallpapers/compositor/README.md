@@ -38,3 +38,9 @@ Admite `--width=1920 --height=1080 --format=png --out=assets/wallpapers/scenes-1
 `PRISMA_PLAYWRIGHT_ROOT` permite señalar una instalación externa de Playwright.
 Las miniaturas distribuidas están en `public/wallpapers/scenes`; los originales reutilizables a 1080p,
 en `assets/wallpapers/scenes-1080`, fuera del paquete web de producción.
+
+## Navegación
+
+Vídeos, Imágenes, Ambiente, Dinámicos, Escenarios 3D, Partículas y Parallax tienen pestañas superiores propias.
+Cada pestaña muestra solo su catálogo y sus controles. Partículas reúne los selectores 3D y 2D, con ajustes y activación independientes.
+No hay galería global Todos ni una segunda fila de categorías. Dinámicos agrupa los cinco fondos procedurales animados de pantalla completa.

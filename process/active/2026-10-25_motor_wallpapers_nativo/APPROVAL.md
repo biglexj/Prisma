@@ -12,3 +12,5 @@ La autorización del usuario cubre el trabajo local. No se atribuye aceptación 
 
 Biglex autoriza continuar y aclara ambiente como capa 2 independiente, solo o sobre el medio base. Catálogo completo, controles independientes, ambos sistemas de partículas y capturas 1080p implementados y comprobados localmente.
 La fase 2 continúa abierta por ecualizador real, políticas automáticas, recuperación de Explorer, medición y aceptación física final del escritorio. La validación técnica no se atribuye como aprobación visual del usuario.
+
+Corrección de navegación solicitada por Biglex: categorías superiores separadas, catálogos exclusivos y partículas agrupadas. Implementación local validada en navegador y build; pendiente aceptación visual del usuario.

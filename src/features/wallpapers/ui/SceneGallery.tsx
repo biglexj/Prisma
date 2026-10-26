@@ -4,14 +4,10 @@ import { AMBIENTS, OVERLAY_SHAPES, SCENARIOS, type EffectLayer } from "../compos
 /** Categorías del catálogo: cada una pertenece a una capa del modelo. */
 export type GalleryKind = "ambient" | "dynamic" | "scene" | "particles" | "overlay";
 
-const CATEGORIES: { value: GalleryKind | "all"; label: string }[] = [
-  { value: "all", label: "Todos" },
-  { value: "ambient", label: "Ambiente" },
-  { value: "dynamic", label: "Dinámicos" },
-  { value: "scene", label: "Escenas 3D" },
-  { value: "particles", label: "Partículas 3D" },
-  { value: "overlay", label: "Partículas 2D" },
-];
+const TITLES: Record<GalleryKind,string> = {
+  ambient: "Ambiente", dynamic: "Fondos dinámicos", scene: "Escenarios 3D",
+  particles: "Partículas 3D", overlay: "Partículas 2D",
+};
 
 interface GalleryItem {
   type: string;
@@ -53,7 +49,7 @@ const ALL_ITEMS = [...AMBIENT_ITEMS, ...SCENE_ITEMS, ...OVERLAY_ITEMS];
 
 const CLEAR_LABEL: Record<GalleryKind, string> = {
   ambient: "Sin ambiente",
-  dynamic: "Sin fondo plano",
+  dynamic: "Sin fondo dinámico",
   scene: "Sin escenario",
   particles: "Sin partículas 3D",
   overlay: "Sin partículas 2D",
@@ -64,21 +60,18 @@ export function SceneGallery({ layer, selected, onSelect }: {
   selected: string;
   onSelect(kind: GalleryKind, type: string): void;
 }) {
-  const [category, setCategory] = useState("all"), [query, setQuery] = useState("");
+  const [query, setQuery] = useState("");
   const items = useMemo(() => ALL_ITEMS.filter(item => {
-    const match = category === "all"
-      || item.kind === category;
+    const match = item.kind === layer;
     return match && `${item.label} ${item.description}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
-  }), [category, query]);
+  }), [layer, query]);
   const clear = () => onSelect(layer === "overlay" ? "overlay" : layer, layer === "ambient" ? "original" : "none");
-  return <section className="scene-gallery" aria-label="Galería de fondos y capas">
+  return <section className="scene-gallery" aria-label={`Galería de ${TITLES[layer]}`}>
     <header className="scene-gallery-header">
-      <div><h2>Capas y fondos</h2><span>{items.length} opciones</span></div>
+      <div><h2>{TITLES[layer]}</h2><span>{items.length} opciones</span></div>
       <input type="search" aria-label="Buscar efectos" placeholder="Buscar un efecto…" value={query} onChange={e => setQuery(e.target.value)} />
     </header>
     <div className="scene-gallery-filters">
-      {CATEGORIES.map(item => <button key={item.value} type="button"
-        aria-pressed={category === item.value} onClick={() => setCategory(item.value)}>{item.label}</button>)}
       <button type="button" className="scene-clear" aria-pressed={selected === "none" || selected === "original"} onClick={clear}>
         {CLEAR_LABEL[layer]}
       </button>

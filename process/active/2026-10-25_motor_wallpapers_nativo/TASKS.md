@@ -80,3 +80,11 @@ Sin capa cero. La numeración arranca en 1.
 - [x] Exportar y comprobar 25 PNG a 1920 × 1080 para otras aplicaciones.
 - [ ] Verificar visualmente clics/orden frente a iconos en toda la composición final y recuperación de Explorer.
 - [ ] Medir CPU/GPU/RAM sostenidos y completar ecualizador real y políticas automáticas.
+
+## Corrección de separación por pestañas — 2026-10-26
+
+- [x] Sustituir Fondos y efectos por Ambiente, Dinámicos, Escenarios 3D, Partículas y Parallax junto a Vídeos/Imágenes.
+- [x] Eliminar Todos y los filtros duplicados; cada pestaña muestra exclusivamente su catálogo y controles.
+- [x] Unificar navegación de partículas con selector interno 3D/2D, conservando ambos estados.
+- [x] Explicar Dinámicos con ejemplos concretos y corregir controles de otras capas ocultos cuando el ambiente era sólido.
+- [x] Comprobar navegación por teclado, aislamiento de catálogos y conservación de capas activas.

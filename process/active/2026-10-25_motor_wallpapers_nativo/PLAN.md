@@ -177,3 +177,7 @@ El ecualizador real sigue pendiente; no se sustituye por datos simulados.
 Vídeos, Imágenes y Fondos y efectos navegan el catálogo sin apagar capas. Los controles y la galería están disponibles también con medios locales.
 Ambiente incluye color sólido/degradado con opacidad, además de las paletas originales. Cada efecto conserva sus controles.
 Se autoriza generar los mismos recursos a 1920 × 1080 para reutilizarlos: se entregan 25 PNG en assets/wallpapers/scenes-1080, separados de las miniaturas de producción.
+
+## Corrección de navegación solicitada por Biglex — 2026-10-26
+
+Pestañas superiores independientes: Vídeos, Imágenes, Ambiente, Dinámicos, Escenarios 3D, Partículas y Parallax. Eliminar Fondos y efectos y la galería global Todos. Cada pestaña contiene exclusivamente su catálogo y controles. Partículas agrupa los dos sistemas bajo un selector interno y conserva sus ajustes independientes. La navegación no modifica las capas activas. Dinámicos se explica como fondos procedurales animados, sin escenario 3D.

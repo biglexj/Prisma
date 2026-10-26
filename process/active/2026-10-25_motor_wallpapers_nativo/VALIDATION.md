@@ -124,3 +124,9 @@ Visto bueno a la base técnica para continuar; fase 2 abierta. La prueba del pro
 - No se sustituyó la instalación de Prisma ni se usaron sus preferencias para las pruebas.
 
 - Comprobación final: 20 pruebas Rust y 14 pruebas Bun correctas; build web y prueba UI repetida después de los ajustes finales, sin fallos. Instancia de prueba cerrada tras detener el fondo.
+
+## Corrección de categorías — 2026-10-26
+
+Prueba del componente LiveWallpapersView completo en Edge con backend simulado: siete pestañas superiores; galerías exclusivas Ambiente 8, Dinámicos 5, Escenarios 4 y Partículas 16/13 según selector interno. Vídeos e Imágenes no contienen galerías de efectos, Parallax solo ofrece sus ajustes. No hay filtro Todos. Navegar entre categorías conserva configuración, controles por efecto y ambos sistemas de partículas. Teclado izquierda/derecha y ancho 375 sin desbordamiento comprobados; cero errores de página. Captura inspeccionada: temp/wallpaper-dynamic-category.png.
+
+TypeScript y build web correctos. Este ajuste es de interfaz; no cambia el motor nativo. No se afirma nueva prueba del escritorio instalado.
