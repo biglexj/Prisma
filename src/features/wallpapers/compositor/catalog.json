@@ -4,6 +4,7 @@
     "label": "Prisma",
     "description": "Facetas de color en movimiento suave",
     "category": "dynamic",
+    "uiGroup": "Escenarios 3D",
     "spatial": false,
     "preview": "/wallpapers/scenes/prisma.webp"
   },
@@ -12,6 +13,7 @@
     "label": "Aurora Boreal",
     "description": "Shaders fluidos de auroras cósmicas",
     "category": "dynamic",
+    "uiGroup": "Escenarios 3D",
     "spatial": false,
     "preview": "/wallpapers/scenes/borealis.webp"
   },
@@ -20,6 +22,7 @@
     "label": "Lente Gravitacional",
     "description": "Lente gravitacional y distorsión relativista",
     "category": "dynamic",
+    "uiGroup": "Escenarios 3D",
     "spatial": false,
     "preview": "/wallpapers/scenes/blackhole.webp"
   },
@@ -28,6 +31,7 @@
     "label": "Gargantúa",
     "description": "Raytracer de Agujero Negro masivo",
     "category": "3d",
+    "uiGroup": "Escenarios 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/gargantua.webp"
   },
@@ -36,6 +40,7 @@
     "label": "Código Matrix",
     "description": "Lluvia de terminal retro de los 90",
     "category": "dynamic",
+    "uiGroup": "Escenarios 3D",
     "spatial": false,
     "preview": "/wallpapers/scenes/matrix.webp"
   },
@@ -44,6 +49,7 @@
     "label": "Flujo Líquido",
     "description": "Fluido procedural con remolinos",
     "category": "dynamic",
+    "uiGroup": "Escenarios 3D",
     "spatial": false,
     "preview": "/wallpapers/scenes/liquid.webp"
   },
@@ -52,6 +58,7 @@
     "label": "Túnel Neón",
     "description": "Warp-speed wireframe hiperespacial",
     "category": "3d",
+    "uiGroup": "Escenarios 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/tunnel.webp"
   },
@@ -60,6 +67,7 @@
     "label": "Holo Ciudad",
     "description": "Ciudad de rascacielos wireframe 3D",
     "category": "3d",
+    "uiGroup": "Escenarios 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/cybercity.webp"
   },
@@ -68,6 +76,7 @@
     "label": "Abismo Marino",
     "description": "God rays oceánicos y plancton 3D",
     "category": "3d",
+    "uiGroup": "Escenarios 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/deepsea.webp"
   },
@@ -76,6 +85,7 @@
     "label": "Agujero Negro",
     "description": "Agujero Negro: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Escenarios 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/blackholepro.webp"
   },
@@ -84,6 +94,7 @@
     "label": "Interestelar",
     "description": "Interestelar: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Escenarios 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/interstellarparticles.webp"
   },
@@ -92,6 +103,7 @@
     "label": "Vía Láctea",
     "description": "Vía Láctea: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Escenarios 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/milkyway.webp"
   },
@@ -100,6 +112,7 @@
     "label": "Doble Abismo",
     "description": "Doble Abismo: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Escenarios 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/binarybh.webp"
   },
@@ -108,6 +121,7 @@
     "label": "Nexo Cuántico",
     "description": "Nexo Cuántico: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Efectos 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/morphclick.webp"
   },
@@ -116,6 +130,7 @@
     "label": "Nebulosa Orión",
     "description": "Nebulosa Orión: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Escenarios 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/nebula.webp"
   },
@@ -124,6 +139,7 @@
     "label": "ADN Cósmico",
     "description": "ADN Cósmico: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Efectos 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/dnahelix.webp"
   },
@@ -132,6 +148,7 @@
     "label": "Agujero de Gusano",
     "description": "Agujero de Gusano: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Escenarios 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/wormhole.webp"
   },
@@ -140,6 +157,7 @@
     "label": "Supernova Púlsar",
     "description": "Supernova Púlsar: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Escenarios 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/supernova.webp"
   },
@@ -148,6 +166,7 @@
     "label": "Cuásar Hiperluminoso",
     "description": "Cuásar Hiperluminoso: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Escenarios 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/quasar.webp"
   },
@@ -156,6 +175,7 @@
     "label": "Burbujas Explosivas",
     "description": "Burbujas Explosivas: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Efectos 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/bubbles.webp"
   },
@@ -164,6 +184,7 @@
     "label": "Bio-Abisal",
     "description": "Bio-Abisal: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Efectos 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/microbes.webp"
   },
@@ -172,6 +193,7 @@
     "label": "Pulso Musical 3D",
     "description": "Pulso Musical 3D: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Efectos 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/soundwave.webp"
   },
@@ -180,6 +202,7 @@
     "label": "Medusas Bioluminiscentes",
     "description": "Medusas Bioluminiscentes: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Efectos 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/jellyfish.webp"
   },
@@ -188,6 +211,7 @@
     "label": "Red Sinapsis Viva",
     "description": "Red Sinapsis Viva: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Efectos 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/synapse.webp"
   },
@@ -196,6 +220,7 @@
     "label": "Velos de Aurora",
     "description": "Velos de Aurora: partículas volumétricas con movimiento procedural",
     "category": "particles",
+    "uiGroup": "Efectos 3D",
     "spatial": true,
     "preview": "/wallpapers/scenes/aurora.webp"
   }

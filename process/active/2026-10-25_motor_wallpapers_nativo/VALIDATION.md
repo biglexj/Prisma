@@ -130,3 +130,13 @@ Visto bueno a la base técnica para continuar; fase 2 abierta. La prueba del pro
 Prueba del componente LiveWallpapersView completo en Edge con backend simulado: siete pestañas superiores; galerías exclusivas Ambiente 8, Dinámicos 5, Escenarios 4 y Partículas 16/13 según selector interno. Vídeos e Imágenes no contienen galerías de efectos, Parallax solo ofrece sus ajustes. No hay filtro Todos. Navegar entre categorías conserva configuración, controles por efecto y ambos sistemas de partículas. Teclado izquierda/derecha y ancho 375 sin desbordamiento comprobados; cero errores de página. Captura inspeccionada: temp/wallpaper-dynamic-category.png.
 
 TypeScript y build web correctos. Este ajuste es de interfaz; no cambia el motor nativo. No se afirma nueva prueba del escritorio instalado.
+
+## Catálogo canónico de Aurora — 2026-10-26
+
+La clasificación anterior dynamic/3d/particles se derivaba de supportsBackgroundCamera y PARTICLE_BACKGROUNDS; no correspondía a la agrupación de la interfaz Aurora. Se verificaron directamente catalog.ts (DYNAMIC_BACKGROUND_GROUPS) y ui/tabs/Fondos/Dinamicos.tsx del repositorio vecino.
+El sincronizador ahora copia uiGroup desde esa fuente. Se mantienen los campos internos que encaminan el renderizado, sin exponerlos como categorías de interfaz.
+
+Prueba Edge de LiveWallpapersView completo con backend simulado: seis pestañas, 25 entradas en Escenarios 3D, secciones de 17/8 con orden idéntico al catálogo; Partículas muestra las 13 formas superpuestas. Selección de ciudad → Borealis → nebulosa → Borealis sustituye el escenario previo y utiliza los controles correspondientes; conserva velocidad por efecto, ambiente sólido/opacidad y partículas superpuestas activas. Búsqueda, teclado y ancho 375 correctos, sin errores de página. Captura inspeccionada: temp/wallpaper-aurora-groups.png.
+Prueba de contrato añadida contra DYNAMIC_BACKGROUND_GROUPS vendorizado, cuyo original se comprueba por SHA-256. Esta validación es de frontend; no implica una nueva prueba del escritorio instalado.
+
+Resultado final: build TypeScript/Vite correcto; 15 pruebas Bun y prueba UI completa correctas, sin fallos. Advertencia habitual de tamaño de chunks conservada.

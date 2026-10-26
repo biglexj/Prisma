@@ -1194,3 +1194,5 @@
 .wallpaper-category-tabs { flex-wrap: wrap; }
 .wallpaper-category-panel { display: grid; gap: 18px; min-width: 0; }
 .wallpaper-category-tabs .segmented-item { min-height: 44px; }
+
+.scene-group-title { margin: 20px 0 12px; font-size: 1rem; font-weight: 650; }

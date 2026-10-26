@@ -41,6 +41,7 @@ en `assets/wallpapers/scenes-1080`, fuera del paquete web de producción.
 
 ## Navegación
 
-Vídeos, Imágenes, Ambiente, Dinámicos, Escenarios 3D, Partículas y Parallax tienen pestañas superiores propias.
-Cada pestaña muestra solo su catálogo y sus controles. Partículas reúne los selectores 3D y 2D, con ajustes y activación independientes.
-No hay galería global Todos ni una segunda fila de categorías. Dinámicos agrupa los cinco fondos procedurales animados de pantalla completa.
+Vídeos, Imágenes, Ambiente, Escenarios 3D, Partículas y Parallax tienen pestañas propias.
+Escenarios 3D contiene los 25 elementos en los grupos y orden definidos por DYNAMIC_BACKGROUND_GROUPS de Aurora: Escenarios 3D (17) y Efectos 3D (8). El sincronizador registra uiGroup, sin inferir categorías de interfaz de las capacidades de cámara.
+Partículas contiene las partículas superpuestas independientes. Elegir un escenario reemplaza el anterior y conserva el medio, ambiente y partículas superpuestas. Los controles y sus ajustes se conservan por efecto.
+Los campos internos dynamic/scenario/particle mantienen compatibilidad con la configuración anterior y encaminan el renderizado; no definen pestañas ni grupos visuales.

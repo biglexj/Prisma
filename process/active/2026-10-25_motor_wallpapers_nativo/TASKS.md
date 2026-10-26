@@ -88,3 +88,11 @@ Sin capa cero. La numeración arranca en 1.
 - [x] Unificar navegación de partículas con selector interno 3D/2D, conservando ambos estados.
 - [x] Explicar Dinámicos con ejemplos concretos y corregir controles de otras capas ocultos cuando el ambiente era sólido.
 - [x] Comprobar navegación por teclado, aislamiento de catálogos y conservación de capas activas.
+
+## Orden canónico de Aurora — sustituye la separación anterior
+
+- [x] Consultar catalog.ts, DYNAMIC_BACKGROUND_GROUPS y ui/tabs/Fondos/Dinamicos.tsx del frontend Aurora vigente.
+- [x] Eliminar la pestaña Dinámicos y reunir los 25 elementos en Escenarios 3D.
+- [x] Reproducir grupos y orden Aurora: Escenarios 3D (17) y Efectos 3D (8).
+- [x] Mantener partículas superpuestas aparte; seleccionar escenario reemplaza el anterior sin modificar ambiente ni partículas superpuestas.
+- [x] Conservar controles y ajustes por efecto; verificar agrupación, orden, búsqueda y tamaño reducido.

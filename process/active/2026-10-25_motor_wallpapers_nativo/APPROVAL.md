@@ -14,3 +14,5 @@ Biglex autoriza continuar y aclara ambiente como capa 2 independiente, solo o so
 La fase 2 continúa abierta por ecualizador real, políticas automáticas, recuperación de Explorer, medición y aceptación física final del escritorio. La validación técnica no se atribuye como aprobación visual del usuario.
 
 Corrección de navegación solicitada por Biglex: categorías superiores separadas, catálogos exclusivos y partículas agrupadas. Implementación local validada en navegador y build; pendiente aceptación visual del usuario.
+
+Biglex corrige la clasificación y solicita usar el orden existente de Aurora, conservando los controles actuales. Se retira Dinámicos como pestaña; catálogo de escenarios y efectos reproducido desde su fuente, con partículas superpuestas independientes. Ajuste local, pendiente aceptación visual del usuario.

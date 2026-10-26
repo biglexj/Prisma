@@ -69,13 +69,14 @@ writeFileSync(resolve(target, "provenance.json"), JSON.stringify({
 }, null, 2) + "\n");
 console.log(`Aurora: ${visited.size} archivos sincronizados.`);
 
-const { DYNAMIC_BACKGROUNDS, supportsBackgroundCamera } = await import(pathToFileURL(resolve(source, 'catalog.ts')).href);
+const { DYNAMIC_BACKGROUNDS, DYNAMIC_BACKGROUND_GROUPS, supportsBackgroundCamera } = await import(pathToFileURL(resolve(source, 'catalog.ts')).href);
 const { PARTICLE_BACKGROUNDS } = await import(pathToFileURL(resolve(source, 'particleScenes.ts')).href);
 const particles = new Set(PARTICLE_BACKGROUNDS.map((item: { type: string }) => item.type));
 const catalog = DYNAMIC_BACKGROUNDS.map((item: {type:string;label:string;desc:string}) => ({
   type: item.type, label: item.label,
   description: item.desc.replace(/reactiv[ao]s? a la voz/g, 'con movimiento procedural').replace('Fluido interactivo reactivo al ratón', 'Fluido procedural con remolinos'),
   category: particles.has(item.type) ? 'particles' : supportsBackgroundCamera(item.type) ? '3d' : 'dynamic',
+  uiGroup: DYNAMIC_BACKGROUND_GROUPS.find((group: {backgrounds:{type:string}[]}) => group.backgrounds.some(background => background.type === item.type))?.label === 'Escenas principales' ? 'Escenarios 3D' : 'Efectos 3D',
   spatial: supportsBackgroundCamera(item.type),
   preview: `/wallpapers/scenes/${item.type}.webp`,
 }));

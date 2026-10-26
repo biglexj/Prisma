@@ -25,7 +25,7 @@ const IMAGE_DURATION_OPTIONS = [10, 20, 30, 60];
 type WallpaperTab = "video" | "image" | CompositionCategory;
 const WALLPAPER_TABS: {id: WallpaperTab; label: string}[] = [
   {id:"video",label:"Vídeos"}, {id:"image",label:"Imágenes"}, {id:"ambient",label:"Ambiente"},
-  {id:"dynamic",label:"Dinámicos"}, {id:"scene",label:"Escenarios 3D"},
+  {id:"scene",label:"Escenarios 3D"},
   {id:"particles",label:"Partículas"}, {id:"parallax",label:"Parallax"},
 ];
 

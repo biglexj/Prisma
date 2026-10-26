@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
-import { AMBIENTS, OVERLAY_SHAPES, SCENARIOS, type EffectLayer } from "../compositor/config";
+import { AMBIENTS, OVERLAY_SHAPES, SCENARIOS } from "../compositor/config";
 
 /** Categorías del catálogo: cada una pertenece a una capa del modelo. */
-export type GalleryKind = "ambient" | "dynamic" | "scene" | "particles" | "overlay";
+export type GalleryKind = "ambient" | "scene" | "overlay";
 
 const TITLES: Record<GalleryKind,string> = {
-  ambient: "Ambiente", dynamic: "Fondos dinámicos", scene: "Escenarios 3D",
-  particles: "Partículas 3D", overlay: "Partículas 2D",
+  ambient: "Ambiente", scene: "Escenarios 3D", overlay: "Partículas",
 };
 
 interface GalleryItem {
@@ -17,6 +16,7 @@ interface GalleryItem {
   preview?: string;
   colors?: string;
   glyph?: string;
+  group?: string;
 }
 
 /** El ambiente es una categoría más: por sí solo ya es un fondo. */
@@ -41,7 +41,8 @@ const SCENE_ITEMS: GalleryItem[] = SCENARIOS.map(item => ({
   type: item.type,
   label: item.label,
   description: item.description,
-  kind: item.category === "particles" ? "particles" : item.category === "3d" ? "scene" : "dynamic",
+  kind: "scene",
+  group: item.uiGroup,
   preview: item.preview,
 }));
 
@@ -49,14 +50,12 @@ const ALL_ITEMS = [...AMBIENT_ITEMS, ...SCENE_ITEMS, ...OVERLAY_ITEMS];
 
 const CLEAR_LABEL: Record<GalleryKind, string> = {
   ambient: "Sin ambiente",
-  dynamic: "Sin fondo dinámico",
   scene: "Sin escenario",
-  particles: "Sin partículas 3D",
-  overlay: "Sin partículas 2D",
+  overlay: "Sin partículas",
 };
 
 export function SceneGallery({ layer, selected, onSelect }: {
-  layer: EffectLayer | "overlay";
+  layer: GalleryKind;
   selected: string;
   onSelect(kind: GalleryKind, type: string): void;
 }) {
@@ -76,8 +75,12 @@ export function SceneGallery({ layer, selected, onSelect }: {
         {CLEAR_LABEL[layer]}
       </button>
     </div>
-    <div className="scene-gallery-grid">
-      {items.map(item => <button key={`${item.kind}-${item.type}`} type="button"
+    {(layer === "scene"
+      ? ["Escenarios 3D", "Efectos 3D"].map(label=>({label,items:items.filter(item=>item.group===label)}))
+      : [{label:"",items}]).filter(group=>group.items.length>0).map(group=><section key={group.label || layer} aria-label={group.label || TITLES[layer]}>
+      {group.label && <h3 className="scene-group-title">{group.label}</h3>}
+      <div className="scene-gallery-grid">
+      {group.items.map(item => <button key={`${item.kind}-${item.type}`} type="button"
         className={`scene-card ${layer === item.kind && selected === item.type ? "is-selected" : ""}`}
         aria-pressed={layer === item.kind && selected === item.type} onClick={() => onSelect(item.kind, item.type)} aria-label={`Seleccionar ${item.label}`}>
         <div className="scene-card-preview">
@@ -89,7 +92,8 @@ export function SceneGallery({ layer, selected, onSelect }: {
         </div>
         <strong>{item.label}</strong><span>{item.description}</span>
       </button>)}
-    </div>
+      </div>
+    </section>)}
     {items.length === 0 && <p>No hay efectos que coincidan con la búsqueda.</p>}
   </section>;
 }

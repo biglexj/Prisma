@@ -181,3 +181,8 @@ Se autoriza generar los mismos recursos a 1920 × 1080 para reutilizarlos: se en
 ## Corrección de navegación solicitada por Biglex — 2026-10-26
 
 Pestañas superiores independientes: Vídeos, Imágenes, Ambiente, Dinámicos, Escenarios 3D, Partículas y Parallax. Eliminar Fondos y efectos y la galería global Todos. Cada pestaña contiene exclusivamente su catálogo y controles. Partículas agrupa los dos sistemas bajo un selector interno y conserva sus ajustes independientes. La navegación no modifica las capas activas. Dinámicos se explica como fondos procedurales animados, sin escenario 3D.
+
+## Catálogo canónico de Aurora — corrección del 2026-10-26
+
+La fuente de agrupación es DYNAMIC_BACKGROUND_GROUPS de Aurora, consumida por ui/tabs/Fondos/Dinamicos.tsx. El nombre de carpeta Dinamicos no define una categoría de interfaz ni supportsBackgroundCamera su organización.
+Pestañas: Vídeos, Imágenes, Ambiente, Escenarios 3D, Partículas y Parallax. Escenarios 3D contiene los 25 efectos, agrupados exactamente como Aurora en Escenarios 3D (17) y Efectos 3D (8), en su orden de origen. Partículas mantiene las partículas superpuestas independientes; los escenarios volumétricos vuelven al catálogo canónico de escenarios. Se conservan los controles existentes y sus ajustes por efecto. Elegir un escenario sustituye el anterior, sin borrar ambiente, medio base ni partículas superpuestas. Los campos internos de renderizado se mantienen por compatibilidad y no se utilizan para inventar agrupaciones visuales.
