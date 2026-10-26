@@ -183,3 +183,9 @@ La fuente BackgroundProjection.ts en Aurora separa ahora cobertura geométrica d
 scripts/test-wallpaper-zoom.cjs usa el renderizador real y shaders originales, con tiempo pausado: compara los cinco fondos planos (Prisma, Borealis, Lente Gravitacional, Matrix y Flujo Líquido), verifica cambios al alejar/acercar y recuperación exacta al volver a 1. Baseline anterior guardado en temp/wallpaper-zoom-baseline.json: hashes de zoom 1 idénticos tras la corrección. Incluye extremos 0,1 y 2,5. Capturas inspeccionadas de Lente Gravitacional: temp/zoom-blackhole-normal.png y temp/zoom-blackhole-far.png. La prueba de galería verifica también persistencia del slider Zoom en el efecto seleccionado.
 
 La fuente Aurora modificada se prueba mediante su copia sincronizada en Prisma; no se afirma un build completo de la aplicación Aurora ni despliegue remoto. Activadores y semántica de ambiente permanecen diferidos a petición de Biglex; el rendimiento de Gargantúa no se modifica.
+
+## Lente Gravitacional: antiguo 0,5 como nuevo 1
+
+Biglex aclara que 0,5 describe el encuadre deseado, no el valor que debe mostrar el control. Se conserva DEFAULT_BACKGROUND_CONTROLS.zoom=1 y DEFAULT_LAYER_CONTROLS.zoom=1, también al restablecer. El shader BlackHoleBackground transforma las coordenadas base alrededor del centro al doble de amplitud; el zoom del adaptador sigue siendo relativo.
+
+Comparación de render congelado a 640×360: nuevo zoom 1 frente a captura anterior a zoom 0,5 difiere únicamente en 3 píxeles, máximo 1 nivel de 255, por redondeo de rasterización. El resto del encuadre es igual. La prueba de zoom verifica alejar/acercar y restablecer sobre este nuevo encuadre. Cambio de fuente compartida en Aurora y copia sincronizada con hash actualizado; no modifica Gargantúa ni otras escenas.

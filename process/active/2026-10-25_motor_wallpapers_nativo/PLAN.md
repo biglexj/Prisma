@@ -201,3 +201,7 @@ Biglex confirma que la corrección anterior no muestra escenarios ni partículas
 Alcance inmediato: corregir zoom en los fondos planos compartidos con el frontend Aurora. No tocar Gargantúa ni optimizar rendimiento; Biglex lo ha diferido expresamente. No cambiar encuadre inicial de Lente Gravitacional: después del arreglo el usuario indicará el valor deseado. Activadores de imágenes/vídeos y semántica de ambiente quedan para después.
 
 Reproducción en motor real congelado a zoom 0,5/1/2: Prisma y Lente Gravitacional no cambian en ninguna dirección porque el mínimo de cobertura geométrica supera los valores del control. Cambiar muestreo UV en lugar de escala del quad permite alejar/acercar manteniendo cobertura y el resultado original a zoom 1. La fuente es BackgroundProjection.ts en Aurora; Prisma recibe su copia mediante el sincronizador.
+
+## Encuadre normalizado de Lente Gravitacional — aclaración de Biglex
+
+El encuadre antes obtenido con zoom 0,5 pasa a ser el encuadre normal con el control en 1. No cambiar el valor predeterminado del slider a 0,5. Ajustar solo el muestreo base del shader BlackHoleBackground en Aurora y sincronizar Prisma. Conservar controles, valores guardados y Gargantúa.

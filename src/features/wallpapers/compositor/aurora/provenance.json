@@ -46,7 +46,7 @@
     "Gargantua/shaders/blackhole.frag.ts": "424afadf89bc4d2eef9ef8a06a701d7b1651435cf1843517da4d778bdbb9e348",
     "prisma/PrismaBackground.ts": "9febcd589328b17b487edc8a3a962b000b397c48f3ef59ca2e98fd08fec1eaaa",
     "borealis/BorealisBackground.ts": "03b8f4e3e3efd4c93f96b82e707674cce18213024e2116fc1e4316baf4c105cd",
-    "blackhole/BlackHoleBackground.ts": "34882ccc395958041d7e9255f5c0038ade5eb9e8d970397677c8f55c80d961de",
+    "blackhole/BlackHoleBackground.ts": "44cfa2b270cd198fd5c393051af3d1b795c79f5434e6131afac972f77f0c1ede",
     "matrix/MatrixRainBackground.ts": "6f382218ce04cac40d324f20e22365ce66c96ced5aa2e1fef9e49b7362afaaa1",
     "liquid/LiquidVortexBackground.ts": "a7708686aa1b557148610997f2e3b02594db76460e0f7e0e576dbddc8dd0bec2",
     "tunnel/SpaceWormholeBackground.ts": "a37ce2afdf67a7e97abb1a3a555faaa0c601814b020801392c291d2dc4e8ce51",

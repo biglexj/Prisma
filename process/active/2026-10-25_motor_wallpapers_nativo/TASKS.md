@@ -123,3 +123,6 @@ Sin capa cero. La numeración arranca en 1.
 - [x] Conservar lógica espacial y Gargantúa sin modificaciones.
 - [ ] Biglex indica el nuevo zoom inicial deseado de Lente Gravitacional; se mantiene en 1 por ahora.
 - [ ] Activadores de imagen/vídeo y ajustes de ambiente: diferidos hasta terminar zoom.
+
+- [x] Aplicar a Lente Gravitacional el encuadre base equivalente al antiguo zoom 0,5, mostrando zoom normal 1 en ambos proyectos.
+- [x] Mantener controles de zoom funcionando sobre el nuevo encuadre; Gargantúa sin cambios.

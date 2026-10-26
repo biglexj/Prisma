@@ -24,3 +24,5 @@ Incidencia reabierta por Biglex: los efectos no se veían sobre la imagen. Corre
 Incidencia de capas invisibles: CERRADA con confirmación visual de Biglex el 2026-10-26: «Sí, ahora aparece». La fase 2 conserva los demás pendientes registrados.
 
 Zoom corregido en el adaptador compartido de fondos planos (Aurora y Prisma), conservando zoom inicial 1. Biglex indicará después el encuadre deseado de Lente Gravitacional. No se aplican cambios de rendimiento ni de Gargantúa.
+
+Encuadre de Lente Gravitacional autorizado: apariencia del anterior zoom 0,5 normalizada como zoom 1. Aplicado en el shader de Aurora y sincronizado con Prisma, manteniendo el control predeterminado en 1.

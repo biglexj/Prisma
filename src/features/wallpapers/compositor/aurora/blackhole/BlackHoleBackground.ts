@@ -52,9 +52,12 @@ export class BlackHoleBackground implements DynamicBackground {
                 }
 
                 void main() {
+                    // Encuadre base: el anterior zoom 0.5 es ahora el zoom normal (1).
+                    // El control del usuario sigue siendo relativo a este encuadre.
+                    vec2 sceneUv = (vUv - 0.5) / 0.5 + 0.5;
                     vec2 aspect = vec2(u_resolution.x / u_resolution.y, 1.0);
                     float scale = 0.65;
-                    vec2 uv = (vUv - 0.5) * aspect * scale;
+                    vec2 uv = (sceneUv - 0.5) * aspect * scale;
 
                     float r = length(uv);
                     vec2 dir = uv / max(r, 0.00001);
@@ -63,10 +66,10 @@ export class BlackHoleBackground implements DynamicBackground {
                     vec3 finalColor = vec3(0.0);
 
                     // Lente gravitacional
-                    vec2 distortedUv = vUv;
+                    vec2 distortedUv = sceneUv;
                     if (r > horizonRadius) {
                         float deflection = (horizonRadius * horizonRadius) / r;
-                        distortedUv = vUv - (dir / aspect) * deflection * 0.45 / scale;
+                        distortedUv = sceneUv - (dir / aspect) * deflection * 0.45 / scale;
                     }
 
                     // Estrellas de fondo (se ocultan si es transparente para ver el fondo real de la sala)
