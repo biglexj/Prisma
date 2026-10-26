@@ -50,3 +50,8 @@ Los campos internos dynamic/scenario/particle mantienen compatibilidad con la co
 
 Las tarjetas de ambiente, escenario y partículas guardan la selección antes de activar la superficie si estaba apagada. La creación muestra explícitamente la ventana Tauri y su WebView2. WebGL tiene un límite de 30 fps; la cadencia de mpv es independiente. La migración de perfiles del modelo anterior evita escenarios simultáneos ocultos.
 GIF pertenece a Imágenes y reproduce su animación en bucle durante la duración elegida; no se congela al terminar su primer ciclo. El motor lee archivos originales y conserva resolución de decodificación; spline36/mitchell mejoran el escalado sin reconstruir detalle inexistente.
+
+## Clics en efectos interactivos
+
+Burbujas Explosivas reacciona al punto del clic; cada clic cambia la forma de Nexo Cuántico. La implementación reutiliza onClick de Aurora. Windows entrega una copia de la entrada de ratón al host mediante Raw Input, sin desactivar los mensajes normales. Se filtra por superficie de escritorio de Explorer, se descartan arrastres y los clics sobre otras aplicaciones, y se retira el registro al pausar/cambiar/cerrar.
+La cola está limitada a 32 clics; solo se consulta para los dos efectos interactivos visibles y sin pausa. El adaptador convierte coordenadas normalizadas a un punto 3D. La adaptación del pulso de clic se conserva en el sincronizador, sin modificar las fábricas generadas a mano.

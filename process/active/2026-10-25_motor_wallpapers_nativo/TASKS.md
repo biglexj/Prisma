@@ -126,3 +126,12 @@ Sin capa cero. La numeración arranca en 1.
 
 - [x] Aplicar a Lente Gravitacional el encuadre base equivalente al antiguo zoom 0,5, mostrando zoom normal 1 en ambos proyectos.
 - [x] Mantener controles de zoom funcionando sobre el nuevo encuadre; Gargantúa sin cambios.
+
+## Interacción de escenarios y espacio de Parallax
+
+- [x] Reutilizar onClick de los efectos Aurora para Burbujas Explosivas y Nexo Cuántico.
+- [x] Raw Input del ratón mientras el efecto está activo; filtrar al escritorio de Explorer, ignorar arrastres y otras aplicaciones.
+- [x] Convertir coordenadas del clic a punto 3D; preservar cada cambio de forma y el pulso de explosión a velocidad alta.
+- [x] Limitar cola y retirar registro/temporizadores al cambiar, pausar o cerrar.
+- [x] Ampliar controles de Parallax a todo el ancho disponible con adaptación a ventana estrecha.
+- [x] Confirmación física de Biglex: «Sí, responde al clic» (2026-10-26).

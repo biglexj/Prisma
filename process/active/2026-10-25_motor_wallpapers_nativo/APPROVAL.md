@@ -26,3 +26,7 @@ Incidencia de capas invisibles: CERRADA con confirmación visual de Biglex el 20
 Zoom corregido en el adaptador compartido de fondos planos (Aurora y Prisma), conservando zoom inicial 1. Biglex indicará después el encuadre deseado de Lente Gravitacional. No se aplican cambios de rendimiento ni de Gargantúa.
 
 Encuadre de Lente Gravitacional autorizado: apariencia del anterior zoom 0,5 normalizada como zoom 1. Aplicado en el shader de Aurora y sincronizado con Prisma, manteniendo el control predeterminado en 1.
+
+Interacción Burbujas/Nexo y ampliación de Parallax implementadas y validadas con motor real/cola simulada y pruebas nativas de registro. Confirmación de clic físico solicitada a Biglex, pendiente de respuesta.
+
+Interacción física confirmada por Biglex el 2026-10-26: «Sí, responde al clic». Incidencia de interacción de estos efectos cerrada; resto de fase 2 conserva sus pendientes.

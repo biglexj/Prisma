@@ -426,6 +426,12 @@ pub fn live_wallpaper_compositor_config_get(
     controller.compositor_config()
 }
 
+/// Solo clics del escritorio para los dos efectos interactivos seleccionados.
+#[tauri::command]
+pub fn live_wallpaper_compositor_clicks(controller:State<'_,WallpaperController>)->Result<Vec<[f32;2]>,String> {
+    controller.poll_interaction()
+}
+
 /// Lectura de posición; no instala hooks ni intercepta clics del escritorio.
 #[tauri::command]
 pub fn live_wallpaper_compositor_pointer(

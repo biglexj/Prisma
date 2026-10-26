@@ -60,7 +60,8 @@ export function mountComposition(root: HTMLElement, options: CompositionHostOpti
   let lastDraw = 0;
   let selected = "", selectedParticle = "", selectedDynamic = "";
   let unlisten: UnlistenFn | undefined;
-  let polling = false, pointerPolling = false;
+  let polling = false, pointerPolling = false, clickPolling = false, clickFailed = false;
+  const clickRay = new THREE.Raycaster(), clickPlane = new THREE.Plane(new THREE.Vector3(0,0,1),0), clickPoint = new THREE.Vector3();
   const targetPointer = new THREE.Vector2(), pointer = new THREE.Vector2(), zeroPointer = new THREE.Vector2();
   const layerPointers = {ambient:new THREE.Vector2(),dynamic:new THREE.Vector2(),scene:new THREE.Vector2(),particles:new THREE.Vector2()};
   let overlaySignature = "";
@@ -204,6 +205,7 @@ export function mountComposition(root: HTMLElement, options: CompositionHostOpti
     const next = normalizeComposition(input);
     if (config && JSON.stringify(next) === JSON.stringify(config)) return;
     config = next;
+    clickFailed = false;
     const tasks: Promise<unknown>[] = [];
     if (selected !== next.scenario) {
       selected = next.scenario;
@@ -233,6 +235,21 @@ export function mountComposition(root: HTMLElement, options: CompositionHostOpti
     finally { polling = false; }
   };
   const timer = window.setInterval(() => { void refresh(); }, 800);
+  const clickTimer = window.setInterval(() => {
+    if (disposed || clickPolling || clickFailed || !config?.enabled || config.paused) return;
+    const active = config.visibility.particles && !controls("particles").paused && ["bubbles","morphclick"].includes(config.particle);
+    if (!active) return;
+    clickPolling = true;
+    const type = config.particle;
+    void invoke<[number,number][]>("live_wallpaper_compositor_clicks").then(clicks => {
+      if (disposed || !config?.enabled || config.paused || config.particle !== type || !config.visibility.particles || controls("particles").paused) return;
+      camera.updateMatrixWorld();
+      for (const [x,y] of clicks) {
+        clickRay.setFromCamera(new THREE.Vector2(x,y),camera);
+        if (clickRay.ray.intersectPlane(clickPlane,clickPoint)) particle?.onClick?.(clickPoint);
+      }
+    }).catch(error => { clickFailed = true; report(error); }).finally(() => { clickPolling = false; });
+  },50);
   const pointerTimer = window.setInterval(() => {
     if (disposed || pointerPolling || !config?.enabled || config.paused || !config.parallax.enabled) return;
     pointerPolling = true;
@@ -250,6 +267,7 @@ export function mountComposition(root: HTMLElement, options: CompositionHostOpti
     ++dynamicVersion;
     clearInterval(timer);
     clearInterval(pointerTimer);
+    clearInterval(clickTimer);
     cancelAnimationFrame(raf);
     unlisten?.();
     window.removeEventListener("resize", resize);

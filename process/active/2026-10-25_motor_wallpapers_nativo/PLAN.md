@@ -205,3 +205,6 @@ Reproducción en motor real congelado a zoom 0,5/1/2: Prisma y Lente Gravitacion
 ## Encuadre normalizado de Lente Gravitacional — aclaración de Biglex
 
 El encuadre antes obtenido con zoom 0,5 pasa a ser el encuadre normal con el control en 1. No cambiar el valor predeterminado del slider a 0,5. Ajustar solo el muestreo base del shader BlackHoleBackground en Aurora y sincronizar Prisma. Conservar controles, valores guardados y Gargantúa.
+
+## Interacción de escenarios y espacio de Parallax — 2026-10-26
+Reutilizar onClick de Aurora para Burbujas Explosivas y Nexo Cuántico. Capturar eventos de ratón mediante Raw Input solo mientras uno de esos efectos está activo y visible, filtrando clics al escritorio; no consumir los mensajes normales ni reaccionar sobre otras aplicaciones. Cola limitada y limpieza en cambio, pausa y cierre. Convertir posición a un punto 3D antes de entregar al motor. Ampliar distribución de Parallax para aprovechar ancho disponible. No modificar Gargantúa.

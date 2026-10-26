@@ -26,6 +26,13 @@ function copy(file: string) {
       'previous?.dispose();\n            this.scenarioScene.clear();\n            this.scenarioScene.add(...staged.children);\n            this.projection?');
     content = content.replace('effect.dispose();\n            this.scenarioScene.clear();\n            throw error;', 'effect.dispose();\n            throw error;');
   }
+  if (file === 'ParticleBackground.ts') {
+    // Entregar el pulso de clic al efecto antes de atenuarlo, incluso a velocidad alta.
+    const decay = 'this.context.state.clickStrength = Math.max(0, this.context.state.clickStrength - delta * 2);';
+    content = content.replace('        ' + decay + '\n', '');
+    content = content.replace('this.animateScene(delta, time, THREE.MathUtils.clamp(intensity, 0, 1));',
+      'this.animateScene(delta, time, THREE.MathUtils.clamp(intensity, 0, 1));\n        ' + decay);
+  }
   if (file === "controls.ts") {
     content = (original.slice(0, original.indexOf("const KEY =")) + original.slice(original.indexOf("export function normalizeBackgroundControls"), original.indexOf("function readSettings")))
       .replace(/^import .*from 'react';\r?\n/m, "")
@@ -63,7 +70,7 @@ mkdirSync(resolve(target,'particles'),{recursive:true});
 writeFileSync(resolve(target,'particles/ParticleLayer.tsx'), ('// Adaptación de Aurora; regenerar con sync-aurora-wallpapers.ts.\n'+overlayCode).replace(/[ \t]+(?=\r?$)/gm, ''));
 writeFileSync(resolve(target, "provenance.json"), JSON.stringify({
   source: "Aurora---Blog/frontend/src/features/Comunidad/EspacioVtuber/islands/three/dynamic-backgrounds",
-  adaptations: ["controls.ts: tipos, valores y normalización sin store React", "fábricas JS: extensión TS sin checkJs; lógica original", "LayeredBackgroundComposer.ts: inicialización transaccional y escena dinámica intermedia", "ParticleLayer.tsx: tipos locales, pausa sin RAF y atributo de escritorio", "normalización de finales de línea y espacios finales"],
+  adaptations: ["controls.ts: tipos, valores y normalización sin store React", "fábricas JS: extensión TS sin checkJs; lógica original", "LayeredBackgroundComposer.ts: inicialización transaccional y escena dinámica intermedia", "ParticleLayer.tsx: tipos locales, pausa sin RAF y atributo de escritorio", "normalización de finales de línea y espacios finales", "ParticleBackground.ts: atenuar pulso de clic después de actualizar el efecto"],
   sha256: manifest,
   external: { 'particles/ParticleLayer.tsx': {source:'../../particles/ParticleLayer.tsx',sha256:createHash('sha256').update(overlaySource).digest('hex')} },
 }, null, 2) + "\n");

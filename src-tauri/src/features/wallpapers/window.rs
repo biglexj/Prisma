@@ -236,6 +236,11 @@ unsafe extern "system" fn wallpaper_wnd_proc(
     lparam: LPARAM,
 ) -> LRESULT {
     match msg {
+        0x00FF => {
+            super::interaction::raw_input(hwnd,lparam);
+            // Win32 necesita DefWindowProc para limpiar WM_INPUT; no consumir el clic normal.
+            unsafe { DefWindowProcW(hwnd,msg,wparam,lparam) }
+        },
         0x0014 => LRESULT(1),
         _ => unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) },
     }

@@ -56,12 +56,12 @@ export class ParticleBackground implements DynamicBackground {
 
     update(delta: number, intensity: number, time: number): void {
         if (!this.context || !this.animateScene || !this.camera) return;
-        this.context.state.clickStrength = Math.max(0, this.context.state.clickStrength - delta * 2);
         applyBackgroundCamera(this.virtualCamera, this.controls, time, 5, delta > 0 ? 1 - Math.exp(-delta * 6) : 1);
         this.camera.updateMatrixWorld();
         this.group.matrix.multiplyMatrices(this.camera.matrixWorld, this.virtualCamera.matrixWorldInverse).scale(this.sourceScale);
         this.group.matrixWorldNeedsUpdate = true;
         this.animateScene(delta, time, THREE.MathUtils.clamp(intensity, 0, 1));
+        this.context.state.clickStrength = Math.max(0, this.context.state.clickStrength - delta * 2);
     }
 
     setControls(controls: Readonly<BackgroundControls>): void { this.controls = controls; }

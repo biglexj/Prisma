@@ -189,3 +189,22 @@ La fuente Aurora modificada se prueba mediante su copia sincronizada en Prisma; 
 Biglex aclara que 0,5 describe el encuadre deseado, no el valor que debe mostrar el control. Se conserva DEFAULT_BACKGROUND_CONTROLS.zoom=1 y DEFAULT_LAYER_CONTROLS.zoom=1, también al restablecer. El shader BlackHoleBackground transforma las coordenadas base alrededor del centro al doble de amplitud; el zoom del adaptador sigue siendo relativo.
 
 Comparación de render congelado a 640×360: nuevo zoom 1 frente a captura anterior a zoom 0,5 difiere únicamente en 3 píxeles, máximo 1 nivel de 255, por redondeo de rasterización. El resto del encuadre es igual. La prueba de zoom verifica alejar/acercar y restablecer sobre este nuevo encuadre. Cambio de fuente compartida en Aurora y copia sincronizada con hash actualizado; no modifica Gargantúa ni otras escenas.
+
+## Interacción de Burbujas/Nexo — 2026-10-26
+
+Aurora ya expone DynamicBackground.onClick y ParticleBackground.onClick: Nexo incrementa morphShapeIndex; Burbujas usa clickWorldPos/clickStrength. El host desktop no entregaba esos clics porque la superficie es click-through.
+
+Implementación native: interaction.rs registra exclusivamente el ratón (usage 1/2, RIDEV_INPUTSINK), sin RIDEV_NOLEGACY ni hooks. WM_INPUT se procesa en el host nativo y se entrega a DefWindowProc. Solo se aceptan raíces Progman/WorkerW cuyo proceso coincide con GetShellWindow (Explorer). Otros programas, barra de tareas y arrastres >=6 px no generan interacción. Cola máxima de 32 clics, coordenadas normalizadas; el host convierte a punto del plano 3D y llama al efecto. El registro se retira al pausar, cambiar ajustes o cerrar y solo vuelve a habilitarse por la consulta de un efecto interactivo visible. Un error de entrada se informa una vez, evitando una tormenta de reintentos.
+
+Pruebas:
+- 25 pruebas Rust completas correctas antes de añadir la prueba de registro/desregistro. Después, las 3 pruebas específicas de interaction.rs pasan, incluida suscripción Raw Input real sobre el HWND y retirada del dispositivo registrado al desactivar.
+- scripts/test-wallpaper-interaction.cjs usa el motor real con la cola IPC simulada: dos clics producen dos cambios de forma; un clic en Burbujas genera 1.140 gotas en esa ejecución, con pulso fresco también a velocidad 3. Pausa y efecto no interactivo detienen las consultas; dispose retira temporizador y canvas. Sin errores WebGL.
+- La adaptación del sincronizador atenúa clickStrength después de entregar el pulso al efecto, para que un delta elevado no haga perder el clic antes de comprobarlo. Fábricas, formas y recursos originales conservados; Gargantúa no se modifica.
+- Build TypeScript/Vite correcto, con aviso existente de tamaño de chunks. Prueba UI de galería completa correcta y ancho 375 sin desbordamiento.
+- Parallax distribuye interruptor, intensidad y aplicación al medio en columnas que ocupan el ancho; captura temp/wallpaper-parallax-toggle.png inspeccionada. No cambia su cálculo de movimiento.
+
+La cola simulada y la prueba de suscripción no equivalen a una prueba física completa de clic → escritorio → efecto. Confirmación solicitada a Biglex en Prisma Dev, todavía pendiente. No se afirma aceptación física final.
+
+Referencias de API: Microsoft, RegisterRawInputDevices y WM_INPUT; consultadas para conservar entrada normal y limpieza del mensaje.
+
+Confirmación física de Biglex el 2026-10-26: «Sí, responde al clic», en respuesta a seleccionar Nexo/Burbujas y hacer clic fuera de Prisma sobre el escritorio. Se confirma la ruta física ratón → escritorio → efecto. Las 3 pruebas de interacción nativa vuelven a pasar tras incluir pausa individual de la capa en el filtro.

@@ -1202,3 +1202,9 @@
   background: var(--surface-container, #f3edf4); cursor: pointer;
 }
 .scene-toggle-card input[type="checkbox"] { flex: 0 0 auto; width: 18px; height: 18px; margin: 0; accent-color: var(--primary, #6750a4); }
+
+.scene-parallax-grid { grid-template-columns: minmax(180px,1fr) minmax(220px,1.25fr) minmax(270px,1.5fr); align-items: stretch; }
+.scene-parallax-grid > .scene-slider { align-self: center; }
+.scene-interaction-hint { margin: 14px 0 0; font-size: .85rem; color: var(--on-surface-variant, #6b616d); }
+@media (max-width: 1000px) { .scene-parallax-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .scene-parallax-grid > .scene-toggle-card:last-of-type { grid-column: 1 / -1; } }
+@media (max-width: 540px) { .scene-parallax-grid { grid-template-columns: minmax(0,1fr); } }

@@ -67,7 +67,7 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
             {layer !== "overlay" && <button type="button" disabled={!hasEffect} onClick={()=>patch({...DEFAULT_LAYER_CONTROLS})}>Restablecer capa</button>}
           </div>}
         </header>
-        {layer === "parallax" ? <div className="scene-control-grid">
+        {layer === "parallax" ? <div className="scene-control-grid scene-parallax-grid">
           <label className="scene-toggle-card"><input type="checkbox" checked={config.parallax.enabled}
             onChange={e=>update(c=>({...c,parallax:{...c.parallax,enabled:e.target.checked}}))}/> Seguir el cursor</label>
           <Slider label="Fuerza de profundidad" min={0} max={2} value={config.parallax.strength}
@@ -119,6 +119,8 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
           </div>
           </> : !hasEffect && <p>Elige un efecto para ajustar esta capa.</p>}
         </>}
+        {category === "scene" && selected?.type === "bubbles" && <p className="scene-interaction-hint">Haz clic cerca de una burbuja en el escritorio para hacerla explotar.</p>}
+        {category === "scene" && selected?.type === "morphclick" && <p className="scene-interaction-hint">Cada clic en el escritorio cambia la forma del Nexo Cuántico.</p>}
         {error && <p className="live-wallpapers-error-banner" role="alert">{error}</p>}
       </div>
     </section>

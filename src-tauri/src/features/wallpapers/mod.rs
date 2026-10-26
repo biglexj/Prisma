@@ -1,6 +1,7 @@
 pub mod compositor;
 pub mod composition_settings;
 pub mod engine;
+pub mod interaction;
 pub mod sources;
 pub mod window;
 
@@ -194,6 +195,7 @@ impl WallpaperController {
             engine.pause()?;
         }
         if inner.window.is_some() { inner.is_paused = true; }
+        interaction::disable();
         Ok(self.build_snapshot(&inner))
     }
 
@@ -491,6 +493,7 @@ impl WallpaperController {
     }
 
     fn close_compositor(inner: &mut InnerState) {
+        interaction::disable();
         inner.compositor_epoch += 1;
         if let Some(app)=inner.compositor_app.take() {
             let handle=app.clone();
@@ -518,6 +521,12 @@ impl WallpaperController {
         Ok(config)
     }
 
+    pub fn poll_interaction(&self)->Result<Vec<[f32;2]>,String> {
+        let inner=self.inner.lock().map_err(|e|e.to_string())?;
+        let active=inner.compositor_enabled && !inner.is_paused && interaction::supported(&inner.compositor_config);
+        interaction::poll(inner.window.as_ref().map_or(0,|window|window.host_handle()),active)
+    }
+
     pub fn update_base_parallax(&self, position: [f32;2]) -> Result<(),String> {
         let mut inner=self.inner.lock().map_err(|e|e.to_string())?;
         if inner.is_paused { return Ok(()); }
@@ -543,6 +552,7 @@ impl WallpaperController {
         if !config.parallax.enabled || !config.parallax.base {
             if let Some(engine)=inner.engine.as_mut() { let _=engine.set_parallax(0.0,0.0,0.0); }
         }
+        interaction::disable();
         inner.compositor_config = config;
         Ok(())
     }

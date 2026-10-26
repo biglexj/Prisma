@@ -5,7 +5,8 @@
     "fábricas JS: extensión TS sin checkJs; lógica original",
     "LayeredBackgroundComposer.ts: inicialización transaccional y escena dinámica intermedia",
     "ParticleLayer.tsx: tipos locales, pausa sin RAF y atributo de escritorio",
-    "normalización de finales de línea y espacios finales"
+    "normalización de finales de línea y espacios finales",
+    "ParticleBackground.ts: atenuar pulso de clic después de actualizar el efecto"
   ],
   "sha256": {
     "LayeredBackgroundComposer.ts": "bb490926fe588aac3a996710b55889a5871adb400d9cde8d3159373ab636e32c",
