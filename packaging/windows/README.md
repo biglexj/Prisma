@@ -21,6 +21,12 @@ tema claro/oscuro automático e integración en el flujo de build del proyecto.
 Los archivos generados se reescriben en cada build a partir de `package.json` y
 `src-tauri/tauri.conf.json`: no se editan a mano.
 
+Para 2.0.0, `template-lock.json` fija por SHA-256 la plantilla ya revisada de Prisma.
+El builder comprueba su version y hash antes de empaquetar, y conserva las demas
+invariantes de instalacion. Asi, una modificacion concurrente de la plantilla
+compartida no cambia el candidato aprobado. Antes de la proxima version, revisar
+la plantilla compartida y actualizar o retirar expresamente esta fijacion.
+
 ## Build
 
 ```powershell

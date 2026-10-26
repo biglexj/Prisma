@@ -110,6 +110,21 @@ function Resolve-SharedInno {
 
 function Sync-SharedTemplate {
     param([string]$SharedDir, [string]$PackagingDir)
+    $pinPath = Join-Path $PackagingDir 'template-lock.json'
+    if (Test-Path -LiteralPath $pinPath) {
+        $pin = Get-Content -LiteralPath $pinPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $appVersion = (Get-Content -LiteralPath (Join-Path $root 'package.json') -Raw | ConvertFrom-Json).version
+        if ($pin.version -ne $appVersion -or $pin.template -ne 'BiglexModernUI.iss') {
+            throw 'Revisa la plantilla fijada antes de compilar una version diferente.'
+        }
+        $pinnedTemplate = Join-Path $PackagingDir 'BiglexModernUI.iss'
+        if ((Get-Sha256 $pinnedTemplate) -ne $pin.sha256) {
+            throw 'La plantilla local difiere de la revision aprobada para esta version.'
+        }
+        $script:usesReviewedTemplate = $true
+        Write-Host "==> Plantilla de release verificada: revision $($pin.reviewedCommit)."
+        return
+    }
     if (-not $SharedDir) { return }
     $src = Join-Path $SharedDir 'BiglexModernUI.iss'
     $dst = Join-Path $PackagingDir 'BiglexModernUI.iss'
@@ -148,7 +163,10 @@ function Assert-PackagingInvariants {
         return
     }
     foreach ($setup in $SetupFiles) {
-        & $shellExe -NoProfile -ExecutionPolicy Bypass -File $checker -SetupIss $setup
+        $checkerArguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $checker, '-SetupIss', $setup)
+        # El hash fijado se comprueba arriba; conservar las demas invariantes.
+        if ($script:usesReviewedTemplate) { $checkerArguments += '-SkipTemplateCheck' }
+        & $shellExe @checkerArguments
         if ($LASTEXITCODE -ne 0) {
             Write-Host "ERROR: las invariantes de empaquetado fallan para $setup." -ForegroundColor Red
             Write-Host '       No se compila el instalador. Corrige lo anterior.' -ForegroundColor Red

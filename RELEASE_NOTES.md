@@ -12,7 +12,9 @@ El capturador combina imagen y vídeo, edición directa del recorte y copia al p
 
 El renombrador incorpora detección de conflictos, numeración que evita destinos ocupados, selección acumulativa con Shift al soltar y recuperación ante errores. Se acumulan mejoras de Quick Look, reproducción de vídeo, historial, favoritos, barra lateral y Acerca de, junto con compatibilidad visual para ElyX, JPEG XL y AVIF. Prisma Upscaler conserva su integración como herramienta del ecosistema, con capacidades sujetas al motor y hardware disponibles.
 
-La personalización añade temas, acentos y colores hexadecimales, y 16 estilos de barra de progreso. La conexión oficial de Aurora y la comprobación de actualizaciones usan Aurora y GitHub. El instalador de Windows conserva la identidad de actualización, incorpora el diseño turquesa acordado, botones de navegación de 26 píxeles lógicos de alto y confirmaciones de salida antes y después de instalar.
+La personalización añade temas, acentos y colores hexadecimales, y 16 estilos de barra de progreso. La conexión oficial de Aurora y la comprobación de actualizaciones usan Aurora y GitHub. El nuevo instalador Inno de Windows incorpora el diseño turquesa acordado, botones de navegación de 26 píxeles lógicos de alto y confirmaciones de salida antes y después de instalar.
+
+Para migrar desde la edición con instalador NSIS, desinstala esa edición antes de instalar la nueva. El procedimiento está documentado en [la guía de migración](https://github.com/biglexj/Prisma/blob/v2.0.0/packaging/windows/MIGRATION.md).
 
 ## [1.1.8] - 2026-10-19 · No publicada (integrada en 2.0.0)
 

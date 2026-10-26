@@ -12,6 +12,10 @@ Prisma 2.0 reúne Fondos Vivos, composición visual de Aurora, la bandeja flotan
 - 🎨 **Personalización y conexión con Aurora**: nuevos temas, controles de color hexadecimal, 16 estilos de barra de progreso y comprobación de actualizaciones mediante Aurora y GitHub.
 - 🚀 **Formatos e instalador**: visualización de ElyX (.elx), JPEG XL y AVIF, y un instalador de Windows renovado con los colores de Prisma y confirmación de salida.
 
+## Actualización desde el instalador anterior
+
+Si tu edición de Prisma utiliza el instalador anterior (NSIS), desinstala esa edición antes de instalar la nueva. [Consulta el procedimiento de migración](https://github.com/biglexj/Prisma/blob/v2.0.0/packaging/windows/MIGRATION.md).
+
 ## 📦 Windows x64
 
 [Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v2.0.0/Prisma_2.0.0-setup.exe)
