@@ -335,45 +335,59 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
-/* Interruptor de sonido del fondo: estado tonal cuando está encendido */
-.sound-toggle {
+.sound-control {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  height: 34px;
-  padding: 0 0.85rem;
-  border-radius: 9999px;
+  gap: 0.65rem;
+  padding: 5px 9px;
   border: 1px solid var(--outline-variant, #ded5df);
-  background: var(--surface-container, #f3edf4);
-  color: var(--on-surface-variant, #6b616d);
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.sound-toggle:hover {
+  border-radius: 12px;
   background: var(--surface-container-high, #e9e2e9);
-  border-color: var(--outline, #958995);
 }
 
-/* El sonido solo aplica a los vídeos: con imágenes el botón queda apagado
-   y sin efecto, para no prometer audio que no existe. */
-.sound-toggle.is-disabled,
-.sound-toggle.is-disabled:hover {
-  background: transparent;
-  border-color: var(--outline-variant, #ded5df);
-  color: var(--on-surface-variant, #49454f);
-  opacity: 0.6;
-  cursor: not-allowed;
+.sound-toggle {
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--outline, #958995);
+  background: var(--surface-container-highest, #e1d9e2);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.sound-toggle-thumb {
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--outline, #958995);
+  transform: translateY(-50%);
+  transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
 .sound-toggle.is-on {
-  background: var(--primary-container, #ffd9df);
-  color: var(--primary, #8f003a);
-  border-color: var(--primary, #8f003a);
-  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary, #8f003a) 18%, transparent);
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.sound-toggle.is-on .sound-toggle-thumb {
+  transform: translate(18px, -50%);
+  background: var(--on-primary, #fff);
+}
+
+.sound-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.sound-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* ── Now Playing Strip ── */

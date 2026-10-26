@@ -532,18 +532,19 @@ export function LiveWallpapersView() {
           </div>
 
           {!showScenes && <div className="control-options-group">
-            {activeTab === "video" && <div className="control-segmented-block">
+            {activeTab === "video" && <div className="sound-control">
               <span className="segmented-label">Sonido</span>
               <button
                 type="button"
                 className={`sound-toggle ${audioEnabled ? "is-on" : ""} ${soundApplies ? "" : "is-disabled"}`}
                 onClick={() => handleSetAudioEnabled(!audioEnabled)}
-                aria-pressed={audioEnabled}
+                role="switch"
+                aria-label="Sonido"
+                aria-checked={audioEnabled}
                 disabled={!soundApplies}
                 title={soundTitle}
               >
-                <Icon name={audioEnabled ? "volume" : "volume-mute"} width={14} height={14} />
-                <span>{audioEnabled ? "Encendido" : "Apagado"}</span>
+                <span className="sound-toggle-thumb" />
               </button>
             </div>}
 
