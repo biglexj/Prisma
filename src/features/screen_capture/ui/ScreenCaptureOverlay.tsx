@@ -7,17 +7,20 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { save } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../../shared/ui/Icon";
 import { CaptureAnnotationBar } from "./components/CaptureAnnotationBar";
+import { CaptureSelectionBar } from "./components/CaptureSelectionBar";
 import { drawAnnotation } from "./utils/annotationDrawing";
 import { annotationShapeRect } from "./utils/annotationGeometry";
+import { lassoSelection, payloadToBlob, resolveSelection } from "./utils/quickCapture";
 import { annotationShortcut, lastCaptureMode, rememberCaptureMode } from "../model/captureControls";
 import { loadRecordingPreferences, resolveRecordingFolder } from "../model/recordingSettings";
-import { getDefaultPicturesDir } from "../../../shared/mediaOperations";
+import { resolveCaptureFolder } from "../../../shared/captureFolders";
 import type {
   ActiveTextBox,
   AnnotationItem,
   AnnotationPoint,
   AnnotationTool,
   CaptureMode,
+  CaptureIntent,
   CaptureSessionInit,
   DetectedTarget,
   EditorPayload,
@@ -28,31 +31,9 @@ import { screenCaptureClient } from "../services/screenCaptureClient";
 import { captureDiagnostics } from "../services/captureDiagnostics";
 import "./screen-capture.css";
 
-const MODE_LABELS: Record<CaptureMode, string> = {
-  rect: "Rectángulo",
-  window: "Ventana",
-  fullscreen: "Pantalla completa",
-  freeform: "Forma libre",
-  eyedropper: "Selector de color",
-};
-
-const MODE_ICONS: Record<CaptureMode, any> = {
-  rect: "crop",
-  window: "columns",
-  fullscreen: "fullscreen",
-  freeform: "lasso",
-  eyedropper: "pipette",
-};
-
-const MODE_OPTIONS: Array<{ id: CaptureMode; label: string; icon: any; shortcut: string }> = [
-  { id: "rect", label: "Rectángulo", icon: "crop", shortcut: "R" },
-  { id: "window", label: "Ventana", icon: "columns", shortcut: "V" },
-  { id: "fullscreen", label: "Pantalla completa", icon: "fullscreen", shortcut: "F" },
-  { id: "freeform", label: "Forma libre", icon: "lasso", shortcut: "Q" },
-];
-
 export function ScreenCaptureOverlay() {
   const [session, setSession] = useState<CaptureSessionInit | null>(null);
+  const snapshotImageRef = useRef<HTMLImageElement | null>(null);
   const [phase, setPhase] = useState<"selecting" | "annotating">("selecting");
   const [mode, setMode] = useState<CaptureMode>(() => lastCaptureMode());
   const [activeTarget, setActiveTarget] = useState<DetectedTarget | null>(null);
@@ -76,6 +57,9 @@ export function ScreenCaptureOverlay() {
   // Título de la ventana seleccionada: sirve para seguirla durante la grabación.
   const windowTitleRef = useRef<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [changingIntent, setChangingIntent] = useState(false);
+  const changingIntentRef = useRef(false);
+  const recordingRevisionRef = useRef<number | null>(null);
 
   // Cuadro de texto interactivo in-situ (elegir marco de texto arrastrando o clic)
   const [activeTextBox, setActiveTextBox] = useState<ActiveTextBox | null>(null);
@@ -84,6 +68,7 @@ export function ScreenCaptureOverlay() {
 
   // Las anotaciones se reinician; el último modo confirmado se conserva.
   const handleSetMode = useCallback((newMode: CaptureMode) => {
+    windowTitleRef.current = null;
     targetQuery.cancel();
     ++confirmRevisionRef.current;
     modeRef.current = newMode;
@@ -114,6 +99,10 @@ export function ScreenCaptureOverlay() {
   } | null>(null);
 
   // ── Estados de Anotación In-Situ (en el lugar exacto de captura) ──
+  const [scribblePoints, setScribblePoints] = useState<AnnotationPoint[]>([]);
+  const scribblePointsRef = useRef<AnnotationPoint[]>([]);
+  const scribblePointerIdRef = useRef<number | null>(null);
+  const pendingCropPromiseRef = useRef<Promise<EditorPayload> | null>(null);
   const [annotatingPayload, setAnnotatingPayload] = useState<EditorPayload | null>(null);
   const [canvasRect, setCanvasRect] = useState<RectSelection | null>(null);
   const [activeTool, setActiveTool] = useState<AnnotationTool>("pen");
@@ -174,6 +163,10 @@ export function ScreenCaptureOverlay() {
     dragTextBoxRef.current = null;
     resizeRef.current = null;
     dragMoveRef.current = null;
+    scribblePointsRef.current = [];
+    scribblePointerIdRef.current = null;
+    pendingCropPromiseRef.current = null;
+    setScribblePoints([]);
     setIsDrawing(false);
     setIsDragging(false);
     setCurrentAnnotation(null);
@@ -228,6 +221,7 @@ export function ScreenCaptureOverlay() {
   }, []);
 
   const clearCaptureView = useCallback(() => {
+    recordingRevisionRef.current = null;
     targetQuery.cancel();
     ++confirmRevisionRef.current;
     resetPointerGestures();
@@ -240,6 +234,7 @@ export function ScreenCaptureOverlay() {
     setLassoPoints([]);
     setLassoClipPolygon(null);
     setHoveredColor(null);
+    setCountdown(null);
   }, [targetQuery, resetPointerGestures, clearAnnotationSurface]);
 
   // Aplicar una sesión de captura. Las sesiones obsoletas se descartan: el overlay
@@ -249,6 +244,7 @@ export function ScreenCaptureOverlay() {
     const sessionId = payload.sessionId ?? 0;
     if (sessionId && sessionId <= appliedSessionIdRef.current) return;
     if (sessionId) appliedSessionIdRef.current = sessionId;
+    recordingRevisionRef.current = null;
 
     targetQuery.cancel();
     ++confirmRevisionRef.current;
@@ -276,9 +272,15 @@ export function ScreenCaptureOverlay() {
     lassoPointsRef.current = [];
     setHoveredColor(null);
     setToastMessage(null);
+    setCountdown(null);
+    setChangingIntent(false);
     dragTextBoxRef.current = null;
     resizeRef.current = null;
     dragMoveRef.current = null;
+    scribblePointsRef.current = [];
+    scribblePointerIdRef.current = null;
+    pendingCropPromiseRef.current = null;
+    setScribblePoints([]);
     // Sin selección previa: el objetivo se determina al mover el cursor, de modo que
     // nunca quede preseleccionada una ventana del sistema (barra de tareas, escritorio).
     activeTargetRef.current = null;
@@ -301,9 +303,28 @@ export function ScreenCaptureOverlay() {
     setCurrentAnnotation(null);
   }, []);
 
-  // El backend mantiene el overlay oculto hasta que React haya limpiado la sesión anterior.
+  // Mostrar y tomar el foco solo cuando la imagen congelada ya esté decodificada.
+  // Así el cierre de Inicio o de un menú no cambia el fondo durante el recorte.
   useEffect(() => {
-    if (session) void screenCaptureClient.overlayReady(session.sessionId).catch(() => {});
+    if (!session) return;
+    let disposed = false;
+    const prepare = async () => {
+      try {
+        if (session.intent !== "video" && session.snapshotDataUrl) {
+          const image = snapshotImageRef.current;
+          if (!image) throw new Error("No se encontró el fondo de la captura");
+          await image.decode();
+        }
+        if (!disposed) await screenCaptureClient.overlayReady(session.sessionId);
+      } catch (error) {
+        if (disposed) return;
+        console.error("No se pudo mostrar la captura congelada", error);
+        clearCaptureView();
+        void screenCaptureClient.cancelCapture().catch(() => {});
+      }
+    };
+    void prepare();
+    return () => { disposed = true; };
   }, [session]);
 
   useEffect(() => {
@@ -357,20 +378,52 @@ export function ScreenCaptureOverlay() {
 
   // Cancelar captura completa
   const handleCancel = useCallback(async () => {
-    clearCaptureView();
+    const sessionId = sessionRef.current?.sessionId;
+    // Invalidar operaciones pendientes de inmediato, conservando los píxeles
+    // hasta que el backend haya ocultado la ventana.
+    ++confirmRevisionRef.current;
+    setCountdown(null);
     try {
       await screenCaptureClient.cancelCapture();
+      if (sessionRef.current?.sessionId === sessionId) clearCaptureView();
     } catch {
-      // Silencio intencional
+      setToastMessage("No se pudo cerrar la captura. Pulsa Esc para reintentar.");
     }
   }, []);
+
+  const handleIntentChange = useCallback(async (intent: CaptureIntent) => {
+    const current = sessionRef.current;
+    if (!current || current.intent === intent || changingIntentRef.current) return;
+    changingIntentRef.current = true;
+    const revision = ++confirmRevisionRef.current;
+    setChangingIntent(true);
+    targetQuery.cancel();
+    try {
+      const updated = await screenCaptureClient.setIntent(current.sessionId, intent);
+      if (sessionRef.current?.sessionId !== current.sessionId || revision !== confirmRevisionRef.current) return;
+      sessionRef.current = updated;
+      setSession(updated);
+      handleSetMode(intent === "video" && (modeRef.current === "freeform" || modeRef.current === "eyedropper") ? "rect" : modeRef.current);
+      setHoveredColor(null);
+      setToastMessage(null);
+    } catch (error) {
+      if (sessionRef.current?.sessionId === current.sessionId) setToastMessage(String(error));
+    } finally {
+      changingIntentRef.current = false;
+      setChangingIntent(false);
+    }
+  }, [handleSetMode, targetQuery]);
 
   // Iniciar la grabación de la región confirmada.
   // El backend aparta el overlay antes de capturar: si el overlay siguiera
   // visible, aparecería dentro del vídeo grabado.
   const handleStartRecording = useCallback(async (rect: RectSelection, windowTitle?: string) => {
+    if (recordingRevisionRef.current !== null) return;
+    const startingSession = sessionRef.current;
+    if (!startingSession) return;
     targetQuery.cancel();
-    ++confirmRevisionRef.current;
+    const revision = ++confirmRevisionRef.current;
+    recordingRevisionRef.current = revision;
     setToastMessage("Iniciando la grabación…");
     try {
       // Cuenta atrás como en Recortes: el overlay sigue visible y avisa antes
@@ -378,11 +431,13 @@ export function ScreenCaptureOverlay() {
       for (let remaining = 3; remaining > 0; remaining -= 1) {
         setCountdown(remaining);
         await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (revision !== confirmRevisionRef.current || !sessionRef.current) return;
       }
       setCountdown(null);
 
       const preferences = loadRecordingPreferences();
       const outputFolder = await resolveRecordingFolder();
+      if (revision !== confirmRevisionRef.current || !sessionRef.current) return;
       await screenCaptureClient.startRecording({
         region: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
         fps: preferences.fps,
@@ -392,19 +447,35 @@ export function ScreenCaptureOverlay() {
         quality: preferences.quality,
         maxHeight: preferences.maxHeight,
         systemAudio: preferences.systemAudio,
-        // Con título, la captura sigue a la ventana aunque se mueva.
+        container: preferences.container,
+        // Nombre informativo: el backend conserva el área visible seleccionada.
         windowTitle: windowTitle ?? null,
       });
       await handleCancel();
     } catch (err) {
       console.error("Error al iniciar la grabación:", err);
+      // El backend puede haber apartado el overlay antes de fallar. Recuperar
+      // la sesión vigente para que el error no se pierda en una ventana oculta.
+      const current = await screenCaptureClient.getSession().catch(() => null);
+      if (current?.sessionId === startingSession.sessionId) {
+        sessionRef.current = current;
+        setSession(current);
+      }
       setToastMessage(`No se pudo iniciar la grabación: ${String(err)}`);
-      setTimeout(() => setToastMessage(null), 5000);
+    } finally {
+      if (recordingRevisionRef.current === revision) recordingRevisionRef.current = null;
     }
   }, [handleCancel]);
 
   // Confirmar recorte y pasar a anotación IN-SITU (sin abrir otra ventana)
-  const handleConfirmToAnnotate = useCallback(async (rect: RectSelection, clipPolygon?: AnnotationPoint[], previousRect?: RectSelection) => {
+  const handleConfirmToAnnotate = useCallback(async (
+    rect: RectSelection,
+    clipPolygon?: AnnotationPoint[],
+    previousRect?: RectSelection,
+    initialStroke?: AnnotationItem,
+    pendingPromise?: Promise<EditorPayload> | null
+  ) => {
+    if (changingIntentRef.current) return;
     if (rect.width <= 4 || rect.height <= 4) return;
     // En una sesión de vídeo, confirmar la región significa «grabar aquí».
     if (sessionRef.current?.intent === "video") {
@@ -415,7 +486,9 @@ export function ScreenCaptureOverlay() {
     const revision = ++confirmRevisionRef.current;
     targetQuery.cancel();
     try {
-      const payload = await screenCaptureClient.confirmCapture(rect);
+      const payload = pendingPromise
+        ? await pendingPromise
+        : await screenCaptureClient.confirmCapture(rect);
       if (!sessionRef.current || sessionRef.current.sessionId !== sessionId || revision !== confirmRevisionRef.current) return;
       if (payload) {
         resetPointerGestures();
@@ -439,6 +512,9 @@ export function ScreenCaptureOverlay() {
             endPoint: item.endPoint ? shift(item.endPoint) : undefined,
             rect: item.rect ? { ...item.rect, x: item.rect.x + dx, y: item.rect.y + dy } : undefined,
           })));
+        } else if (initialStroke) {
+          setAnnotations([initialStroke]);
+          setHistoryIndex(0);
         } else {
           setAnnotations([]);
           setHistoryIndex(-1);
@@ -472,7 +548,7 @@ export function ScreenCaptureOverlay() {
     setCurrentAnnotation(null);
   }, []);
 
-  // Copiar imagen final al portapapeles sin tocar disco y cerrar
+  // Copiar imagen final al portapapeles y a Synapse, y cerrar.
   const handleCopy = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -485,17 +561,60 @@ export function ScreenCaptureOverlay() {
 
       if (!blob) throw new Error("No se pudo exportar lienzo a PNG");
 
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          "image/png": blob,
-        }),
-      ]);
+      await screenCaptureClient.copyToClipboard(blob);
 
       if (sessionRef.current && confirmRevisionRef.current === revision) await handleCancel();
     } catch (err) {
       console.error("Error al copiar al portapapeles:", err);
+      setToastMessage(String(err));
+      setTimeout(() => setToastMessage(null), 5000);
     }
   }, []);
+
+  // Selección activa de la fase de selección. Enter y Ctrl+C parten de aquí:
+  // ambos caminos capturan exactamente la misma zona.
+  const currentSelection = useCallback(() => resolveSelection({
+    mode: modeRef.current,
+    selectionRect: selectionRectRef.current,
+    activeTarget: activeTargetRef.current,
+    subregionTarget: subregionTargetRef.current,
+    useSubregion: useSubregionRef.current,
+    activeMonitor: activeMonitorRef.current,
+    monitors: sessionRef.current?.monitors ?? [],
+    lassoPoints: lassoPointsRef.current,
+  }), []);
+
+  // Captura rápida: copiar al portapapeles y cerrar, sin pasar por la edición.
+  // Es el atajo de la «captura sin más»: la selección actual se congela, se
+  // copia y el overlay desaparece.
+  const handleQuickCopy = useCallback(async () => {
+    if (changingIntentRef.current) return;
+    if (modeRef.current === "eyedropper") return;
+    // En una sesión de vídeo la captura es una grabación: Ctrl+C no aplica.
+    if (sessionRef.current?.intent === "video") return;
+    const selection = currentSelection();
+    if (!selection) {
+      setToastMessage("No hay una selección activa para copiar");
+      setTimeout(() => setToastMessage(null), 2500);
+      return;
+    }
+
+    const sessionId = sessionRef.current?.sessionId;
+    const revision = ++confirmRevisionRef.current;
+    targetQuery.cancel();
+    try {
+      const payload = await screenCaptureClient.confirmCapture(selection.rect);
+      if (!sessionRef.current || sessionRef.current.sessionId !== sessionId) return;
+      const blob = await payloadToBlob(payload, selection.clipPolygon);
+      await screenCaptureClient.copyToClipboard(blob);
+      rememberCaptureMode(modeRef.current);
+      if (sessionRef.current && confirmRevisionRef.current === revision) await handleCancel();
+    } catch (err) {
+      console.error("Error al copiar la captura:", err);
+      setToastMessage(String(err));
+      setTimeout(() => setToastMessage(null), 5000);
+    }
+  }, [currentSelection, targetQuery, handleCancel]);
 
   // Guardar en el formato global sin pedir ruta cada vez
   const handleSaveAs = useCallback(async () => {
@@ -505,32 +624,14 @@ export function ScreenCaptureOverlay() {
     const captureFormat = getCaptureFormat();
 
     try {
-      let targetFolder = "";
-      try {
-        const stored = localStorage.getItem("prisma.system-settings.v1");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed.screenCaptureFolder && typeof parsed.screenCaptureFolder === "string" && parsed.screenCaptureFolder.trim()) {
-            targetFolder = parsed.screenCaptureFolder.trim();
-          }
-        }
-      } catch {}
-
-      if (!targetFolder) {
-        try {
-          const picturesDir = await getDefaultPicturesDir();
-          if (picturesDir) {
-            targetFolder = `${picturesDir}\\Capturas`;
-          }
-        } catch {}
-      }
+      const targetFolder = await resolveCaptureFolder("image");
 
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, "0");
       const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
       const defaultFilename = `Prisma_Captura_${dateStr}.${captureFormat.extension}`;
 
-      const finalFolder = targetFolder || "C:\\Capturas";
+      const finalFolder = targetFolder;
       const fullPath = `${finalFolder}\\${defaultFilename}`;
 
       const dataUrl = canvas.toDataURL("image/png");
@@ -538,7 +639,7 @@ export function ScreenCaptureOverlay() {
       await screenCaptureClient.saveFile(fullPath, dataUrl, captureFormat.id);
 
       if (!sessionRef.current || confirmRevisionRef.current !== revision) return;
-      setToastMessage(`Guardado en Capturas: ${defaultFilename}`);
+      setToastMessage(`Captura guardada: ${defaultFilename}`);
       setTimeout(() => {
         if (sessionRef.current && confirmRevisionRef.current === revision) void handleCancel();
       }, 350);
@@ -627,6 +728,7 @@ export function ScreenCaptureOverlay() {
       const code = e.code;
 
       if (e.isComposing) return;
+      if ((changingIntentRef.current || recordingRevisionRef.current !== null) && e.key !== "Escape") return;
       if (activeTextBox) {
         if (e.key === "Escape") {
           e.preventDefault();
@@ -635,41 +737,31 @@ export function ScreenCaptureOverlay() {
         return;
       }
       if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return;
+      // Enter/Espacio activan el botón o el desplegable enfocado, sin confirmar
+      // a la vez una captura detrás de la barra.
+      if (e.target instanceof HTMLElement && e.target.closest(".capture-floating-toolbar") && (e.key === "Enter" || e.key === " ")) return;
 
       if (phaseRef.current === "selecting") {
-        if (e.key === "Escape") {
+        if (isCtrl && (key === "c" || code === "KeyC")) {
+          // Captura directa: se copia la selección actual y se cierra el overlay,
+          // sin abrir la etapa de edición.
+          e.preventDefault();
+          void handleQuickCopy();
+        } else if (e.key === "Escape") {
           e.preventDefault();
           void handleCancel();
         } else if (e.key === "Enter") {
+          // Abrir la edición sobre exactamente la misma selección que copiaría Ctrl+C.
           e.preventDefault();
+          const selection = currentSelection();
+          if (!selection) return;
           if (modeRef.current === "window") {
             const target = (useSubregionRef.current && subregionTargetRef.current)
               ? subregionTargetRef.current
               : activeTargetRef.current;
-            if (target) {
-              windowTitleRef.current = target.title || null;
-              void handleConfirmToAnnotate({
-                x: target.x,
-                y: target.y,
-                width: target.width,
-                height: target.height,
-              });
-            }
-          } else if (modeRef.current === "rect") {
-            if (selectionRectRef.current) {
-              void handleConfirmToAnnotate(selectionRectRef.current);
-            }
-          } else if (modeRef.current === "fullscreen") {
-            const mon = activeMonitorRef.current || sessionRef.current?.monitors?.[0];
-            if (mon) {
-              void handleConfirmToAnnotate({
-                x: mon.x,
-                y: mon.y,
-                width: mon.width,
-                height: mon.height,
-              });
-            }
+            windowTitleRef.current = target && !target.isChild ? target.title || null : null;
           }
+          void handleConfirmToAnnotate(selection.rect, selection.clipPolygon);
         } else if (!isCtrl && !e.altKey) {
           if (key === "v" || code === "KeyV") {
             e.preventDefault();
@@ -681,17 +773,10 @@ export function ScreenCaptureOverlay() {
             e.preventDefault();
             handleSetMode("freeform");
           } else if (key === "f" || code === "KeyF") {
+            // Pantalla completa: solo se resalta el monitor. La captura se
+            // decide después con Ctrl+C (copiar) o Enter (editar).
             e.preventDefault();
             handleSetMode("fullscreen");
-            const mon = activeMonitorRef.current || sessionRef.current?.monitors?.[0];
-            if (mon) {
-              void handleConfirmToAnnotate({
-                x: mon.x,
-                y: mon.y,
-                width: mon.width,
-                height: mon.height,
-              });
-            }
           } else if ((key === "c" || code === "KeyC") && sessionRef.current?.intent !== "video") {
             // Atajo oficial solicitado para Selector de Color en fase 1
             e.preventDefault();
@@ -741,7 +826,7 @@ export function ScreenCaptureOverlay() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleCancel, handleConfirmToAnnotate, handleCopy, handleSaveAs, handleUndo, handleRedo, selectionRect, activeTextBox, handleConfirmTextBox, handleCancelTextBox, handleRetrySelection, handleClearAnnotations, isDrawing]);
+  }, [handleCancel, handleConfirmToAnnotate, handleCopy, handleQuickCopy, currentSelection, handleSaveAs, handleUndo, handleRedo, selectionRect, activeTextBox, handleConfirmTextBox, handleCancelTextBox, handleRetrySelection, handleClearAnnotations, isDrawing]);
 
   // Manejo de movimiento del cursor sobre la pantalla (Fase Selección)
   // Se escuchan eventos de puntero (pointer) y no de ratón (mouse) para que la
@@ -855,30 +940,11 @@ export function ScreenCaptureOverlay() {
     }
 
     if (mode === "freeform") {
-      {
-        const points = lassoPointsRef.current;
-        if (points.length > 5) {
-          const minX = Math.min(...points.map((p) => p.x));
-          const maxX = Math.max(...points.map((p) => p.x));
-          const minY = Math.min(...points.map((p) => p.y));
-          const maxY = Math.max(...points.map((p) => p.y));
-          const width = maxX - minX;
-          const height = maxY - minY;
-
-          if (width >= 16 && height >= 16) {
-            const relativePolygon = points.map((p) => ({
-              x: p.x - minX,
-              y: p.y - minY,
-            }));
-            void handleConfirmToAnnotate({ x: minX, y: minY, width, height }, relativePolygon);
-          } else {
-            lassoPointsRef.current = [];
-            setLassoPoints([]);
-          }
-        } else {
-          lassoPointsRef.current = [];
-          setLassoPoints([]);
-        }
+      // El lazo se mantiene trazado: la captura se decide después con
+      // Ctrl+C (copiar) o Enter (editar).
+      if (!lassoSelection(lassoPointsRef.current)) {
+        lassoPointsRef.current = [];
+        setLassoPoints([]);
       }
       return;
     }
@@ -891,7 +957,10 @@ export function ScreenCaptureOverlay() {
         width: Math.abs(e.screenX - start.x), height: Math.abs(e.screenY - start.y),
       } : null;
       if (rect && rect.width >= 10 && rect.height >= 10) {
-        void handleConfirmToAnnotate(rect);
+        // El rectángulo queda seleccionado y listo: Ctrl+C lo copia al instante
+        // y Enter lo lleva a la etapa de edición.
+        selectionRectRef.current = rect;
+        setSelectionRect(rect);
       }
     }
   };
@@ -968,31 +1037,61 @@ export function ScreenCaptureOverlay() {
     }
   };
 
-  // Desplazamiento fluido del marco rectangular sin saltos
+  // Desplazamiento fluido en vídeo o dibujo directo / habilitar herramientas en imagen
   const handleBoxPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest(".capture-resize-handle")) return;
     if (!selectionRect) return;
+
+    if (sessionRef.current?.intent === "video") {
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {}
+      dragMoveRef.current = {
+        startScreenX: e.screenX,
+        startScreenY: e.screenY,
+        startRect: { ...selectionRect },
+      };
+      return;
+    }
+
+    // Sesión de imagen: inicio de garabato directo o clic para habilitar herramientas sin doble clic
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {}
-    dragMoveRef.current = {
-      startScreenX: e.screenX,
-      startScreenY: e.screenY,
-      startRect: { ...selectionRect },
-    };
+    scribblePointerIdRef.current = e.pointerId;
+    const localX = Math.round(e.screenX - selectionRect.x);
+    const localY = Math.round(e.screenY - selectionRect.y);
+    const startPoint = { x: localX, y: localY };
+    scribblePointsRef.current = [startPoint];
+    setScribblePoints([startPoint]);
+    pendingCropPromiseRef.current = screenCaptureClient.confirmCapture(selectionRect);
   };
 
   const handleBoxPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragMoveRef.current) return;
-    const { startScreenX, startScreenY, startRect } = dragMoveRef.current;
-    const dx = e.screenX - startScreenX;
-    const dy = e.screenY - startScreenY;
-    setSelectionRect({
-      ...startRect,
-      x: startRect.x + dx,
-      y: startRect.y + dy,
-    });
+    if (dragMoveRef.current) {
+      const { startScreenX, startScreenY, startRect } = dragMoveRef.current;
+      const dx = e.screenX - startScreenX;
+      const dy = e.screenY - startScreenY;
+      setSelectionRect({
+        ...startRect,
+        x: startRect.x + dx,
+        y: startRect.y + dy,
+      });
+      return;
+    }
+
+    if (scribblePointerIdRef.current === e.pointerId && selectionRect) {
+      const curX = Math.round(e.screenX - selectionRect.x);
+      const curY = Math.round(e.screenY - selectionRect.y);
+      const pts = scribblePointsRef.current;
+      const last = pts[pts.length - 1];
+      if (!last || Math.hypot(curX - last.x, curY - last.y) >= 2) {
+        const next = [...pts, { x: curX, y: curY }];
+        scribblePointsRef.current = next;
+        setScribblePoints(next);
+      }
+    }
   };
 
   const handleBoxPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -1001,6 +1100,38 @@ export function ScreenCaptureOverlay() {
         e.currentTarget.releasePointerCapture(e.pointerId);
       } catch {}
       dragMoveRef.current = null;
+      return;
+    }
+
+    if (scribblePointerIdRef.current === e.pointerId) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
+      scribblePointerIdRef.current = null;
+
+      const rect = selectionRectRef.current ?? selectionRect;
+      const pts = scribblePointsRef.current;
+      const cropPromise = pendingCropPromiseRef.current;
+      pendingCropPromiseRef.current = null;
+      setScribblePoints([]);
+      scribblePointsRef.current = [];
+
+      if (!rect) return;
+
+      const isScribble = pts.length > 2 || (pts.length === 2 && Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y) >= 4);
+
+      const initialStroke: AnnotationItem | undefined = isScribble ? {
+        id: Math.random().toString(36).slice(2),
+        tool: activeTool,
+        color: activeColor,
+        strokeWidth,
+        points: pts,
+        startPoint: pts[0],
+        endPoint: pts[pts.length - 1],
+        rect: { x: 0, y: 0, width: 0, height: 0 },
+      } : undefined;
+
+      void handleConfirmToAnnotate(rect, undefined, undefined, initialStroke, cropPromise);
     }
   };
 
@@ -1045,7 +1176,7 @@ export function ScreenCaptureOverlay() {
       } catch { return; }
       if (!sessionRef.current || sessionRef.current.sessionId !== sessionId || modeRef.current !== "window") return;
       if (target) {
-        windowTitleRef.current = target.title || null;
+        windowTitleRef.current = !target.isChild ? target.title || null : null;
         void handleConfirmToAnnotate({
           x: target.x,
           y: target.y,
@@ -1342,77 +1473,26 @@ export function ScreenCaptureOverlay() {
       onWheel={handleWheel}
       role="presentation"
     >
-      {/* ── FASE 1: BARRA SUPERIOR DE SELECCIÓN EN UNA SOLA FILA REFINADA ── */}
+      {session.intent !== "video" && session.snapshotDataUrl && (
+        <img
+          key={session.sessionId}
+          ref={snapshotImageRef}
+          className="capture-frozen-background"
+          src={session.snapshotDataUrl}
+          alt=""
+          draggable={false}
+          aria-hidden="true"
+        />
+      )}
       {phase === "selecting" && (
-        <div
-          className="capture-floating-toolbar is-refined-row"
-          role="toolbar"
-          aria-label="Selector de captura"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="capture-mode-row-group">
-            {isVideoSession && (
-              <span className="capture-video-badge" title="Sesión de grabación de vídeo">
-                <span className="capture-video-badge-dot" aria-hidden="true" />
-                Grabación
-              </span>
-            )}
-            {MODE_OPTIONS.filter((opt) => !(isVideoSession && opt.id === "freeform")).map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                className={`capture-mode-btn ${mode === opt.id ? "is-active" : ""}`}
-                onClick={() => {
-                  handleSetMode(opt.id);
-                  if (opt.id === "fullscreen") {
-                    const mon = activeMonitorRef.current || sessionRef.current?.monitors?.[0];
-                    if (mon) {
-                      void handleConfirmToAnnotate({
-                        x: mon.x,
-                        y: mon.y,
-                        width: mon.width,
-                        height: mon.height,
-                      });
-                    }
-                  }
-                }}
-                title={`${opt.label} (${opt.shortcut})`}
-              >
-                <Icon name={opt.icon} width={16} height={16} />
-                <span className="label">{opt.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="capture-pill-divider" />
-
-          {/* Selector de color en la pestaña 1 con atajo C */}
-          {!isVideoSession && (
-            <button
-              type="button"
-              className={`capture-mode-btn is-eyedropper ${mode === "eyedropper" ? "is-active" : ""}`}
-              onClick={() => handleSetMode("eyedropper")}
-              title="Selector de color (C) · Clic en la pantalla para copiar código hexadecimal"
-            >
-              <Icon name="pipette" width={16} height={16} />
-              <span className="label">Selector de color</span>
-            </button>
-          )}
-
-          <div className="capture-pill-divider" />
-
-          <button
-            type="button"
-            className="capture-mode-btn is-cancel"
-            onClick={(e) => {
-              e.stopPropagation();
-              void handleCancel();
-            }}
-            title="Cancelar captura (Esc)"
-          >
-            <Icon name="close" width={14} height={14} />
-          </button>
-        </div>
+        <CaptureSelectionBar
+          intent={session.intent}
+          mode={mode}
+          disabled={changingIntent || countdown !== null}
+          onIntentChange={(intent) => void handleIntentChange(intent)}
+          onModeChange={handleSetMode}
+          onCancel={() => void handleCancel()}
+        />
       )}
 
       {/* Tooltip del Cuentagotas en Fase de Selección (Pestaña 1) */}
@@ -1489,7 +1569,7 @@ export function ScreenCaptureOverlay() {
               displayedTarget.y - virtY < 35 ? "is-flipped" : ""
             }`}
           >
-            {displayedTarget.width} × {displayedTarget.height} px · Clic o Enter para capturar
+            {displayedTarget.width} × {displayedTarget.height} px · {isVideoSession ? "Clic o Enter para grabar" : "Clic, Enter o Ctrl+C para capturar"}
             {displayedTarget.title ? ` · ${displayedTarget.title.slice(0, 32)}` : ""}
             {subregionTarget ? " (Rueda ratón para alternar subregión)" : ""}
           </div>
@@ -1523,7 +1603,7 @@ export function ScreenCaptureOverlay() {
           }}
         >
           <div className="capture-target-badge">
-            {activeMonitor.name} · {activeMonitor.width} × {activeMonitor.height} px · Clic o Enter para capturar
+            {activeMonitor.name} · {activeMonitor.width} × {activeMonitor.height} px · {isVideoSession ? "Clic o Enter para grabar" : "Clic, Enter o Ctrl+C para capturar"}
           </div>
         </div>
       )}
@@ -1531,7 +1611,7 @@ export function ScreenCaptureOverlay() {
       {/* ── Resaltado y Tiradores en Modo Rectángulo (4 esquinas con puntero capturado) ── */}
       {phase === "selecting" && mode === "rect" && selectionRect && (
         <div
-          className="capture-target-box"
+          className={`capture-target-box ${isVideoSession ? "is-video-target" : ""}`}
           style={{
             left: `${selectionRect.x - virtX}px`,
             top: `${selectionRect.y - virtY}px`,
@@ -1543,17 +1623,40 @@ export function ScreenCaptureOverlay() {
           onPointerMove={handleBoxPointerMove}
           onPointerUp={handleBoxPointerUp}
           onPointerCancel={handleBoxPointerUp}
-          onDoubleClick={() => void handleConfirmToAnnotate(selectionRect)}
         >
           <div
             className={`capture-target-badge ${
               selectionRect.y - virtY < 35 ? "is-flipped" : ""
             }`}
           >
-            {selectionRect.width} × {selectionRect.height} px · Doble clic o Enter para capturar
+            {selectionRect.width} × {selectionRect.height} px · {isVideoSession ? "Enter para grabar" : "Dibuja o Enter para editar · Ctrl+C para copiar"}
           </div>
 
-          {!isDragging && (
+          {/* Trazo reactivo inmediato mientras el usuario garabatea en medio */}
+          {scribblePoints.length > 1 && (
+            <svg
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                pointerEvents: "none",
+                overflow: "visible",
+                zIndex: 2,
+              }}
+            >
+              <polyline
+                points={scribblePoints.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="none"
+                stroke={activeColor}
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+
+          {!isDragging && scribblePoints.length === 0 && (
             <>
               {/* 4 Esquinas Principales de Redimensionamiento */}
               <div

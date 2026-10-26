@@ -2,10 +2,10 @@
 .screen-capture-view {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   width: 100%;
-  min-height: 100%;
-  padding: clamp(14px, 2vw, 24px) clamp(16px, 3vw, 32px) 40px;
+  min-width: 0;
+  padding: var(--page-top-space, 24px) 0 0;
   animation: captureFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -14,6 +14,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-wrap: wrap;
 }
 
 .capture-topbar h1 {
@@ -36,18 +37,20 @@
   box-shadow: 0 6px 16px color-mix(in srgb, var(--primary) 32%, transparent);
 }
 
-/* Dos columnas que ocupan todo el ancho, como el resto de pestañas. */
+/* El contenedor global define el ancho; las tarjetas distribuyen los controles. */
 .capture-columns {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
 }
 
-@media (max-width: 1200px) {
-  .capture-columns {
-    grid-template-columns: 1fr;
-  }
+@container preview-content (max-width: 1200px) {
+  .capture-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container preview-content (max-width: 800px) {
+  .capture-columns { grid-template-columns: 1fr; }
 }
 
 .capture-card {
@@ -238,18 +241,6 @@
   transform: translateY(0);
 }
 
-.capture-shortcut-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-family: monospace;
-  font-weight: bold;
-}
-
 .capture-mode-selector {
   display: flex;
   align-items: center;
@@ -351,6 +342,16 @@
   z-index: 999999;
 }
 
+.capture-frozen-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: -1;
+}
+
 .capture-floating-toolbar {
   position: fixed;
   top: 24px;
@@ -372,8 +373,27 @@
 }
 
 @keyframes toolbarSlideDown {
-  from { opacity: 0; transform: translate(-50%, -12px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Selección compacta: el escritorio y el marco nunca se escalan. */
+.capture-selection-bar { gap: 6px; padding: 6px; border-radius: 14px; }
+.capture-intent-pill { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(255,255,255,.06); }
+.capture-selection-bar .capture-icon-btn { justify-content: center; width: 36px; height: 36px; padding: 0; border-radius: 8px; }
+.capture-mode-picker { position: relative; }
+.capture-mode-picker summary { list-style: none; height: 36px; box-sizing: border-box; padding: 0 10px; border-radius: 8px; }
+.capture-mode-picker summary::-webkit-details-marker { display: none; }
+.capture-mode-picker[open] summary { background: rgba(255,255,255,.1); }
+.capture-mode-menu { position: absolute; top: calc(100% + 12px); left: 0; display: flex; flex-direction: column; gap: 3px; min-width: 230px; padding: 6px; border: 1px solid rgba(255,255,255,.16); border-radius: 13px; background: rgba(22,22,26,.98); box-shadow: 0 12px 32px rgba(0,0,0,.35); animation: capture-menu-in 140ms ease-out; }
+.capture-mode-option { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 10px; border: 0; border-radius: 8px; color: #d2d2da; background: transparent; font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
+.capture-mode-option:is(:hover, .is-active) { color: #00C9B9; background: rgba(0,201,185,.14); }
+.capture-mode-option kbd { margin-left: auto; font: inherit; font-size: 11px; opacity: .65; }
+.capture-selection-bar :is(button, summary):focus-visible { outline: 2px solid #00C9B9; outline-offset: 2px; }
+.capture-selection-bar button:disabled, .capture-selection-bar summary[aria-disabled=true] { opacity: .45; cursor: default; }
+@keyframes capture-menu-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .capture-floating-toolbar, .capture-annotation-floating-bar, .capture-mode-menu, .capture-editor-toast { animation: none; }
 }
 
 .capture-pill-btn {
@@ -439,6 +459,10 @@
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
   border-radius: 2px;
   z-index: 999998;
+  cursor: crosshair;
+}
+
+.capture-target-box.is-video-target {
   cursor: move;
 }
 
@@ -1252,7 +1276,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 160px;
+  min-width: 0;
 }
 
 .capture-select-label {
@@ -1304,7 +1328,7 @@
 }
 
 .capture-checkbox-field {
-  min-width: 240px;
+  min-width: 0;
 }
 
 .capture-checkbox {
@@ -1327,15 +1351,8 @@
   cursor: pointer;
 }
 
-.capture-btn-primary.is-video {
-  background: var(--error);
-  color: var(--on-error);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--error) 32%, transparent);
-}
-
-.capture-btn-primary.is-video:hover {
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--error) 42%, transparent);
-}
+/* El botón de grabar vídeo se ve igual que el de capturar fotos:
+   mismo color de acento y mismo peso visual. */
 
 /* ── Distintivo de grabación en el overlay ────────────────────────────── */
 .capture-video-badge {
@@ -1585,101 +1602,72 @@
   outline-offset: 1px;
 }
 
-/* ── Barra flotante de control de grabación (ventana propia) ──────────── */
-.recorder-bar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  height: 100%;
-  padding: 0 16px;
-  border-radius: 18px;
-  background: var(--surface-container-high);
-  border: 1px solid color-mix(in srgb, var(--error) 40%, var(--outline-variant));
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-  color: var(--on-surface);
-  animation: captureFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+/* Barra nativa movible: el estado y el cronómetro tienen espacio propio. */
+.recorder-bar { display: flex; align-items: center; gap: 12px; width: 100%; height: 100%; box-sizing: border-box; padding: 7px 10px; border-radius: 14px; background: var(--surface-container-high); border: 1px solid var(--outline-variant); color: var(--on-surface); cursor: grab; user-select: none; touch-action: none; animation: recorder-bar-enter 220ms cubic-bezier(.2,0,0,1); }
+.recorder-bar:active { cursor: grabbing; }
+.recorder-bar-grip { display: flex; flex: 0 0 12px; color: var(--on-surface-variant); opacity: .55; }
+.recorder-bar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--error); flex-shrink: 0; animation: captureRecordPulse 1.4s ease-in-out infinite; }
+.recorder-bar.is-paused .recorder-bar-dot { animation: none; background: var(--on-surface-variant); }
+.recorder-bar-body { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+.recorder-bar-time { flex: 0 0 auto; font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; line-height: 1; white-space: nowrap; }
+.recorder-bar-meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .75rem; color: var(--on-surface-variant); }
+.recorder-bar-meta.is-error { color: var(--error); }
+.recorder-bar-stop, .recorder-bar-pause { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 38px; width: 38px; height: 38px; padding: 0; border-radius: 9px; border: 1px solid var(--outline-variant); background: var(--surface); color: var(--on-surface); cursor: pointer; transition: background 150ms ease, color 150ms ease; }
+.recorder-bar-stop { background: var(--error); color: var(--on-error); border-color: transparent; }
+.recorder-bar-pause:hover:not(:disabled) { background: var(--primary-container); color: var(--on-primary-container); }
+.recorder-bar .recorder-bar-stop:hover:not(:disabled) { background: color-mix(in srgb, var(--error) 85%, var(--on-error)); color: var(--on-error); border-color: transparent; }
+.recorder-bar .recorder-bar-stop:active:not(:disabled) { background: var(--error); color: var(--on-error); }
+.recorder-bar.is-finished .recorder-bar-body { flex-direction: column; align-items: flex-start; gap: 3px; }
+.recorder-bar-done { display: flex; flex-shrink: 0; color: var(--success); }
+.recorder-bar-saved-title { font-size: .8rem; font-weight: 650; white-space: nowrap; }
+.recorder-bar.is-finished .recorder-bar-meta { max-width: 100%; font-size: .7rem; }
+.recorder-bar button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.recorder-bar button:disabled { opacity: .6; cursor: wait; }
+.recorder-bar-stop-dot { width: 12px; height: 12px; border-radius: 3px; background: currentColor; }
+/* Ancho reducido con altura original y etiquetas completas en los controles. */
+html.is-capture-recorder, html.is-capture-recorder body, html.is-capture-recorder #root { min-width: 0; overflow: hidden; }
+.recorder-bar { gap: 6px; padding: 7px 8px; border-radius: 10px; }
+.recorder-bar-grip { flex-basis: 8px; overflow: hidden; }
+.recorder-bar-dot { width: 8px; height: 8px; }
+.recorder-bar-body { flex-direction: column; align-items: flex-start; gap: 1px; }
+.recorder-bar-time { font-size: 16px; letter-spacing: 0; }
+.recorder-bar-meta { max-width: 100%; font-size: 11px; line-height: 13px; }
+.recorder-bar-stop, .recorder-bar-pause { height: 38px; border-radius: 8px; }
+.recorder-bar:not(.is-finished) .recorder-bar-stop, .recorder-bar:not(.is-finished) .recorder-bar-pause { flex: 0 0 auto; width: auto; gap: 6px; padding: 0 9px; font-size: 12px; white-space: nowrap; }
+.recorder-bar:not(.is-finished) .recorder-bar-body { flex: 1; flex-direction: row; align-items: center; gap: 8px; }
+.recorder-bar-status { flex: 0 1 auto; text-align: left; }
+.recorder-bar:not(.is-finished) .recorder-bar-pause { width: 32px; padding: 0; }
+.recorder-bar-hide { display: flex; align-items: center; justify-content: center; flex: 0 0 26px; width: 26px; height: 38px; padding: 0; border: none; border-radius: 8px; background: transparent; color: var(--on-surface-variant); cursor: pointer; }
+.recorder-bar-hide:hover { background: var(--surface-container-highest); }
+.recorder-bar-stop-dot { width: 10px; height: 10px; }
+.recording-hud.is-live { width: 320px; height: 56px; box-sizing: border-box; gap: 8px; padding: 7px 8px; border-radius: 10px; }
+.recording-hud.is-live .recording-hud-dot { flex-shrink: 0; width: 8px; height: 8px; }
+.recording-hud.is-live .recording-hud-body { flex: 1; }
+.recording-hud.is-live .recording-hud-time { font-size: 16px; white-space: nowrap; letter-spacing: 0; }
+.recording-hud.is-live .recording-hud-meta { display: none; }
+.recording-hud.is-live .recording-hud-action, .recording-hud.is-live .recording-hud-stop { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; width: auto; height: 38px; gap: 6px; padding: 0 10px; border-radius: 8px; font-size: 12px; white-space: nowrap; }
+@keyframes recorder-bar-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .recorder-bar, .recorder-bar-dot { animation: none; } .recorder-bar button { transition: none; } }
+
+.capture-shortcut-settings { grid-column: 1 / -1; }
+/* El atajo no se pliega: se muestra siempre, sin botón de ocultar. */
+.capture-shortcut-settings > .settings-card-header-row { margin-bottom: 12px; }
+.capture-shortcut-settings > .settings-card-header-row p { margin: 2px 0 0; }
+.capture-save-folders { display: grid; gap: 12px; margin-top: 14px; }
+.capture-folder-setting { min-width: 0; }
+.capture-folder-setting .snapshot-folder-path-text { margin: 0; }
+.capture-folder-setting .snapshot-folder-actions-row { margin-top: 10px; }
+.capture-save-card .snapshot-format-chip { padding: 8px 4px; min-width: 0; }
+.capture-save-card .snapshot-format-info { min-width: 0; }
+
+@container preview-content (min-width: 801px) and (max-width: 1200px) {
+  .screen-capture-view.is-video .capture-save-card {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .screen-capture-view.is-video .capture-save-folders { display: contents; }
 }
 
-.recorder-bar-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #ff5252;
-  flex-shrink: 0;
-  animation: captureRecordPulse 1.4s ease-in-out infinite;
-}
-
-.recorder-bar-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  flex: 1;
-}
-
-.recorder-bar-time {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--on-surface);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
-  line-height: 1.1;
-}
-
-.recorder-bar-meta {
-  font-size: 0.72rem;
-  color: var(--on-surface-variant);
-}
-
-.recorder-bar-stop {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 16px;
-  border-radius: 12px;
-  border: none;
-  background: var(--error);
-  color: var(--on-error);
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.recorder-bar-pause {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 13px;
-  border-radius: 12px;
-  border: 1px solid var(--outline-variant);
-  background: var(--surface);
-  color: var(--on-surface);
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-
-.recorder-bar-pause:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.recorder-bar-stop:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--error) 40%, transparent);
-}
-
-.recorder-bar-stop:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-
-.recorder-bar-stop-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  background: currentColor;
-}
+.capture-format-options .snapshot-format-info small { overflow-wrap: anywhere; }
