@@ -1,4 +1,4 @@
 ; ---------------------------------------------------------------------------
 ; version.iss - generado por scripts/packaging/Build-Installer.ps1
 ; ---------------------------------------------------------------------------
-#define MyAppVersion "2.0.0"
+#define MyAppVersion "2.0.1"
