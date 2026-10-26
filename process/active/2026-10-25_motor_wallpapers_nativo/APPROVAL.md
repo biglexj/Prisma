@@ -20,3 +20,5 @@ Biglex corrige la clasificación y solicita usar el orden existente de Aurora, c
 Pulido autorizado por Biglex: aplicación inmediata de tarjetas, GIF animado, escalado ligero y control Parallax en recuadro implementados. Validación automatizada y nativa aislada; aceptación física de fluidez/nitidez por el usuario sigue pendiente.
 
 Incidencia reabierta por Biglex: los efectos no se veían sobre la imagen. Corregida inicialización nativa de opacidad de WS_EX_LAYERED y orden show/SetParent. Atributos verificados antes/después; confirmación visual solicitada y todavía pendiente. No cerrar la incidencia por isVisible/capturas internas.
+
+Incidencia de capas invisibles: CERRADA con confirmación visual de Biglex el 2026-10-26: «Sí, ahora aparece». La fase 2 conserva los demás pendientes registrados.

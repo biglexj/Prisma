@@ -113,4 +113,4 @@ Sin capa cero. La numeración arranca en 1.
 - [x] Identificar WS_EX_LAYERED sin alfa nativa inicializada y verificar atributos antes/después en WebView2 real.
 - [x] Inicializar/verificar alfa global 255 y aplicar estilos de hija después de mostrar mediante Tauri.
 - [x] Probar coexistencia de PNG, partículas y escenario en instancia aislada.
-- [ ] Confirmación visual de Biglex sobre imagen en el escritorio; pendiente de respuesta.
+- [x] Confirmación visual de Biglex sobre imagen en el escritorio: «Sí, ahora aparece» (2026-10-26).

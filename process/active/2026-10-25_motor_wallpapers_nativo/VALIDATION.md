@@ -169,3 +169,7 @@ Prueba nativa aislada (perfil wallpaper-alpha-probe): el log antes de inicializa
 Se solicitó confirmación visual a Biglex en la instancia de desarrollo recompilada. Pendiente de respuesta; no atribuir aceptación ni cierre físico a las comprobaciones de atributos nativos. La prueba antigua de creación directa de una ventana hija layered falló en el harness; la regresión se ajusta al flujo real de Tauri (creación superior, conversión a hija y SetParent).
 
 Resultado final automatizado de esta corrección: 23 pruebas Rust correctas. La regresión crea la ventana superior layered, la convierte en hija y verifica atributos ausentes antes de inicializar y alfa 255 después, replicando el flujo Tauri. Confirmación visual del usuario todavía pendiente.
+
+## Confirmación visual del usuario — 2026-10-26
+
+Biglex responde «Sí, ahora aparece» a la prueba de partícula o escenario sobre imagen en Prisma Dev. Se confirma la aparición visible en el escritorio tras inicializar la opacidad nativa. Esta confirmación cierra la incidencia de capas invisibles; no se extiende a recuperación de Explorer, rendimiento sostenido ni las demás funciones pendientes.
