@@ -726,6 +726,13 @@
   flex-direction: column;
 }
 
+.videos-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
 .videos-list-title {
   font-size: 1.15rem;
   font-weight: 800;

@@ -671,43 +671,45 @@ export function LiveWallpapersView() {
             </p>
           </div>
 
-          <div className="videos-search-box">
-            <Icon name="search" width={15} height={15} />
-            <input
-              type="text"
-              placeholder={`Buscar en la lista de ${mediaNounPlural(kindMode)}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                className="search-clear-btn"
-                onClick={() => setSearchQuery("")}
-                title="Limpiar búsqueda"
-              >
-                <Icon name="close" width={13} height={13} />
-              </button>
-            )}
-          </div>
+          <div className="videos-header-actions">
+            <button
+              type="button"
+              className={`videos-visibility-toggle ${showHidden ? "is-active" : ""}`}
+              onClick={() => setShowHidden((value) => !value)}
+              title={
+                showHidden
+                  ? "Dejar de mostrar los medios ocultados"
+                  : "Mostrar los medios ocultados en gris"
+              }
+              aria-pressed={showHidden}
+            >
+              <Icon name={showHidden ? "eye" : "eye-slash"} width={15} height={15} />
+              <span>{showHidden ? "Ocultos visibles" : "Mostrar ocultos"}</span>
+              {hiddenMediaCount > 0 && (
+                <span className="videos-visibility-count">{hiddenMediaCount}</span>
+              )}
+            </button>
 
-          <button
-            type="button"
-            className={`videos-visibility-toggle ${showHidden ? "is-active" : ""}`}
-            onClick={() => setShowHidden((value) => !value)}
-            title={
-              showHidden
-                ? "Dejar de mostrar los medios ocultados"
-                : "Mostrar los medios ocultados en gris"
-            }
-            aria-pressed={showHidden}
-          >
-            <Icon name={showHidden ? "eye" : "eye-slash"} width={15} height={15} />
-            <span>{showHidden ? "Ocultos visibles" : "Mostrar ocultos"}</span>
-            {hiddenMediaCount > 0 && (
-              <span className="videos-visibility-count">{hiddenMediaCount}</span>
-            )}
-          </button>
+            <div className="videos-search-box">
+              <Icon name="search" width={15} height={15} />
+              <input
+                type="text"
+                placeholder={`Buscar en la lista de ${mediaNounPlural(kindMode)}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="search-clear-btn"
+                  onClick={() => setSearchQuery("")}
+                  title="Limpiar búsqueda"
+                >
+                  <Icon name="close" width={13} height={13} />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         {allMedia.length === 0 ? (
