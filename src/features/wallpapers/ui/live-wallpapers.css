@@ -1143,7 +1143,7 @@
 /* ── Pestañas y paneles de categorías ── */
 .wallpaper-category-tabs { flex-wrap: wrap; }
 .wallpaper-category-panel { display: grid; gap: 18px; min-width: 0; }
-.wallpaper-category-tabs .segmented-item { min-height: 44px; }
+.wallpaper-category-tabs .segmented-item { min-height: 34px; padding: 0.25rem 0.85rem; }
 .wallpaper-category-tabs .segmented-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .wallpaper-category-tabs .segmented-item.is-selected {
   background: var(--surface-bright, #ffffff);
