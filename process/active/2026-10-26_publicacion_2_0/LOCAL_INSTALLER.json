@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "status": "local-only",
+  "artifact": "release/Prisma_2.0.0-setup.exe",
+  "bytes": 169259337,
+  "sha256": "69a0d3d744b8e243e9a2f29d3785eb5ee74c258fa6c07322d1c1af4fa58309b2",
+  "verifiedCopy": true,
+  "sourceInputs": {
+    "packaging/windows/setup.iss": "aa2e2d02570addb8ce0cb7fe50618b6b32055da5f437f744529aedb35a325ceb",
+    "packaging/windows/PrismaInstallerUI.iss": "d1589c15bae318a1d9d0ebaaaa9ce894318e8335b2e366391bbccff5882c6373",
+    "packaging/windows/BiglexModernUI.iss": "e3716eaa0547b8699449ed158d38cc7b0fc08a0a19f688c903ef9bbad2f9f423",
+    "packaging/windows/icon.ico": "1b5c544936fd7913f17fcce1376e2ef029001af4859f3e8162c5b04b794585d6",
+    "src-tauri/target/release/prisma.exe": "a5073401a1528947b317984f199a3713797410b1b6bb0d559422ed280ae8728c"
+  },
+  "installed": false,
+  "published": false
+}
