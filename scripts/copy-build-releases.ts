@@ -1,8 +1,15 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 
+// Copia los instaladores de Windows a la carpeta `release`.
+//
+// El empaquetado ya no usa el bundle NSIS de Tauri: el instalador lo genera
+// Inno Setup (scripts/packaging/Build-Installer.ps1) y queda en
+// src-tauri/target/inno/output. Este script solo copia esos artefactos, para
+// no arrastrar restos de un bundle NSIS antiguo.
+
 const rootDir = process.cwd();
-const bundleDir = join(rootDir, "src-tauri", "target", "release", "bundle");
+const bundleDir = join(rootDir, "src-tauri", "target", "inno", "output");
 const targetDirs = [join(rootDir, "release")];
 
 // Leer la versión actual desde package.json
@@ -10,7 +17,7 @@ const packageJson = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf-
 const currentVersion = packageJson.version;
 
 if (!existsSync(bundleDir)) {
-  console.log("⚠️ No se encontró la carpeta de bundle en:", bundleDir);
+  console.log("⚠️ No se encontró la carpeta de instaladores en:", bundleDir);
   process.exit(0);
 }
 
@@ -55,7 +62,7 @@ function findArtifacts(dir: string): string[] {
 const artifacts = findArtifacts(bundleDir);
 
 if (artifacts.length === 0) {
-  console.log(`ℹ️ No se encontraron instaladores para la versión v${currentVersion} en el bundle.`);
+  console.log(`ℹ️ No se encontraron instaladores para la versión v${currentVersion}.`);
 } else {
   console.log(`\n🚀 Copiando instalador v${currentVersion} a la carpeta 'release'...`);
   for (const artifact of artifacts) {
@@ -63,7 +70,7 @@ if (artifacts.length === 0) {
     for (const targetDir of targetDirs) {
       const destPath = join(targetDir, fileName);
       copyFileSync(artifact, destPath);
-      const folderName = targetDir.split(/[\\/]/).pop()!;
+      const folderName = targetDir.split(/[\/\\]/).pop()!;
       console.log(`  ✅ Copiado: ${folderName}/${fileName}`);
     }
   }

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "recorder-drag",
+  "description": "Permite mover únicamente la barra flotante de grabación.",
+  "windows": ["screen_capture_recorder"],
+  "permissions": ["core:window:allow-start-dragging"]
+}

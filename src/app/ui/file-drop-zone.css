@@ -1,393 +1,71 @@
-/* ── Zona de recepción de archivos (parte superior central) ───────────── */
-.file-drop-zone {
-  position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9600;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: none;
-}
-
-/* Muesca discreta: ~50 px de ancho por 3 px de alto. */
-.file-drop-zone-notch {
-  width: 80px;
-  height: 4px;
-  border-radius: 0 0 4px 4px;
-  background: var(--primary, #00c9b9);
-  opacity: 1;
-  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary, #00c9b9) 60%, transparent);
-  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease,
-    box-shadow 0.25s ease;
-}
-
-.file-drop-zone:hover .file-drop-zone-notch {
-  width: 72px;
-  opacity: 0.7;
-}
-
-.file-drop-zone.is-expanded {
-  pointer-events: auto;
-}
-
-.file-drop-zone.is-expanded .file-drop-zone-notch {
-  width: 260px;
-  height: 4px;
-  opacity: 0.9;
-  animation: dropZoneBreathe 1.8s ease-in-out infinite;
-}
-
-.file-drop-zone.is-hovering .file-drop-zone-notch {
-  width: 300px;
-  opacity: 1;
-  box-shadow: 0 2px 14px color-mix(in srgb, var(--primary) 70%, transparent);
-}
-
-.file-drop-zone-panel {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-  padding: 10px 18px;
-  /* Arriba recto (pega con el borde de la pantalla), abajo redondeado. */
-  border-radius: 0 0 14px 14px;
-  background: var(--surface-container-high);
-  border: 1px solid var(--outline-variant);
-  border-top: none;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.26);
-  color: var(--on-surface);
-  font-size: 0.82rem;
-  font-weight: 600;
-  white-space: nowrap;
-  animation: dropZoneRise 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.file-drop-zone.is-hovering .file-drop-zone-panel {
-  border-color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 14%, var(--surface-container-high));
-  animation: dropZoneReceive 0.9s ease-in-out infinite;
-}
-
-.file-drop-zone-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--primary) 18%, transparent);
-  color: var(--primary);
-  flex-shrink: 0;
-}
-
-.file-drop-zone-label {
-  color: var(--on-surface);
-}
-
-@keyframes dropZoneBreathe {
-  0%, 100% { opacity: 0.9; }
-  50% { opacity: 0.55; }
-}
-
-@keyframes dropZoneRise {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes dropZoneReceive {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.025); }
-}
-
-/* ── Bóveda flotante ───────────────────────────────────────────────────── */
-.vault-shelf {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-  width: 100%;
-  /* La franja de acento va unas píxeles más abajo: el borde superior de la
-     ventana queda recortado por el compositor. */
-  padding-top: 3px;
-}
-
-/* El asa es lo único que se ve: una franja en el borde superior.
-   La ventana es más alta, pero el resto queda transparente.
-   El alto va explícito: con «100%» sobre un contenedor de altura automática
-   el asa se quedaba en cero y no se veía nada.
-   El acento va como borde del propio asa: un hijo con fondo propio no llega a
-   pintarse en una ventana tan pequeña. */
-.vault-handle {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  width: 100%;
-  height: 8px;
-  padding: 0;
-  border: none;
-  border-bottom: 4px solid var(--primary, #00c9b9);
-  background: transparent;
-  cursor: pointer;
-}
-
-.vault-handle .file-drop-zone-notch {
-  opacity: 0.6;
-  transition: opacity 0.2s ease, box-shadow 0.2s ease;
-}
-
-.vault-handle:hover .file-drop-zone-notch,
-.vault-shelf.is-open .file-drop-zone-notch {
-  opacity: 1;
-  box-shadow: 0 2px 14px color-mix(in srgb, var(--primary) 85%, transparent);
-}
-
-.vault-items {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 6px 8px 8px;
-  /* Arriba recto (pega con el borde de la pantalla), abajo redondeado. */
-  border-radius: 0 0 14px 14px;
-  background: var(--surface-container-high);
-  border: 1px solid var(--outline-variant);
-  border-top: none;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3);
-  animation: dropZoneRise 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.vault-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  width: 78px;
-  padding: 5px 4px 4px;
-  border-radius: 11px;
-  background: var(--surface);
-  border: 1px solid var(--outline-variant);
-  cursor: grab;
-  user-select: none;
-  transition: transform 0.15s ease, border-color 0.15s ease;
-}
-
-.vault-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--primary);
-}
-
-.vault-card:active {
-  cursor: grabbing;
-}
-
-.vault-card.is-pinned {
-  border-color: color-mix(in srgb, var(--primary) 60%, var(--outline-variant));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent);
-}
-
-.vault-card-preview {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 54px;
-  height: 34px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--surface-container-high);
-  color: var(--on-surface-variant);
-}
-
-.vault-card-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.vault-card-pin {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: var(--on-primary);
-}
-
-.vault-card-name {
-  width: 100%;
-  font-size: 0.62rem;
-  line-height: 1.2;
-  color: var(--on-surface-variant);
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.vault-card-actions {
-  display: flex;
-  gap: 3px;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-.vault-card:hover .vault-card-actions,
-.vault-card:focus-within .vault-card-actions {
-  opacity: 1;
-}
-
-.vault-card-actions button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: var(--surface-container-high);
-  color: var(--on-surface-variant);
-  cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease;
-}
-
-.vault-card-actions button:hover {
-  background: var(--primary);
-  color: var(--on-primary);
-}
-
-.vault-drop-hint {
-  padding: 8px 14px;
-  /* Arriba recto, abajo redondeado. */
-  border-radius: 0 0 12px 12px;
-  background: var(--surface-container-high);
-  border: 1px solid var(--primary);
-  border-top: none;
-  color: var(--on-surface);
-  font-size: 0.76rem;
-  font-weight: 600;
-  white-space: nowrap;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
-}
-
-/* ── Zona del sistema: la muesca no debe robar el clic a la pantalla ─── */
-/* La ventana del sistema es opaca: una ventana transparente de este tamaño no
-   llega a componerse. El fondo toma el color de la app y DWM redondea solo
-   las esquinas de abajo, que es lo que hace de pestañita. */
+/* La región nativa dibuja el notch opaco, con el borde superior recto. */
 html.is-system-drop-zone,
-body.is-system-drop-zone {
+html.is-system-drop-zone body,
+html.is-system-drop-zone #root {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: var(--surface);
-}
-
-.system-drop-zone {
-  width: 100%;
+  min-width: 0 !important;
   height: 100%;
-  align-items: center;
-  justify-content: flex-start;
+  background: var(--surface-container-high) !important;
 }
-
-.system-drop-zone .file-drop-zone-notch {
-  width: 80px;
-  height: 3px;
-}
-
-.system-drop-zone.is-expanded .file-drop-zone-notch {
-  width: 50px;
-  height: 3px;
-  opacity: 0.9;
-  animation: none;
-}
-
-.system-drop-zone.is-expanded .file-drop-zone-panel,
-.system-drop-zone.has-menu .file-drop-zone-menu {
-  margin-top: 6px;
-}
-
-/* ── Menú de destinos de la zona ──────────────────────────────────────── */.file-drop-zone-menu {
-  display: flex;
-  flex-direction: column;
-  min-width: 268px;
-  margin-top: 8px;
-  padding: 8px;
-  /* Arriba recto, abajo redondeado. */
-  border-radius: 0 0 16px 16px;
-  background: var(--surface-container-high);
-  border: 1px solid var(--outline-variant);
-  border-top: none;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
-  pointer-events: auto;
-  animation: dropZoneRise 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.file-drop-zone-menu-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 4px 8px 8px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--outline-variant);
-  color: var(--on-surface);
-  font-size: 0.8rem;
-}
-
-.file-drop-zone-menu-header strong {
-  max-width: 210px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file-drop-zone-menu-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--on-surface-variant);
-  cursor: pointer;
-}
-
-.file-drop-zone-menu-close:hover {
-  background: var(--surface-container-lowest);
-  color: var(--on-surface);
-}
-
-.file-drop-zone-menu button[role="menuitem"] {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 9px 10px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--on-surface);
-  font-size: 0.83rem;
-  font-weight: 500;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-.file-drop-zone-menu button[role="menuitem"]:hover {
-  background: color-mix(in srgb, var(--primary) 16%, transparent);
-}
-
-.file-drop-zone-menu button[role="menuitem"] svg {
-  color: var(--primary);
-  flex-shrink: 0;
-}
+.vault-shelf { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; color: var(--on-surface); }
+.vault-strip { position: relative; overflow: hidden; display: block; flex: 0 0 3px; width: 100%; height: 3px; padding: 0; border: 0; background: var(--primary); cursor: pointer; }
+.vault-strip::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--on-primary), transparent); opacity: 0; }
+.vault-shelf.is-busy .vault-strip::after { opacity: .65; animation: vault-activity 1100ms ease-in-out infinite; }
+/* El panel toma el alto de su contenido: la ventana se ajusta a él. */
+.vault-panel { flex: 0 0 auto; display: flex; flex-direction: column; padding: 10px 14px 12px; opacity: 0; transform: translateY(-10px); clip-path: inset(0 35% 100% round 0 0 20px 20px); pointer-events: none; transition: opacity 160ms ease, transform 220ms cubic-bezier(.2,0,0,1), clip-path 220ms cubic-bezier(.2,0,0,1); }
+.vault-shelf.is-revealed .vault-panel { opacity: 1; transform: translateY(0); clip-path: inset(0 0 0 round 0 0 20px 20px); pointer-events: auto; transition-duration: 200ms, 320ms, 320ms; }
+.vault-shelf.is-revealed .vault-card { animation: vault-card-in 260ms cubic-bezier(.2,0,0,1) both; }
+.vault-shelf.is-revealed .vault-card:nth-child(2) { animation-delay: 25ms; }
+.vault-shelf.is-revealed .vault-card:nth-child(3) { animation-delay: 50ms; }
+.vault-shelf.is-revealed .vault-card:nth-child(4) { animation-delay: 75ms; }
+.vault-shelf.is-revealed .vault-card:nth-child(5) { animation-delay: 100ms; }
+/* La botonera de destinos solo aparece mientras arrastras: en reposo la fila
+   se pliega y no queda hueco arriba, el panel muestra solo los espacios. */
+.vault-destinations { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 6px; max-height: 0; margin-bottom: 0; opacity: 0; overflow: hidden; pointer-events: none; }
+.vault-shelf.is-drag-over .vault-destinations { max-height: 150px; margin-bottom: 0; opacity: 1; overflow: visible; pointer-events: auto; animation: vault-destinations-in 200ms cubic-bezier(.16,1,.3,1); }
+.vault-destination { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 34px; border: 2px solid transparent; border-radius: 10px; background: var(--surface-container); color: var(--on-surface-variant); font: inherit; font-size: 12px; cursor: pointer; transition: background 160ms, border-color 160ms, color 160ms, opacity 160ms; }
+.vault-destination:hover, .vault-destination.is-target { background: var(--primary-container); color: var(--on-primary-container); border-color: var(--primary); }
+.vault-shelf.is-drag-over .vault-destination { min-height: 116px; flex-direction: column; gap: 10px; }
+.vault-shelf.is-drag-over .vault-destination:not(.is-target) { opacity: .68; }
+.vault-destination.is-target { font-weight: 700; }
+.vault-items { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; flex: 0 0 auto; }
+/* Mientras arrastras solo se ven los botones de destino: los elementos se ocultan. */
+.vault-shelf.is-drag-over .vault-items { display: none; }
+.vault-card { position: relative; isolation: isolate; min-width: 0; flex: 0 1 106px; height: 106px; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0; box-sizing: border-box; border-radius: 14px; border: 1px solid var(--outline-variant); background: var(--surface-container); cursor: grab; user-select: none; transition: border-color 160ms, background 160ms; }
+.vault-empty:hover { border-color: var(--primary); background: var(--primary-container); }
+.vault-text-preview { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; width: 100%; height: 100%; box-sizing: border-box; padding: 9px; color: var(--on-surface); overflow: hidden; text-align: left; }
+.vault-text-preview > svg { flex-shrink: 0; color: var(--primary); }
+.vault-text-preview > span { font-size: 10px; line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+/* El contorno queda encima de la miniatura; el hover no se recorta en la tarjeta. */
+.vault-card::after { content: ""; position: absolute; inset: -1px; z-index: 2; border: 1px solid var(--outline-variant); border-radius: inherit; pointer-events: none; }
+.vault-card:not(.vault-empty):is(:hover, :focus-within) { background: var(--surface-container-highest); }
+.vault-card:not(.vault-empty):is(:hover, :focus-within)::after, .vault-card.is-pinned::after { border-color: var(--primary); }
+.vault-empty::after { display: none; }
+.vault-card.is-pinned { border-color: var(--primary); }
+.vault-card-preview { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; flex: 0 0 100%; border-radius: 13px; overflow: hidden; background: var(--surface); color: var(--on-surface-variant); }
+.vault-card-preview img { width: 100%; height: 100%; object-fit: cover; }
+.vault-card-pin { position: absolute; top: 4px; right: 4px; display: grid; place-items: center; width: 21px; height: 21px; border-radius: 50%; background: var(--primary); color: var(--on-primary); }
+.vault-card-name { position: absolute; bottom: 0; box-sizing: border-box; width: 100%; padding: 5px 4px; border-radius: 0 0 13px 13px; background: color-mix(in srgb, var(--surface-container) 94%, transparent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; color: var(--on-surface-variant); font-size: 11px; line-height: 14px; }
+.vault-card-actions { position: absolute; inset: auto 3px 3px; z-index: 1; display: flex; justify-content: center; gap: 0; padding: 3px 0; border-radius: 10px; background: var(--surface-container-high); opacity: 0; pointer-events: none; transition: opacity 120ms; }
+.vault-card:hover .vault-card-actions, .vault-card:focus-within .vault-card-actions { opacity: 1; pointer-events: auto; }
+.vault-card-actions button, .vault-phone-heading button { display: grid; place-items: center; flex: 0 0 24px; padding: 0; width: 24px; height: 26px; border: 0; border-radius: 7px; background: transparent; color: var(--on-surface-variant); cursor: pointer; }
+.vault-card-actions button:hover, .vault-card-actions button[aria-pressed=true] { background: var(--primary-container); color: var(--on-primary-container); }
+.vault-empty { justify-content: center; border-style: dashed; background: transparent; color: var(--outline); cursor: default; }
+.vault-empty span { font-size: 11px; }
+.vault-status { flex: 0 0 auto; min-height: 24px; padding-top: 8px; font-size: 11px; line-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--on-surface-variant); }
+.vault-error { color: var(--error); }
+.vault-phone { flex: 0 0 auto; height: 158px; box-sizing: border-box; padding: 8px 12px; border-radius: 14px; background: var(--surface-container); overflow-y: auto; }
+.vault-phone-heading { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.vault-phone-heading button { margin-left: auto; }
+.vault-phone p { margin: 8px 0; font-size: 12px; }
+.vault-phone small { display: block; font-size: 11px; color: var(--on-surface-variant); }
+.vault-phone progress { width: 100%; height: 6px; accent-color: var(--primary); }
+.vault-device { padding: 8px 12px; border: 0; border-radius: 10px; margin: 0 5px 5px 0; background: var(--primary-container); color: var(--on-primary-container); cursor: pointer; }
+.vault-shelf button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.vault-shelf button:disabled { opacity: .5; cursor: default; }
+@keyframes vault-card-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes vault-activity { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@keyframes vault-destinations-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .vault-panel, .vault-shelf *, .vault-strip::after { animation: none !important; transition: none !important; } }

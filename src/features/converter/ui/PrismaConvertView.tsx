@@ -173,6 +173,55 @@ export function PrismaConvertView({ incomingRequest, onRequestConsumed }: {
     ? "Calidad de audio (Sin compresión · WAV)"
     : "Bitrate";
 
+  // Botones de formato: viven en la barra superior, sobre las tres columnas.
+  const formatBar: {
+    label: string;
+    list: readonly string[];
+    value: string;
+    onPick: (format: string) => void;
+  } = (() => {
+    if (mode === "image") {
+      return {
+        label: "Formato de salida",
+        list: IMAGE_FORMATS,
+        value: imageOptions.target_format,
+        onPick: (format: string) => setImageOptions((prev) => ({ ...prev, target_format: format })),
+      };
+    }
+    if (mode === "video_to_audio") {
+      return {
+        label: "Formato de audio destino",
+        list: VIDEO_TO_AUDIO_FORMATS,
+        value: videoToAudioOptions.target_format,
+        onPick: (format: string) =>
+          setVideoToAudioOptions((prev) => ({
+            ...prev,
+            target_format: format,
+            bitrate: format === "flac" ? "flac_max" : format === "wav" ? "wav_24" : "320k",
+          })),
+      };
+    }
+    if (mode === "video_transcode") {
+      return {
+        label: "Contenedor de salida",
+        list: VIDEO_FORMATS,
+        value: videoTranscodeOptions.target_format,
+        onPick: (format: string) => setVideoTranscodeOptions((prev) => ({ ...prev, target_format: format })),
+      };
+    }
+    return {
+      label: "Formato destino",
+      list: AUDIO_FORMATS,
+      value: audioTranscodeOptions.target_format,
+      onPick: (format: string) =>
+        setAudioTranscodeOptions((prev) => ({
+          ...prev,
+          target_format: format,
+          bitrate: format === "flac" ? "flac_max" : format === "wav" ? "wav_24" : "320k",
+        })),
+    };
+  })();
+
   return (
     <div
       className={`convert-root ${isDraggingOver ? "is-drag-over" : ""}`}
@@ -203,10 +252,12 @@ export function PrismaConvertView({ incomingRequest, onRequestConsumed }: {
           <p>Motor de conversión por lotes de imágenes, extracción de vídeo a audio y transcodificación</p>
         </div>
 
-        <div className={`convert-ffmpeg-badge ${status?.is_available ? "is-ok" : "is-missing"}`}>
-          <Icon name={status?.is_available ? "check" : "close"} />
+        <div className={`convert-ffmpeg-badge ${status === null ? "is-checking" : status.is_available ? "is-ok" : "is-missing"}`}>
+          <Icon name={status === null ? "refresh" : status.is_available ? "check" : "close"} />
           <span>
-            {status?.is_available
+            {status === null
+              ? "Comprobando FFmpeg…"
+              : status.is_available
               ? "FFmpeg activo"
               : "FFmpeg no detectado"}
           </span>
@@ -257,24 +308,29 @@ export function PrismaConvertView({ incomingRequest, onRequestConsumed }: {
         </button>
       </nav>
 
-      <fieldset disabled={isRunning} className="convert-panels-grid" style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-        {/* Panel Izquierdo: Opciones de Formato y Procesamiento */}
-        <div className="convert-card">
-          <span className="convert-card-title">
-            <Icon name="sliders" />
-            <span>Ajustes de Conversión</span>
-          </span>
+      <div className="convert-panels-grid">
+        <fieldset
+          disabled={isRunning}
+          className="convert-tools-area"
+          style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+        >
+          {/* Herramientas · columna izquierda */}
+          <div className="convert-column">
+            {/* Ajustes del modo de conversión */}
+            <div className="convert-card convert-panel">
+              <span className="convert-card-title">
+                <Icon name="sliders" />
+                <span>Ajustes de Conversión</span>
+              </span>
 
-          {mode === "image" ? (
-            <>
               <div className="convert-control-group">
-                <label>Formato de salida</label>
+                <label>{formatBar.label}</label>
                 <div className="convert-format-selector">
-                  {IMAGE_FORMATS.map((fmt) => (
+                  {formatBar.list.map((fmt) => (
                     <button
                       key={fmt}
-                      className={`convert-format-pill ${imageOptions.target_format === fmt ? "is-active" : ""}`}
-                      onClick={() => setImageOptions((prev) => ({ ...prev, target_format: fmt }))}
+                      className={`convert-format-pill ${formatBar.value === fmt ? "is-active" : ""}`}
+                      onClick={() => formatBar.onPick(fmt)}
                       type="button"
                     >
                       {fmt.toUpperCase()}
@@ -283,740 +339,734 @@ export function PrismaConvertView({ incomingRequest, onRequestConsumed }: {
                 </div>
               </div>
 
-              <div className="convert-controls-grid">
-                <div className="convert-control-group">
-                  <label>Calidad ({imageOptions.quality || 85}%)</label>
-                  <input
-                    max={100}
-                    min={1}
-                    type="range"
-                    value={imageOptions.quality || 85}
-                    onChange={(e) =>
-                      setImageOptions((prev) => ({ ...prev, quality: parseInt(e.target.value, 10) }))
-                    }
-                  />
-                </div>
+              {mode === "image" ? (
+                <>
 
-                <div className="convert-control-group">
-                  <label>Redimensionar (Ancho px)</label>
-                  <input
-                    placeholder="Original"
-                    type="number"
-                    value={imageOptions.resize_width || ""}
-                    onChange={(e) =>
-                      setImageOptions((prev) => ({
-                        ...prev,
-                        resize_width: e.target.value ? parseInt(e.target.value, 10) : undefined,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
+                                <div className="convert-controls-grid">
+                                  <div className="convert-control-group">
+                                    <label>Calidad ({imageOptions.quality || 85}%)</label>
+                                    <input
+                                      max={100}
+                                      min={1}
+                                      type="range"
+                                      value={imageOptions.quality || 85}
+                                      onChange={(e) =>
+                                        setImageOptions((prev) => ({ ...prev, quality: parseInt(e.target.value, 10) }))
+                                      }
+                                    />
+                                  </div>
 
-              <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.82rem", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={imageOptions.keep_aspect_ratio ?? true}
-                    onChange={(e) =>
-                      setImageOptions((prev) => ({ ...prev, keep_aspect_ratio: e.target.checked }))
-                    }
-                  />
-                  <span>Preservar proporción de aspecto</span>
-                </label>
+                                  <div className="convert-control-group">
+                                    <label>Redimensionar (Ancho px)</label>
+                                    <input
+                                      placeholder="Original"
+                                      type="number"
+                                      value={imageOptions.resize_width || ""}
+                                      onChange={(e) =>
+                                        setImageOptions((prev) => ({
+                                          ...prev,
+                                          resize_width: e.target.value ? parseInt(e.target.value, 10) : undefined,
+                                        }))
+                                      }
+                                    />
+                                  </div>
+                                </div>
 
-                <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.82rem", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={imageOptions.strip_metadata ?? false}
-                    onChange={(e) =>
-                      setImageOptions((prev) => ({ ...prev, strip_metadata: e.target.checked }))
-                    }
-                  />
-                  <span>Eliminar metadatos EXIF</span>
-                </label>
-              </div>
+                                <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "0.25rem" }}>
+                                  <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.82rem", cursor: "pointer" }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={imageOptions.keep_aspect_ratio ?? true}
+                                      onChange={(e) =>
+                                        setImageOptions((prev) => ({ ...prev, keep_aspect_ratio: e.target.checked }))
+                                      }
+                                    />
+                                    <span>Preservar proporción de aspecto</span>
+                                  </label>
 
-              {/* Marca de agua y metadatos de autoría por lotes */}
-              <div className="convert-watermark-card">
-                <div className="convert-watermark-header">
-                  <div className="convert-watermark-title">
-                    <Icon name="watermark" />
-                    <span>Marca de agua y autoría por lote</span>
-                  </div>
-                  <label className="convert-watermark-toggle" title="Activar marca de agua en lote">
-                    <input
-                      type="checkbox"
-                      checked={watermarkConfig.enabled}
-                      onChange={(e) =>
-                        setWatermarkConfig((prev) => ({ ...prev, enabled: e.target.checked }))
-                      }
-                      disabled={isRunning}
-                    />
-                    <span className="convert-watermark-toggle-slider" />
-                  </label>
-                </div>
+                                  <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.82rem", cursor: "pointer" }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={imageOptions.strip_metadata ?? false}
+                                      onChange={(e) =>
+                                        setImageOptions((prev) => ({ ...prev, strip_metadata: e.target.checked }))
+                                      }
+                                    />
+                                    <span>Eliminar metadatos EXIF</span>
+                                  </label>
+                                </div>
 
-                {watermarkConfig.enabled ? (
-                  <div className="convert-watermark-body">
-                    <div className="convert-watermark-row">
-                      <div className="convert-control-group" style={{ flex: 1 }}>
-                        <label>Firma / Texto de autoría</label>
-                        <div className="convert-input-with-icon">
-                          <Icon name="edit" />
-                          <input
-                            type="text"
-                            placeholder="ej. © 2026 Biglex J"
-                            value={watermarkConfig.text}
-                            onChange={(e) =>
-                              setWatermarkConfig((prev) => ({ ...prev, text: e.target.value }))
-                            }
-                            disabled={isRunning}
-                          />
-                        </div>
-                      </div>
 
-                      <label className="convert-watermark-checkbox-inline">
-                        <input
-                          type="checkbox"
-                          checked={watermarkConfig.includeDate}
-                          onChange={(e) =>
-                            setWatermarkConfig((prev) => ({ ...prev, includeDate: e.target.checked }))
-                          }
-                          disabled={isRunning}
-                        />
-                        <span>Añadir fecha actual</span>
-                      </label>
-                    </div>
+                </>
+              ) : null}
 
-                    <div className="convert-watermark-row">
-                      <div className="convert-control-group" style={{ flex: 1 }}>
-                        <label>Logotipo gráfico (PNG / WebP transparente)</label>
-                        <div className="convert-logo-picker">
-                          {watermarkConfig.logoPath ? (
-                            <div className="convert-logo-selected">
-                              <img
-                                src={convertFileSrc(watermarkConfig.logoPath)}
-                                alt="Logo"
-                                className="convert-logo-preview-img"
-                              />
-                              <span className="convert-logo-filename" title={watermarkConfig.logoPath}>
-                                {watermarkConfig.logoPath.split(/[/\\]/).pop()}
-                              </span>
-                              <button
-                                type="button"
-                                className="convert-logo-btn-clear"
-                                onClick={removeWatermarkLogo}
-                                disabled={isRunning}
-                                title="Quitar logotipo"
-                              >
-                                <Icon name="close" />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              className="convert-logo-btn-pick"
-                              onClick={pickWatermarkLogo}
-                              disabled={isRunning}
-                            >
-                              <Icon name="image" />
-                              <span>Examinar logotipo PNG...</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+              {mode === "video_to_audio" ? (
 
-                    {watermarkConfig.logoPath && (
-                      <div className="convert-logo-layout-controls">
-                        <div className="convert-control-group">
-                          <div className="convert-slider-label">
-                            <label htmlFor="convert-watermark-logo-size">Tamaño del logotipo</label>
-                            <span className="convert-slider-val">{Math.round(watermarkConfig.logoScale * 100)}%</span>
-                          </div>
-                          <input
-                            id="convert-watermark-logo-size"
-                            type="range"
-                            min="0.1"
-                            max="1.5"
-                            step="0.05"
-                            value={watermarkConfig.logoScale}
-                            onChange={(event) => setWatermarkConfig((previous) => ({
-                              ...previous,
-                              logoScale: parseFloat(event.target.value),
-                            }))}
-                            disabled={isRunning}
-                            className="convert-slider"
-                          />
-                        </div>
-                        {(watermarkConfig.text.trim() || watermarkConfig.includeDate) && (
-                          <div className="convert-control-group">
-                            <label>Logo respecto al texto</label>
-                            <div className="convert-watermark-positions">
-                              {WATERMARK_LOGO_PLACEMENTS.map((choice) => (
-                                <button
-                                  key={choice.id}
-                                  type="button"
-                                  className={`convert-watermark-pos-btn ${watermarkConfig.logoPlacement === choice.id ? "is-selected" : ""}`}
-                                  onClick={() => setWatermarkConfig((previous) => ({ ...previous, logoPlacement: choice.id }))}
+                              <div className="convert-control-group">
+                                <label>{videoToAudioQualityLabel}</label>
+                                <CustomSelect
+                                  value={
+                                    videoToAudioOptions.bitrate ||
+                                    (isVideoToAudioFlac ? "flac_max" : isVideoToAudioWav ? "wav_24" : "320k")
+                                  }
+                                  options={videoToAudioQualityOptions}
+                                  onChange={(val) =>
+                                    setVideoToAudioOptions((prev) => ({ ...prev, bitrate: val }))
+                                  }
                                   disabled={isRunning}
-                                >
-                                  {choice.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                                />
+                              </div>
 
+              ) : null}
+
+              {mode === "video_transcode" ? (
+
+                              <div className="convert-control-group">
+                                <label>Códec de vídeo</label>
+                                <CustomSelect
+                                  value={videoTranscodeOptions.video_codec}
+                                  options={VIDEO_CODEC_OPTIONS}
+                                  onChange={(val) =>
+                                    setVideoTranscodeOptions((prev) => ({ ...prev, video_codec: val }))
+                                  }
+                                  disabled={isRunning}
+                                />
+                              </div>
+
+              ) : null}
+
+              {mode === "audio_transcode" ? (
+
+                              <div className="convert-control-group">
+                                <label>{audioTranscodeQualityLabel}</label>
+                                <CustomSelect
+                                  value={
+                                    audioTranscodeOptions.bitrate ||
+                                    (isAudioTranscodeFlac ? "flac_max" : isAudioTranscodeWav ? "wav_24" : "320k")
+                                  }
+                                  options={audioTranscodeQualityOptions}
+                                  onChange={(val) =>
+                                    setAudioTranscodeOptions((prev) => ({ ...prev, bitrate: val }))
+                                  }
+                                  disabled={isRunning}
+                                />
+                              </div>
+
+              ) : null}
+            </div>
+
+
+            {/* Columna 3: destino y reglas de renombrado */}
+            <div className="convert-card convert-panel">
+              <span className="convert-card-title">
+                <Icon name="edit" />
+                <span>Destino y Reglas de Renombrado</span>
+              </span>
+
+              <div className="convert-control-group">
+                <label>Carpeta de destino</label>
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <input
+                    readOnly
+                    placeholder="Misma carpeta que el archivo original"
+                    value={customOutputFolder || ""}
+                    style={{ flex: 1 }}
+                  />
+                  <button className="convert-btn is-secondary" onClick={pickOutputFolder} type="button">
+                    <Icon name="folder-open" />
+                    <span>Cambiar</span>
+                  </button>
+                  {customOutputFolder ? (
+                    <button
+                      className="convert-btn is-danger"
+                      onClick={() => setCustomOutputFolder(null)}
+                      title="Restablecer a carpeta original"
+                      type="button"
+                    >
+                      <Icon name="undo" />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div style={{ borderTop: "1px solid var(--outline-variant, rgba(208, 188, 255, 0.08))", paddingTop: "0.75rem" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.85rem", cursor: "pointer", fontWeight: 600 }}>
+                  <input
+                    type="checkbox"
+                    checked={renameRules.enabled}
+                    onChange={(e) =>
+                      setRenameRules((prev) => ({ ...prev, enabled: e.target.checked }))
+                    }
+                  />
+                  <span>Habilitar renombrado automático por lote</span>
+                </label>
+
+                {renameRules.enabled ? (
+                  <div className="convert-controls-grid" style={{ marginTop: "0.75rem" }}>
                     <div className="convert-control-group">
-                      <label>Posición en la imagen</label>
-                      <div className="convert-watermark-positions">
-                        {WATERMARK_POSITIONS.map((pos) => (
-                          <button
-                            key={pos.id}
-                            type="button"
-                            className={`convert-watermark-pos-btn ${
-                              watermarkConfig.position === pos.id ? "is-selected" : ""
-                            }`}
-                            onClick={() =>
-                              setWatermarkConfig((prev) => ({ ...prev, position: pos.id }))
-                            }
-                            disabled={isRunning}
-                          >
-                            {pos.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="convert-controls-grid">
-                      <div className="convert-control-group">
-                        <div className="convert-slider-label">
-                          <label>Tamaño del texto</label>
-                          <span className="convert-slider-val">{watermarkConfig.scale.toFixed(1)}x</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0.4"
-                          max="2.5"
-                          step="0.1"
-                          value={watermarkConfig.scale}
-                          onChange={(e) =>
-                            setWatermarkConfig((prev) => ({
-                              ...prev,
-                              scale: parseFloat(e.target.value),
-                            }))
-                          }
-                          disabled={isRunning}
-                          className="convert-slider"
-                        />
-                      </div>
-
-                      <div className="convert-control-group">
-                        <div className="convert-slider-label">
-                          <label>Opacidad</label>
-                          <span className="convert-slider-val">
-                            {Math.round(watermarkConfig.opacity * 100)}%
-                          </span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0.1"
-                          max="1.0"
-                          step="0.05"
-                          value={watermarkConfig.opacity}
-                          onChange={(e) =>
-                            setWatermarkConfig((prev) => ({
-                              ...prev,
-                              opacity: parseFloat(e.target.value),
-                            }))
-                          }
-                          disabled={isRunning}
-                          className="convert-slider"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="convert-logo-layout-controls">
-                      <div className="convert-color-row">
-                        <label htmlFor="convert-watermark-text-color">Color del texto</label>
-                        <input id="convert-watermark-text-color" type="color" value={watermarkConfig.color}
-                          onChange={(event) => setWatermarkConfig((previous) => ({ ...previous, color: event.target.value }))} disabled={isRunning} />
-                        <span>{watermarkConfig.color.toUpperCase()}</span>
-                      </div>
-                      <label className="convert-watermark-checkbox-inline">
-                        <input type="checkbox" checked={watermarkConfig.withOutline}
-                          onChange={(event) => setWatermarkConfig((previous) => ({ ...previous, withOutline: event.target.checked }))} disabled={isRunning} />
-                        <span>Contorno de texto y logo</span>
-                      </label>
-                      {watermarkConfig.withOutline && <>
-                        <div className="convert-color-row">
-                          <label htmlFor="convert-watermark-outline-color">Color del contorno</label>
-                          <input id="convert-watermark-outline-color" type="color" value={watermarkConfig.outlineColor}
-                            onChange={(event) => setWatermarkConfig((previous) => ({ ...previous, outlineColor: event.target.value }))} disabled={isRunning} />
-                          <span>{watermarkConfig.outlineColor.toUpperCase()}</span>
-                        </div>
-                        <div className="convert-control-group">
-                          <div className="convert-slider-label"><label htmlFor="convert-watermark-outline-width">Grosor del borde</label><span className="convert-slider-val">{watermarkConfig.outlineWidth}%</span></div>
-                          <input id="convert-watermark-outline-width" type="range" min="1" max="12" step="1" value={watermarkConfig.outlineWidth}
-                            onChange={(event) => setWatermarkConfig((previous) => ({ ...previous, outlineWidth: Number(event.target.value) }))}
-                            disabled={isRunning} className="convert-slider" />
-                        </div>
-                      </>}
-                    </div>
-
-                    <label className="convert-watermark-checkbox-inline" style={{ marginTop: "0.25rem" }}>
+                      <label>Prefijo</label>
                       <input
-                        type="checkbox"
-                        checked={watermarkConfig.withShadow}
-                        onChange={(e) =>
-                          setWatermarkConfig((prev) => ({ ...prev, withShadow: e.target.checked }))
-                        }
-                        disabled={isRunning}
+                        placeholder="Ej. Prisma_"
+                        value={renameRules.prefix}
+                        onChange={(e) => setRenameRules((prev) => ({ ...prev, prefix: e.target.value }))}
                       />
-                      <span>Sombra de contraste suave (Drop Shadow sobre fondos claros)</span>
-                    </label>
+                    </div>
+                    <div className="convert-control-group">
+                      <label>Sufijo</label>
+                      <input
+                        placeholder="Ej. _convertido"
+                        value={renameRules.suffix}
+                        onChange={(e) => setRenameRules((prev) => ({ ...prev, suffix: e.target.value }))}
+                      />
+                    </div>
+                    <div className="convert-control-group">
+                      <label>Buscar texto</label>
+                      <input
+                        placeholder="Texto a reemplazar"
+                        value={renameRules.findText}
+                        onChange={(e) => setRenameRules((prev) => ({ ...prev, findText: e.target.value }))}
+                      />
+                    </div>
+                    <div className="convert-control-group">
+                      <label>Reemplazar con</label>
+                      <input
+                        placeholder="Nuevo texto"
+                        value={renameRules.replaceText}
+                        onChange={(e) => setRenameRules((prev) => ({ ...prev, replaceText: e.target.value }))}
+                      />
+                    </div>
                   </div>
                 ) : null}
               </div>
-            </>
-          ) : null}
+            </div>
 
-          {mode === "video_to_audio" ? (
-            <>
-              <div className="convert-control-group">
-                <label>Formato de audio destino</label>
-                <div className="convert-format-selector">
-                  {VIDEO_TO_AUDIO_FORMATS.map((fmt) => (
-                    <button
-                      key={fmt}
-                      className={`convert-format-pill ${videoToAudioOptions.target_format === fmt ? "is-active" : ""}`}
-                      onClick={() => {
-                        const defaultQuality = fmt === "flac" ? "flac_max" : fmt === "wav" ? "wav_24" : "320k";
-                        setVideoToAudioOptions((prev) => ({
-                          ...prev,
-                          target_format: fmt,
-                          bitrate: defaultQuality,
-                        }));
-                      }}
-                      type="button"
-                    >
-                      {fmt.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {/* Marca de agua o segunda opción del modo */}
+            <div className="convert-card convert-panel">
+              {mode === "image" ? (
+                <>
 
-              <div className="convert-controls-grid">
-                <div className="convert-control-group">
-                  <label>{videoToAudioQualityLabel}</label>
-                  <CustomSelect
-                    value={
-                      videoToAudioOptions.bitrate ||
-                      (isVideoToAudioFlac ? "flac_max" : isVideoToAudioWav ? "wav_24" : "320k")
-                    }
-                    options={videoToAudioQualityOptions}
-                    onChange={(val) =>
-                      setVideoToAudioOptions((prev) => ({ ...prev, bitrate: val }))
-                    }
-                    disabled={isRunning}
-                  />
-                </div>
+                            {/* Marca de agua y metadatos de autoría por lotes */}
+                            <div className="convert-watermark-card">
+                              <div className="convert-watermark-header">
+                                <div className="convert-watermark-title">
+                                  <Icon name="watermark" />
+                                  <span>Marca de agua y autoría por lote</span>
+                                </div>
+                                <label className="convert-watermark-toggle" title="Activar marca de agua en lote">
+                                  <input
+                                    type="checkbox"
+                                    checked={watermarkConfig.enabled}
+                                    onChange={(e) =>
+                                      setWatermarkConfig((prev) => ({ ...prev, enabled: e.target.checked }))
+                                    }
+                                    disabled={isRunning}
+                                  />
+                                  <span className="convert-watermark-toggle-slider" />
+                                </label>
+                              </div>
 
-                <div className="convert-control-group">
-                  <label>Canales de sonido</label>
-                  <CustomSelect
-                    value={videoToAudioOptions.channels || 2}
-                    options={AUDIO_CHANNELS_OPTIONS}
-                    onChange={(val) =>
-                      setVideoToAudioOptions((prev) => ({ ...prev, channels: val }))
-                    }
-                    disabled={isRunning}
-                  />
-                </div>
-              </div>
-            </>
-          ) : null}
+                              {watermarkConfig.enabled ? (
+                                <div className="convert-watermark-body">
+                                  <div className="convert-watermark-row">
+                                    <div className="convert-control-group" style={{ flex: 1 }}>
+                                      <label>Firma / Texto de autoría</label>
+                                      <div className="convert-input-with-icon">
+                                        <Icon name="edit" />
+                                        <input
+                                          type="text"
+                                          placeholder="ej. © 2026 Biglex J"
+                                          value={watermarkConfig.text}
+                                          onChange={(e) =>
+                                            setWatermarkConfig((prev) => ({ ...prev, text: e.target.value }))
+                                          }
+                                          disabled={isRunning}
+                                        />
+                                      </div>
+                                    </div>
 
-          {mode === "video_transcode" ? (
-            <>
-              <div className="convert-control-group">
-                <label>Contenedor de salida</label>
-                <div className="convert-format-selector">
-                  {VIDEO_FORMATS.map((fmt) => (
-                    <button
-                      key={fmt}
-                      className={`convert-format-pill ${videoTranscodeOptions.target_format === fmt ? "is-active" : ""}`}
-                      onClick={() => setVideoTranscodeOptions((prev) => ({ ...prev, target_format: fmt }))}
-                      type="button"
-                    >
-                      {fmt.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                                    <label className="convert-watermark-checkbox-inline">
+                                      <input
+                                        type="checkbox"
+                                        checked={watermarkConfig.includeDate}
+                                        onChange={(e) =>
+                                          setWatermarkConfig((prev) => ({ ...prev, includeDate: e.target.checked }))
+                                        }
+                                        disabled={isRunning}
+                                      />
+                                      <span>Añadir fecha actual</span>
+                                    </label>
+                                  </div>
 
-              <div className="convert-controls-grid">
-                <div className="convert-control-group">
-                  <label>Códec de vídeo</label>
-                  <CustomSelect
-                    value={videoTranscodeOptions.video_codec}
-                    options={VIDEO_CODEC_OPTIONS}
-                    onChange={(val) =>
-                      setVideoTranscodeOptions((prev) => ({ ...prev, video_codec: val }))
-                    }
-                    disabled={isRunning}
-                  />
-                </div>
+                                  <div className="convert-watermark-row">
+                                    <div className="convert-control-group" style={{ flex: 1 }}>
+                                      <label>Logotipo gráfico (PNG / WebP transparente)</label>
+                                      <div className="convert-logo-picker">
+                                        {watermarkConfig.logoPath ? (
+                                          <div className="convert-logo-selected">
+                                            <img
+                                              src={convertFileSrc(watermarkConfig.logoPath)}
+                                              alt="Logo"
+                                              className="convert-logo-preview-img"
+                                            />
+                                            <span className="convert-logo-filename" title={watermarkConfig.logoPath}>
+                                              {watermarkConfig.logoPath.split(/[/\\]/).pop()}
+                                            </span>
+                                            <button
+                                              type="button"
+                                              className="convert-logo-btn-clear"
+                                              onClick={removeWatermarkLogo}
+                                              disabled={isRunning}
+                                              title="Quitar logotipo"
+                                            >
+                                              <Icon name="close" />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            className="convert-logo-btn-pick"
+                                            onClick={pickWatermarkLogo}
+                                            disabled={isRunning}
+                                          >
+                                            <Icon name="image" />
+                                            <span>Examinar logotipo PNG...</span>
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
 
-                <div className="convert-control-group">
-                  <label>Resolución</label>
-                  <CustomSelect
-                    value={videoTranscodeOptions.scale || "none"}
-                    options={VIDEO_SCALE_OPTIONS}
-                    onChange={(val) =>
-                      setVideoTranscodeOptions((prev) => ({ ...prev, scale: val }))
-                    }
-                    disabled={isRunning}
-                  />
-                </div>
-              </div>
-            </>
-          ) : null}
+                                  {watermarkConfig.logoPath && (
+                                    <div className="convert-logo-layout-controls">
+                                      <div className="convert-control-group">
+                                        <div className="convert-slider-label">
+                                          <label htmlFor="convert-watermark-logo-size">Tamaño del logotipo</label>
+                                          <span className="convert-slider-val">{Math.round(watermarkConfig.logoScale * 100)}%</span>
+                                        </div>
+                                        <input
+                                          id="convert-watermark-logo-size"
+                                          type="range"
+                                          min="0.1"
+                                          max="1.5"
+                                          step="0.05"
+                                          value={watermarkConfig.logoScale}
+                                          onChange={(event) => setWatermarkConfig((previous) => ({
+                                            ...previous,
+                                            logoScale: parseFloat(event.target.value),
+                                          }))}
+                                          disabled={isRunning}
+                                          className="convert-slider"
+                                        />
+                                      </div>
+                                      {(watermarkConfig.text.trim() || watermarkConfig.includeDate) && (
+                                        <div className="convert-control-group">
+                                          <label>Logo respecto al texto</label>
+                                          <div className="convert-watermark-positions">
+                                            {WATERMARK_LOGO_PLACEMENTS.map((choice) => (
+                                              <button
+                                                key={choice.id}
+                                                type="button"
+                                                className={`convert-watermark-pos-btn ${watermarkConfig.logoPlacement === choice.id ? "is-selected" : ""}`}
+                                                onClick={() => setWatermarkConfig((previous) => ({ ...previous, logoPlacement: choice.id }))}
+                                                disabled={isRunning}
+                                              >
+                                                {choice.label}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
 
-          {mode === "audio_transcode" ? (
-            <>
-              <div className="convert-control-group">
-                <label>Formato destino</label>
-                <div className="convert-format-selector">
-                  {AUDIO_FORMATS.map((fmt) => (
-                    <button
-                      key={fmt}
-                      className={`convert-format-pill ${audioTranscodeOptions.target_format === fmt ? "is-active" : ""}`}
-                      onClick={() => {
-                        const defaultQuality = fmt === "flac" ? "flac_max" : fmt === "wav" ? "wav_24" : "320k";
-                        setAudioTranscodeOptions((prev) => ({
-                          ...prev,
-                          target_format: fmt,
-                          bitrate: defaultQuality,
-                        }));
-                      }}
-                      type="button"
-                    >
-                      {fmt.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                                  <div className="convert-control-group">
+                                    <label>Posición en la imagen</label>
+                                    <div className="convert-watermark-positions">
+                                      {WATERMARK_POSITIONS.map((pos) => (
+                                        <button
+                                          key={pos.id}
+                                          type="button"
+                                          className={`convert-watermark-pos-btn ${
+                                            watermarkConfig.position === pos.id ? "is-selected" : ""
+                                          }`}
+                                          onClick={() =>
+                                            setWatermarkConfig((prev) => ({ ...prev, position: pos.id }))
+                                          }
+                                          disabled={isRunning}
+                                        >
+                                          {pos.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
 
-              <div className="convert-controls-grid">
-                <div className="convert-control-group">
-                  <label>{audioTranscodeQualityLabel}</label>
-                  <CustomSelect
-                    value={
-                      audioTranscodeOptions.bitrate ||
-                      (isAudioTranscodeFlac ? "flac_max" : isAudioTranscodeWav ? "wav_24" : "320k")
-                    }
-                    options={audioTranscodeQualityOptions}
-                    onChange={(val) =>
-                      setAudioTranscodeOptions((prev) => ({ ...prev, bitrate: val }))
-                    }
-                    disabled={isRunning}
-                  />
-                </div>
-              </div>
-            </>
-          ) : null}
-        </div>
+                                  <div className="convert-controls-grid">
+                                    <div className="convert-control-group">
+                                      <div className="convert-slider-label">
+                                        <label>Tamaño del texto</label>
+                                        <span className="convert-slider-val">{watermarkConfig.scale.toFixed(1)}x</span>
+                                      </div>
+                                      <input
+                                        type="range"
+                                        min="0.4"
+                                        max="2.5"
+                                        step="0.1"
+                                        value={watermarkConfig.scale}
+                                        onChange={(e) =>
+                                          setWatermarkConfig((prev) => ({
+                                            ...prev,
+                                            scale: parseFloat(e.target.value),
+                                          }))
+                                        }
+                                        disabled={isRunning}
+                                        className="convert-slider"
+                                      />
+                                    </div>
 
-        {/* Panel Derecho: Renombrado y Carpeta de Salida */}
-        <div className="convert-card">
-          <span className="convert-card-title">
-            <Icon name="edit" />
-            <span>Destino y Reglas de Renombrado</span>
-          </span>
+                                    <div className="convert-control-group">
+                                      <div className="convert-slider-label">
+                                        <label>Opacidad</label>
+                                        <span className="convert-slider-val">
+                                          {Math.round(watermarkConfig.opacity * 100)}%
+                                        </span>
+                                      </div>
+                                      <input
+                                        type="range"
+                                        min="0.1"
+                                        max="1.0"
+                                        step="0.05"
+                                        value={watermarkConfig.opacity}
+                                        onChange={(e) =>
+                                          setWatermarkConfig((prev) => ({
+                                            ...prev,
+                                            opacity: parseFloat(e.target.value),
+                                          }))
+                                        }
+                                        disabled={isRunning}
+                                        className="convert-slider"
+                                      />
+                                    </div>
+                                  </div>
 
-          <div className="convert-control-group">
-            <label>Carpeta de destino</label>
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-              <input
-                readOnly
-                placeholder="Misma carpeta que el archivo original"
-                value={customOutputFolder || ""}
-                style={{ flex: 1 }}
-              />
-              <button className="convert-btn is-secondary" onClick={pickOutputFolder} type="button">
-                <Icon name="folder-open" />
-                <span>Cambiar</span>
-              </button>
-              {customOutputFolder ? (
-                <button
-                  className="convert-btn is-danger"
-                  onClick={() => setCustomOutputFolder(null)}
-                  title="Restablecer a carpeta original"
-                  type="button"
-                >
-                  <Icon name="undo" />
-                </button>
+                                  <div className="convert-logo-layout-controls">
+                                    <div className="convert-color-row">
+                                      <label htmlFor="convert-watermark-text-color">Color del texto</label>
+                                      <input id="convert-watermark-text-color" type="color" value={watermarkConfig.color}
+                                        onChange={(event) => setWatermarkConfig((previous) => ({ ...previous, color: event.target.value }))} disabled={isRunning} />
+                                      <span>{watermarkConfig.color.toUpperCase()}</span>
+                                    </div>
+                                    <label className="convert-watermark-checkbox-inline">
+                                      <input type="checkbox" checked={watermarkConfig.withOutline}
+                                        onChange={(event) => setWatermarkConfig((previous) => ({ ...previous, withOutline: event.target.checked }))} disabled={isRunning} />
+                                      <span>Contorno de texto y logo</span>
+                                    </label>
+                                    {watermarkConfig.withOutline && <>
+                                      <div className="convert-color-row">
+                                        <label htmlFor="convert-watermark-outline-color">Color del contorno</label>
+                                        <input id="convert-watermark-outline-color" type="color" value={watermarkConfig.outlineColor}
+                                          onChange={(event) => setWatermarkConfig((previous) => ({ ...previous, outlineColor: event.target.value }))} disabled={isRunning} />
+                                        <span>{watermarkConfig.outlineColor.toUpperCase()}</span>
+                                      </div>
+                                      <div className="convert-control-group">
+                                        <div className="convert-slider-label"><label htmlFor="convert-watermark-outline-width">Grosor del borde</label><span className="convert-slider-val">{watermarkConfig.outlineWidth}%</span></div>
+                                        <input id="convert-watermark-outline-width" type="range" min="1" max="12" step="1" value={watermarkConfig.outlineWidth}
+                                          onChange={(event) => setWatermarkConfig((previous) => ({ ...previous, outlineWidth: Number(event.target.value) }))}
+                                          disabled={isRunning} className="convert-slider" />
+                                      </div>
+                                    </>}
+                                  </div>
+
+                                  <label className="convert-watermark-checkbox-inline" style={{ marginTop: "0.25rem" }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={watermarkConfig.withShadow}
+                                      onChange={(e) =>
+                                        setWatermarkConfig((prev) => ({ ...prev, withShadow: e.target.checked }))
+                                      }
+                                      disabled={isRunning}
+                                    />
+                                    <span>Sombra de contraste suave (Drop Shadow sobre fondos claros)</span>
+                                  </label>
+                                </div>
+                              ) : null}
+                            </div>
+
+                </>
+              ) : null}
+
+              {mode === "video_to_audio" ? (
+                <>
+                  <span className="convert-card-title">
+                    <Icon name="music" />
+                    <span>Canales de sonido</span>
+                  </span>
+
+                                <div className="convert-control-group">
+                                  <label>Canales de sonido</label>
+                                  <CustomSelect
+                                    value={videoToAudioOptions.channels || 2}
+                                    options={AUDIO_CHANNELS_OPTIONS}
+                                    onChange={(val) =>
+                                      setVideoToAudioOptions((prev) => ({ ...prev, channels: val }))
+                                    }
+                                    disabled={isRunning}
+                                  />
+                                </div>
+
+                </>
+              ) : null}
+
+              {mode === "audio_transcode" ? (
+                <>
+                  <span className="convert-card-title">
+                    <Icon name="music" />
+                    <span>Canales de sonido</span>
+                  </span>
+                  <div className="convert-control-group">
+                    <label>Canales de sonido</label>
+                    <CustomSelect
+                      value={audioTranscodeOptions.channels || 2}
+                      options={AUDIO_CHANNELS_OPTIONS}
+                      onChange={(val) =>
+                        setAudioTranscodeOptions((prev) => ({ ...prev, channels: val }))
+                      }
+                      disabled={isRunning}
+                    />
+                  </div>
+                </>
+              ) : null}
+
+              {mode === "video_transcode" ? (
+                <>
+                  <span className="convert-card-title">
+                    <Icon name="video" />
+                    <span>Resolución</span>
+                  </span>
+
+                                <div className="convert-control-group">
+                                  <label>Resolución</label>
+                                  <CustomSelect
+                                    value={videoTranscodeOptions.scale || "none"}
+                                    options={VIDEO_SCALE_OPTIONS}
+                                    onChange={(val) =>
+                                      setVideoTranscodeOptions((prev) => ({ ...prev, scale: val }))
+                                    }
+                                    disabled={isRunning}
+                                  />
+                                </div>
+
+                </>
               ) : null}
             </div>
           </div>
+        </fieldset>
 
-          <div style={{ borderTop: "1px solid var(--outline-variant, rgba(208, 188, 255, 0.08))", paddingTop: "0.75rem" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.85rem", cursor: "pointer", fontWeight: 600 }}>
-              <input
-                type="checkbox"
-                checked={renameRules.enabled}
-                onChange={(e) =>
-                  setRenameRules((prev) => ({ ...prev, enabled: e.target.checked }))
-                }
-              />
-              <span>Habilitar renombrado automático por lote</span>
-            </label>
-
-            {renameRules.enabled ? (
-              <div className="convert-controls-grid" style={{ marginTop: "0.75rem" }}>
-                <div className="convert-control-group">
-                  <label>Prefijo</label>
-                  <input
-                    placeholder="Ej. Prisma_"
-                    value={renameRules.prefix}
-                    onChange={(e) => setRenameRules((prev) => ({ ...prev, prefix: e.target.value }))}
-                  />
-                </div>
-                <div className="convert-control-group">
-                  <label>Sufijo</label>
-                  <input
-                    placeholder="Ej. _convertido"
-                    value={renameRules.suffix}
-                    onChange={(e) => setRenameRules((prev) => ({ ...prev, suffix: e.target.value }))}
-                  />
-                </div>
-                <div className="convert-control-group">
-                  <label>Buscar texto</label>
-                  <input
-                    placeholder="Texto a reemplazar"
-                    value={renameRules.findText}
-                    onChange={(e) => setRenameRules((prev) => ({ ...prev, findText: e.target.value }))}
-                  />
-                </div>
-                <div className="convert-control-group">
-                  <label>Reemplazar con</label>
-                  <input
-                    placeholder="Nuevo texto"
-                    value={renameRules.replaceText}
-                    onChange={(e) => setRenameRules((prev) => ({ ...prev, replaceText: e.target.value }))}
-                  />
-                </div>
+        {/* Columna derecha · cola de archivos a convertir */}
+        <div className="convert-column is-queue">
+          {/* Cola de Conversión */}
+          <div className="convert-card convert-queue-card">
+            <div className="convert-queue-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <span className="convert-card-title">
+                  <Icon name="queue" />
+                  <span>Cola de Archivos ({queue.length})</span>
+                </span>
+                {queue.length > 0 ? (
+                  <span style={{ fontSize: "0.82rem", opacity: 0.7 }}>
+                    {completedCount} listos · {errorCount > 0 ? `${errorCount} con error · ` : ""}{progressPercent}% completado
+                  </span>
+                ) : null}
               </div>
-            ) : null}
-          </div>
-        </div>
-      </fieldset>
 
-      {/* Cola de Conversión */}
-      <div className="convert-card" style={{ flex: 1 }}>
-        <div className="convert-queue-header">
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <span className="convert-card-title">
-              <Icon name="queue" />
-              <span>Cola de Archivos ({queue.length})</span>
-            </span>
-            {queue.length > 0 ? (
-              <span style={{ fontSize: "0.82rem", opacity: 0.7 }}>
-                {completedCount} listos · {errorCount > 0 ? `${errorCount} con error · ` : ""}{progressPercent}% completado
-              </span>
-            ) : null}
-          </div>
-
-          <div className="convert-queue-actions">
-            <button className="convert-btn is-secondary" onClick={pickFiles} type="button" disabled={isRunning}>
-              <Icon name="plus" />
-              <span>Añadir archivos</span>
-            </button>
-
-            <button className="convert-btn is-secondary" onClick={pickFolder} type="button" disabled={isRunning}>
-              <Icon name="folder-open" />
-              <span>Añadir carpeta</span>
-            </button>
-
-            {queue.length > 0 ? (
-              <button className="convert-btn is-danger" onClick={clearQueue} type="button" disabled={isRunning}>
-                <Icon name="trash" />
-                <span>Limpiar</span>
-              </button>
-            ) : null}
-
-            {isRunning ? (
-              <button className="convert-btn is-danger" onClick={cancelBatch} type="button">
-                <Icon name="close" />
-                <span>Detener después de este archivo</span>
-              </button>
-            ) : (
-              <button
-                className="convert-btn is-primary"
-                onClick={startBatch}
-                type="button"
-                disabled={queue.length === 0}
-              >
-                <Icon name="play" />
-                <span>Iniciar conversión</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {isRunning || progressPercent > 0 ? (
-          <div className="convert-global-progress">
-            <div className="convert-progress-track">
-              <div className="convert-progress-fill" style={{ width: `${progressPercent}%` }} />
-            </div>
-          </div>
-        ) : null}
-
-        <div className="convert-queue-table-container">
-          {queue.length === 0 ? (
-            <div
-              className="convert-empty-dropzone"
-              onClick={pickFiles}
-              onDragOver={(e) => {
-                e.preventDefault();
-                if (e.dataTransfer) {
-                  e.dataTransfer.dropEffect = "copy";
-                }
-              }}
-              style={{
-                padding: "3.5rem 1.5rem",
-                textAlign: "center",
-                cursor: "pointer",
-                border: "2px dashed var(--border-subtle, rgba(255, 255, 255, 0.12))",
-                borderRadius: "1.25rem",
-                margin: "1rem",
-                background: "rgba(255, 255, 255, 0.015)",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <div
-                style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: "50%",
-                  background: "rgba(var(--accent-rgb, 99, 102, 241), 0.12)",
-                  color: "var(--accent, #6366f1)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: "0.85rem",
-                }}
-              >
-                <Icon name="download" />
-              </div>
-              <h4 style={{ margin: "0 0 0.35rem 0", fontSize: "1.05rem", fontWeight: 600 }}>
-                Arrastra archivos o carpetas aquí o haz clic para examinar
-              </h4>
-              <p style={{ margin: "0 0 1.25rem 0", fontSize: "0.84rem", opacity: 0.7 }}>
-                Soporta imágenes individuales, colecciones de vídeo y carpetas completas para conversión por lotes.
-              </p>
-              <div style={{ display: "flex", gap: "0.6rem", justifyContent: "center", flexWrap: "wrap" }}>
-                <button
-                  className="convert-btn is-primary"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    pickFiles();
-                  }}
-                  type="button"
-                  disabled={isRunning}
-                >
+              <div className="convert-queue-actions">
+                <button className="convert-btn is-secondary" onClick={pickFiles} type="button" disabled={isRunning}>
                   <Icon name="plus" />
                   <span>Añadir archivos</span>
                 </button>
-                <button
-                  className="convert-btn is-secondary"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    pickFolder();
-                  }}
-                  type="button"
-                  disabled={isRunning}
-                >
+
+                <button className="convert-btn is-secondary" onClick={pickFolder} type="button" disabled={isRunning}>
                   <Icon name="folder-open" />
                   <span>Añadir carpeta</span>
                 </button>
+
+                {queue.length > 0 ? (
+                  <button className="convert-btn is-danger" onClick={clearQueue} type="button" disabled={isRunning}>
+                    <Icon name="trash" />
+                    <span>Limpiar</span>
+                  </button>
+                ) : null}
+
+                {isRunning ? (
+                  <button className="convert-btn is-danger" onClick={cancelBatch} type="button">
+                    <Icon name="close" />
+                    <span>Detener después de este archivo</span>
+                  </button>
+                ) : (
+                  <button
+                    className="convert-btn is-primary"
+                    onClick={startBatch}
+                    type="button"
+                    disabled={queue.length === 0}
+                  >
+                    <Icon name="play" />
+                    <span>Iniciar conversión</span>
+                  </button>
+                )}
               </div>
             </div>
-          ) : (
-            <table className="convert-queue-table">
-              <thead>
-                <tr>
-                  <th>Nombre del Archivo</th>
-                  <th>Formato Destino</th>
-                  <th>Ruta de Salida</th>
-                  <th>Estado</th>
-                  <th style={{ textAlign: "right" }}>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {queue.map((item) => (
-                  <tr key={item.id} className={item.status === "processing" ? "is-processing" : ""}>
-                    <td>
-                      <strong style={{ display: "block" }}>{item.fileName}</strong>
-                      <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>{item.inputPath}</span>
-                    </td>
-                    <td>
-                      <span className="convert-format-pill" style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem" }}>
-                        {item.targetFormat.toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: "0.8rem", opacity: 0.8 }}>{item.outputPath}</td>
-                    <td>
-                      <span className={`convert-status-badge status-${item.status}`}>
-                        {item.status === "pending" ? "En espera" : null}
-                        {item.status === "processing" ? "Convirtiendo..." : null}
-                        {item.status === "completed" ? <><Icon name="check" /><span>Completado</span></> : null}
-                        {item.status === "error" ? `✕ Error` : null}
-                      </span>
-                      {item.errorMessage ? (
-                        <span style={{ display: "block", fontSize: "0.72rem", color: "#f2b8b5", marginTop: "0.2rem" }}>
-                          {item.errorMessage}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td style={{ textAlign: "right" }}>
-                      <div className="convert-result-actions">
-                        {item.status === "completed" && item.outputPath ? (
-                          <button
-                            className="convert-btn is-primary convert-preview-btn"
-                            disabled={openingOutput !== null}
-                            onClick={() => void previewOutput(item.outputPath)}
-                            title={`${IMAGE_FORMATS.includes(item.targetFormat.toLowerCase()) ? "Ver imagen convertida" : "Reproducir archivo convertido"}: ${item.outputPath}`}
-                            type="button"
-                          >
-                            <Icon name={IMAGE_FORMATS.includes(item.targetFormat.toLowerCase()) ? "image" : "play"} />
-                            <span>{openingOutput === item.outputPath ? "Abriendo…" : IMAGE_FORMATS.includes(item.targetFormat.toLowerCase()) ? "Ver imagen" : "Reproducir"}</span>
-                          </button>
-                        ) : null}
-                        <button
-                          className="convert-btn is-danger"
-                          disabled={isRunning}
-                          onClick={() => removeItem(item.id)}
-                          style={{ padding: "0.3rem 0.5rem" }}
-                          title="Eliminar de la cola"
-                          type="button"
-                        >
-                          <Icon name="trash" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+
+            {isRunning || progressPercent > 0 ? (
+              <div className="convert-global-progress">
+                <div className="convert-progress-track">
+                  <div className="convert-progress-fill" style={{ width: `${progressPercent}%` }} />
+                </div>
+              </div>
+            ) : null}
+
+            <div className="convert-queue-table-container">
+              {queue.length === 0 ? (
+                <div
+                  className="convert-empty-dropzone"
+                  onClick={pickFiles}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer) {
+                      e.dataTransfer.dropEffect = "copy";
+                    }
+                  }}
+                  style={{
+                    padding: "1.25rem 1.5rem",
+                    textAlign: "center",
+                    cursor: "pointer",
+                    border: "2px dashed var(--border-subtle, rgba(255, 255, 255, 0.12))",
+                    borderRadius: "1.25rem",
+                    margin: "0.5rem",
+                    background: "rgba(255, 255, 255, 0.015)",
+                    transition: "all 0.2s ease",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: "50%",
+                      background: "rgba(var(--accent-rgb, 99, 102, 241), 0.12)",
+                      color: "var(--accent, #6366f1)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "0.85rem",
+                    }}
+                  >
+                    <Icon name="download" />
+                  </div>
+                  <h4 style={{ margin: "0 0 0.35rem 0", fontSize: "1.05rem", fontWeight: 600 }}>
+                    Arrastra archivos o carpetas aquí o haz clic para examinar
+                  </h4>
+                  <p style={{ margin: "0 0 1.25rem 0", fontSize: "0.84rem", opacity: 0.7 }}>
+                    Soporta imágenes individuales, colecciones de vídeo y carpetas completas para conversión por lotes.
+                  </p>
+                  <div style={{ display: "flex", gap: "0.6rem", justifyContent: "center", flexWrap: "wrap" }}>
+                    <button
+                      className="convert-btn is-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        pickFiles();
+                      }}
+                      type="button"
+                      disabled={isRunning}
+                    >
+                      <Icon name="plus" />
+                      <span>Añadir archivos</span>
+                    </button>
+                    <button
+                      className="convert-btn is-secondary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        pickFolder();
+                      }}
+                      type="button"
+                      disabled={isRunning}
+                    >
+                      <Icon name="folder-open" />
+                      <span>Añadir carpeta</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <table className="convert-queue-table">
+                  <thead>
+                    <tr>
+                      <th>Nombre del Archivo</th>
+                      <th>Formato Destino</th>
+                      <th>Ruta de Salida</th>
+                      <th>Estado</th>
+                      <th style={{ textAlign: "right" }}>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {queue.map((item) => (
+                      <tr key={item.id} className={item.status === "processing" ? "is-processing" : ""}>
+                        <td>
+                          <strong style={{ display: "block" }}>{item.fileName}</strong>
+                          <span style={{ fontSize: "0.75rem", opacity: 0.6 }}>{item.inputPath}</span>
+                        </td>
+                        <td>
+                          <span className="convert-format-pill" style={{ padding: "0.2rem 0.5rem", fontSize: "0.75rem" }}>
+                            {item.targetFormat.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: "0.8rem", opacity: 0.8 }}>{item.outputPath}</td>
+                        <td>
+                          <span className={`convert-status-badge status-${item.status}`}>
+                            {item.status === "pending" ? "En espera" : null}
+                            {item.status === "processing" ? "Convirtiendo..." : null}
+                            {item.status === "completed" ? <><Icon name="check" /><span>Completado</span></> : null}
+                            {item.status === "error" ? `✕ Error` : null}
+                          </span>
+                          {item.errorMessage ? (
+                            <span style={{ display: "block", fontSize: "0.72rem", color: "#f2b8b5", marginTop: "0.2rem" }}>
+                              {item.errorMessage}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <div className="convert-result-actions">
+                            {item.status === "completed" && item.outputPath ? (
+                              <button
+                                className="convert-btn is-primary convert-preview-btn"
+                                disabled={openingOutput !== null}
+                                onClick={() => void previewOutput(item.outputPath)}
+                                title={`${IMAGE_FORMATS.includes(item.targetFormat.toLowerCase()) ? "Ver imagen convertida" : "Reproducir archivo convertido"}: ${item.outputPath}`}
+                                type="button"
+                              >
+                                <Icon name={IMAGE_FORMATS.includes(item.targetFormat.toLowerCase()) ? "image" : "play"} />
+                                <span>{openingOutput === item.outputPath ? "Abriendo…" : IMAGE_FORMATS.includes(item.targetFormat.toLowerCase()) ? "Ver imagen" : "Reproducir"}</span>
+                              </button>
+                            ) : null}
+                            <button
+                              className="convert-btn is-danger"
+                              disabled={isRunning}
+                              onClick={() => removeItem(item.id)}
+                              style={{ padding: "0.3rem 0.5rem" }}
+                              title="Eliminar de la cola"
+                              type="button"
+                            >
+                              <Icon name="trash" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          </div>
       </div>
+
     </div>
   );
 }

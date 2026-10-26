@@ -3,6 +3,7 @@ mod imp {
     use serde::Serialize;
     use std::{
         cell::{RefCell, UnsafeCell},
+        collections::HashMap,
         ffi::OsString,
         os::windows::ffi::OsStringExt,
         path::PathBuf,
@@ -16,12 +17,14 @@ mod imp {
             Foundation::{BOOL, HWND, LPARAM, POINT, POINTL},
             Graphics::Gdi::ScreenToClient,
             System::{
+                Memory::{GlobalLock, GlobalUnlock, GlobalSize},
+                DataExchange::RegisterClipboardFormatW,
                 Com::{CoCreateInstance, CLSCTX_INPROC_SERVER, IDataObject, DVASPECT_CONTENT, FORMATETC, TYMED_HGLOBAL},
                 Ole::{
                     IDropTarget, IDropTarget_Impl, RegisterDragDrop, ReleaseStgMedium,
                     RevokeDragDrop, CF_HDROP, DROPEFFECT, DROPEFFECT_COPY, DROPEFFECT_NONE,
                 },
-                SystemServices::MODIFIERKEYS_FLAGS,
+                SystemServices::{MODIFIERKEYS_FLAGS, MK_SHIFT},
             },
             UI::{
                 Shell::{DragQueryFileW, HDROP, CLSID_DragDropHelper, IDropTargetHelper},
@@ -31,7 +34,7 @@ mod imp {
     };
 
     thread_local! {
-        static MAIN_DROP_CONTROLLER: RefCell<Option<NativeFileDropController>> = const { RefCell::new(None) };
+        static DROP_CONTROLLERS: RefCell<HashMap<String, NativeFileDropController>> = RefCell::new(HashMap::new());
     }
 
     #[derive(Clone, Copy, Serialize)]
@@ -41,9 +44,12 @@ mod imp {
     }
 
     #[derive(Clone, Serialize)]
+    #[serde(rename_all = "camelCase")]
     struct DragPayload {
         paths: Vec<String>,
         position: DragPosition,
+        text: Option<String>,
+        shift_key: bool,
     }
 
     pub fn register_or_refresh(window: &WebviewWindow) -> Result<usize, String> {
@@ -53,19 +59,12 @@ mod imp {
         let parent = HWND(tauri_parent.0);
         let app = window.app_handle().clone();
 
-        MAIN_DROP_CONTROLLER.with(|slot| {
-            let mut slot = slot.borrow_mut();
-            match slot.as_mut() {
-                Some(controller) if controller.parent == parent => controller.refresh(),
-                _ => {
-                    *slot = Some(NativeFileDropController::new(parent, app));
-                }
-            }
-
-            let count = slot
-                .as_ref()
-                .map(|controller| controller.drop_targets.len())
-                .unwrap_or_default();
+        DROP_CONTROLLERS.with(|controllers| {
+            let mut controllers = controllers.borrow_mut();
+            let slot = controllers.entry(window.label().to_string()).or_insert_with(|| NativeFileDropController::new(parent, app.clone(), window.label().to_string()));
+            if slot.parent == parent { slot.refresh(); }
+            else { *slot = NativeFileDropController::new(parent, app, window.label().to_string()); }
+            let count = slot.drop_targets.len();
             if count == 0 {
                 Err("WebView2 todavía no expuso una superficie receptora de archivos".to_string())
             } else {
@@ -77,14 +76,16 @@ mod imp {
     struct NativeFileDropController {
         parent: HWND,
         app: AppHandle,
+        label: String,
         drop_targets: Vec<(HWND, IDropTarget)>,
     }
 
     impl NativeFileDropController {
-        fn new(parent: HWND, app: AppHandle) -> Self {
+        fn new(parent: HWND, app: AppHandle, label: String) -> Self {
             let mut controller = Self {
                 parent,
                 app,
+                label,
                 drop_targets: Vec::new(),
             };
             controller.register_targets();
@@ -120,7 +121,7 @@ mod imp {
                 return;
             }
 
-            let target: IDropTarget = NativeFileDropTarget::new(hwnd, self.app.clone()).into();
+            let target: IDropTarget = NativeFileDropTarget::new(hwnd, self.parent, self.app.clone(), self.label.clone()).into();
             let _ = unsafe { RevokeDragDrop(hwnd) };
             if unsafe { RegisterDragDrop(hwnd, &target) }.is_ok() {
                 self.drop_targets.push((hwnd, target));
@@ -139,7 +140,9 @@ mod imp {
     #[implement(IDropTarget)]
     struct NativeFileDropTarget {
         hwnd: HWND,
+        parent: HWND,
         app: AppHandle,
+        label: String,
         drag_image_helper: Option<IDropTargetHelper>,
         cursor_effect: UnsafeCell<DROPEFFECT>,
         enter_is_valid: UnsafeCell<bool>,
@@ -147,10 +150,12 @@ mod imp {
     }
 
     impl NativeFileDropTarget {
-        fn new(hwnd: HWND, app: AppHandle) -> Self {
+        fn new(hwnd: HWND, parent: HWND, app: AppHandle, label: String) -> Self {
             Self {
                 hwnd,
+                parent,
                 app,
+                label,
                 drag_image_helper: unsafe {
                     CoCreateInstance(&CLSID_DragDropHelper, None, CLSCTX_INPROC_SERVER).ok()
                 },
@@ -190,22 +195,68 @@ mod imp {
                 x: point.x,
                 y: point.y,
             };
-            let _ = unsafe { ScreenToClient(self.hwnd, &mut client_point) };
+            let _ = unsafe { ScreenToClient(self.parent, &mut client_point) };
             DragPosition {
                 x: client_point.x as f64,
                 y: client_point.y as f64,
             }
         }
 
-        fn emit(&self, event: &str, paths: Vec<String>, position: DragPosition) {
-            let _ = self.app.emit(
-                event,
-                DragPayload {
-                    paths,
-                    position,
-                },
-            );
+        fn text_data(&self, data_object: Option<&IDataObject>) -> Option<String> {
+            if self.label != "system_drop_zone" { return None; }
+            // Chrome/Edge proporcionan la URL de imagen en HTML Format o texto Unicode.
+            unsafe {
+                let html_format = RegisterClipboardFormatW(windows::core::w!("HTML Format")) as u16;
+                for (format_id, unicode) in [(html_format, false), (13, true)] {
+                    let format = FORMATETC { cfFormat: format_id, ptd: ptr::null_mut(), dwAspect: DVASPECT_CONTENT.0, lindex: -1, tymed: TYMED_HGLOBAL.0 as u32 };
+                    let Some(object) = data_object else { return None; };
+                    let Ok(mut medium) = object.GetData(&format) else { continue; };
+                    let memory = medium.u.hGlobal;
+                    let size = GlobalSize(memory);
+                    let pointer = GlobalLock(memory);
+                    let text = if !pointer.is_null() && size <= 8 * 1024 * 1024 {
+                        let result = if unicode {
+                            let data = std::slice::from_raw_parts(pointer as *const u16, size / 2);
+                            String::from_utf16_lossy(&data[..data.iter().position(|c| *c == 0).unwrap_or(data.len())])
+                        } else {
+                            String::from_utf8_lossy(std::slice::from_raw_parts(pointer as *const u8, size)).to_string()
+                        };
+                        Some(result)
+                    } else { None };
+                    if !pointer.is_null() { let _ = GlobalUnlock(memory); }
+                    ReleaseStgMedium(&mut medium);
+                    if let Some(text) = text {
+                        if unicode && !text.trim().is_empty() { return Some(text); }
+                        if !unicode {
+                            let lower = text.to_lowercase();
+                            if let Some(img) = lower.find("<img") {
+                                let fragment = &text[img..];
+                                if let Some(src) = fragment.to_lowercase().find("src=") {
+                                    let value = fragment[src + 4..].trim_start();
+                                    if let Some(quote) = value.chars().next().filter(|c| *c == '\'' || *c == '"') {
+                                        if let Some(end) = value[1..].find(quote) {
+                                            return Some(value[1..end + 1].replace("&amp;", "&"));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            None
         }
+
+        fn emit(&self, event: &str, paths: Vec<String>, position: DragPosition, text: Option<String>, key_state: MODIFIERKEYS_FLAGS) {
+            let payload = DragPayload { paths, position, text, shift_key: key_state.0 & MK_SHIFT.0 != 0 };
+            if self.label == "system_drop_zone" {
+                let event = event.replace("prisma://native-", "prisma:vault-");
+                let _ = self.app.emit_to(self.label.as_str(), &event, payload);
+            } else {
+                let _ = self.app.emit(event, payload);
+            }
+        }
+
     }
 
     #[allow(non_snake_case)]
@@ -213,12 +264,13 @@ mod imp {
         fn DragEnter(
             &self,
             data_object: Option<&IDataObject>,
-            _key_state: MODIFIERKEYS_FLAGS,
+            key_state: MODIFIERKEYS_FLAGS,
             point: &POINTL,
             effect: *mut DROPEFFECT,
         ) -> windows::core::Result<()> {
             let paths = NativeFileDropTarget::extract_paths(data_object).unwrap_or_default();
-            let is_valid = !paths.is_empty();
+            let text = if paths.is_empty() { self.text_data(data_object) } else { None };
+            let is_valid = !paths.is_empty() || text.is_some();
             let cursor_effect = if is_valid {
                 DROPEFFECT_COPY
             } else {
@@ -238,14 +290,14 @@ mod imp {
 
             if is_valid {
                 *self.entered_paths.borrow_mut() = Rc::new(paths.clone());
-                self.emit("prisma://native-drag-enter", paths, self.client_position(point));
+                self.emit("prisma://native-drag-enter", paths, self.client_position(point), text, key_state);
             }
             Ok(())
         }
 
         fn DragOver(
             &self,
-            _key_state: MODIFIERKEYS_FLAGS,
+            key_state: MODIFIERKEYS_FLAGS,
             point: &POINTL,
             effect: *mut DROPEFFECT,
         ) -> windows::core::Result<()> {
@@ -262,6 +314,8 @@ mod imp {
                     "prisma://native-drag-over",
                     self.entered_paths.borrow().as_ref().clone(),
                     self.client_position(point),
+                    None,
+                    key_state,
                 );
             }
             Ok(())
@@ -276,6 +330,8 @@ mod imp {
                     "prisma://native-drag-leave",
                     Vec::new(),
                     DragPosition { x: 0.0, y: 0.0 },
+                    None,
+                    MODIFIERKEYS_FLAGS(0),
                 );
             }
             unsafe {
@@ -289,12 +345,13 @@ mod imp {
         fn Drop(
             &self,
             data_object: Option<&IDataObject>,
-            _key_state: MODIFIERKEYS_FLAGS,
+            key_state: MODIFIERKEYS_FLAGS,
             point: &POINTL,
             effect: *mut DROPEFFECT,
         ) -> windows::core::Result<()> {
             let paths = NativeFileDropTarget::extract_paths(data_object).unwrap_or_default();
-            let is_valid = !paths.is_empty();
+            let text = if paths.is_empty() { self.text_data(data_object) } else { None };
+            let is_valid = !paths.is_empty() || text.is_some();
             unsafe {
                 *effect = if is_valid {
                     DROPEFFECT_COPY
@@ -311,7 +368,7 @@ mod imp {
                 let _ = unsafe { helper.Drop(data_object, &position, *effect) };
             }
             if is_valid {
-                self.emit("prisma://native-drag-drop", paths, self.client_position(point));
+                self.emit("prisma://native-drag-drop", paths, self.client_position(point), text, key_state);
             }
             Ok(())
         }

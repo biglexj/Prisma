@@ -291,7 +291,31 @@ pub fn media_get_default_pictures_dir(app: tauri::AppHandle) -> Result<String, S
     Ok(clean_path_str("."))
 }
 
-/// Guarda un fotograma capturado de un vídeo (snapshot) en la carpeta configurada o en Imágenes por defecto.
+#[derive(serde::Serialize)]
+pub struct DefaultCaptureFolders {
+    images: String,
+    videos: String,
+}
+
+/// Usa las bibliotecas reales del sistema (también si están redirigidas a D:).
+#[tauri::command]
+pub fn media_get_default_capture_folders(app: tauri::AppHandle) -> Result<DefaultCaptureFolders, String> {
+    use tauri::Manager;
+    let images = app.path().picture_dir()
+        .map_err(|error| format!("No se pudo localizar Imágenes: {error}"))?.join("Prisma");
+    let videos = app.path().video_dir()
+        .map_err(|error| format!("No se pudo localizar Vídeos: {error}"))?.join("Prisma");
+    for directory in [&images, &videos] {
+        std::fs::create_dir_all(directory)
+            .map_err(|error| format!("No se pudo crear {}: {error}", directory.display()))?;
+    }
+    Ok(DefaultCaptureFolders {
+        images: clean_path_str(&images.to_string_lossy()),
+        videos: clean_path_str(&videos.to_string_lossy()),
+    })
+}
+
+/// Guarda un fotograma en su carpeta configurada o en Imágenes/Prisma.
 #[tauri::command]
 pub async fn video_save_snapshot(
     app: tauri::AppHandle,
@@ -331,21 +355,9 @@ pub async fn video_save_snapshot(
             let clean = clean_path_str(&folder);
             PathBuf::from(clean)
         } else {
-            // Predeterminado: Carpeta Imágenes del sistema
-            if let Ok(pic_dir) = app.path().picture_dir() {
-                pic_dir
-            } else {
-                #[cfg(target_os = "windows")]
-                {
-                    if let Ok(userprofile) = std::env::var("USERPROFILE") {
-                        PathBuf::from(userprofile).join("Pictures")
-                    } else {
-                        PathBuf::from(".")
-                    }
-                }
-                #[cfg(not(target_os = "windows"))]
-                PathBuf::from(".")
-            }
+            app.path().picture_dir()
+                .map_err(|error| format!("No se pudo localizar Imágenes: {error}"))?
+                .join("Prisma")
         };
 
         if !target_dir.exists() {
@@ -389,11 +401,9 @@ pub async fn video_save_snapshot(
         };
 
         // 5. Extensión
-        let ext = match format.as_deref().map(|s| s.to_lowercase()).as_deref() {
-            Some("webp") => "webp",
-            Some("jpg") | Some("jpeg") => "jpg",
-            _ => "png",
-        };
+        let format = format.as_deref().unwrap_or("png");
+        let ext = crate::infrastructure::codecs::capture_image::capture_extension(format)?;
+        let image_bytes = crate::infrastructure::codecs::capture_image::encode_capture_image(&image_bytes, format)?;
 
         // 6. Generar nombre único evitando colisiones
         let base_file_name = format!("Prisma_snap_{effective_stem}_{time_tag}.{ext}");
@@ -413,6 +423,7 @@ pub async fn video_save_snapshot(
 
         let clean_saved = clean_path_str(&target_file_path.to_string_lossy());
         let clean_folder = clean_path_str(&target_dir.to_string_lossy());
+        super::vault_import::remember_capture(&app, &clean_saved);
 
         Ok(SaveSnapshotResult {
             saved_path: clean_saved,
@@ -422,5 +433,44 @@ pub async fn video_save_snapshot(
     })
     .await
     .map_err(|e| format!("Error al procesar la captura de fotograma: {e}"))?
+}
+
+fn is_file_or_ancestor_hidden(path: &Path) -> bool {
+    for component in path.components() {
+        let s = component.as_os_str().to_string_lossy();
+        if s.starts_with('.') && s != "." && s != ".." {
+            return true;
+        }
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        const FILE_ATTRIBUTE_HIDDEN: u32 = 0x2;
+        if let Ok(meta) = path.metadata() {
+            if (meta.file_attributes() & FILE_ATTRIBUTE_HIDDEN) != 0 {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Filtra una lista de rutas multimedia, devolviendo únicamente aquellas que existen
+/// en disco como archivos regulares y no están ocultas por el sistema.
+#[tauri::command]
+pub async fn media_filter_existing_paths(paths: Vec<String>) -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut existing = Vec::with_capacity(paths.len());
+        for raw in paths {
+            let clean = clean_path_str(&raw);
+            let p = Path::new(&clean);
+            if p.is_file() && !is_file_or_ancestor_hidden(p) {
+                existing.push(raw);
+            }
+        }
+        Ok(existing)
+    })
+    .await
+    .map_err(|e| format!("Error al verificar existencia de rutas: {e}"))?
 }
 

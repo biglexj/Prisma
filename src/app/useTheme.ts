@@ -4,26 +4,30 @@ import { emitTo, listen } from "@tauri-apps/api/event";
 import { FLYOUT_THEME_EVENT, type FlyoutTheme } from "../features/playback/services/flyoutTheme";
 
 export type ThemeMode = "light" | "dark" | "system";
-export type AccentColorId = "purple" | "rose" | "blue" | "emerald" | "amber" | "cyan";
-export type BackgroundVariantId = "prisma" | "neutral" | "dark_blue";
+export type AccentColorId = "turquoise" | "purple" | "rose" | "blue" | "emerald" | "amber" | "cyan";
+export type BackgroundVariantId = "prisma" | "neutral" | "dark_blue" | "pure" | "classic";
 
 export interface AccentColorOption {
   id: AccentColorId;
   label: string;
   colorHex: string;
-  badge?: string;
 }
 
 export interface BackgroundVariantOption {
   id: BackgroundVariantId;
+  light: BackgroundVariantTone;
+  dark: BackgroundVariantTone;
+}
+
+interface BackgroundVariantTone {
   label: string;
   desc: string;
-  badge?: string;
   colorHex: string;
 }
 
 export const ACCENT_COLORS: AccentColorOption[] = [
-  { id: "purple", label: "Morado Prisma", colorHex: "#a855f7", badge: "Destacado" },
+  { id: "turquoise", label: "Turquesa Ely", colorHex: "#00C9B9" },
+  { id: "purple", label: "Morado Prisma", colorHex: "#a855f7" },
   { id: "rose", label: "Rosa Aurora", colorHex: "#f43f5e" },
   { id: "blue", label: "Azul Eléctrico", colorHex: "#3b82f6" },
   { id: "emerald", label: "Verde Esmeralda", colorHex: "#10b981" },
@@ -34,31 +38,48 @@ export const ACCENT_COLORS: AccentColorOption[] = [
 export const BACKGROUND_VARIANTS: BackgroundVariantOption[] = [
   {
     id: "prisma",
-    label: "Tonal Prisma",
-    desc: "Ciruela oscuro cálido característico",
-    badge: "Predeterminado",
-    colorHex: "#1b1216",
+    light: { label: "Marfil Prisma", desc: "Marfil suave con un matiz malva", colorHex: "#faf7f9" },
+    dark: { label: "Tonal Prisma", desc: "Ciruela suave con superficies equilibradas", colorHex: "#1b171f" },
   },
   {
     id: "neutral",
-    label: "Gris Neutro",
-    desc: "Gris carbón neutro / oscuro clásico",
-    badge: "Clásico",
-    colorHex: "#121214",
+    light: { label: "Gris Perla", desc: "Grises claros sin dominante de color", colorHex: "#f7f7f7" },
+    dark: { label: "Gris Neutro", desc: "Grafito neutro con contraste suave", colorHex: "#171719" },
   },
   {
     id: "dark_blue",
-    label: "Azul Oscuro",
-    desc: "Azul profundo nocturno",
-    badge: "Nocturno",
-    colorHex: "#16161e",
+    light: { label: "Azul Bruma", desc: "Azul grisáceo claro y desaturado", colorHex: "#f4f7fb" },
+    dark: { label: "Azul Oscuro", desc: "Azul pizarra con superficies desaturadas", colorHex: "#161c26" },
   },
+  {
+    id: "pure",
+    light: { label: "Blanco Puro", desc: "Blanco puro sin degradado", colorHex: "#ffffff" },
+    dark: { label: "Negro Puro", desc: "Negro puro sin degradado", colorHex: "#000000" },
+  },
+  {
+    id: "classic",
+    light: { label: "Prisma Clásico", desc: "Rosado suave del tema original", colorHex: "#fff8f7" },
+    dark: { label: "Prisma Clásico", desc: "Vino oscuro del tema original", colorHex: "#1b1216" },
+  },
+
 ];
+
+export function getBackgroundVariants(mode: "light" | "dark") {
+  return BACKGROUND_VARIANTS.map(variant => ({ id: variant.id, ...variant[mode] }));
+}
 
 const STORAGE_THEME_KEY = "prisma_theme";
 const STORAGE_ACCENT_KEY = "prisma_accent";
 const STORAGE_BG_VARIANT_KEY = "prisma_bg_variant";
+const STORAGE_BG_LIGHT_KEY = "prisma_bg_variant_light";
+const STORAGE_BG_DARK_KEY = "prisma_bg_variant_dark";
 const STORAGE_DYNAMIC_MUSIC_KEY = "prisma_dynamic_music_theme";
+
+function storedBackgroundVariant(key: string): BackgroundVariantId {
+  const saved = localStorage.getItem(key) ?? localStorage.getItem(STORAGE_BG_VARIANT_KEY);
+  if (saved === "miku") return "dark_blue";
+  return BACKGROUND_VARIANTS.some(variant => variant.id === saved) ? saved as BackgroundVariantId : "prisma";
+}
 
 function publishFlyoutTheme(): void {
   const root = document.documentElement;
@@ -152,18 +173,17 @@ export function useTheme() {
     const saved = localStorage.getItem(STORAGE_THEME_KEY) as ThemeMode | null;
     return saved ?? "system";
   });
+  const [systemDark, setSystemDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const resolvedTheme = theme === "system" ? (systemDark ? "dark" : "light") : theme;
 
   const [accentColor, setAccentColorState] = useState<AccentColorId>(() => {
     const saved = localStorage.getItem(STORAGE_ACCENT_KEY) as AccentColorId | null;
     return saved ?? "purple";
   });
 
-  const [backgroundVariant, setBackgroundVariantState] = useState<BackgroundVariantId>(() => {
-    const saved = localStorage.getItem(STORAGE_BG_VARIANT_KEY);
-    if (saved === "miku" || saved === "dark_blue") return "dark_blue";
-    if (saved === "neutral" || saved === "prisma") return saved;
-    return "prisma";
-  });
+  const [lightBackgroundVariant, setLightBackgroundVariant] = useState(() => storedBackgroundVariant(STORAGE_BG_LIGHT_KEY));
+  const [darkBackgroundVariant, setDarkBackgroundVariant] = useState(() => storedBackgroundVariant(STORAGE_BG_DARK_KEY));
+  const backgroundVariant = resolvedTheme === "dark" ? darkBackgroundVariant : lightBackgroundVariant;
 
   const [dynamicMusicTheme, setDynamicMusicThemeState] = useState<boolean>(() => {
     const saved = localStorage.getItem(STORAGE_DYNAMIC_MUSIC_KEY);
@@ -175,7 +195,7 @@ export function useTheme() {
   // Aplicar atributos base data-theme, data-accent y data-bg
   useEffect(() => {
     applyThemeAttributes(theme, accentColor, backgroundVariant);
-  }, [theme, accentColor, backgroundVariant]);
+  }, [theme, resolvedTheme, accentColor, backgroundVariant]);
 
   // Aplicar tokens adaptativos en tiempo real si hay música sonando y está activado
   useEffect(() => {
@@ -185,7 +205,7 @@ export function useTheme() {
       applyMusicPaletteTokens(null, theme);
     }
     publishFlyoutTheme();
-  }, [dynamicMusicTheme, activeMusicPalette, theme]);
+  }, [dynamicMusicTheme, activeMusicPalette, theme, resolvedTheme]);
 
   useEffect(() => { publishFlyoutTheme(); }, [accentColor, backgroundVariant]);
 
@@ -197,18 +217,12 @@ export function useTheme() {
   // Escuchar cambios de preferencia del sistema si el modo es "system"
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => {
-      if (theme === "system") {
-        applyThemeAttributes("system", accentColor, backgroundVariant);
-        if (dynamicMusicTheme && activeMusicPalette) {
-          applyMusicPaletteTokens(activeMusicPalette, "system");
-        }
-        publishFlyoutTheme();
-      }
+    const handler = (event: MediaQueryListEvent) => {
+      setSystemDark(event.matches);
     };
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [theme, accentColor, backgroundVariant, dynamicMusicTheme, activeMusicPalette]);
+  }, []);
 
   const setTheme = useCallback((mode: ThemeMode) => {
     localStorage.setItem(STORAGE_THEME_KEY, mode);
@@ -221,9 +235,14 @@ export function useTheme() {
   }, []);
 
   const setBackgroundVariant = useCallback((variant: BackgroundVariantId) => {
-    localStorage.setItem(STORAGE_BG_VARIANT_KEY, variant);
-    setBackgroundVariantState(variant);
-  }, []);
+    if (resolvedTheme === "dark") {
+      localStorage.setItem(STORAGE_BG_DARK_KEY, variant);
+      setDarkBackgroundVariant(variant);
+    } else {
+      localStorage.setItem(STORAGE_BG_LIGHT_KEY, variant);
+      setLightBackgroundVariant(variant);
+    }
+  }, [resolvedTheme]);
 
   const setDynamicMusicTheme = useCallback((enabled: boolean) => {
     localStorage.setItem(STORAGE_DYNAMIC_MUSIC_KEY, String(enabled));
@@ -236,10 +255,13 @@ export function useTheme() {
 
   return {
     theme,
+    resolvedTheme,
     setTheme,
     accentColor,
     setAccentColor,
     backgroundVariant,
+    lightBackgroundVariant,
+    darkBackgroundVariant,
     setBackgroundVariant,
     dynamicMusicTheme,
     setDynamicMusicTheme,

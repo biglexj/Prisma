@@ -12,7 +12,7 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 Set-Location $root
 $repo = 'biglexj/Prisma'
-$baseUrl = 'https://www.biglexj.com'
+$baseUrl = 'https://biglexj.com'
 $package = Get-Content package.json -Raw -Encoding UTF8 | ConvertFrom-Json
 if (-not $Version) { $Version = $package.version }
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'A stable SemVer version is required.' }
@@ -25,10 +25,20 @@ $notesPath = Join-Path $root 'RELEASE_MESSAGE.md'
 $notes = [IO.File]::ReadAllText($notesPath, [Text.Encoding]::UTF8)
 if (-not $notes.Contains("Prisma $Version") -or $notes -match '(?i)(?<![a-z])[a-z]:[\\/]') { throw 'Invalid public release message.' }
 $tag = "v$Version"
-$installer = Join-Path $root "release/Prisma_$($Version)_x64-setup.exe"
+$installer = Join-Path $root "release/Prisma_$($Version)-setup.exe"
 $assetName = Split-Path $installer -Leaf
 $assetUrl = "https://github.com/$repo/releases/download/$tag/$assetName"
 $releaseUrl = "https://github.com/$repo/releases/tag/$tag"
+function Get-Sha256Hex {
+    param([string]$Path)
+    # Compatible con Windows PowerShell cuando Get-FileHash no está disponible.
+    $algorithm = [Security.Cryptography.SHA256]::Create()
+    try {
+        $stream = [IO.File]::OpenRead($Path)
+        try { $digest = $algorithm.ComputeHash($stream) } finally { $stream.Dispose() }
+    } finally { $algorithm.Dispose() }
+    ([BitConverter]::ToString($digest)).Replace('-', '').ToLowerInvariant()
+}
 function Invoke-CheckedNative {
     param([string]$Command, [string[]]$Arguments)
     & $Command @Arguments
@@ -94,11 +104,11 @@ if (-not $LocalOnly) {
 }
 if (-not $SkipBuild -and -not $SyncAuroraOnly) {
     Invoke-CheckedNative bun @('test','tests')
-    Invoke-CheckedNative bun @('run','tauri','build')
-    Invoke-CheckedNative bun @('scripts/copy-build-releases.ts')
+    # Compila la app con Tauri (sin bundle NSIS) y genera el instalador Inno Setup.
+    Invoke-CheckedNative bun @('run','tauri:build')
 }
 if (-not (Test-Path -LiteralPath $installer)) { throw 'Prepared installer is missing.' }
-$hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+$hash = Get-Sha256Hex $installer
 $bytes = (Get-Item -LiteralPath $installer).Length
 if ($SkipBuild -and -not $SyncAuroraOnly) {
     $manifestPath = $BuildManifest
@@ -117,7 +127,7 @@ if ($SkipBuild -and -not $SyncAuroraOnly) {
     $changed = @(Invoke-CheckedNative git @('diff','--name-only',$manifest.sourceCommit,'--','src','src-tauri'))
     foreach ($path in $changed) { if ($path -notin $knownPaths) { throw "Source changed since build: $path" } }
     foreach ($property in $manifest.uncommittedSourceHashes.PSObject.Properties) {
-        if ((Get-FileHash -LiteralPath $property.Name -Algorithm SHA256).Hash -ne $property.Value) { throw "Source hash changed since build: $($property.Name)" }
+        if ((Get-Sha256Hex $property.Name) -ne $property.Value) { throw "Source hash changed since build: $($property.Name)" }
     }
     Write-Host 'Prepared installer and source snapshot verified.'
 }
@@ -126,6 +136,7 @@ $sumsFile = Join-Path (Split-Path $installer -Parent) 'SHA256SUMS.txt'
 [IO.File]::WriteAllText($sumsFile, "$hash  $assetName" + [Environment]::NewLine, (New-Object Text.UTF8Encoding($false)))
 if ($LocalOnly) { Write-Host "Local installer verified: $assetName ($hash)"; exit 0 }
 if (-not $SyncAuroraOnly) {
+    if (Invoke-CheckedNative git @('status','--porcelain')) { throw 'Sources changed during the build; review and commit before publication.' }
     Invoke-CheckedNative git @('tag','-a',$tag,'-m',"Prisma $Version")
     Invoke-CheckedNative git @('push','--atomic','origin','HEAD:refs/heads/preview','HEAD:refs/heads/main',"refs/tags/$tag")
     Invoke-CheckedNative gh @('release','create',$tag,$installer,"$installer.sha256",$sumsFile,'--repo',$repo,'--verify-tag','--latest','--title',"Prisma $Version",'--notes-file',$notesPath)

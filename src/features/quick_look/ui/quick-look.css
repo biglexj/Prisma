@@ -186,12 +186,7 @@
 .quicklook-dims-badge {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
-}
-
-@media (max-width: 480px) {
-  .quicklook-dims-badge {
-    display: none;
-  }
+  white-space: nowrap;
 }
 
 .dark .quicklook-file-badge,
@@ -2008,3 +2003,100 @@ input[type="range"].quicklook-seek-bar::-webkit-slider-thumb {
 }
 
 
+
+/* Cabecera en reposo: nombre/peso a la izquierda, posición a la derecha.
+   Hover y foco revelan acciones ancladas a la derecha, sin desplazar la ventana. */
+.quicklook-header {
+  position: relative;
+  padding: 0 12px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.quicklook-header-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.quicklook-header-summary .quicklook-file-info {
+  max-width: 80%;
+}
+.quicklook-header-details {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+.quicklook-header .quicklook-header-actions {
+  display: none;
+  margin-left: auto;
+  flex-shrink: 0;
+  gap: 4px;
+}
+.quicklook-header:is(:hover, :focus-within, .has-open-panel) .quicklook-header-summary {
+  display: none;
+}
+.quicklook-header:is(:hover, :focus-within, .has-open-panel) .quicklook-header-actions {
+  display: flex;
+}
+.quicklook-header:is(:hover, :focus-within, .has-open-panel) .quicklook-header-details {
+  display: flex;
+}
+.quicklook-header .quicklook-selection-pager {
+  box-sizing: border-box;
+  height: 28px;
+  flex-shrink: 0;
+  max-width: 120px;
+}
+.quicklook-header .quicklook-pager-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@media (max-width: 480px) {
+  .quicklook-header { padding: 0 6px; }
+}
+@media (max-width: 360px) {
+  .quicklook-header .quicklook-exif-wrapper,
+  .quicklook-header .ql-action-edit { display: none; }
+}
+@media (max-width: 316px) {
+  .quicklook-header .ql-action-open { display: none; }
+}
+@media (max-width: 284px) {
+  .quicklook-header .ql-action-pin { display: none; }
+}
+@media (max-width: 252px) {
+  .quicklook-header .ql-action-copy { display: none; }
+}
+@media (max-width: 220px) {
+  .quicklook-header .quicklook-header-details { display: none !important; }
+  .quicklook-header .ql-action-compare { display: none; }
+}
+@media (max-width: 140px) {
+  .quicklook-header .quicklook-selection-pager { display: none; }
+
+}
+
+.quicklook-header-summary .quicklook-selection-pager {
+  flex-shrink: 0;
+}
+/* El contador en reposo se mantiene estable mientras se usan sus flechas. */
+.quicklook-header:has(.quicklook-header-summary .quicklook-selection-pager:is(:hover, :focus-within)) .quicklook-header-summary {
+  display: flex;
+}
+.quicklook-header:has(.quicklook-header-summary .quicklook-selection-pager:is(:hover, :focus-within)) .quicklook-header-actions,
+.quicklook-header:has(.quicklook-header-summary .quicklook-selection-pager:is(:hover, :focus-within)) .quicklook-header-details {
+  display: none;
+}
+@media (max-width: 220px) {
+  .quicklook-header-summary .quicklook-size-badge { display: none; }
+}
+@media (max-width: 200px) {
+  .quicklook-header .quicklook-pager-btn { display: none; }
+  .quicklook-header .quicklook-selection-pager { max-width: 64px; }
+}

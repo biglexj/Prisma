@@ -2,10 +2,13 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
   height: 100%;
-  padding: 1.5rem 2rem;
+  overflow: hidden;
+  padding: var(--page-top-space, 24px) 0 0;
   gap: 1.25rem;
-  overflow-y: auto;
   color: var(--on-surface);
 }
 
@@ -46,6 +49,8 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 1rem;
+  /* La cabecera no se encoge: el distintivo de FFmpeg siempre se ve. */
+  flex: 0 0 auto;
 }
 
 .convert-title-area h1 {
@@ -73,6 +78,12 @@
   border: 1px solid currentColor;
 }
 
+.convert-ffmpeg-badge.is-checking {
+  background: color-mix(in srgb, var(--on-surface-variant) 10%, transparent);
+  color: var(--on-surface-variant);
+  border-color: color-mix(in srgb, var(--on-surface-variant) 30%, transparent);
+}
+
 .convert-ffmpeg-badge.is-ok {
   background: color-mix(in srgb, var(--success, #178958) 12%, transparent);
   color: var(--success, #178958);
@@ -92,6 +103,7 @@
   padding: 0.35rem;
   border-radius: 16px;
   border: 1px solid var(--outline-variant);
+  flex: 0 0 auto;
 }
 
 .convert-mode-btn {
@@ -122,15 +134,61 @@
   box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
+/* La sección se divide en dos columnas de mitad: las herramientas a la
+   izquierda y la cola de archivos a la derecha. */
 .convert-panels-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.25rem;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
-@media (max-width: 1024px) {
+.convert-tools-area {
+  grid-column: 1 / 2;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-height: 0;
+}
+
+.convert-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.convert-column > .convert-card {
+  flex: 0 0 auto;
+}
+
+/* La cola de archivos se desplaza por su cuenta: la página no se mueve. */
+.convert-column.is-queue {
+  grid-column: 2 / 3;
+  overflow: hidden;
+}
+
+.convert-column.is-queue > .convert-queue-card {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.convert-panel {
+  min-height: 0;
+}
+
+@media (max-width: 1100px) {
   .convert-panels-grid {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .convert-tools-area,
+  .convert-column.is-queue {
+    grid-column: 1;
   }
 }
 
@@ -311,13 +369,16 @@
   cursor: not-allowed;
 }
 
+/* La lista de archivos a convertir se desplaza por su cuenta. */
 .convert-queue-table-container {
   background: var(--surface-container-low);
   border: 1px solid var(--outline-variant);
   border-radius: 16px;
   overflow: hidden;
-  max-height: 380px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .convert-queue-table {
@@ -328,6 +389,9 @@
 }
 
 .convert-queue-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   padding: 0.75rem 1rem;
   background: var(--surface-container);
   color: var(--on-surface-variant);

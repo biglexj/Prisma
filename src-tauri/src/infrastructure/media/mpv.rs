@@ -15,7 +15,9 @@ pub struct MpvBackend {
 impl MpvBackend {
     pub fn new() -> Result<Self, String> {
         let mpv = Mpv::with_initializer(|initializer| {
-            initializer.set_property("vo", "auto")?;
+            // mpv v0.41 eliminó la salida "auto": nombrar una concreta evita el
+            // fallo "Video output auto not found!" al abrir cualquier medio.
+            initializer.set_property("vo", "gpu")?;
             initializer.set_property("audio-display", "no")?;
             initializer.set_property("keep-open", "yes")?;
             Ok(())

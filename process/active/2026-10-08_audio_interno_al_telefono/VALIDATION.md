@@ -35,3 +35,12 @@ Diagnóstico nativo: Ctrl+Shift+Alt+T ocupado, error Windows1409. Biglex identif
 ## Preparación de versión — 2026-10-08
 
 Solicitud posterior: contrastar GitHub y avanzar únicamente versiones que todavía lo necesiten. Releases y tags remotos verificados: último Prisma v1.1.7; local package.json, tauri.conf.json, Cargo.toml y Cargo.lock ya coinciden en 1.1.8. Se conserva ese número. Se actualizan fecha, entrada de novedades y release message de 1.1.8. No hay tag ni release v1.1.8 remoto, y no se publica ni se hace push.
+
+
+## Aviso del atajo global fuera de Prisma — 2026-10-19
+
+Alcance solicitado: únicamente hacer visible la confirmación de Ctrl+Alt+Shift+T cuando Prisma no está en primer plano. El aviso existente de App.tsx vive dentro de la ventana principal y no puede verse sobre otra aplicación.
+
+El callback nativo del atajo ahora muestra una notificación de escritorio mediante el plugin de notificaciones ya instalado cuando la ventana principal no tiene el foco. Confirma activación/desactivación o informa el error; al activar distingue Conectando de Conectado. Si Prisma tiene foco conserva el aviso interno sin duplicar la notificación de escritorio. No se cambia el transporte de audio ni el registro de atajos.
+
+Validación: PASS `cargo test --manifest-path src-tauri/Cargo.toml --lib features::audio_relay::tests::shortcut_feedback -- --nocapture` (1 prueba; compila el código nativo y comprueba mensajes de activación, conexión, desactivación y fallo). PASS `git diff --check` sobre el módulo. La aparición efectiva del aviso de Windows queda pendiente; la instancia observada en ejecución pertenece a la aplicación instalada, no a esta compilación del código fuente. No se reinició ni reemplazó esa instalación y no se afirmó validación de audio físico.

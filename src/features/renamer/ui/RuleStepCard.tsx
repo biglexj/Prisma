@@ -289,6 +289,7 @@ function TemplateRuleEditor({
           value={config.counterStart}
           onChange={(e) => onChange({ counterStart: parseInt(e.target.value, 10) || 1 })}
         />
+        <small>Primer número de la secuencia. Los nombres ocupados se saltan automáticamente.</small>
       </div>
 
       <div className="rule-input-group">
@@ -467,6 +468,7 @@ function CounterRuleEditor({
           value={config.start}
           onChange={(e) => onChange({ start: parseInt(e.target.value, 10) || 1 })}
         />
+        <small>Primer número de la secuencia. Los nombres ocupados se saltan automáticamente.</small>
       </div>
 
       <div className="rule-input-group">

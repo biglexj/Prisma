@@ -1,5 +1,6 @@
 pub mod capture;
 mod metadata;
+mod toast;
 use std::io::{Read, Write};
 use std::net::{IpAddr, Shutdown, SocketAddr, TcpStream};
 use std::path::PathBuf;
@@ -15,7 +16,7 @@ use crate::infrastructure::media::passthru::PassthruService;
 
 pub const PORT: u16 = 49288;
 pub const CAPABILITY: &str = "audio-receiver-tls-pcm-v1";
-const DEFAULT_SHORTCUT: &str = "Ctrl+Shift+Alt+M";
+const DEFAULT_SHORTCUT: &str = "Ctrl+Shift+Alt+T";
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -43,13 +44,12 @@ pub struct AudioRelayService {
     transition: Mutex<()>, saving: Mutex<()>, last_shortcut: Mutex<Option<Instant>>,
 }
 impl AudioRelayService {
-    pub fn start(app: AppHandle, directory: PathBuf, development: bool) -> Arc<Self> {
+    pub fn start(app: AppHandle, directory: PathBuf, _development: bool) -> Arc<Self> {
         let path = directory.join("mobile-audio.json");
         let mut config: SavedConfig = std::fs::read(&path).ok().and_then(|bytes| serde_json::from_slice(&bytes).ok()).unwrap_or_default();
-        // M belongs to the installed app; dev uses T, including profiles created
-        // before the two instances had separate shortcut defaults.
-        let default_shortcut = if development { "Ctrl+Shift+Alt+T" } else { DEFAULT_SHORTCUT };
-        if !config.shortcut.is_empty() { config.shortcut = default_shortcut.into(); }
+        let default_shortcut = DEFAULT_SHORTCUT;
+        let needs_save = config.shortcut.is_empty() || config.shortcut != default_shortcut;
+        config.shortcut = default_shortcut.into();
         config.volume = if config.volume.is_finite() { config.volume.clamp(0.0, 1.0) } else { 1.0 };
         let status = RelayStatus { enabled: false, connection: "off".into(), device: config.device.clone(), volume: config.volume,
             capture_device_id: config.capture_device_id.clone(), shortcut: config.shortcut.clone(), default_shortcut: default_shortcut.into(), shortcut_error: None,
@@ -57,6 +57,7 @@ impl AudioRelayService {
         let service = Arc::new(Self { config: Mutex::new(config), status: Mutex::new(status), path,
             enabled: AtomicBool::new(false), quitting: AtomicBool::new(false), generation: AtomicU64::new(0),
             socket: Mutex::new(None), transition: Mutex::new(()), saving: Mutex::new(()), last_shortcut: Mutex::new(None), app });
+        if needs_save { let _ = service.save(); }
         service.register_shortcut();
         let retry = service.clone();
         std::thread::spawn(move || {
@@ -109,6 +110,9 @@ impl AudioRelayService {
         self.change_enabled(!self.enabled.load(Ordering::SeqCst))
     }
     fn shortcut_toggle(&self) -> Result<RelayStatus, String> {
+        // global-hotkey uses RegisterHotKey(MOD_NOREPEAT) on Windows. Each Pressed
+        // is a distinct chord; a second time filter drops deliberate quick toggles.
+        if cfg!(target_os = "windows") { return self.toggle(); }
         let mut last = self.last_shortcut.lock().unwrap();
         if last.is_some_and(|time| time.elapsed() < Duration::from_millis(400)) { return Ok(self.status()); }
         *last = Some(Instant::now());
@@ -293,16 +297,46 @@ fn register(app: &AppHandle, shortcut: &str) -> Result<(), String> {
     let held = Arc::new(AtomicBool::new(false));
     app.global_shortcut().on_shortcut(shortcut, move |app, _, event| {
         if event.state() == ShortcutState::Released { held.store(false, Ordering::Relaxed); return; }
-        if event.state() == ShortcutState::Pressed && !held.swap(true, Ordering::Relaxed) {
+        // Windows already suppresses key-repeat. Do not depend on its synthetic
+        // Released event: losing it must never prevent the next real press.
+        if event.state() == ShortcutState::Pressed &&
+            (cfg!(target_os = "windows") || !held.swap(true, Ordering::Relaxed)) {
             let app = app.clone();
             std::thread::spawn(move || {
                 if let Some(service) = app.try_state::<Arc<AudioRelayService>>() {
-                    if let Err(error) = service.shortcut_toggle() { let _ = app.emit("prisma://mobile-audio-error", error); }
+                    let result = service.shortcut_toggle();
+                    show_shortcut_feedback(&app, &result);
+                    if let Err(error) = result { let _ = app.emit("prisma://mobile-audio-error", error); }
                 }
             });
         }
     }).map_err(|_| "El atajo global está ocupado o no es válido".into())
 }
+fn shortcut_feedback(result: &Result<RelayStatus, String>) -> (&'static str, String) {
+    match result {
+        Ok(status) if status.enabled => {
+            let phone = status.device.as_ref().map(|device| device.name.as_str()).unwrap_or("el teléfono");
+            let body = if status.connection == "connected" {
+                format!("Conectado con {phone}.")
+            } else {
+                format!("Conectando con {phone}…")
+            };
+            ("Audio al teléfono activado", body)
+        }
+        Ok(_) => ("Audio al teléfono desactivado", "Se detuvo el envío de audio al teléfono.".into()),
+        Err(error) => ("No se pudo cambiar el audio al teléfono", error.clone()),
+    }
+}
+
+fn show_shortcut_feedback(app: &AppHandle, result: &Result<RelayStatus, String>) {
+    // En primer plano la app ya muestra su aviso; fuera de ella debe ser visible en el escritorio.
+    if app.get_webview_window("main").and_then(|window| window.is_focused().ok()).unwrap_or(false) {
+        return;
+    }
+    let (title, body) = shortcut_feedback(result);
+    toast::show(app, if result.is_err() { body } else { format!("🔊 {title}") });
+}
+
 fn local_tcp(address: &str) -> Result<TcpStream, String> {
     let ip: IpAddr = address.parse().map_err(|_| "Dirección Synapse inválida")?;
     let local = match ip { IpAddr::V4(ip) => ip.is_private() || ip.is_loopback() || ip.is_link_local(), IpAddr::V6(ip) => ip.is_loopback() || ip.is_unique_local() || ip.is_unicast_link_local() };
@@ -382,6 +416,22 @@ fn encode_pcm(block: &capture::AudioBlock, gain: f32) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn shortcut_feedback_distinguishes_activation_connection_stop_and_error() {
+        let mut status = RelayStatus { enabled: true, connection: "connecting".into(), device: None, volume: 1.0,
+            capture_device_id: None, shortcut: DEFAULT_SHORTCUT.into(), default_shortcut: DEFAULT_SHORTCUT.into(),
+            shortcut_error: None, error: None, sample_rate: 0 };
+        let (title, body) = shortcut_feedback(&Ok(status.clone()));
+        assert_eq!(title, "Audio al teléfono activado");
+        assert_eq!(body, "Conectando con el teléfono…");
+        status.device = Some(MobileAudioDevice { id: "test".into(), name: "Teléfono de prueba".into(), address: String::new(), fingerprint: String::new() });
+        status.connection = "connected".into();
+        assert_eq!(shortcut_feedback(&Ok(status.clone())).1, "Conectado con Teléfono de prueba.");
+        status.enabled = false;
+        assert_eq!(shortcut_feedback(&Ok(status)).0, "Audio al teléfono desactivado");
+        let error = "No hay un teléfono disponible.".to_string();
+        assert_eq!(shortcut_feedback(&Err(error.clone())), ("No se pudo cambiar el audio al teléfono", error));
+    }
     #[test] fn framing_rejects_unbounded_or_truncated_controls() {
         assert!(read_json(&mut &u32::MAX.to_be_bytes()[..]).is_err());
         assert!(read_json(&mut &[0,0,0,5,b'{'][..]).is_err());

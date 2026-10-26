@@ -26,3 +26,5 @@
 - Vista previa de esa configuración compilada sin errores. La compilación de aplicación y pruebas anteriores no se repiten: esta revisión solo afecta a los scripts Pascal del instalador.
 
 - Compilación local vigente con tamaño intermedio: Inno correcto (198,672 s), copia y checksums contrastados. SHA-256: 68a5a6d0ef15dd04827c709aff391faa20439dcc35a3d50ae836f4d0040b7baa. No instalado ni publicado; las vistas previas solo comprueban presentación y controles, no una instalación completa.
+
+- Autorización posterior de publicación recibida. Última versión pública consultada: 1.1.7 en GitHub y Aurora; se prepara 2.0.0 sin sobrescribirla. Mensaje revisado: grabación de región fija, nombres oficiales de Super Gallery y Prisma Upscaler, sin garantías absolutas ni rendimiento no medido. No se anuncia la pausa de grabación, cuya aceptación real no está acreditada. Se realizará build nuevo desde el snapshot consolidado antes de publicar.

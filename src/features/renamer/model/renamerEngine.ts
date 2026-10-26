@@ -257,9 +257,16 @@ export function applyRemove(text: string, config: RemoveRuleConfig): string {
 export function computeRenamingPreview(
   items: RenamerFileItem[],
   steps: RuleStep[],
-  selectedPaths: Set<string>
+  selectedPaths: Set<string>,
+  occupiedPaths?: ReadonlySet<string>,
 ): PreviewItem[] {
   const enabledSteps = steps.filter((s) => s.enabled);
+  const pathKey = (path: string) => path.replace(/\\/g, "/").toLowerCase();
+  const occupied = new Set([...(occupiedPaths ?? [])].map(pathKey));
+  // Los números solo avanzan cuando alguna regla usa realmente un contador.
+  const hasCounter = enabledSteps.some((step) => step.type === "counter" ||
+    (step.type === "template" && /\[(Contador|Counter|Numero|Número|Num|01|001|0001)\]/i.test((step.config as TemplateRuleConfig).pattern)));
+  const reserved = new Set<string>();
   let selectedCounter = 0;
 
   // Paso 1: Transformar cada archivo individualmente
@@ -268,6 +275,7 @@ export function computeRenamingPreview(
     base: string;
     ext: string;
     selected: boolean;
+    skippedNumbers?: number;
   }> = [];
 
   for (const item of items) {
@@ -287,61 +295,82 @@ export function computeRenamingPreview(
     let currentBase = initialBase;
     let currentExt = initialExt;
     selectedCounter += 1;
-    const currentSeqIndex = selectedCounter;
+    let currentSeqIndex = selectedCounter;
+    let skippedNumbers = 0;
+    const triedNames = new Set<string>();
 
-    for (const step of enabledSteps) {
-      switch (step.type) {
-        case "template": {
-          const cfg = step.config as TemplateRuleConfig;
-          const val = (cfg.counterStart ?? 1) + (currentSeqIndex - 1) * (cfg.counterStep ?? 1);
-          currentBase = applyTemplate(currentBase, currentExt, item, cfg, val, items.length);
-          break;
-        }
-        case "replace": {
-          const cfg = step.config as ReplaceRuleConfig;
-          currentBase = applyReplace(currentBase, cfg);
-          break;
-        }
-        case "add": {
-          const cfg = step.config as AddRuleConfig;
-          currentBase = applyAdd(currentBase, cfg);
-          break;
-        }
-        case "counter": {
-          const cfg = step.config as CounterRuleConfig;
-          const val = (cfg.start ?? 1) + (currentSeqIndex - 1) * (cfg.step ?? 1);
-          currentBase = applyCounter(currentBase, cfg, val);
-          break;
-        }
-        case "case": {
-          const cfg = step.config as CaseRuleConfig;
-          if (cfg.target === "name" || cfg.target === "all") {
-            currentBase = toCaseMode(currentBase, cfg.mode);
+    while (true) {
+      currentBase = initialBase;
+      currentExt = initialExt;
+
+      for (const step of enabledSteps) {
+        switch (step.type) {
+          case "template": {
+            const cfg = step.config as TemplateRuleConfig;
+            const val = (cfg.counterStart ?? 1) + (currentSeqIndex - 1) * (cfg.counterStep ?? 1);
+            currentBase = applyTemplate(currentBase, currentExt, item, cfg, val, items.length);
+            break;
           }
-          if ((cfg.target === "extension" || cfg.target === "all") && currentExt) {
-            currentExt = toCaseMode(currentExt, cfg.mode);
+          case "replace": {
+            const cfg = step.config as ReplaceRuleConfig;
+            currentBase = applyReplace(currentBase, cfg);
+            break;
           }
-          break;
-        }
-        case "remove": {
-          const cfg = step.config as RemoveRuleConfig;
-          currentBase = applyRemove(currentBase, cfg);
-          break;
-        }
-        case "extension": {
-          const cfg = step.config as ExtensionRuleConfig;
-          if (!item.isDir) {
-            if (cfg.mode === "lowercase") {
-              currentExt = currentExt.toLowerCase();
-            } else if (cfg.mode === "uppercase") {
-              currentExt = currentExt.toUpperCase();
-            } else if (cfg.mode === "custom" && cfg.customExt) {
-              currentExt = cfg.customExt.replace(/^\./, "");
+          case "add": {
+            const cfg = step.config as AddRuleConfig;
+            currentBase = applyAdd(currentBase, cfg);
+            break;
+          }
+          case "counter": {
+            const cfg = step.config as CounterRuleConfig;
+            const val = (cfg.start ?? 1) + (currentSeqIndex - 1) * (cfg.step ?? 1);
+            currentBase = applyCounter(currentBase, cfg, val);
+            break;
+          }
+          case "case": {
+            const cfg = step.config as CaseRuleConfig;
+            if (cfg.target === "name" || cfg.target === "all") {
+              currentBase = toCaseMode(currentBase, cfg.mode);
             }
+            if ((cfg.target === "extension" || cfg.target === "all") && currentExt) {
+              currentExt = toCaseMode(currentExt, cfg.mode);
+            }
+            break;
           }
-          break;
+          case "remove": {
+            const cfg = step.config as RemoveRuleConfig;
+            currentBase = applyRemove(currentBase, cfg);
+            break;
+          }
+          case "extension": {
+            const cfg = step.config as ExtensionRuleConfig;
+            if (!item.isDir) {
+              if (cfg.mode === "lowercase") {
+                currentExt = currentExt.toLowerCase();
+              } else if (cfg.mode === "uppercase") {
+                currentExt = currentExt.toUpperCase();
+              } else if (cfg.mode === "custom" && cfg.customExt) {
+                currentExt = cfg.customExt.replace(/^\./, "");
+              }
+            }
+            break;
+          }
         }
       }
+
+      const fullName = currentBase.trim() + (currentExt && !item.isDir ? `.${currentExt}` : "");
+      const parent = item.path.replace(/\\/g, "/").slice(0, item.path.replace(/\\/g, "/").lastIndexOf("/") + 1);
+      const candidateKey = pathKey(parent + fullName);
+      const blocked = reserved.has(candidateKey) || (occupied.has(candidateKey) && candidateKey !== pathKey(item.path));
+      if (!occupiedPaths || !hasCounter || !blocked || !fullName || INVALID_CHARS_REGEX.test(fullName)
+        || triedNames.has(candidateKey) || skippedNumbers >= occupied.size + items.length + 1) {
+        reserved.add(candidateKey);
+        break;
+      }
+      triedNames.add(candidateKey);
+      skippedNumbers += 1;
+      selectedCounter += 1;
+      currentSeqIndex = selectedCounter;
     }
 
     initialResults.push({
@@ -349,6 +378,7 @@ export function computeRenamingPreview(
       base: currentBase,
       ext: currentExt,
       selected: isSelected,
+      skippedNumbers,
     });
   }
 
@@ -385,6 +415,7 @@ export function computeRenamingPreview(
       parentDir,
       selected: res.selected,
       hasChanged: finalFullName !== res.original.name,
+      skippedNumbers: res.skippedNumbers,
     };
   });
 
@@ -447,6 +478,7 @@ export function computeRenamingPreview(
         hasChanged: false,
         selected: true,
         status: "unchanged" as PreviewStatus,
+        skippedNumbers: item.skippedNumbers,
       };
     }
 
@@ -457,6 +489,7 @@ export function computeRenamingPreview(
       hasChanged: true,
       selected: true,
       status: "ready" as PreviewStatus,
+      skippedNumbers: item.skippedNumbers,
     };
   });
 }

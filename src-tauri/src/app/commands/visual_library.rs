@@ -554,12 +554,26 @@ pub fn visual_library_sync_pip_icon(app: tauri::AppHandle) -> Result<(), String>
     {
         use tauri::Manager;
         use windows::Win32::Foundation::{BOOL, HWND, LPARAM, WPARAM};
+        use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND};
         use windows::Win32::UI::WindowsAndMessaging::{
-            EnumWindows, GetClassNameW, GetWindowTextW, SendMessageTimeoutW,
+            EnumWindows, GetClassNameW, GetWindowTextW, GetWindowThreadProcessId, SendMessageTimeoutW,
             ICON_BIG, ICON_SMALL, SMTO_ABORTIFHUNG, WM_GETICON, WM_SETICON,
         };
 
+        // PiP belongs to our WebView2 browser process, not to every Chrome window.
+        let (browser_sender, browser_receiver) = std::sync::mpsc::channel();
+        if let Some(main) = app.get_webview_window("main") {
+            let _ = main.with_webview(move |webview| unsafe {
+                let mut pid = 0;
+                if let Ok(core) = webview.controller().CoreWebView2() {
+                    let _ = core.BrowserProcessId(&mut pid);
+                }
+                let _ = browser_sender.send(pid);
+            });
+        }
         std::thread::spawn(move || {
+            let browser_pid = browser_receiver.recv_timeout(std::time::Duration::from_secs(2)).unwrap_or(0);
+            if browser_pid == 0 { return; }
             // Se espera 120ms para que Chromium instancie la ventana flotante PiP
             std::thread::sleep(std::time::Duration::from_millis(120));
 
@@ -601,16 +615,21 @@ pub fn visual_library_sync_pip_icon(app: tauri::AppHandle) -> Result<(), String>
                 struct EnumData {
                     icon_big: usize,
                     icon_small: usize,
+                    browser_pid: u32,
                 }
 
                 let mut data = EnumData {
                     icon_big: hicon_big,
                     icon_small: if hicon_small != 0 { hicon_small } else { hicon_big },
+                    browser_pid,
                 };
 
                 unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
                     unsafe {
                         let data = &*(lparam.0 as *const EnumData);
+                        let mut pid = 0;
+                        GetWindowThreadProcessId(hwnd, Some(&mut pid));
+                        if pid != data.browser_pid { return BOOL(1); }
 
                         let mut class_buf = [0u16; 256];
                         let len_c = GetClassNameW(hwnd, &mut class_buf);
@@ -620,11 +639,18 @@ pub fn visual_library_sync_pip_icon(app: tauri::AppHandle) -> Result<(), String>
                         let len_t = GetWindowTextW(hwnd, &mut text_buf);
                         let title = String::from_utf16_lossy(&text_buf[..len_t as usize]).to_lowercase();
 
-                        if class_name.contains("Chrome_WidgetWin")
-                            || title.contains("imagen en imagen")
+                        if class_name.contains("Chrome_WidgetWin") && (
+                            title.contains("imagen en imagen")
                             || title.contains("picture in picture")
-                            || title.contains("picture-in-picture")
-                        {
+                            || title.contains("picture-in-picture")) {
+                            // Keep native rounding attached to the HWND through Chromium's
+                            // closing transition, rather than relying only on its content mask.
+                            let preference = DWMWCP_ROUND;
+                            let _ = DwmSetWindowAttribute(
+                                hwnd, DWMWA_WINDOW_CORNER_PREFERENCE,
+                                &preference as *const _ as *const std::ffi::c_void,
+                                std::mem::size_of_val(&preference) as u32,
+                            );
                             let mut res = 0;
                             let _ = SendMessageTimeoutW(
                                 hwnd,

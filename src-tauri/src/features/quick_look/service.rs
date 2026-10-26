@@ -671,7 +671,7 @@ impl QuickLookState {
         )
         .title(format!("Prisma · {}", payload.file_name))
         .inner_size(target_w, target_h)
-        .min_inner_size(320.0, 240.0)
+        .min_inner_size(96.0, 96.0)
         .decorations(false)
         .transparent(true)
         .resizable(true)
@@ -858,8 +858,8 @@ fn resolve_media_size(
                 let max_content_h = max_h - header_h;
 
                 let scale = (max_w / nw as f64).min(max_content_h / nh as f64).min(1.0);
-                let fitted_w = ((nw as f64 * scale).round() as f64).max(320.0);
-                let fitted_h = ((nh as f64 * scale).round() as f64).max(220.0);
+                let fitted_w = ((nw as f64 * scale).round() as f64).max(96.0);
+                let fitted_h = ((nh as f64 * scale).round() as f64).max(48.0);
 
                 (fitted_w, fitted_h + header_h)
             } else {

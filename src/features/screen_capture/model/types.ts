@@ -21,7 +21,9 @@ export interface RecordingOptions {
   quality?: "high" | "medium" | "low";
   maxHeight?: number | null;
   systemAudio?: boolean;
-  /** Título de la ventana a seguir durante la grabación. */
+  /** Contenedor del vídeo grabado: `mp4`, `mkv` o `mov`. */
+  container?: "mp4" | "mkv" | "mov";
+  /** Nombre de la ventana seleccionada; se graba su región visible. */
   windowTitle?: string | null;
 }
 
@@ -75,6 +77,8 @@ export interface CaptureSessionInit {
   defaultMode: CaptureMode;
   /** `image` para captura puntual, `video` para preparar una grabación. */
   intent: CaptureIntent;
+  /** Fotograma inicial; null durante la preparación de vídeo. */
+  snapshotDataUrl: string | null;
 }
 
 export interface EditorPayload {

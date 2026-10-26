@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Icon } from "../../../shared/ui/Icon";
+import { ImageLoadingState } from "../../../shared/ui/ImageLoadingState";
 import { toSafeAssetUrl } from "../../../shared/mediaTree";
 import { formatTime } from "../../playback/ui/formatters";
 import { MediaProgressBar } from "../../../shared/ui/MediaProgressBar";
@@ -284,6 +285,13 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
 
   return (
     <div className="quicklook-video-content">
+      {!isReady && !hasError ? (
+        <ImageLoadingState
+          key={payload.path}
+          itemKey={payload.path}
+          label="Cargando vídeo…"
+        />
+      ) : null}
       <video
         ref={videoRef}
         className={`quicklook-video-element ${isReady ? "is-ready" : ""}`}

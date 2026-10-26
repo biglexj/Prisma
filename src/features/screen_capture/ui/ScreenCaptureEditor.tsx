@@ -7,6 +7,7 @@ import { Icon } from "../../../shared/ui/Icon";
 import { drawAnnotation } from "./utils/annotationDrawing";
 import type { AnnotationItem, AnnotationTool, EditorPayload } from "../model/types";
 import { screenCaptureClient } from "../services/screenCaptureClient";
+import { resolveCaptureFolder } from "../../../shared/captureFolders";
 import "./screen-capture.css";
 
 const PALETTE = [
@@ -225,7 +226,7 @@ export function ScreenCaptureEditor() {
     });
   }, []);
 
-  // Copiar imagen renderizada al portapapeles sin tocar disco
+  // Copiar imagen renderizada al portapapeles y conservarla en Synapse.
   const handleCopy = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -237,16 +238,12 @@ export function ScreenCaptureEditor() {
 
       if (!blob) throw new Error("No se pudo exportar el lienzo a PNG");
 
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          "image/png": blob,
-        }),
-      ]);
+      await screenCaptureClient.copyToClipboard(blob);
 
-      showToast("¡Captura copiada al portapapeles sin tocar disco!");
+      showToast("Captura copiada y añadida a Synapse");
     } catch (err) {
       console.error("Error al copiar imagen:", err);
-      showToast("Error al copiar al portapapeles.");
+      showToast(String(err));
     }
   }, [showToast]);
 
@@ -260,10 +257,11 @@ export function ScreenCaptureEditor() {
       const now = new Date();
       const dateStr = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
       const defaultFilename = `Prisma_Captura_${dateStr}.${captureFormat.extension}`;
+      const folder = await resolveCaptureFolder("image");
 
       const chosenPath = await save({
         title: "Guardar captura de pantalla",
-        defaultPath: defaultFilename,
+        defaultPath: `${folder}\\${defaultFilename}`,
         filters: [{ name: `Imagen ${captureFormat.label}`, extensions: [captureFormat.extension] }],
       });
 

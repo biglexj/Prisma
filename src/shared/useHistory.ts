@@ -119,6 +119,32 @@ export function clearHistory(type?: HistoryCategory) {
   notifyListeners();
 }
 
+export function pruneHistoryPaths(invalidPaths: string[]) {
+  if (!invalidPaths || invalidPaths.length === 0) return;
+  const invalidSet = new Set(invalidPaths.map(normalizePath));
+  let modified = false;
+
+  const filterList = (list: HistoryItem[]) => {
+    const next = list.filter((item) => !invalidSet.has(normalizePath(item.path)));
+    if (next.length !== list.length) modified = true;
+    return next;
+  };
+
+  const nextStore: HistoryStore = {
+    ...globalHistoryStore,
+    music: filterList(globalHistoryStore.music),
+    images: filterList(globalHistoryStore.images),
+    videos: filterList(globalHistoryStore.videos),
+    playlists: filterList(globalHistoryStore.playlists),
+  };
+
+  if (modified) {
+    globalHistoryStore = nextStore;
+    saveToLocalStorage(globalHistoryStore);
+    notifyListeners();
+  }
+}
+
 export function useHistory() {
   const [store, setStore] = useState<HistoryStore>(globalHistoryStore);
 
@@ -138,9 +164,14 @@ export function useHistory() {
     clearHistory(type);
   }, []);
 
+  const prune = useCallback((paths: string[]) => {
+    pruneHistoryPaths(paths);
+  }, []);
+
   return {
     store,
     addToHistory: add,
     clearHistory: clear,
+    pruneHistoryPaths: prune,
   };
 }

@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::collections::VecDeque;
 use std::net::TcpListener;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -48,7 +49,7 @@ impl SystemAudioSource {
         let running = Arc::new(AtomicBool::new(true));
         let thread_running = Arc::clone(&running);
         std::thread::spawn(move || {
-            if let Err(error) = pump_loopback(listener, &endpoint_id, &thread_running) {
+            if let Err(error) = pump_loopback(listener, &endpoint_id, rate, channels, &thread_running) {
                 eprintln!("[Grabadora] Audio del sistema: {error}");
             }
         });
@@ -72,6 +73,8 @@ impl Drop for SystemAudioSource {
 fn pump_loopback(
     listener: TcpListener,
     endpoint_id: &str,
+    rate: u32,
+    channels: usize,
     running: &AtomicBool,
 ) -> Result<(), String> {
     let deadline = Instant::now() + Duration::from_secs(10);
@@ -98,37 +101,51 @@ fn pump_loopback(
     let client = LoopbackClient::open(endpoint_id)?;
     client.start()?;
 
-    let mut pending: Vec<u8> = Vec::with_capacity(8192);
-    let mut warned = false;
-    let last_report = Instant::now();
+    let mut pcm = PcmClock::new(rate, channels);
+    let started = Instant::now();
     while running.load(Ordering::Relaxed) {
-        let Some(samples) = client.next_samples() else {
-            // No hay paquete: se espera un poco y se sigue.
-            if !warned && last_report.elapsed() > Duration::from_secs(3) {
-                warned = true;
-                eprintln!(
-                    "[Grabadora] Audio del sistema: el dispositivo de salida no está entregando muestras; la grabación seguirá sin sonido."
-                );
-            }
-            std::thread::sleep(Duration::from_millis(3));
-            continue;
-        };
-        if samples.is_empty() {
-            continue;
+        while let Some(samples) = client.next_samples() {
+            if samples.is_empty() { break; }
+            pcm.samples.extend(samples);
         }
-
-        pending.clear();
-        for sample in &samples {
-            let clamped = sample.clamp(-1.0, 1.0);
-            pending.extend_from_slice(&((clamped * 32767.0) as i16).to_le_bytes());
-        }
-        if socket.write_all(&pending).is_err() {
-            break;
+        // WASAPI puede no emitir paquetes si no suena nada. Mantener el reloj
+        // PCM con silencio: dejar el socket sin datos bloquea también el vídeo.
+        if let Some(block) = pcm.next_block(started.elapsed()) {
+            if socket.write_all(&block).is_err() { break; }
+        } else {
+            std::thread::sleep(Duration::from_millis(2));
         }
     }
 
     let _ = socket.flush();
     Ok(())
+}
+
+struct PcmClock {
+    rate: u32,
+    channels: usize,
+    sent_frames: u128,
+    samples: VecDeque<f32>,
+}
+
+impl PcmClock {
+    fn new(rate: u32, channels: usize) -> Self {
+        Self { rate, channels, sent_frames: 0, samples: VecDeque::new() }
+    }
+
+    fn next_block(&mut self, elapsed: Duration) -> Option<Vec<u8>> {
+        let frames = (self.rate / 100).max(1) as u128;
+        let due = elapsed.as_nanos() * self.rate as u128 / 1_000_000_000;
+        if due < self.sent_frames + frames { return None; }
+        let count = frames as usize * self.channels;
+        let mut block = Vec::with_capacity(count * 2);
+        for _ in 0..count {
+            let sample = self.samples.pop_front().unwrap_or(0.0).clamp(-1.0, 1.0);
+            block.extend_from_slice(&((sample * 32767.0) as i16).to_le_bytes());
+        }
+        self.sent_frames += frames;
+        Some(block)
+    }
 }
 
 // ── WASAPI ──────────────────────────────────────────────────────────────────
@@ -311,6 +328,32 @@ fn read_default_output_format() -> Result<(String, u32, usize), String> {
 mod tests {
     use super::*;
     use std::io::Read;
+
+    #[test]
+    fn el_silencio_mantiene_pcm_continuo_sin_adelantar_el_reloj() {
+        let mut pcm = PcmClock::new(48_000, 2);
+        assert!(pcm.next_block(Duration::from_millis(9)).is_none());
+        for tick in 1..=100 {
+            let elapsed = Duration::from_millis(tick * 10);
+            let block = pcm.next_block(elapsed).unwrap();
+            assert_eq!(block.len(), 480 * 2 * 2);
+            assert!(block.iter().all(|byte| *byte == 0));
+            assert!(pcm.next_block(elapsed).is_none());
+        }
+        assert_eq!(pcm.sent_frames, 48_000);
+    }
+
+    #[test]
+    fn al_volver_el_audio_no_se_duplican_muestras_ni_silencio() {
+        let mut pcm = PcmClock::new(48_000, 1);
+        pcm.next_block(Duration::from_millis(10)).unwrap();
+        pcm.samples.extend(std::iter::repeat_n(0.5, 480));
+        let block = pcm.next_block(Duration::from_millis(20)).unwrap();
+        assert_eq!(i16::from_le_bytes([block[0], block[1]]), 16383);
+        assert!(pcm.samples.is_empty());
+        assert!(pcm.next_block(Duration::from_millis(20)).is_none());
+        assert!(pcm.next_block(Duration::from_millis(30)).unwrap().iter().all(|byte| *byte == 0));
+    }
 
     /// El canal debe entregar PCM del audio del sistema.
     ///

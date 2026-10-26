@@ -5,6 +5,7 @@ import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { cleanPath } from "../../../shared/mediaTree";
 import { computeRenamingPreview } from "../model/renamerEngine";
+import { createSourceDropQueue, mergeSourceSelection, orderSourceSelection } from "../model/sourceSelection";
 import { renamerClient } from "../tauri/client";
 import type {
   FilterMode,
@@ -132,8 +133,29 @@ export const BUILTIN_PRESETS: PresetTemplate[] = [
   },
 ];
 
+type TargetType = "files" | "folders" | "both";
+
+interface SourceOverrides {
+  append?: boolean;
+  preserveOrder?: boolean;
+  filterMode?: FilterMode;
+  customExtensions?: string;
+  includeSubfolders?: boolean;
+  targetType?: TargetType;
+}
+
+/** Convierte "png, jpg" en ["png", "jpg"]. */
+function parseCustomExtensions(extsStr: string): string[] {
+  return extsStr
+    .split(/[,;\s]+/)
+    .map((e) => e.trim().replace(/^\./, ""))
+    .filter(Boolean);
+}
+
 export function useRenamer() {
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
+  // Rutas de una selección explícita de archivos (null = modo carpeta)
+  const [sourcePaths, setSourcePaths] = useState<string[] | null>(null);
   const [items, setItems] = useState<RenamerFileItem[]>([]);
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [customExtensions, setCustomExtensions] = useState<string>("");
@@ -165,6 +187,44 @@ export function useRenamer() {
   const [error, setError] = useState<string | null>(null);
 
   const dragCounterRef = useRef(0);
+  const loadedItemsRef = useRef(items);
+  const selectedPathsRef = useRef(selectedPaths);
+  const sourceLoadRevisionRef = useRef(0);
+  const enqueueDrop = useMemo(() => createSourceDropQueue(), []);
+  const shiftPressedRef = useRef(false);
+  const [isAppendingDrop, setIsAppendingDrop] = useState(false);
+  loadedItemsRef.current = items;
+  selectedPathsRef.current = selectedPaths;
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      shiftPressedRef.current = event.shiftKey;
+      setIsAppendingDrop(event.shiftKey);
+    };
+    const onDrag = (event: DragEvent) => {
+      shiftPressedRef.current = event.shiftKey;
+      setIsAppendingDrop(event.shiftKey);
+    };
+    const onBlur = () => { shiftPressedRef.current = false; setIsAppendingDrop(false); };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKey);
+    window.addEventListener("dragover", onDrag);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKey);
+      window.removeEventListener("dragover", onDrag);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    void renamerClient.canUndo().then((available) => {
+      if (!disposed) setCanUndo(available);
+    }).catch(() => {});
+    return () => { disposed = true; };
+  }, []);
 
   // Escanear carpeta
   const scanFolderInternal = useCallback(
@@ -175,6 +235,7 @@ export function useRenamer() {
       subfolders: boolean,
       target: "files" | "folders" | "both"
     ) => {
+      const revision = ++sourceLoadRevisionRef.current;
       setIsScanning(true);
       setError(null);
       try {
@@ -191,15 +252,19 @@ export function useRenamer() {
           target
         );
 
+        if (revision !== sourceLoadRevisionRef.current) return;
+        loadedItemsRef.current = scanned;
+        selectedPathsRef.current = new Set(scanned.map((it) => it.path));
         setItems(scanned);
         // Por defecto, seleccionar todos los elementos encontrados
         setSelectedPaths(new Set(scanned.map((it) => it.path)));
       } catch (err) {
+        if (revision !== sourceLoadRevisionRef.current) return;
         setError(err instanceof Error ? err.message : String(err));
         setItems([]);
         setSelectedPaths(new Set());
       } finally {
-        setIsScanning(false);
+        if (revision === sourceLoadRevisionRef.current) setIsScanning(false);
       }
     },
     []
@@ -208,6 +273,7 @@ export function useRenamer() {
   const loadFolder = useCallback(
     (folderPath: string) => {
       setCurrentFolder(folderPath);
+      setSourcePaths(null);
       void scanFolderInternal(
         folderPath,
         filterMode,
@@ -219,11 +285,69 @@ export function useRenamer() {
     [customExtensions, filterMode, includeSubfolders, scanFolderInternal, targetType]
   );
 
-  const refreshFolder = useCallback(() => {
-    if (currentFolder) {
+  /**
+   * Carga un origen de trabajo a partir de rutas sueltas (soltar en la ventana).
+   * Una sola carpeta se escanea completa; una selección de archivos carga
+   * únicamente esos archivos, sin expandir la carpeta que los contiene.
+   */
+  const loadSource = useCallback(
+    async (paths: string[], overrides?: SourceOverrides) => {
+      const cleaned = paths.map((p) => cleanPath(p).trim()).filter(Boolean);
+      if (cleaned.length === 0) return;
+      const revision = ++sourceLoadRevisionRef.current;
+
+      const filter = overrides?.filterMode ?? filterMode;
+      const extsStr = overrides?.customExtensions ?? customExtensions;
+      const subfolders = overrides?.includeSubfolders ?? includeSubfolders;
+      const target = overrides?.targetType ?? targetType;
+
+      setIsScanning(true);
+      setError(null);
+      try {
+        const result = await renamerClient.loadSource(
+          cleaned,
+          filter,
+          parseCustomExtensions(extsStr),
+          subfolders,
+          target
+        );
+
+        if (revision !== sourceLoadRevisionRef.current) return;
+        const incoming = overrides?.preserveOrder ? orderSourceSelection(result.items, cleaned) : result.items;
+        const merged = mergeSourceSelection(loadedItemsRef.current, incoming, selectedPathsRef.current, !!overrides?.append);
+        loadedItemsRef.current = merged.items;
+        selectedPathsRef.current = merged.selected;
+        setItems(merged.items);
+        setSelectedPaths(merged.selected);
+        setCurrentFolder(overrides?.append ? `${merged.items.length} elementos en la selección acumulada` : result.display);
+        // Una única carpeta vuelve al modo carpeta; una selección queda anclada a sus archivos.
+        setSourcePaths(overrides?.append ? merged.items.map((item) => item.path) : result.kind === "files" ? cleaned : null);
+      } catch (err) {
+        if (revision !== sourceLoadRevisionRef.current) return;
+        setError(err instanceof Error ? err.message : String(err));
+        if (!overrides?.append) {
+          setItems([]);
+          setSelectedPaths(new Set());
+        }
+      } finally {
+        if (revision === sourceLoadRevisionRef.current) setIsScanning(false);
+      }
+    },
+    [customExtensions, filterMode, includeSubfolders, targetType]
+  );
+
+  /** Recarga el origen activo respetando el modo actual (carpeta o selección). */
+  const reloadCurrentSource = useCallback(() => {
+    if (sourcePaths && sourcePaths.length > 0) {
+      void loadSource(sourcePaths, { preserveOrder: true });
+    } else if (currentFolder) {
       loadFolder(currentFolder);
     }
-  }, [currentFolder, loadFolder]);
+  }, [currentFolder, loadFolder, loadSource, sourcePaths]);
+
+  const refreshFolder = useCallback(() => {
+    reloadCurrentSource();
+  }, [reloadCurrentSource]);
 
   // Diálogo para seleccionar carpeta
   const pickFolder = useCallback(async () => {
@@ -245,7 +369,9 @@ export function useRenamer() {
   const handleFilterChange = useCallback(
     (newFilter: FilterMode) => {
       setFilterMode(newFilter);
-      if (currentFolder) {
+      if (sourcePaths && sourcePaths.length > 0) {
+        void loadSource(sourcePaths, { filterMode: newFilter, preserveOrder: true });
+      } else if (currentFolder) {
         void scanFolderInternal(
           currentFolder,
           newFilter,
@@ -255,13 +381,23 @@ export function useRenamer() {
         );
       }
     },
-    [currentFolder, customExtensions, includeSubfolders, scanFolderInternal, targetType]
+    [
+      currentFolder,
+      customExtensions,
+      includeSubfolders,
+      loadSource,
+      scanFolderInternal,
+      sourcePaths,
+      targetType,
+    ]
   );
 
   const handleSubfoldersToggle = useCallback(
     (enabled: boolean) => {
       setIncludeSubfolders(enabled);
-      if (currentFolder) {
+      if (sourcePaths && sourcePaths.length > 0) {
+        void loadSource(sourcePaths, { includeSubfolders: enabled, preserveOrder: true });
+      } else if (currentFolder) {
         void scanFolderInternal(
           currentFolder,
           filterMode,
@@ -271,13 +407,23 @@ export function useRenamer() {
         );
       }
     },
-    [currentFolder, customExtensions, filterMode, scanFolderInternal, targetType]
+    [
+      currentFolder,
+      customExtensions,
+      filterMode,
+      loadSource,
+      scanFolderInternal,
+      sourcePaths,
+      targetType,
+    ]
   );
 
   const handleTargetTypeChange = useCallback(
-    (target: "files" | "folders" | "both") => {
+    (target: TargetType) => {
       setTargetType(target);
-      if (currentFolder) {
+      if (sourcePaths && sourcePaths.length > 0) {
+        void loadSource(sourcePaths, { targetType: target, preserveOrder: true });
+      } else if (currentFolder) {
         void scanFolderInternal(
           currentFolder,
           filterMode,
@@ -287,7 +433,15 @@ export function useRenamer() {
         );
       }
     },
-    [currentFolder, customExtensions, filterMode, includeSubfolders, scanFolderInternal]
+    [
+      currentFolder,
+      customExtensions,
+      filterMode,
+      includeSubfolders,
+      loadSource,
+      scanFolderInternal,
+      sourcePaths,
+    ]
   );
 
   // Gestión de pasos de regla
@@ -424,9 +578,46 @@ export function useRenamer() {
   }, []);
 
   // Cálculo de vista previa en tiempo real
-  const previewItems: PreviewItem[] = useMemo(() => {
+  const basePreviewItems: PreviewItem[] = useMemo(() => {
     return computeRenamingPreview(items, steps, selectedPaths);
   }, [items, steps, selectedPaths]);
+
+  const previewRequest = useMemo(() => ({ items, steps, selectedPaths, lastResult }),
+    [items, steps, selectedPaths, lastResult]);
+  const [validation, setValidation] = useState<{
+    request: typeof previewRequest | null; items: PreviewItem[]; error?: string;
+  }>({ request: null, items: [] });
+  const isCheckingConflicts = validation.request !== previewRequest;
+
+  useEffect(() => {
+    let disposed = false;
+    const timer = window.setTimeout(() => {
+      const check = async () => {
+        const { items, steps, selectedPaths } = previewRequest;
+        const occupied = items.length ? await renamerClient.occupiedPaths(items.map((item) => item.path)) : [];
+        if (disposed) return;
+        const preview = computeRenamingPreview(items, steps, selectedPaths, new Set(occupied));
+        const operations = preview.filter((p) => p.selected && p.status === "ready").map((p) => ({
+          oldPath: p.original.path, newPath: p.newPath, originalName: p.original.name, newName: p.newName,
+        }));
+        const conflicts = operations.length ? await renamerClient.validateBatch(operations) : [];
+        if (disposed) return;
+        const messages = new Map(conflicts.map((c) => [c.oldPath, c.message]));
+        setValidation({ request: previewRequest, items: preview.map((p) => {
+          const message = messages.get(p.original.path);
+          return message ? { ...p, status: "conflict", error: message } : p;
+        }) });
+      };
+      void check().catch((err) => {
+        if (!disposed) setValidation({ request: previewRequest, items: [], error: String(err) });
+      });
+    }, 180);
+    return () => { disposed = true; window.clearTimeout(timer); };
+  }, [previewRequest]);
+
+  const previewItems = validation.request === previewRequest && !validation.error
+    ? validation.items : basePreviewItems;
+  const skippedNumberCount = previewItems.reduce((total, item) => total + (item.skippedNumbers ?? 0), 0);
 
   // Elementos filtrados por la búsqueda rápida de la tabla
   const filteredPreviewItems = useMemo(() => {
@@ -448,6 +639,10 @@ export function useRenamer() {
 
   // Ejecución de renombrado por lotes
   const executeRename = useCallback(async () => {
+    if (isCheckingConflicts || validation.error || conflictCount > 0 || invalidCount > 0) {
+      setError(validation.error ?? "Resuelve los conflictos antes de renombrar.");
+      return;
+    }
     const readyOps: RenameOperation[] = previewItems
       .filter((p) => p.selected && p.status === "ready")
       .map((p) => ({
@@ -468,7 +663,11 @@ export function useRenamer() {
       const result = await renamerClient.executeBatch(readyOps);
       setLastResult(result);
       setCanUndo(result.canUndo);
-      if (currentFolder) {
+      if (sourcePaths && sourcePaths.length > 0) {
+        // En modo selección hay que seguir las rutas nuevas de los archivos renombrados.
+        const remap = new Map(result.operations.map((op) => [op.oldPath, op.newPath]));
+        await loadSource(sourcePaths.map((p) => remap.get(p) ?? p), { preserveOrder: true });
+      } else if (currentFolder) {
         loadFolder(currentFolder);
       }
     } catch (err) {
@@ -476,7 +675,7 @@ export function useRenamer() {
     } finally {
       setIsExecuting(false);
     }
-  }, [currentFolder, loadFolder, previewItems]);
+  }, [currentFolder, loadFolder, loadSource, previewItems, sourcePaths, isCheckingConflicts, validation.error, conflictCount, invalidCount]);
 
   // Ejecutar deshacer
   const executeUndo = useCallback(async () => {
@@ -485,8 +684,12 @@ export function useRenamer() {
     try {
       const result = await renamerClient.undoBatch();
       setLastResult(result);
-      setCanUndo(false);
-      if (currentFolder) {
+      setCanUndo(result.canUndo);
+      if (sourcePaths && sourcePaths.length > 0) {
+        // Tras deshacer, las rutas vuelven a ser las originales.
+        const remap = new Map(result.operations.map((op) => [op.oldPath, op.newPath]));
+        await loadSource(sourcePaths.map((p) => remap.get(p) ?? p), { preserveOrder: true });
+      } else if (currentFolder) {
         loadFolder(currentFolder);
       }
     } catch (err) {
@@ -494,27 +697,30 @@ export function useRenamer() {
     } finally {
       setIsExecuting(false);
     }
-  }, [currentFolder, loadFolder]);
+  }, [currentFolder, loadFolder, loadSource, sourcePaths]);
 
   // Drag & drop nativo de Tauri v2 (soporte universal de carpetas y archivos)
   useEffect(() => {
     const unlistens: UnlistenFn[] = [];
     let isCancelled = false;
 
-    const handleDrop = (paths: string[]) => {
+    const handleDrop = (paths: string[], append: boolean, channel: "native" | "webview") => {
       setIsDraggingOver(false);
       if (!paths || paths.length === 0) return;
-      const target = cleanPath(paths[0]).trim();
-      if (target) {
-        loadFolder(target);
-      }
+      const cleaned = paths.map((p) => cleanPath(p).trim()).filter(Boolean);
+      if (cleaned.length === 0) return;
+      // Se envía el conjunto completo: el backend decide si es una carpeta o una
+      // selección de archivos. Antes solo se tomaba paths[0] y se cargaba su carpeta.
+      void enqueueDrop(cleaned, channel, async () => {
+        if (!isCancelled) await loadSource(cleaned, { append });
+      });
     };
 
     // 1. Canal OLE propio de Prisma para Windows/WebView2
-    listen<{ paths?: string[] }>("prisma://native-drag-drop", (event) => {
+    listen<{ paths?: string[]; shiftKey?: boolean }>("prisma://native-drag-drop", (event) => {
       if (isCancelled) return;
       if (event.payload?.paths && event.payload.paths.length > 0) {
-        handleDrop(event.payload.paths);
+        handleDrop(event.payload.paths, event.payload.shiftKey ?? shiftPressedRef.current, "native");
       } else {
         setIsDraggingOver(false);
       }
@@ -525,14 +731,23 @@ export function useRenamer() {
       })
       .catch(() => {});
 
-    listen("prisma://native-drag-enter", () => {
-      if (!isCancelled) setIsDraggingOver(true);
+    listen<{ shiftKey?: boolean }>("prisma://native-drag-enter", ({ payload }) => {
+      if (!isCancelled) {
+        setIsDraggingOver(true);
+        setIsAppendingDrop(!!payload?.shiftKey);
+      }
     })
       .then((unlisten) => {
         if (isCancelled) unlisten();
         else unlistens.push(unlisten);
       })
       .catch(() => {});
+
+    listen<{ shiftKey?: boolean }>("prisma://native-drag-over", ({ payload }) => {
+      if (!isCancelled) setIsAppendingDrop(!!payload?.shiftKey);
+    }).then((unlisten) => {
+      if (isCancelled) unlisten(); else unlistens.push(unlisten);
+    }).catch(() => {});
 
     listen("prisma://native-drag-leave", () => {
       if (!isCancelled) setIsDraggingOver(false);
@@ -553,7 +768,7 @@ export function useRenamer() {
             setIsDraggingOver(true);
           } else if (event.payload.type === "drop") {
             if (event.payload.paths && event.payload.paths.length > 0) {
-              handleDrop(event.payload.paths);
+              handleDrop(event.payload.paths, shiftPressedRef.current, "webview");
             } else {
               setIsDraggingOver(false);
             }
@@ -576,7 +791,7 @@ export function useRenamer() {
         } catch {}
       }
     };
-  }, [loadFolder]);
+  }, [loadSource, enqueueDrop]);
 
   // Listener para recibir apertura directa de carpeta desde menús contextuales
   useEffect(() => {
@@ -595,6 +810,7 @@ export function useRenamer() {
 
   return {
     currentFolder,
+    sourcePaths,
     items,
     previewItems,
     filteredPreviewItems,
@@ -607,8 +823,12 @@ export function useRenamer() {
     searchQuery,
     isScanning,
     isExecuting,
+    isCheckingConflicts,
+    skippedNumberCount,
+    conflictCheckError: validation.error,
     canUndo,
     isDraggingOver,
+    isAppendingDrop,
     lastResult,
     error,
     totalCount,
@@ -620,6 +840,7 @@ export function useRenamer() {
     setCustomExtensions,
     pickFolder,
     loadFolder,
+    loadSource,
     refreshFolder,
     handleFilterChange,
     handleSubfoldersToggle,

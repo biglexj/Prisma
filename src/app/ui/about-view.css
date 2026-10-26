@@ -1,23 +1,33 @@
 /* ══════════════════════════════════════════════
    ABOUT VIEW — MATERIAL 3 EXPRESSIVE
+
+   La vista ocupa el alto disponible y no desplaza la página:
+   tres filas (hero · tira de tecnologías · fila inferior). La tira
+   de tecnologías va a todo el ancho a propósito: así no es una
+   columna susceptible de quedarse vacía, y la fila inferior puede
+   repartirse el alto que sobra.
+
+   La fila inferior nunca se recorta: si el contenido (por ejemplo,
+   las doce apps del ecosistema) necesita más alto del que hay, la
+   página crece y el contenedor de la vista hace el scroll.
    ══════════════════════════════════════════════ */
 
 .about-view-page {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  display: grid;
+  grid-template-rows: auto auto minmax(min-content, 1fr);
+  gap: 18px;
   min-height: 100%;
+  overflow: visible;
   padding-top: clamp(14px, 2vw, 24px);
-  padding-bottom: 40px;
 }
 
-/* Hero Card */
+/* ── Hero ── */
 .about-hero-card {
   position: relative;
   background: var(--surface-container);
   border: 1px solid var(--outline-variant);
-  border-radius: 28px;
-  padding: 28px 32px;
+  border-radius: 24px;
+  padding: 22px 28px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -32,39 +42,24 @@
   gap: 28px;
 }
 
-@media (max-width: 1100px) {
-  .about-hero-content {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 20px;
-  }
-}
-
 .about-hero-brand {
   display: flex;
   align-items: center;
   gap: 24px;
   flex: 1;
-}
-
-@media (max-width: 640px) {
-  .about-hero-brand {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
+  min-width: 0;
 }
 
 .about-app-icon-wrap {
-  width: 96px;
-  height: 96px;
-  border-radius: 24px;
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
   background: var(--surface-container-high);
   border: 1px solid var(--outline-variant);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
+  padding: 10px;
   flex-shrink: 0;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
@@ -79,6 +74,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
 }
 
 .about-title-row {
@@ -90,7 +86,7 @@
 
 .about-title-row h2 {
   margin: 0;
-  font-size: 1.9rem;
+  font-size: 1.6rem;
   font-weight: 900;
   color: var(--on-surface);
   letter-spacing: -0.02em;
@@ -118,21 +114,21 @@
 
 .about-tagline {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--on-surface-variant);
-  line-height: 1.5;
-  max-width: 680px;
+  line-height: 1.45;
+  max-width: 760px;
 }
 
 .about-meta-chips {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .about-chip {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 600;
   padding: 4px 10px;
   background: var(--surface-container-low);
@@ -141,24 +137,26 @@
   border-radius: 10px;
 }
 
-/* Banner de Actualizaciones a la derecha horizontal */
+/* ── Banner de estado y actualizaciones ── */
 .about-update-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 14px 20px;
+  gap: 16px;
+  padding: 12px 16px;
   background: var(--surface-container-high);
   border: 1px solid var(--outline-variant);
-  border-radius: 20px;
+  border-radius: 18px;
   flex-shrink: 0;
+  width: clamp(320px, 30%, 460px);
 }
 
 .about-update-info {
   display: flex;
   align-items: center;
-  gap: 14px;
-  white-space: nowrap;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
 }
 
 .about-update-icon-bubble {
@@ -177,66 +175,203 @@
   height: 20px;
 }
 
+.about-update-text {
+  min-width: 0;
+}
+
 .about-update-text strong {
   display: block;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 700;
   color: var(--on-surface);
 }
 
 .about-update-text p {
   margin: 2px 0 0;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--on-surface-variant);
-  white-space: nowrap;
+  line-height: 1.35;
+  /* Como mucho dos líneas: el texto completo vive en el title. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.about-check-update-btn {
+.about-update-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.about-check-update-btn,
+.about-update-download-btn,
+.about-update-notes-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 10px 16px;
   border-radius: 14px;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 700;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-.about-update-toast {
-  padding: 12px 18px;
-  background: color-mix(in srgb, var(--primary) 12%, var(--surface-container));
-  border: 1px solid var(--primary);
-  color: var(--on-surface);
-  border-radius: 16px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-align: center;
-  animation: fadeIn 0.2s ease-out;
+.about-check-update-btn svg,
+.about-update-download-btn svg,
+.about-update-notes-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
-/* Grid de Secciones */
+.about-update-notes-btn {
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+  border: 1px solid var(--outline-variant);
+  cursor: pointer;
+  font-weight: 650;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.about-update-notes-btn:hover {
+  border-color: var(--outline);
+}
+
+/* Estados del banner. Los tonos salen del tema, nunca de un color fijo. */
+.about-update-banner.is-up-to-date,
+.about-update-banner.is-update-available {
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface-container-high));
+  border-color: color-mix(in srgb, var(--primary) 38%, var(--outline-variant));
+}
+
+.about-update-banner.is-up-to-date .about-update-icon-bubble,
+.about-update-banner.is-update-available .about-update-icon-bubble {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.about-update-banner.is-update-available {
+  border-color: var(--primary);
+}
+
+.about-update-banner.is-error {
+  background: color-mix(in srgb, var(--error) 10%, var(--surface-container-high));
+  border-color: color-mix(in srgb, var(--error) 45%, transparent);
+}
+
+.about-update-banner.is-error .about-update-icon-bubble {
+  background: color-mix(in srgb, var(--error) 18%, transparent);
+  color: var(--error);
+}
+
+/* ── Tira de tecnologías a todo el ancho ── */
+.about-tech-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 22px;
+  background: var(--surface-container);
+  border: 1px solid var(--outline-variant);
+  border-radius: 20px;
+  padding: 16px 20px;
+  min-height: 0;
+}
+
+.about-tech-strip-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 240px;
+  min-width: 0;
+}
+
+.about-tech-strip-head h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--on-surface);
+}
+
+.about-tech-strip-head p {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  color: var(--on-surface-variant);
+  line-height: 1.35;
+}
+
+.about-tech-badges {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.about-tech-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px 16px;
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  border-radius: 14px;
+  min-width: 0;
+}
+
+.about-tech-item strong {
+  font-size: 0.78rem;
+  color: var(--primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.about-tech-item span {
+  font-size: 0.7rem;
+  color: var(--on-surface-variant);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Fila inferior ── */
 .about-sections-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 20px;
+  /* El ecosistema se queda con el 60%: la rejilla de aplicaciones necesita
+     ese ancho para que las insignias quepan en una línea y la tarjeta no
+     desborde hacia abajo. */
+  grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.2fr);
+  gap: 26px;
+  min-height: 0;
 }
 
 .about-card {
   background: var(--surface-container);
   border: 1px solid var(--outline-variant);
-  border-radius: 24px;
-  padding: 24px;
+  border-radius: 22px;
+  padding: 22px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* La tarjeta del ecosistema es breve: en vez de estirarla y dejar un
+   hueco al pie, sus bloques se reparten el alto sobrante como espaciado. */
+.about-ecosystem-card {
+  justify-content: space-between;
 }
 
 .about-card-header {
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-shrink: 0;
 }
 
 .about-card-icon-wrap {
@@ -258,6 +393,12 @@
   color: var(--on-surface);
 }
 
+/* Estado tonal: el contenedor y el texto salen del tema, nunca de un color fijo. */
+.about-card-icon-wrap.is-ecosystem {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
 .about-card-icon-wrap.is-info {
   background: color-mix(in srgb, var(--primary) 18%, transparent);
   color: var(--primary);
@@ -270,7 +411,7 @@
 
 .about-card-header h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 800;
   color: var(--on-surface);
 }
@@ -283,28 +424,45 @@
 
 .about-card-description {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.83rem;
   color: var(--on-surface-variant);
   line-height: 1.5;
+  flex-shrink: 0;
 }
 
-/* Botones de Donación */
-.about-donation-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.about-card-footer {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--on-surface-variant);
+  flex-shrink: 0;
+  /* La licencia se queda al pie de la tarjeta, aunque sobre espacio libre. */
   margin-top: auto;
 }
 
-.about-donation-btn {
+/* ── Botones de Donación ── */
+.about-donation-buttons {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
+  flex-direction: column;
+  gap: 12px;
+  /* Altura natural: la tarjeta del ecosistema define lo alta que es la
+     fila, así que los botones no se estiran de más. */
+  flex: 0 0 auto;
+}
+
+.about-donation-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 18px;
   border-radius: 18px;
   border: 1px solid var(--outline-variant);
   cursor: pointer;
   text-align: left;
+  flex: 1 1 auto;
+  min-height: 76px;
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
   background: var(--surface-container-high);
   color: var(--on-surface);
@@ -325,9 +483,14 @@
   border-color: var(--primary);
 }
 
+.about-donation-btn.is-star {
+  background: var(--surface-container-low);
+  border-color: var(--outline-variant);
+}
+
 .about-donation-btn svg:first-child {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   color: var(--primary);
   flex-shrink: 0;
 }
@@ -339,11 +502,13 @@
 .about-btn-text {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  gap: 2px;
+  min-width: 0;
+  padding-right: 28px;
 }
 
 .about-btn-text strong {
-  font-size: 0.9rem;
+  font-size: 0.92rem;
 }
 
 .about-btn-text span {
@@ -352,18 +517,48 @@
 }
 
 .about-ext-icon {
+  position: absolute;
+  top: 16px;
+  right: 16px;
   width: 18px;
   height: 18px;
   color: var(--on-surface-variant);
   flex-shrink: 0;
 }
 
-/* Enlaces del Ecosistema */
-.about-ecosystem-links {
-  display: flex;
-  flex-direction: column;
+/* ── Contador de apps instaladas (cabecera del ecosistema) ── */
+.about-eco-count-badge {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* ── Cuadrícula de apps del ecosistema ── */
+.about-eco-grid {
+  display: grid;
+  /* Con el 60% de ancho caben cinco columnas: trece aplicaciones en tres
+     filas, y la tarjeta no desborda hacia abajo. El mínimo va por debajo de
+     164 px porque el hueco entre columnas también cuenta al repartir. */
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 8px;
-  margin-top: auto;
+  /* Separación respecto al texto: va por margen para que la lista
+     respire sin que ninguna fila quede pegada al borde de la tarjeta. */
+  margin-top: 4px;
+  flex: 0 0 auto;
+}
+
+/* ── Enlaces rápidos del ecosistema ── */
+.about-quick-links {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .about-link-row {
@@ -376,9 +571,14 @@
   border: 1px solid var(--outline-variant);
   color: var(--on-surface);
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
   transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.about-quick-links .about-link-row {
+  flex: 1 1 150px;
+  font-size: 0.76rem;
 }
 
 .about-link-row:hover {
@@ -390,45 +590,69 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .about-link-left svg {
   width: 18px;
   height: 18px;
+  flex-shrink: 0;
 }
 
 .about-link-row svg:last-child {
   width: 16px;
   height: 16px;
   color: var(--on-surface-variant);
+  flex-shrink: 0;
 }
 
-/* Tarjeta de Tecnologías */
-.about-tech-badges {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+/* ══════════════════════════════════════════════
+   Adaptación al ancho real del contenido.
+   Se usan container queries porque el sidebar se come
+   224 px del viewport: las media queries medirían mal.
+   ══════════════════════════════════════════════ */
+
+@container preview-content (max-width: 1300px) {
+  .about-tech-strip {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .about-tech-strip-head {
+    flex: 0 0 auto;
+  }
+
+  .about-tech-badges {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
-.about-tech-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
-  background: var(--surface-container-high);
-  border: 1px solid var(--outline-variant);
-  border-radius: 14px;
+@container preview-content (max-width: 900px) {
+  .about-sections-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .about-hero-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .about-update-banner {
+    width: auto;
+  }
 }
 
-.about-tech-item strong {
-  font-size: 0.82rem;
-  color: var(--primary);
-}
+@container preview-content (max-width: 640px) {
+  .about-hero-brand {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
 
-.about-tech-item span {
-  font-size: 0.74rem;
-  color: var(--on-surface-variant);
-  line-height: 1.4;
+  .about-tech-badges {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .spinning-icon {
@@ -438,9 +662,4 @@
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
 }

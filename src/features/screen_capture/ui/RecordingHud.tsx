@@ -26,16 +26,11 @@ interface RecordingHudProps {
   onAddToVideoLibrary?: (folder: string) => void;
 }
 
-/**
- * Indicador flotante de grabación. Vive en la ventana principal, no en el
- * overlay, porque el overlay debe ocultarse durante la captura: si siguiera
- * visible aparecería dentro del vídeo grabado.
- */
+/** Acciones posteriores al guardado. El control activo vive en la barra nativa. */
 export function RecordingHud({ onAddToVideoLibrary }: RecordingHudProps = {}) {
-  const [recording, setRecording] = useState<RecordingInfo | null>(null);
+
   const [finished, setFinished] = useState<RecordingInfo | null>(null);
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const [isStopping, setIsStopping] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [isInLibrary, setIsInLibrary] = useState(false);
 
@@ -43,51 +38,18 @@ export function RecordingHud({ onAddToVideoLibrary }: RecordingHudProps = {}) {
     const unlistenPromise = listen<RecordingInfo>(RECORDING_STATE_EVENT, ({ payload }) => {
       if (!payload) return;
       if (payload.status === "recording") {
-        setRecording(payload);
         setFinished(null);
         setError(null);
       } else if (payload.status === "finished") {
-        setRecording(null);
         setFinished(payload);
       } else {
-        setRecording(null);
         setFinished(null);
       }
     });
 
-    // Respaldo: la ventana principal puede cargarse con una grabación en curso.
-    void screenCaptureClient
-      .getRecordingStatus()
-      .then((status) => {
-        if (status?.status === "recording") setRecording(status);
-      })
-      .catch(() => undefined);
-
     return () => {
       void unlistenPromise.then((unlisten) => unlisten());
     };
-  }, []);
-
-  useEffect(() => {
-    if (!recording) return;
-    const tick = () => setElapsedMs(Math.max(0, Date.now() - recording.startedAtMs));
-    tick();
-    const timer = setInterval(tick, 250);
-    return () => clearInterval(timer);
-  }, [recording]);
-
-  const handleStop = useCallback(async () => {
-    setIsStopping(true);
-    setError(null);
-    try {
-      const info = await screenCaptureClient.stopRecording();
-      setRecording(null);
-      setFinished(info);
-    } catch (err) {
-      setError(String(err));
-    } finally {
-      setIsStopping(false);
-    }
   }, []);
 
   const handleSendToSuperGallery = useCallback(() => {
@@ -104,14 +66,6 @@ export function RecordingHud({ onAddToVideoLibrary }: RecordingHudProps = {}) {
     void invoke("open_in_file_manager", { path: finished.outputPath });
   }, [finished]);
 
-  const handleTogglePause = useCallback(async () => {
-    try {
-      await screenCaptureClient.togglePause();
-    } catch (err) {
-      console.error("Error al pausar la grabación:", err);
-    }
-  }, []);
-
   const handleAddToLibrary = useCallback(() => {
     if (!finished?.outputPath || !onAddToVideoLibrary) return;
     const folder = finished.outputPath.replace(/[/\\][^/\\]*$/, "");
@@ -120,6 +74,11 @@ export function RecordingHud({ onAddToVideoLibrary }: RecordingHudProps = {}) {
   }, [finished, onAddToVideoLibrary]);
 
   const [isTrimming, setIsTrimming] = useState(false);
+  useEffect(() => {
+    if (!finished || isTrimming) return;
+    const timer = setTimeout(() => setFinished(null), 3000);
+    return () => clearTimeout(timer);
+  }, [finished, isTrimming]);
   const [trimStart, setTrimStart] = useState("0");
   const [trimEnd, setTrimEnd] = useState("0");
 
@@ -149,42 +108,10 @@ export function RecordingHud({ onAddToVideoLibrary }: RecordingHudProps = {}) {
     }
   }, [finished, trimEnd, trimStart]);
 
-  if (!recording && !finished && !error) return null;
+  if (!finished && !error) return null;
 
   return (
     <div className="recording-hud-root">
-      {recording && (
-        <div className="recording-hud is-live" role="status" aria-live="polite">
-          <span className="recording-hud-dot" aria-hidden="true" />
-          <div className="recording-hud-body">
-            <strong className="recording-hud-time">
-              {recording.paused ? "En pausa" : formatElapsed(elapsedMs)}
-            </strong>
-            <span className="recording-hud-meta">
-              {recording.width}×{recording.height} · {recording.fps} fps
-            </span>
-          </div>
-          <button
-            type="button"
-            className="recording-hud-action"
-            onClick={() => void handleTogglePause()}
-            title={recording.paused ? "Reanudar la grabación" : "Pausar la grabación"}
-          >
-            <Icon name={recording.paused ? "play" : "pause"} width={15} height={15} />
-          </button>
-          <button
-            type="button"
-            className="recording-hud-stop"
-            onClick={() => void handleStop()}
-            disabled={isStopping}
-            title="Detener la grabación"
-          >
-            <span className="recording-hud-stop-dot" aria-hidden="true" />
-            <span>{isStopping ? "Cerrando…" : "Detener"}</span>
-          </button>
-        </div>
-      )}
-
       {finished && (
         <div className="recording-hud is-done" role="status" aria-live="polite">
           <span className="recording-hud-done-icon" aria-hidden="true">

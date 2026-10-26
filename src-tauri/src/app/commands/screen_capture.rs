@@ -61,6 +61,7 @@ fn start_capture_session(
     let init = init_capture_session(state, intent)?;
 
     if let Some(overlay) = app.get_webview_window("screen_capture_overlay") {
+        disable_capture_window_transitions(&overlay);
         // Una ventana minimizada (por ejemplo tras Win+D) ignora set_position/set_size y
         // show() no la restaura: quedaría fuera de pantalla y la captura no se vería.
         let _ = overlay.unminimize();
@@ -76,6 +77,15 @@ fn start_capture_session(
     }
 
     Ok(init)
+}
+
+#[tauri::command]
+pub fn screen_capture_set_intent(
+    state: tauri::State<'_, SharedCaptureState>,
+    session_id: u64,
+    intent: String,
+) -> Result<CaptureSessionInit, String> {
+    crate::features::screen_capture::set_capture_intent(&state, session_id, &intent)
 }
 
 #[tauri::command]
@@ -156,14 +166,40 @@ pub async fn screen_capture_cancel(
 
 pub fn hide_capture_windows(app: &tauri::AppHandle) {
     if let Some(overlay) = app.get_webview_window("screen_capture_overlay") {
+        disable_capture_window_transitions(&overlay);
         let session_id = app.try_state::<SharedCaptureState>()
             .and_then(|state| get_session(&state).map(|session| session.session_id));
-        let _ = overlay.emit("screen_capture://session-ended", session_id);
+        // Retirar primero la ventana: limpiar React mientras aún es visible
+        // puede exponer un fotograma transparente antes de que Windows la oculte.
         let _ = overlay.hide();
+        let _ = overlay.emit("screen_capture://session-ended", session_id);
     }
     if let Some(editor) = app.get_webview_window("screen_capture_editor") {
+        disable_capture_window_transitions(&editor);
         let _ = editor.hide();
     }
+}
+
+/// El escritorio congelado debe permanecer inmóvil: las transiciones DWM de
+/// mostrar, ocultar o restaurar una ventana parecen un zoom de toda la pantalla.
+/// Las barras de herramientas conservan sus propias microanimaciones CSS.
+fn disable_capture_window_transitions(window: &tauri::WebviewWindow) {
+    #[cfg(windows)]
+    if let Ok(hwnd) = window.hwnd() {
+        use windows::Win32::Foundation::BOOL;
+        use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_TRANSITIONS_FORCEDISABLED};
+        let disabled = BOOL(1);
+        unsafe {
+            let _ = DwmSetWindowAttribute(
+                windows::Win32::Foundation::HWND(hwnd.0),
+                DWMWA_TRANSITIONS_FORCEDISABLED,
+                &disabled as *const _ as *const std::ffi::c_void,
+                std::mem::size_of_val(&disabled) as u32,
+            );
+        }
+    }
+    #[cfg(not(windows))]
+    let _ = window;
 }
 
 #[tauri::command]
@@ -187,6 +223,17 @@ pub async fn screen_capture_get_editor_payload(
 
 #[tauri::command]
 pub async fn screen_capture_save_file(
+    app: tauri::AppHandle,
+    file_path: String,
+    data_base64: String,
+    format: Option<String>,
+) -> Result<String, String> {
+    let saved = save_capture_image(file_path, data_base64, format).await?;
+    super::vault_import::remember_capture(&app, &saved);
+    Ok(saved)
+}
+
+async fn save_capture_image(
     file_path: String,
     data_base64: String,
     format: Option<String>,
@@ -439,14 +486,80 @@ pub fn apply_capture_shortcut_at_startup(
 /// Evento que difunde el estado de la grabación a todas las ventanas.
 pub const RECORDING_STATE_EVENT: &str = "prisma://recording-state";
 
+/// La misma confirmación para el botón y el atajo, visible fuera de la ventana
+/// principal. Solo se publica después del cierre y guardado satisfactorios.
+fn present_saved_recording(app: &tauri::AppHandle, info: &RecordingInfo) {
+    set_recorder_controls_active(app, false);
+    super::vault_import::remember_capture(app, &info.output_path);
+    let _ = app.emit(RECORDING_STATE_EVENT, info);
+    if let Some(bar) = app.get_webview_window("screen_capture_recorder") {
+        let _ = bar.show();
+    }
+}
+
 /// Medidas de la barra flotante de control.
 const RECORDER_BAR_WIDTH: i32 = 320;
-const RECORDER_BAR_HEIGHT: i32 = 64;
-/// Franja que se reserva para la barra cuando no hay sitio fuera de la región.
-const RECORDER_BAR_STRIP: i32 = RECORDER_BAR_HEIGHT + 12;
+const RECORDER_BAR_HEIGHT: i32 = 56;
 
 /// Atajo global que detiene la grabación en curso.
 pub const DEFAULT_STOP_SHORTCUT: &str = "Ctrl+Shift+R";
+pub const SAVE_RECORDING_SHORTCUT: &str = "Ctrl+S";
+
+pub struct RecorderTrayControls {
+    pub stop: tauri::menu::MenuItem<tauri::Wry>,
+    pub show: tauri::menu::MenuItem<tauri::Wry>,
+    pub save_shortcut_registered: AtomicBool,
+}
+
+fn set_recorder_controls_active(app: &tauri::AppHandle, active: bool) {
+    if let Some(controls) = app.try_state::<RecorderTrayControls>() {
+        let _ = controls.stop.set_enabled(active);
+        let _ = controls.show.set_enabled(active);
+        if !active && controls.save_shortcut_registered.swap(false, Ordering::Relaxed) {
+            let _ = app.global_shortcut().unregister(SAVE_RECORDING_SHORTCUT);
+        }
+        if active && !controls.save_shortcut_registered.load(Ordering::Relaxed) {
+            match app.global_shortcut().on_shortcut(SAVE_RECORDING_SHORTCUT, |app, _, event| {
+                if event.state() == ShortcutState::Pressed {
+                    request_recording_stop(app);
+                }
+            }) {
+                Ok(()) => {
+                    controls.save_shortcut_registered.store(true, Ordering::Relaxed);
+                    let _ = controls.stop.set_text("Detener y guardar grabación (Ctrl+S)");
+                }
+                Err(error) => {
+                    let _ = controls.stop.set_text("Detener y guardar grabación");
+                    eprintln!("[Grabadora] Ctrl+S no disponible; usa la bandeja o {DEFAULT_STOP_SHORTCUT}: {error}");
+                }
+            }
+        }
+    }
+}
+
+/// Botón, bandeja y atajos cierran el mismo archivo antes de anunciarlo.
+pub fn request_recording_stop(app: &tauri::AppHandle) {
+    let app = app.clone();
+    let state = app.state::<SharedRecorderState>().inner().clone();
+    tauri::async_runtime::spawn(async move {
+        if recorder::recording_info(&state).is_none() { return; }
+        match tauri::async_runtime::spawn_blocking(move || recorder::stop_recording(&state)).await {
+            Ok(Ok(info)) => present_saved_recording(&app, &info),
+            result => {
+                eprintln!("[Grabadora] No se pudo detener y guardar: {result:?}");
+                show_recording_controls(&app);
+            }
+        }
+    });
+}
+
+pub fn show_recording_controls(app: &tauri::AppHandle) {
+    if let Some(bar) = app.get_webview_window("screen_capture_recorder") {
+        let _ = bar.unminimize();
+        let _ = bar.show();
+        let _ = app.emit("prisma://recording-controls-shown", ());
+    }
+}
 
 /// Registra el atajo global que detiene una grabación en curso.
 ///
@@ -480,10 +593,7 @@ pub fn apply_recorder_stop_shortcut(app: &tauri::AppHandle, state: &SharedRecord
             let result =
                 tauri::async_runtime::spawn_blocking(move || recorder::stop_recording(&stop_state)).await;
             if let Ok(Ok(info)) = result {
-                if let Some(bar) = app.get_webview_window("screen_capture_recorder") {
-                    let _ = bar.hide();
-                }
-                let _ = app.emit(RECORDING_STATE_EVENT, &info);
+                present_saved_recording(&app, &info);
             }
         });
     };
@@ -512,23 +622,38 @@ pub async fn screen_recorder_start(
         let _ = windows::Win32::Graphics::Dwm::DwmFlush();
     }
 
-    // La barra de control tiene que quedar fuera de la región grabada. Si la
-    // región ocupa todo el escritorio no hay sitio libre, así que se reserva
-    // una franja inferior y se graba el resto: el vídeo no se contamina.
-    let mut options = options;
-    let mut bar_position = recorder::place_control_bar(
-        &options.region,
-        RECORDER_BAR_WIDTH,
-        RECORDER_BAR_HEIGHT,
+    let bar = app.get_webview_window("screen_capture_recorder")
+        .ok_or("No se encontró la barra de grabación")?;
+    // Win+D puede dejarla minimizada: restaurar antes de medir y posicionar.
+    disable_capture_window_transitions(&bar);
+    bar.unminimize().map_err(|error| error.to_string())?;
+    bar.hide().map_err(|error| error.to_string())?;
+    // Se aplica antes de iniciar FFmpeg y permanece al arrastrar la barra.
+    // Así no es necesario recortar una franja de la región elegida.
+    bar.set_content_protected(true)
+        .map_err(|error| format!("No se pudo excluir el control del vídeo: {error}"))?;
+    let monitor = bar.available_monitors().map_err(|error| error.to_string())?
+        .into_iter().max_by_key(|monitor| {
+            let position = monitor.position();
+            let size = monitor.size();
+            let overlap_x = ((options.region.x as i64 + options.region.width as i64)
+                .min(position.x as i64 + size.width as i64) - (options.region.x as i64).max(position.x as i64)).max(0);
+            let overlap_y = ((options.region.y as i64 + options.region.height as i64)
+                .min(position.y as i64 + size.height as i64) - (options.region.y as i64).max(position.y as i64)).max(0);
+            overlap_x * overlap_y
+        }).ok_or("No se encontró el monitor de grabación")?;
+    let scale = monitor.scale_factor();
+    let width = (RECORDER_BAR_WIDTH as f64 * scale).round() as i32;
+    let height = (RECORDER_BAR_HEIGHT as f64 * scale).round() as i32;
+    let area = monitor.work_area();
+    let (x, y) = recorder::control_bar_position(
+        (area.position.x, area.position.y, area.size.width, area.size.height),
+        width, height, (12.0 * scale).round() as i32,
     );
-    if bar_position.is_none() && options.region.height as i32 > RECORDER_BAR_STRIP + 80 {
-        options.region.height = (options.region.height as i32 - RECORDER_BAR_STRIP) as u32;
-        bar_position = recorder::place_control_bar(
-            &options.region,
-            RECORDER_BAR_WIDTH,
-            RECORDER_BAR_HEIGHT,
-        );
-    }
+    bar.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }))
+        .map_err(|error| error.to_string())?;
+    bar.set_size(tauri::Size::Physical(tauri::PhysicalSize { width: width as u32, height: height as u32 }))
+        .map_err(|error| error.to_string())?;
 
     let recorder_state = state.inner().clone();
     let info = tauri::async_runtime::spawn_blocking(move || {
@@ -538,14 +663,10 @@ pub async fn screen_recorder_start(
     .await
     .map_err(|e| format!("Error iniciando la grabación: {e}"))??;
 
-    if let Some(bar) = app.get_webview_window("screen_capture_recorder") {
-        let _ = bar.unminimize();
-        if let Some((x, y)) = bar_position {
-            let _ = bar.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }));
-            let _ = bar.show();
-        }
-    }
+    let _ = bar.unminimize();
+    let _ = bar.show();
 
+    set_recorder_controls_active(&app, true);
     let _ = app.emit(RECORDING_STATE_EVENT, &info);
     Ok(info)
 }
@@ -563,10 +684,7 @@ pub async fn screen_recorder_stop(
     .await
     .map_err(|e| format!("Error deteniendo la grabación: {e}"))??;
 
-    if let Some(bar) = app.get_webview_window("screen_capture_recorder") {
-        let _ = bar.hide();
-    }
-    let _ = app.emit(RECORDING_STATE_EVENT, &info);
+    present_saved_recording(&app, &info);
     Ok(info)
 }
 
@@ -592,6 +710,7 @@ pub async fn screen_recorder_cancel(
     if let Some(bar) = app.get_webview_window("screen_capture_recorder") {
         let _ = bar.hide();
     }
+    set_recorder_controls_active(&app, false);
     let _ = app.emit(
         RECORDING_STATE_EVENT,
         &RecordingInfo {
@@ -667,7 +786,7 @@ mod save_format_tests {
         let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
         for format in ["png", "webp", "jpeg", "elx"] {
             let path = std::env::temp_dir().join(format!("prisma-capture-{stamp}-{format}.png"));
-            let saved = tauri::async_runtime::block_on(screen_capture_save_file(
+            let saved = tauri::async_runtime::block_on(save_capture_image(
                 path.to_string_lossy().into_owned(), data.clone(), Some(format.into()),
             )).unwrap();
             let bytes = std::fs::read(&saved).unwrap();

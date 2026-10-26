@@ -64,6 +64,42 @@ export const PROGRESS_BAR_OPTIONS: { id: ProgressBarStyle; label: string; desc: 
     desc: "Cuerda tensada que vibra con oscilación armónica al interactuar",
     previewClass: "elastic-string-preview",
   },
+  {
+    id: "binary",
+    label: "Matriz Binaria",
+    desc: "Dígitos 0/1 que se descifran justo antes del cabezal de lectura",
+    previewClass: "binary-preview",
+  },
+  {
+    id: "pacman",
+    label: "Laberinto Pac-Man",
+    desc: "El personaje devora la pista punto a punto hasta la píldora final",
+    previewClass: "pacman-preview",
+  },
+  {
+    id: "glitch",
+    label: "Ciber-Glitch",
+    desc: "Canales cian y magenta desfasados con artefactos de bloque",
+    previewClass: "glitch-preview",
+  },
+  {
+    id: "fire",
+    label: "Fuego Cinético",
+    desc: "Llama viva que sube desde la cabeza de reproducción",
+    previewClass: "fire-preview",
+  },
+  {
+    id: "tesla",
+    label: "Rayo Tesla",
+    desc: "Descarga eléctrica bifurcada que salta hacia el cabezal",
+    previewClass: "tesla-preview",
+  },
+  {
+    id: "laser",
+    label: "Sable Láser",
+    desc: "Hoja incandescente con empuñadura metálica y zumbido en la punta",
+    previewClass: "laser-preview",
+  },
 ];
 
 interface ProgressBarSettingsPanelProps {
@@ -125,7 +161,7 @@ export function ProgressBarSettingsPanel({
         </div>
       </div>
 
-      {/* Catálogo de los 10 Estilos */}
+      {/* Catálogo de Estilos */}
       <div className="settings-card">
         <h3>Catálogo de Estilos de Reproducción</h3>
         <p>
@@ -186,29 +222,29 @@ export function ProgressBarSettingsPanel({
                 {id === "soundwave" && (
                   <div className="preview-wave-track">
                     <svg className="preview-wave-svg" viewBox="0 0 160 20" fill="none">
-                      {[4, 8, 14, 6, 12, 16, 9, 15, 11, 7, 13, 15, 8].map((h, i) => (
+                      {[10, 14, 8, 12, 16, 9, 13, 7, 11, 15, 9, 12].map((h, i) => (
                         <rect
                           key={i}
-                          x={i * 7}
+                          x={i * 7 + 6}
                           y={10 - h / 2}
-                          width="3.5"
+                          width="4"
                           height={h}
-                          rx="1.75"
+                          rx="2"
                           fill="var(--primary)"
                         />
                       ))}
-                      {[6, 8, 5, 7, 6, 9, 5, 8, 6, 7].map((h, i) => (
+                      {[5, 7, 4, 6, 5, 8, 4, 7].map((h, i) => (
                         <rect
                           key={`in-${i}`}
-                          x={98 + i * 6}
+                          x={94 + i * 7}
                           y={10 - h / 2}
-                          width="3"
+                          width="4"
                           height={h}
-                          rx="1.5"
+                          rx="2"
                           fill="var(--outline-variant)"
                         />
                       ))}
-                      <rect x="91" y="1" width="4" height="18" rx="2" fill="#ffffff" filter="drop-shadow(0 1px 2px rgba(0,0,0,0.4))" />
+                      <rect x="88" y="1" width="4" height="18" rx="2" fill="#ffffff" filter="drop-shadow(0 0 4px var(--primary))" />
                     </svg>
                   </div>
                 )}
@@ -237,7 +273,7 @@ export function ProgressBarSettingsPanel({
                       />
                       <path
                         d="M0 10 Q 15 17, 30 10 T 60 10 T 90 10"
-                        stroke="color-mix(in srgb, var(--primary) 65%, #ffffff)"
+                        stroke="var(--secondary, color-mix(in srgb, var(--primary) 45%, var(--on-surface-variant) 55%))"
                         strokeWidth="3"
                         strokeLinecap="round"
                       />
@@ -265,13 +301,13 @@ export function ProgressBarSettingsPanel({
                 {id === "particles" && (
                   <div className="preview-wave-track">
                     <svg className="preview-wave-svg" viewBox="0 0 160 20" fill="none">
-                      <line x1="0" y1="10" x2="95" y2="10" stroke="var(--primary)" strokeWidth="3.5" strokeLinecap="round" />
-                      <line x1="95" y1="10" x2="160" y2="10" stroke="var(--outline-variant)" strokeWidth="3" strokeLinecap="round" />
-                      <circle cx="35" cy="7" r="1.5" fill="var(--primary)" opacity="0.6" />
-                      <circle cx="55" cy="13" r="2" fill="var(--primary)" opacity="0.8" />
-                      <circle cx="75" cy="6" r="1.8" fill="var(--primary)" opacity="0.9" />
-                      <circle cx="85" cy="12" r="2.2" fill="#ffffff" />
-                      <circle cx="95" cy="10" r="5.5" fill="#ffffff" filter="drop-shadow(0 0 5px var(--primary))" />
+                      <rect x="0" y="8" width="160" height="4" rx="2" fill="rgba(30,41,59,0.55)" />
+                      <rect x="0" y="8" width="95" height="4" rx="2" fill="var(--primary)" />
+                      <circle cx="35" cy="7" r="1.5" fill="#f59e0b" opacity="0.7" />
+                      <circle cx="55" cy="13" r="2" fill="#ec4899" opacity="0.8" />
+                      <circle cx="74" cy="6" r="1.8" fill="#f59e0b" opacity="0.9" />
+                      <circle cx="86" cy="12" r="2" fill="#ffffff" opacity="0.9" />
+                      <circle cx="95" cy="10" r="6" fill="#ffffff" filter="drop-shadow(0 0 6px #fef3c7)" />
                     </svg>
                   </div>
                 )}
@@ -305,6 +341,110 @@ export function ProgressBarSettingsPanel({
                       />
                       <line x1="95" y1="10" x2="160" y2="10" stroke="var(--outline-variant)" strokeWidth="3" strokeLinecap="round" />
                       <ellipse cx="95" cy="10" rx="3" ry="7" fill="#ffffff" filter="drop-shadow(0 1px 2px rgba(0,0,0,0.4))" />
+                    </svg>
+                  </div>
+                )}
+                {id === "binary" && (
+                  <div className="preview-wave-track">
+                    <svg className="preview-wave-svg" viewBox="0 0 160 20" fill="none">
+                      <rect x="0" y="1" width="160" height="18" rx="4" fill="rgba(17,24,39,0.9)" />
+                      <text
+                        x="6"
+                        y="13.5"
+                        fill="#22c55e"
+                        fontFamily="ui-monospace, monospace"
+                        fontSize="12"
+                        fontWeight="700"
+                        letterSpacing="1"
+                      >
+                        10110010
+                      </text>
+                      <text
+                        x="80"
+                        y="13.5"
+                        fill="rgba(55,65,81,0.95)"
+                        fontFamily="ui-monospace, monospace"
+                        fontSize="12"
+                        fontWeight="700"
+                        letterSpacing="1"
+                      >
+                        01100101
+                      </text>
+                      <rect x="92" y="1" width="2" height="18" fill="#ffffff" filter="drop-shadow(0 0 4px #22c55e)" />
+                    </svg>
+                  </div>
+                )}
+                {id === "pacman" && (
+                  <div className="preview-wave-track">
+                    <svg className="preview-wave-svg" viewBox="0 0 160 20" fill="none">
+                      <rect x="0" y="0" width="160" height="20" fill="rgba(0,0,0,0.9)" />
+                      <line x1="0" y1="1.5" x2="160" y2="1.5" stroke="#1d4ed8" strokeWidth="1.5" />
+                      <line x1="0" y1="18.5" x2="160" y2="18.5" stroke="#1d4ed8" strokeWidth="1.5" />
+                      {[110, 128, 146].map((x) => (
+                        <circle key={x} cx={x} cy="10" r="2.5" fill="#fef08a" />
+                      ))}
+                      <circle cx="152" cy="10" r="4" fill="#fef08a" filter="drop-shadow(0 0 4px #fef08a)" />
+                      <path d="M64 10 L 78 3 A 10 10 0 0 1 78 17 Z" fill="#eab308" />
+                    </svg>
+                  </div>
+                )}
+                {id === "glitch" && (
+                  <div className="preview-wave-track">
+                    <svg className="preview-wave-svg" viewBox="0 0 160 20" fill="none">
+                      <rect x="0" y="8" width="160" height="4" fill="rgba(55,65,81,0.9)" />
+                      <rect x="0" y="8" width="96" height="4" fill="rgba(6,182,212,0.85)" />
+                      <rect x="3" y="9" width="96" height="4" fill="rgba(236,72,153,0.8)" />
+                      <rect x="0" y="9" width="96" height="2" fill="#ffffff" />
+                      <rect x="30" y="4" width="14" height="2" fill="#06b6d4" />
+                      <rect x="62" y="14" width="18" height="2" fill="#ec4899" />
+                      <rect x="92" y="2" width="8" height="16" fill="#ffffff" />
+                    </svg>
+                  </div>
+                )}
+                {id === "fire" && (
+                  <div className="preview-wave-track">
+                    <svg className="preview-wave-svg" viewBox="0 0 160 20" fill="none">
+                      <rect x="0" y="9" width="160" height="2" fill="rgba(69,26,3,0.9)" />
+                      <rect x="0" y="8" width="96" height="4" fill="#ef4444" />
+                      <rect x="0" y="9" width="96" height="2" fill="#7f1d1d" />
+                      <circle cx="92" cy="7" r="3" fill="#f97316" opacity="0.9" />
+                      <circle cx="88" cy="4" r="2.2" fill="#facc15" opacity="0.85" />
+                      <circle cx="84" cy="2" r="1.6" fill="#ef4444" opacity="0.7" />
+                      <circle cx="95" cy="5" r="1.8" fill="#facc15" opacity="0.8" />
+                    </svg>
+                  </div>
+                )}
+                {id === "tesla" && (
+                  <div className="preview-wave-track">
+                    <svg className="preview-wave-svg" viewBox="0 0 160 20" fill="none">
+                      <rect x="0" y="9" width="160" height="2" fill="rgba(30,41,59,0.9)" />
+                      <polyline
+                        points="0,10 14,4 26,13 38,3 50,14 62,6 74,12 86,4 96,10"
+                        stroke="#38bdf8"
+                        strokeWidth="1.5"
+                        strokeLinejoin="round"
+                      />
+                      <polyline
+                        points="0,10 16,8 30,12 46,7 60,13 76,8 90,11 96,10"
+                        stroke="#ffffff"
+                        strokeWidth="2"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="96" cy="10" r="5" fill="#bae6fd" filter="drop-shadow(0 0 5px #0284c7)" />
+                    </svg>
+                  </div>
+                )}
+                {id === "laser" && (
+                  <div className="preview-wave-track">
+                    <svg className="preview-wave-svg" viewBox="0 0 160 20" fill="none">
+                      <rect x="0" y="8" width="160" height="4" fill="rgba(17,24,39,0.9)" />
+                      <rect x="0" y="5" width="20" height="10" fill="#cbd5e1" />
+                      <rect x="5" y="4" width="4" height="12" fill="#475569" />
+                      <rect x="15" y="4" width="2" height="12" fill="#475569" />
+                      <rect x="20" y="6" width="78" height="8" fill="#ef4444" filter="drop-shadow(0 0 6px #ef4444)" />
+                      <rect x="20" y="8" width="78" height="4" fill="#fca5a5" />
+                      <rect x="20" y="9" width="76" height="2" fill="#ffffff" />
+                      <circle cx="97" cy="10" r="2.5" fill="#ffffff" opacity="0.9" />
                     </svg>
                   </div>
                 )}

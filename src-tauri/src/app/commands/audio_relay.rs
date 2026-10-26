@@ -5,6 +5,11 @@ use crate::features::audio_relay::{AudioRelayService, RelayStatus};
 #[tauri::command]
 pub fn mobile_audio_status(service: State<'_, Arc<AudioRelayService>>) -> RelayStatus { service.status() }
 #[tauri::command]
+pub async fn mobile_audio_toggle(service: State<'_, Arc<AudioRelayService>>) -> Result<RelayStatus, String> {
+    let service = service.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || service.toggle()).await.map_err(|_| "No se pudo cambiar el altavoz")?
+}
+#[tauri::command]
 pub async fn mobile_audio_set_enabled(enabled: bool, service: State<'_, Arc<AudioRelayService>>) -> Result<RelayStatus, String> {
     let service = service.inner().clone();
     tauri::async_runtime::spawn_blocking(move || service.set_enabled(enabled)).await.map_err(|_| "No se pudo activar el altavoz")?

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { QuickLookPayload } from "../model/types";
 import { Icon } from "../../../shared/ui/Icon";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 interface QuickLookHtmlProps {
   payload: QuickLookPayload;
@@ -19,6 +20,12 @@ export function QuickLookHtml({ payload }: QuickLookHtmlProps) {
   const rawHtml = payload.textContent || "";
   const lines = rawHtml.split(/\r?\n/);
 
+  // Inyectar etiqueta <base> con la ruta del directorio para que los scripts, CSS,
+  // datos e imágenes relativos se resuelvan correctamente a través del protocolo de assets.
+  const dirPath = payload.path ? payload.path.replace(/[\\/][^\\/]+$/, "") : "";
+  const baseHref = dirPath ? convertFileSrc(dirPath) + "/" : "";
+  const BASE_TAG = baseHref ? `<base href="${baseHref}">` : "";
+
   // Inyectar scrollbar personalizado dentro del documento HTML aislado del iframe
   const SCROLLBAR_CSS = `<style>
     *{scrollbar-width:thin;scrollbar-color:rgba(208,188,255,0.45) transparent}
@@ -28,11 +35,13 @@ export function QuickLookHtml({ payload }: QuickLookHtmlProps) {
     *::-webkit-scrollbar-thumb:hover{background:rgba(208,188,255,0.75)}
   </style>`;
 
+  const injection = `${BASE_TAG}${SCROLLBAR_CSS}`;
+
   const injectedHtml = rawHtml.includes("</head>")
-    ? rawHtml.replace("</head>", `${SCROLLBAR_CSS}</head>`)
+    ? rawHtml.replace("</head>", `${injection}</head>`)
     : rawHtml.includes("<html")
-      ? rawHtml.replace(/(<html[^>]*>)/i, `$1${SCROLLBAR_CSS}`)
-      : `${SCROLLBAR_CSS}${rawHtml}`;
+      ? rawHtml.replace(/(<html[^>]*>)/i, `$1${injection}`)
+      : `${injection}${rawHtml}`;
 
   const handleCopy = () => {
     void navigator.clipboard.writeText(rawHtml);
@@ -83,7 +92,7 @@ export function QuickLookHtml({ payload }: QuickLookHtmlProps) {
         <div style={{ flex: 1, position: "relative", overflow: "hidden", background: "#ffffff" }}>
           <iframe
             srcDoc={injectedHtml}
-            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-downloads allow-modals"
             style={{
               width: "100%",
               height: "100%",

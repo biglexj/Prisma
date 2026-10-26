@@ -50,10 +50,13 @@ pub struct RecordingOptions {
     /// Capturar también el audio del sistema (WASAPI loopback).
     #[serde(default)]
     pub system_audio: Option<bool>,
-    /// Título de la ventana a seguir. Si viene informado, la captura sigue a
-    /// la ventana aunque se mueva por la pantalla.
+    /// Nombre informativo de la ventana seleccionada. Se captura su región
+    /// visible del escritorio, sin depender de GetDC(hwnd).
     #[serde(default)]
     pub window_title: Option<String>,
+    /// Contenedor del vídeo: `mp4`, `mkv` o `mov`.
+    #[serde(default)]
+    pub container: Option<String>,
 }
 
 /// Estado público de la grabadora.
@@ -110,27 +113,6 @@ fn now_ms() -> u64 {
         .as_millis() as u64
 }
 
-/// Origen del escritorio virtual. GDIGRAB mide el desplazamiento desde esta esquina,
-/// no desde el monitor principal, así que en setups multimonitor las coordenadas
-/// negativas se restan correctamente.
-#[cfg(windows)]
-fn virtual_origin() -> (i32, i32) {
-    use windows::Win32::UI::WindowsAndMessaging::{
-        GetSystemMetrics, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN,
-    };
-    unsafe {
-        (
-            GetSystemMetrics(SM_XVIRTUALSCREEN),
-            GetSystemMetrics(SM_YVIRTUALSCREEN),
-        )
-    }
-}
-
-#[cfg(not(windows))]
-fn virtual_origin() -> (i32, i32) {
-    (0, 0)
-}
-
 /// Rectángulo del escritorio virtual: origen y tamaño en coordenadas físicas.
 #[cfg(windows)]
 pub fn virtual_screen_rect() -> (i32, i32, u32, u32) {
@@ -164,20 +146,30 @@ fn even_dimension(value: u32) -> u32 {
     }
 }
 
-fn build_output_path(folder: &str) -> Result<PathBuf, String> {
+fn build_output_path(folder: &str, container: &str) -> Result<PathBuf, String> {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default();
     let secs = now.as_secs();
     // Fecha local en formato YYYY-MM-DD_HH-MM-SS.
     let local = chrono_like_local(secs);
-    let name = format!("Prisma_Grabacion_{local}.mp4");
+    let name = format!("Prisma_Grabacion_{local}.{}", container_extension(container));
     let path = PathBuf::from(folder).join(name);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)
             .map_err(|e| format!("No se pudo crear la carpeta de destino: {e}"))?;
     }
     Ok(path)
+}
+
+/// Extensión del contenedor pedido. El vídeo siempre es H.264 + AAC, así que
+/// MP4, MKV y MOV son todos válidos; cualquier otra opción cae en MP4.
+fn container_extension(container: &str) -> &'static str {
+    match container.trim().to_ascii_lowercase().as_str() {
+        "mkv" | "matroska" => "mkv",
+        "mov" | "quicktime" => "mov",
+        _ => "mp4",
+    }
 }
 
 /// Convierte un instante epoch en texto local `YYYY-MM-DD_HH-MM-SS` sin dependencias extra.
@@ -302,8 +294,6 @@ struct SpawnPlan<'a> {
     width: u32,
     height: u32,
     audio_device: Option<&'a str>,
-    /// Título de la ventana a seguir, si la grabación es de una ventana.
-    window_title: Option<String>,
     /// Audio del sistema: puerto local, frecuencia y canales.
     system_audio: Option<(u16, u32, usize)>,
     output_path: &'a std::path::Path,
@@ -414,26 +404,15 @@ fn spawn_recorder(
 ) -> Result<(Child, Option<ChildStdin>, Arc<Mutex<String>>), String> {
     let mut command = Command::new(plan.ffmpeg);
     command.args(["-hide_banner", "-loglevel", "error", "-stats"]);
-    command.args(["-f", "gdigrab", "-draw_mouse", "1"]);
+    command.args(["-thread_queue_size", "16", "-f", "gdigrab", "-draw_mouse", "1"]);
     command.args(["-framerate", &plan.fps.to_string()]);
 
-    match plan.window_title.as_deref() {
-        // Con título, GDIGRAB sigue a la ventana: si se mueve, la captura la
-        // sigue. No se pasa el desplazamiento (la posición es la de la
-        // ventana), pero sí el tamaño, que debe ser par: H.264 no admite
-        // dimensiones impares y el motor de hardware las rechaza.
-        Some(title) => {
-            command.args(["-video_size", &format!("{}x{}", plan.width, plan.height)]);
-            command.args(["-i", &format!("title={title}")]);
-        }
-        None => {
-            command
-                .args(["-offset_x", &plan.offset_x.to_string()])
-                .args(["-offset_y", &plan.offset_y.to_string()])
-                .args(["-video_size", &format!("{}x{}", plan.width, plan.height)])
-                .args(["-i", "desktop"]);
-        }
-    }
+    // Capturar los píxeles ya compuestos por Windows. GetDC(hwnd) puede
+    // devolver negro con Chromium/WebView2 y además solo abarca el área cliente.
+    command.args(["-offset_x", &plan.offset_x.to_string()])
+        .args(["-offset_y", &plan.offset_y.to_string()])
+        .args(["-video_size", &format!("{}x{}", plan.width, plan.height)])
+        .args(["-i", "desktop"]);
 
     // El audio del sistema llega por un socket local: FFmpeg se conecta como
     // cliente y lee el PCM en crudo que le escribe la captura WASAPI.
@@ -446,7 +425,8 @@ fn spawn_recorder(
     }
     if let Some((port, rate, channels)) = plan.system_audio {
         command
-            .args(["-f", "s16le", "-ar", &rate.to_string(), "-ac", &channels.to_string()])
+            .args(["-thread_queue_size", "16", "-probesize", "32", "-analyzeduration", "0",
+                "-f", "s16le", "-ar", &rate.to_string(), "-ac", &channels.to_string()])
             .args(["-i", &format!("tcp://127.0.0.1:{port}")]);
         audio_inputs.push(next_input);
     }
@@ -554,6 +534,19 @@ fn spawn_recorder(
     Ok((child, stdin, log))
 }
 
+/// Conserva el encuadre físico seleccionado; solo limita la parte fuera del
+/// escritorio. No mide otra ventana por título ni recorta su área cliente.
+fn visible_capture_region(region: &RecordingRegion, desktop: (i32, i32, u32, u32)) -> Result<RecordingRegion, String> {
+    let (x, y, width, height) = desktop;
+    let left = (region.x as i64).max(x as i64);
+    let top = (region.y as i64).max(y as i64);
+    let right = (region.x as i64 + region.width as i64).min(x as i64 + width as i64);
+    let bottom = (region.y as i64 + region.height as i64).min(y as i64 + height as i64);
+    if right - left < 2 || bottom - top < 2 { return Err("La región a grabar está fuera del escritorio".into()); }
+    Ok(RecordingRegion { x: left as i32, y: top as i32,
+        width: even_dimension((right-left) as u32), height: even_dimension((bottom-top) as u32) })
+}
+
 /// Inicia una grabación de la región indicada.
 ///
 /// La captura se delega en FFmpeg (GDIGRAB), que ya forma parte del paquete de
@@ -572,29 +565,19 @@ pub fn start_recording(
     let ffmpeg = find_ffmpeg_binary()
         .ok_or_else(|| "FFmpeg no está disponible en esta instalación".to_string())?;
 
-    let width = even_dimension(options.region.width);
-    let height = even_dimension(options.region.height);
-    if width < 2 || height < 2 {
-        return Err("La región a grabar es demasiado pequeña".to_string());
-    }
+    let capture_region = visible_capture_region(&options.region, virtual_screen_rect())?;
+    let width = capture_region.width;
+    let height = capture_region.height;
 
     let fps = options
         .fps
         .unwrap_or(DEFAULT_FPS)
         .clamp(MIN_FPS, MAX_FPS);
 
-    let (origin_x, origin_y) = virtual_origin();
-    let offset_x = options.region.x - origin_x;
-    let offset_y = options.region.y - origin_y;
-    let follows_window = options
-        .window_title
-        .as_deref()
-        .map(str::trim)
-        .filter(|title| !title.is_empty())
-        .is_some();
-    if !follows_window && (offset_x < 0 || offset_y < 0) {
-        return Err("La región a grabar está fuera del escritorio virtual".to_string());
-    }
+    // GDIGRAB desktop recibe coordenadas absolutas, incluidas las negativas
+    // de monitores situados a la izquierda o por encima del principal.
+    let offset_x = capture_region.x;
+    let offset_y = capture_region.y;
 
     let output_folder = options
         .output_folder
@@ -602,7 +585,7 @@ pub fn start_recording(
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .ok_or_else(|| "No se indicó la carpeta de destino de la grabación".to_string())?;
-    let output_path = build_output_path(output_folder)?;
+    let output_path = build_output_path(output_folder, options.container.as_deref().unwrap_or("mp4"))?;
 
     // Codificadores candidatos. En «auto» se prueban en orden y se queda con el
     // primero que arranque: el FFmpeg que viaja con Prisma trae NVENC, QSV y AMF,
@@ -629,14 +612,6 @@ pub fn start_recording(
         .to_lowercase();
     let max_height = options.max_height.filter(|value| *value >= 240);
 
-    // Título de la ventana a seguir. Los dos puntos y el igual rompen el
-    // análisis de opciones de FFmpeg, así que se sustituyen por un espacio.
-    let window_title = options
-        .window_title
-        .as_deref()
-        .map(str::trim)
-        .filter(|title| !title.is_empty())
-        .map(|title| title.replace([':', '='], " "));
 
     // Audio del sistema: se abre la captura antes de lanzar FFmpeg para que
     // sepa el puerto, la frecuencia y los canales con los que debe grabar.
@@ -670,7 +645,6 @@ pub fn start_recording(
             .as_deref()
             .map(str::trim)
             .filter(|value| !value.is_empty()),
-        window_title,
         #[cfg(windows)]
         system_audio,
         #[cfg(not(windows))]
@@ -707,8 +681,8 @@ pub fn start_recording(
     let started_at = Instant::now();
     let started_at_ms = now_ms();
     let region = RecordingRegion {
-        x: options.region.x,
-        y: options.region.y,
+        x: capture_region.x,
+        y: capture_region.y,
         width,
         height,
     };
@@ -921,35 +895,19 @@ pub fn cancel_recording(state: &SharedRecorderState) -> Result<(), String> {
     Ok(())
 }
 
-/// Coloca la barra de control junto a la región grabada.
-///
-/// La barra se busca siempre FUERA de la región: si quedara dentro, aparecería
-/// dentro del propio vídeo. Cuando la región ocupa todo el escritorio no hay
-/// sitio libre, y entonces se deja constancia de ello para que el backend
-/// reduzca la región grabada en esa franja.
-pub fn place_control_bar(
-    region: &RecordingRegion,
+/// Centro inferior del área de trabajo del monitor, sin invadir la barra de tareas.
+/// La ventana se excluye de la captura; no se altera la región del vídeo.
+pub fn control_bar_position(
+    work_area: (i32, i32, u32, u32),
     bar_width: i32,
     bar_height: i32,
-) -> Option<(i32, i32)> {
-    const GAP: i32 = 12;
-    let (vx, vy, vw, vh) = virtual_screen_rect();
-    let right = vx + vw as i32;
-    let bottom = vy + vh as i32;
-
-    let candidates = [
-        (region.x, region.y + region.height as i32 + GAP),
-        (region.x, region.y - bar_height - GAP),
-        (region.x + region.width as i32 + GAP, region.y),
-        (region.x - bar_width - GAP, region.y),
-    ];
-
-    for (x, y) in candidates {
-        if x >= vx && y >= vy && x + bar_width <= right && y + bar_height <= bottom {
-            return Some((x, y));
-        }
-    }
-    None
+    margin: i32,
+) -> (i32, i32) {
+    let (left, top, width, height) = work_area;
+    (
+        left + ((width as i32 - bar_width) / 2).max(0),
+        top + (height as i32 - bar_height - margin).max(0),
+    )
 }
 
 /// Recorta un vídeo ya grabado sin recodificarlo.
@@ -975,7 +933,14 @@ pub fn trim_video(source: &std::path::Path, start_seconds: f64, end_seconds: f64
         .file_stem()
         .map(|value| value.to_string_lossy().into_owned())
         .unwrap_or_else(|| "Prisma_Grabacion".to_string());
-    let output_path = folder.join(format!("{stem}_Recortado.mp4"));
+    // El recorte conserva el contenedor del original: MKV y MOV también
+    // aceptan H.264 + AAC sin recodificar.
+    let extension = source
+        .extension()
+        .map(|value| value.to_string_lossy().to_lowercase())
+        .filter(|value| value == "mkv" || value == "mov")
+        .unwrap_or_else(|| "mp4".to_string());
+    let output_path = folder.join(format!("{stem}_Recortado.{extension}"));
 
     let mut command = Command::new(&ffmpeg);
     command
@@ -1022,6 +987,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn el_encuadre_conserva_coordenadas_fisicas_y_no_reduce_a_area_cliente() {
+        let input = RecordingRegion { x: -1700, y: 120, width: 1202, height: 832 };
+        let region = visible_capture_region(&input, (-1920, 0, 3840, 1080)).unwrap();
+        assert_eq!((region.x, region.y, region.width, region.height), (-1700, 120, 1202, 832));
+        let edge = visible_capture_region(&RecordingRegion { x: -1930, y: -10, width: 200, height: 200 }, (-1920, 0, 3840, 1080)).unwrap();
+        assert_eq!((edge.x, edge.y, edge.width, edge.height), (-1920, 0, 190, 190));
+        assert!(visible_capture_region(&RecordingRegion { x: 5000, y: 0, width: 100, height: 100 }, (0, 0, 1920, 1080)).is_err());
+    }
+
+    #[test]
     fn dimensions_are_even_for_h264() {
         assert_eq!(even_dimension(641), 640);
         assert_eq!(even_dimension(640), 640);
@@ -1037,9 +1012,17 @@ mod tests {
     #[test]
     fn output_file_lands_in_the_requested_folder() {
         let folder = std::env::temp_dir().join("prisma-recorder-test");
-        let path = build_output_path(&folder.to_string_lossy()).unwrap();
+        let path = build_output_path(&folder.to_string_lossy(), "mp4").unwrap();
         assert!(path.starts_with(&folder));
         assert!(path.to_string_lossy().ends_with(".mp4"));
+    }
+
+    #[test]
+    fn el_contenedor_elegido_define_la_extension() {
+        assert_eq!(container_extension("mkv"), "mkv");
+        assert_eq!(container_extension("MOV"), "mov");
+        assert_eq!(container_extension("webm"), "mp4");
+        assert_eq!(container_extension(""), "mp4");
     }
 
     #[test]
@@ -1058,24 +1041,18 @@ mod tests {
     }
 
     #[test]
-    fn la_barra_de_control_queda_fuera_de_la_region() {
-        let region = RecordingRegion { x: 100, y: 100, width: 400, height: 300 };
-        if let Some((x, y)) = place_control_bar(&region, 320, 64) {
-            let outside_region = x + 320 <= region.x
-                || x >= region.x + region.width as i32
-                || y + 64 <= region.y
-                || y >= region.y + region.height as i32;
-            assert!(
-                outside_region,
-                "la barra de control ({x},{y}) caería dentro de la región grabada"
-            );
-        }
+    fn la_barra_se_centra_abajo_en_el_monitor_y_respeta_su_area_util() {
+        assert_eq!(control_bar_position((0, 0, 1920, 1040), 150, 42, 12), (885, 986));
+        assert_eq!(control_bar_position((0, 0, 1920, 1040), 380, 56, 12), (770, 972));
+        assert_eq!(control_bar_position((-1920, -200, 1920, 1040), 380, 56, 12), (-1150, 772));
+        assert_eq!(control_bar_position((0, 0, 2880, 1560), 570, 84, 18), (1155, 1458));
+        assert_eq!(control_bar_position((20, 30, 200, 40), 380, 56, 12), (20, 30));
     }
 
-    /// La captura por título sigue a la ventana aunque se mueva. La prueba
-    /// busca una ventana real del escritorio; si no hay ninguna apta, se omite.
+    /// Graba la región visible completa de una ventana real. Además de medir
+    /// el contenedor, decodifica un fotograma para detectar el vídeo negro.
     #[test]
-    fn graba_una_ventana_por_titulo() {
+    fn graba_la_region_visible_de_una_ventana() {
         if find_ffmpeg_binary().is_none() {
             eprintln!("[Grabadora] FFmpeg no disponible: se omite la prueba de ventana");
             return;
@@ -1086,7 +1063,6 @@ mod tests {
             .into_iter()
             .find(|target| {
                 !target.title.trim().is_empty()
-                    && !target.title.contains([':', '=', '"'])
                     && target.width > 32
                     && target.height > 32
             });
@@ -1113,6 +1089,7 @@ mod tests {
             max_height: None,
             system_audio: Some(false),
             window_title: Some(title.clone()),
+            container: None,
         };
 
         match start_recording(&state, options) {
@@ -1127,10 +1104,36 @@ mod tests {
                 let path = PathBuf::from(&finished.output_path);
                 let size = std::fs::metadata(&path).map(|meta| meta.len()).unwrap_or(0);
                 assert!(size > 0, "La grabación de la ventana «{title}» debe tener contenido");
+                let ffprobe = crate::infrastructure::converter::find_ffprobe_binary().expect("FFprobe disponible");
+                let result = Command::new(ffprobe).args([
+                    "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height,nb_frames", "-of", "json"
+                ]).arg(&path).output().expect("inspeccionar vídeo real");
+                assert!(result.status.success());
+                let probe: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+                let stream = &probe["streams"][0];
+                assert_eq!(stream["width"].as_u64(), Some(info.width as u64));
+                assert_eq!(stream["height"].as_u64(), Some(info.height as u64));
+                let frames = stream["nb_frames"].as_str().and_then(|value| value.parse::<u64>().ok()).unwrap_or(0);
+                assert!(frames >= 10, "La grabación real debe contener fotogramas continuos; obtuvo {frames}");
+                eprintln!("[Grabadora] FFprobe confirma {}×{}, {frames} fotogramas", info.width, info.height);
+                let decoded = Command::new(find_ffmpeg_binary().unwrap()).args([
+                    "-v", "error", "-ss", "0.5", "-i"
+                ]).arg(&path).args(["-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1"])
+                    .output().expect("decodificar un fotograma real");
+                assert!(decoded.status.success());
+                assert_eq!(decoded.stdout.len(), info.width as usize * info.height as usize * 3);
+                let visible = decoded.stdout.chunks_exact(3).filter(|rgb| rgb.iter().any(|value| *value >= 24)).count();
+                assert!(visible > info.width as usize * info.height as usize / 100,
+                    "El vídeo quedó negro salvo por el cursor: solo {visible} píxeles con contenido");
+                let evidence = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("temp");
+                std::fs::create_dir_all(&evidence).unwrap();
+                image::RgbImage::from_raw(info.width, info.height, decoded.stdout).unwrap()
+                    .save(evidence.join("recorder-visible-window-test.png")).unwrap();
+                std::fs::copy(&path, evidence.join("recorder-visible-window-test.mp4")).unwrap();
                 let _ = std::fs::remove_file(&path);
             }
             Err(error) => {
-                eprintln!("[Grabadora] No se pudo grabar la ventana «{title}»: {error}");
+                panic!("No se pudo grabar la ventana «{title}»: {error}");
             }
         }
 
@@ -1165,6 +1168,7 @@ mod tests {
             max_height: None,
             system_audio: Some(true),
             window_title: None,
+            container: None,
         };
 
         let started = match start_recording(&state, options) {
@@ -1224,6 +1228,7 @@ mod tests {
             max_height: None,
             system_audio: Some(false),
             window_title: None,
+            container: None,
         };
 
         let started = match start_recording(&state, options) {

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import type { MusicLibraryItem } from "../../music_library/model/types";
 import { MusicArtwork } from "../../music_library/ui/MusicArtwork";
@@ -6,8 +6,9 @@ import { resolveLibraryTrackInfo } from "../../music_library/model/trackInfo";
 import type { VisualLibraryItem } from "../../visual_library/model/types";
 import { VisualThumbnail } from "../../visual_library/ui/VisualThumbnail";
 import { VideoThumbnail } from "../../visual_library/ui/VideoThumbnail";
-import { cleanPath } from "../../../shared/mediaTree";
+import { cleanPath, isPathExcludedByFolder, isPathHiddenBySystem } from "../../../shared/mediaTree";
 import { useHistory } from "../../../shared/useHistory";
+import { filterExistingMediaPaths } from "../../../shared/mediaOperations";
 import { FavoriteFullView } from "./FavoriteFullView";
 import type { FavoriteMediaType } from "../model/types";
 import { useScrollRestoration } from "../../../shared/useScrollRestoration";
@@ -19,6 +20,7 @@ interface HistoryViewProps {
   musicItems: MusicLibraryItem[];
   images: VisualLibraryItem[];
   videos: VisualLibraryItem[];
+  excludedFolders?: string[];
   onPlayMusic: (path: string, sessionItems?: MusicLibraryItem[], queueName?: string) => void;
   onOpenImage?: (path: string, sessionItems?: VisualLibraryItem[]) => void;
   onPlayVideo: (path: string, sessionItems?: VisualLibraryItem[]) => void;
@@ -72,13 +74,16 @@ export function HistoryView({
   musicItems,
   images,
   videos,
+  excludedFolders = [],
   onPlayMusic,
   onOpenImage,
   onPlayVideo,
 }: HistoryViewProps) {
-  const { store, clearHistory } = useHistory();
+  const { store, clearHistory, pruneHistoryPaths } = useHistory();
   const [activatingPath, setActivatingPath] = useState<string | null>(null);
   const [fullViewType, setFullViewTypeState] = useState<FavoriteMediaType | null>(() => sessionHistoryFullViewType);
+  const [verifiedUnindexedPaths, setVerifiedUnindexedPaths] = useState<Set<string>>(() => new Set());
+
   const setFullViewType = useCallback((type: FavoriteMediaType | null) => {
     sessionHistoryFullViewType = type;
     setFullViewTypeState(type);
@@ -103,37 +108,132 @@ export function HistoryView({
 
   useScrollRestoration(`view:history:${fullViewType ?? "summary"}`);
 
-  // Mapear rutas de historial con los objetos reales de la biblioteca o sintetizar respaldo.
-  // Se excluyen los elementos de carpetas ocultas (isExcluded) para no mostrarlos en el historial.
+  // Verificar la existencia real de rutas fuera de las carpetas de biblioteca
+  // y purgar inmediatamente del historial las que correspondan a carpetas ocultas o que ya no existan en disco.
+  useEffect(() => {
+    const knownMap = new Set([
+      ...musicItems.map((it) => normalizePath(it.path)),
+      ...images.map((it) => normalizePath(it.path)),
+      ...videos.map((it) => normalizePath(it.path)),
+    ]);
+
+    const allHistoryPaths = [
+      ...store.music.map((i) => i.path),
+      ...store.images.map((i) => i.path),
+      ...store.videos.map((i) => i.path),
+      ...store.playlists.map((i) => i.path),
+    ];
+
+    const unindexed: string[] = [];
+    const invalidExcludedOrHidden: string[] = [];
+
+    for (const rawPath of allHistoryPaths) {
+      if (!rawPath) continue;
+      if (isPathExcludedByFolder(rawPath, excludedFolders) || isPathHiddenBySystem(rawPath)) {
+        invalidExcludedOrHidden.push(rawPath);
+        continue;
+      }
+      if (!knownMap.has(normalizePath(rawPath))) {
+        unindexed.push(rawPath);
+      }
+    }
+
+    if (invalidExcludedOrHidden.length > 0) {
+      pruneHistoryPaths(invalidExcludedOrHidden);
+    }
+
+    if (unindexed.length === 0) return;
+
+    let canceled = false;
+    filterExistingMediaPaths(unindexed)
+      .then((existing) => {
+        if (canceled) return;
+        const existingSet = new Set(existing.map(normalizePath));
+        const missing = unindexed.filter((p) => !existingSet.has(normalizePath(p)));
+        if (missing.length > 0) {
+          pruneHistoryPaths(missing);
+        }
+        setVerifiedUnindexedPaths((prev) => {
+          const next = new Set(prev);
+          for (const p of existing) {
+            next.add(normalizePath(p));
+          }
+          return next;
+        });
+      })
+      .catch((err) => {
+        console.warn("[HistoryView] Error al validar rutas de archivos:", err);
+      });
+
+    return () => {
+      canceled = true;
+    };
+  }, [store, musicItems, images, videos, excludedFolders, pruneHistoryPaths]);
+
+  // Mapear rutas de historial con los objetos reales de la biblioteca o respaldo verificado.
+  // Se excluyen estrictamente carpetas ocultas (isExcluded / excludedFolders), rutas con segmentos ocultos y archivos inexistentes.
   const historyMusicItems = useMemo(() => {
     const musicMap = new Map(musicItems.map((it) => [normalizePath(it.path), it]));
-    return store.music
-      .map((item) => musicMap.get(normalizePath(item.path)) || synthesizeMusicItem(item.path))
-      .filter((it) => {
-        const real = musicMap.get(normalizePath(it.path));
-        return real ? !real.isExcluded : true;
-      });
-  }, [store.music, musicItems]);
+    const result: MusicLibraryItem[] = [];
+
+    for (const item of store.music) {
+      const norm = normalizePath(item.path);
+      if (isPathExcludedByFolder(item.path, excludedFolders) || isPathHiddenBySystem(item.path)) {
+        continue;
+      }
+      const real = musicMap.get(norm);
+      if (real) {
+        if (!real.isExcluded && !isPathExcludedByFolder(real.path, excludedFolders)) {
+          result.push(real);
+        }
+      } else if (verifiedUnindexedPaths.has(norm)) {
+        result.push(synthesizeMusicItem(item.path));
+      }
+    }
+    return result;
+  }, [store.music, musicItems, excludedFolders, verifiedUnindexedPaths]);
 
   const historyImageItems = useMemo(() => {
     const imgMap = new Map(images.map((it) => [normalizePath(it.path), it]));
-    return store.images
-      .map((item) => imgMap.get(normalizePath(item.path)) || synthesizeVisualItem(item.path))
-      .filter((it) => {
-        const real = imgMap.get(normalizePath(it.path));
-        return real ? !real.isExcluded : true;
-      });
-  }, [store.images, images]);
+    const result: VisualLibraryItem[] = [];
+
+    for (const item of store.images) {
+      const norm = normalizePath(item.path);
+      if (isPathExcludedByFolder(item.path, excludedFolders) || isPathHiddenBySystem(item.path)) {
+        continue;
+      }
+      const real = imgMap.get(norm);
+      if (real) {
+        if (!real.isExcluded && !isPathExcludedByFolder(real.path, excludedFolders)) {
+          result.push(real);
+        }
+      } else if (verifiedUnindexedPaths.has(norm)) {
+        result.push(synthesizeVisualItem(item.path));
+      }
+    }
+    return result;
+  }, [store.images, images, excludedFolders, verifiedUnindexedPaths]);
 
   const historyVideoItems = useMemo(() => {
     const vidMap = new Map(videos.map((it) => [normalizePath(it.path), it]));
-    return store.videos
-      .map((item) => vidMap.get(normalizePath(item.path)) || synthesizeVisualItem(item.path))
-      .filter((it) => {
-        const real = vidMap.get(normalizePath(it.path));
-        return real ? !real.isExcluded : true;
-      });
-  }, [store.videos, videos]);
+    const result: VisualLibraryItem[] = [];
+
+    for (const item of store.videos) {
+      const norm = normalizePath(item.path);
+      if (isPathExcludedByFolder(item.path, excludedFolders) || isPathHiddenBySystem(item.path)) {
+        continue;
+      }
+      const real = vidMap.get(norm);
+      if (real) {
+        if (!real.isExcluded && !isPathExcludedByFolder(real.path, excludedFolders)) {
+          result.push(real);
+        }
+      } else if (verifiedUnindexedPaths.has(norm)) {
+        result.push(synthesizeVisualItem(item.path));
+      }
+    }
+    return result;
+  }, [store.videos, videos, excludedFolders, verifiedUnindexedPaths]);
 
   const totalHistory =
     historyMusicItems.length + historyImageItems.length + historyVideoItems.length;

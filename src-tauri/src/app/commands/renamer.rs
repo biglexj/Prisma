@@ -4,6 +4,8 @@ use std::sync::Mutex;
 use std::time::UNIX_EPOCH;
 use serde::{Deserialize, Serialize};
 
+mod safe_batch;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RenamerFileItem {
@@ -13,6 +15,16 @@ pub struct RenamerFileItem {
     pub is_dir: bool,
     pub size_bytes: u64,
     pub modified_at_millis: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RenamerLoadResult {
+    /// "folder" cuando el origen es una carpeta, "files" cuando es una selección explícita.
+    pub kind: String,
+    /// Texto a mostrar en la barra de herramientas.
+    pub display: String,
+    pub items: Vec<RenamerFileItem>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,6 +68,145 @@ const DOCUMENT_EXTS: &[&str] = &[
     "rs", "py", "c", "cpp", "h", "log", "rtf", "odt", "ods", "odp",
 ];
 
+/// Limpia una ruta Vendida por el sistema o por el drop de Windows.
+fn sanitize_path(raw: &str) -> PathBuf {
+    PathBuf::from(raw.trim().trim_matches('"').trim_matches('\''))
+}
+
+/// Comprueba si la extensión del archivo pasa el filtro activo.
+fn matches_filter(extension: &str, filter_mode: &str, custom_ext_list: &[String]) -> bool {
+    match filter_mode {
+        "image" => IMAGE_EXTS.iter().any(|&e| e == extension),
+        "video" => VIDEO_EXTS.iter().any(|&e| e == extension),
+        "audio" => AUDIO_EXTS.iter().any(|&e| e == extension),
+        "document" | "docs" | "text" => DOCUMENT_EXTS.iter().any(|&e| e == extension),
+        "custom" => {
+            custom_ext_list.is_empty() || custom_ext_list.iter().any(|e| e == &extension)
+        }
+        _ => true, // "all"
+    }
+}
+
+/// Construye el item de un archivo o carpeta aplicando filtros y omitiendo archivos del sistema.
+fn build_item(
+    entry_path: &Path,
+    is_dir: bool,
+    filter_mode: &str,
+    custom_ext_list: &[String],
+) -> Option<RenamerFileItem> {
+    let file_name = match entry_path.file_name().and_then(|n| n.to_str()) {
+        Some(n) => n.to_string(),
+        None => return None,
+    };
+
+    // Omitir archivos del sistema o temporales de Prisma
+    if file_name.starts_with('.') || file_name == "desktop.ini" || file_name == "Thumbs.db" {
+        return None;
+    }
+
+    let extension = if is_dir {
+        String::new()
+    } else {
+        entry_path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase()
+    };
+
+    if !is_dir && !matches_filter(&extension, filter_mode, custom_ext_list) {
+        return None;
+    }
+
+    let metadata = entry_path.metadata().ok();
+    let size_bytes = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
+    let modified_at_millis = metadata
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+
+    Some(RenamerFileItem {
+        path: entry_path.to_string_lossy().to_string(),
+        name: file_name,
+        extension,
+        is_dir,
+        size_bytes,
+        modified_at_millis,
+    })
+}
+
+/// Recorre un directorio completo y acumula sus archivos (y carpetas) en `items`.
+fn scan_directory(
+    base_path: &Path,
+    filter_mode: &str,
+    custom_ext_list: &[String],
+    include_subfolders: bool,
+    allow_files: bool,
+    allow_dirs: bool,
+    items: &mut Vec<RenamerFileItem>,
+) {
+    let mut dir_queue = vec![base_path.to_path_buf()];
+
+    while let Some(current_dir) = dir_queue.pop() {
+        if let Ok(entries) = fs::read_dir(&current_dir) {
+            for entry in entries.flatten() {
+                let entry_path = entry.path();
+                let is_dir = entry_path.is_dir();
+
+                if is_dir && include_subfolders && entry_path != base_path {
+                    dir_queue.push(entry_path.clone());
+                }
+
+                if is_dir && !allow_dirs {
+                    continue;
+                }
+                if !is_dir && !allow_files {
+                    continue;
+                }
+
+                if let Some(item) = build_item(&entry_path, is_dir, filter_mode, custom_ext_list) {
+                    items.push(item);
+                }
+            }
+        }
+    }
+}
+
+/// Normaliza la lista de extensiones personalizadas.
+fn normalize_custom_extensions(custom_extensions: Option<Vec<String>>) -> Vec<String> {
+    custom_extensions
+        .unwrap_or_default()
+        .into_iter()
+        .map(|ext| ext.trim().trim_start_matches('.').to_lowercase())
+        .filter(|ext| !ext.is_empty())
+        .collect()
+}
+
+/// Compone el texto que se muestra en la barra de herramientas para una selección.
+fn selection_display(paths: &[PathBuf], file_count: usize) -> String {
+    let label = if file_count == 1 {
+        "1 archivo seleccionado".to_string()
+    } else {
+        format!("{file_count} archivos seleccionados")
+    };
+
+    let mut parents: Vec<&Path> = Vec::new();
+    for p in paths.iter().filter(|p| p.is_file()) {
+        if let Some(parent) = p.parent() {
+            if !parents.iter().any(|existing| *existing == parent) {
+                parents.push(parent);
+            }
+        }
+    }
+
+    if parents.len() == 1 {
+        format!("{}  ({})", parents[0].to_string_lossy(), label)
+    } else {
+        label
+    }
+}
+
 #[tauri::command]
 pub async fn renamer_scan_folder(
     folder_path: String,
@@ -65,10 +216,9 @@ pub async fn renamer_scan_folder(
     target_type: Option<String>,
 ) -> Result<Vec<RenamerFileItem>, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        let clean_folder = folder_path.trim().trim_matches('"').trim_matches('\'');
-        let raw_path = Path::new(clean_folder);
+        let raw_path = sanitize_path(&folder_path);
         let base_path = if raw_path.is_file() {
-            raw_path.parent().unwrap_or(raw_path)
+            raw_path.parent().unwrap_or(&raw_path).to_path_buf()
         } else {
             raw_path
         };
@@ -80,92 +230,18 @@ pub async fn renamer_scan_folder(
         let target_mode = target_type.unwrap_or_else(|| "files".to_string());
         let allow_files = target_mode == "files" || target_mode == "both";
         let allow_dirs = target_mode == "folders" || target_mode == "both";
-
-        let custom_ext_list: Vec<String> = custom_extensions
-            .unwrap_or_default()
-            .into_iter()
-            .map(|ext| ext.trim().trim_start_matches('.').to_lowercase())
-            .filter(|ext| !ext.is_empty())
-            .collect();
+        let custom_ext_list = normalize_custom_extensions(custom_extensions);
 
         let mut items = Vec::new();
-        let mut dir_queue = vec![base_path.to_path_buf()];
-
-        while let Some(current_dir) = dir_queue.pop() {
-            if let Ok(entries) = fs::read_dir(&current_dir) {
-                for entry in entries.flatten() {
-                    let entry_path = entry.path();
-                    let is_dir = entry_path.is_dir();
-
-                    if is_dir && include_subfolders && entry_path != base_path {
-                        dir_queue.push(entry_path.clone());
-                    }
-
-                    if is_dir && !allow_dirs {
-                        continue;
-                    }
-                    if !is_dir && !allow_files {
-                        continue;
-                    }
-
-                    let file_name = match entry_path.file_name().and_then(|n| n.to_str()) {
-                        Some(n) => n.to_string(),
-                        None => continue,
-                    };
-
-                    // Omitir archivos del sistema o temporales de Prisma
-                    if file_name.starts_with('.') || file_name == "desktop.ini" || file_name == "Thumbs.db" {
-                        continue;
-                    }
-
-                    let extension = if is_dir {
-                        String::new()
-                    } else {
-                        entry_path
-                            .extension()
-                            .and_then(|e| e.to_str())
-                            .unwrap_or("")
-                            .to_lowercase()
-                    };
-
-                    // Filtrado por extensión
-                    if !is_dir {
-                        let matched = match filter_mode.as_str() {
-                            "image" => IMAGE_EXTS.iter().any(|&e| e == extension),
-                            "video" => VIDEO_EXTS.iter().any(|&e| e == extension),
-                            "audio" => AUDIO_EXTS.iter().any(|&e| e == extension),
-                            "document" | "docs" | "text" => DOCUMENT_EXTS.iter().any(|&e| e == extension),
-                            "custom" => {
-                                custom_ext_list.is_empty()
-                                    || custom_ext_list.iter().any(|e| e == &extension)
-                            }
-                            _ => true, // "all"
-                        };
-
-                        if !matched {
-                            continue;
-                        }
-                    }
-
-                    let metadata = entry_path.metadata().ok();
-                    let size_bytes = metadata.as_ref().map(|m| m.len()).unwrap_or(0);
-                    let modified_at_millis = metadata
-                        .and_then(|m| m.modified().ok())
-                        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
-                        .map(|d| d.as_millis() as u64)
-                        .unwrap_or(0);
-
-                    items.push(RenamerFileItem {
-                        path: entry_path.to_string_lossy().to_string(),
-                        name: file_name,
-                        extension,
-                        is_dir,
-                        size_bytes,
-                        modified_at_millis,
-                    });
-                }
-            }
-        }
+        scan_directory(
+            &base_path,
+            &filter_mode,
+            &custom_ext_list,
+            include_subfolders,
+            allow_files,
+            allow_dirs,
+            &mut items,
+        );
 
         // Ordenamiento natural por nombre
         items.sort_by(|a, b| crate::features::folder_session::compare_naturally(&a.name, &b.name));
@@ -176,247 +252,332 @@ pub async fn renamer_scan_folder(
     .map_err(|e| format!("Error en tarea de escaneo de renombrador: {e}"))?
 }
 
+/// Resuelve el origen de trabajo del renombrador.
+///
+/// - Una única carpeta → modo "folder": se escanea su contenido completo.
+/// - Una selección de archivos → modo "files": se cargan **solo** esos archivos,
+///   sin expandir la carpeta que los contiene.
+pub fn resolve_source_paths(
+    paths: Vec<String>,
+    filter_mode: &str,
+    custom_extensions: Option<Vec<String>>,
+    include_subfolders: bool,
+    target_type: Option<&str>,
+) -> Result<RenamerLoadResult, String> {
+    let cleaned: Vec<PathBuf> = paths
+        .iter()
+        .map(|p| sanitize_path(p))
+        .filter(|p| !p.as_os_str().is_empty())
+        .collect();
+
+    if cleaned.is_empty() {
+        return Err("No se recibió ninguna ruta válida".to_string());
+    }
+
+    let target_mode = target_type.unwrap_or("files");
+    let allow_files = target_mode == "files" || target_mode == "both";
+    let allow_dirs = target_mode == "folders" || target_mode == "both";
+    let custom_ext_list = normalize_custom_extensions(custom_extensions);
+
+    // Una sola carpeta: se mantiene el comportamiento histórico de escaneo completo.
+    if cleaned.len() == 1 && cleaned[0].is_dir() {
+        let base_path = cleaned[0].clone();
+        let mut items = Vec::new();
+        scan_directory(
+            &base_path,
+            filter_mode,
+            &custom_ext_list,
+            include_subfolders,
+            allow_files,
+            allow_dirs,
+            &mut items,
+        );
+        items.sort_by(|a, b| crate::features::folder_session::compare_naturally(&a.name, &b.name));
+
+        return Ok(RenamerLoadResult {
+            kind: "folder".to_string(),
+            display: base_path.to_string_lossy().to_string(),
+            items,
+        });
+    }
+
+    // Selección explícita: solo los archivos señalados, nunca su carpeta contenedora.
+    let mut items = Vec::new();
+    let mut file_count = 0usize;
+
+    for path in &cleaned {
+        if path.is_dir() {
+            // Carpeta dentro de una selección múltiple: se expande su contenido.
+            let mut sub_items = Vec::new();
+            scan_directory(
+                path,
+                filter_mode,
+                &custom_ext_list,
+                include_subfolders,
+                allow_files,
+                allow_dirs,
+                &mut sub_items,
+            );
+            items.extend(sub_items);
+        } else if path.is_file() {
+            file_count += 1;
+            if let Some(item) = build_item(path, false, filter_mode, &custom_ext_list) {
+                items.push(item);
+            }
+        }
+    }
+
+    items.sort_by(|a, b| crate::features::folder_session::compare_naturally(&a.name, &b.name));
+
+    Ok(RenamerLoadResult {
+        kind: "files".to_string(),
+        display: selection_display(&cleaned, file_count),
+        items,
+    })
+}
+
+#[tauri::command]
+pub async fn renamer_scan_paths(
+    paths: Vec<String>,
+    filter_mode: String,
+    custom_extensions: Option<Vec<String>>,
+    include_subfolders: bool,
+    target_type: Option<String>,
+) -> Result<RenamerLoadResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        resolve_source_paths(
+            paths,
+            &filter_mode,
+            custom_extensions,
+            include_subfolders,
+            target_type.as_deref(),
+        )
+    })
+    .await
+    .map_err(|e| format!("Error en tarea de carga del renombrador: {e}"))?
+}
+
+#[tauri::command]
+pub async fn renamer_occupied_paths(paths: Vec<String>) -> Result<Vec<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || occupied_paths(&paths))
+        .await.map_err(|e| format!("Error consultando nombres existentes: {e}"))?
+}
+
+fn occupied_paths(paths: &[String]) -> Result<Vec<String>, String> {
+    let mut seen = std::collections::HashSet::new();
+    let mut occupied = Vec::new();
+    for path in paths {
+        let source = Path::new(path);
+        let parent = source.parent().ok_or("La ruta no tiene carpeta contenedora")?;
+        // Devolver las rutas con el mismo prefijo que usa cada origen, incluso
+        // cuando dos prefijos apuntan a la misma carpeta mediante un enlace.
+        if !seen.insert(parent.to_path_buf()) { continue; }
+        for entry in fs::read_dir(parent).map_err(|e| format!("No se pudo leer {}: {e}", parent.display()))? {
+            let entry = entry.map_err(|e| format!("No se pudo comprobar un nombre en {}: {e}", parent.display()))?;
+            // Incluir archivos, carpetas y enlaces, también los ocultos por los filtros.
+            occupied.push(parent.join(entry.file_name()).to_string_lossy().into_owned());
+        }
+    }
+    Ok(occupied)
+}
+
+#[tauri::command]
+pub fn renamer_can_undo(state: tauri::State<'_, RenamerState>) -> Result<bool, String> {
+    state.0.lock().map(|history| !history.is_empty())
+        .map_err(|_| "No se pudo acceder al historial".to_string())
+}
+
+#[tauri::command]
+pub async fn renamer_validate_batch(
+    operations: Vec<RenameOperation>,
+) -> Result<Vec<safe_batch::RenameConflict>, String> {
+    tauri::async_runtime::spawn_blocking(move || safe_batch::validate(&operations))
+        .await.map_err(|e| format!("Error comprobando conflictos: {e}"))
+}
+
 #[tauri::command]
 pub async fn renamer_execute_batch(
     state: tauri::State<'_, RenamerState>,
     operations: Vec<RenameOperation>,
 ) -> Result<RenameBatchResult, String> {
-    let hist_arc = state.0.clone();
+    let history = state.0.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let mut executed_ops = Vec::new();
-        let mut errors = Vec::new();
-
-        if operations.is_empty() {
-            return Ok(RenameBatchResult {
-                renamed_count: 0,
-                errors: vec!["No hay operaciones para ejecutar".to_string()],
-                can_undo: false,
-                operations: Vec::new(),
-            });
-        }
-
-        // Caracteres no permitidos en nombres de archivo
-        let invalid_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
-
-        // Estructura de staging para resolver renombrados circulares y en cadena
-        struct StagingItem {
-            src: PathBuf,
-            dst: PathBuf,
-            temp: Option<PathBuf>,
-            original_name: String,
-            new_name: String,
-        }
-
-        let mut staging: Vec<StagingItem> = Vec::new();
-
-        for op in &operations {
-            let src = PathBuf::from(&op.old_path);
-            let dst = PathBuf::from(&op.new_path);
-
-            if !src.exists() {
-                errors.push(format!("No existe el archivo origen: {}", op.old_path));
-                continue;
-            }
-
-            if op.new_name.trim().is_empty() {
-                errors.push(format!("El nuevo nombre no puede estar vacío para: {}", op.original_name));
-                continue;
-            }
-
-            if op.new_name.chars().any(|c| invalid_chars.contains(&c) || c.is_control()) {
-                errors.push(format!(
-                    "El nombre \"{}\" contiene caracteres no permitidos (< > : \" / \\ | ? *)",
-                    op.new_name
-                ));
-                continue;
-            }
-
-            if src == dst {
-                // Sin cambio requerido
-                continue;
-            }
-
-            staging.push(StagingItem {
-                src,
-                dst,
-                temp: None,
-                original_name: op.original_name.clone(),
-                new_name: op.new_name.clone(),
-            });
-        }
-
-        if staging.is_empty() {
-            return Ok(RenameBatchResult {
-                renamed_count: 0,
-                errors,
-                can_undo: false,
-                operations: Vec::new(),
-            });
-        }
-
-        // Paso 1: Mover a nombres temporales únicos para evitar colisiones en cadena (ej: a->b, b->c)
-        let unique_batch_id = std::time::SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(12345);
-
-        for (idx, item) in staging.iter_mut().enumerate() {
-            if let Some(parent) = item.src.parent() {
-                let temp_file_name = format!(".__prisma_renamer_tmp_{}_{}", unique_batch_id, idx);
-                let temp_path = parent.join(&temp_file_name);
-
-                if let Err(e) = fs::rename(&item.src, &temp_path) {
-                    errors.push(format!(
-                        "Error al preparar renombrado temporal de \"{}\": {}",
-                        item.original_name, e
-                    ));
-                } else {
-                    item.temp = Some(temp_path);
-                }
-            }
-        }
-
-        // Paso 2: Mover desde el archivo temporal a su destino final
-        for item in &staging {
-            if let Some(ref temp_path) = item.temp {
-                if let Err(e) = fs::rename(temp_path, &item.dst) {
-                    errors.push(format!(
-                        "Error al renombrar \"{}\" a \"{}\": {}",
-                        item.original_name, item.new_name, e
-                    ));
-                    // Intentar restaurar origen temporal
-                    let _ = fs::rename(temp_path, &item.src);
-                } else {
-                    executed_ops.push(RenameOperation {
-                        old_path: item.src.to_string_lossy().to_string(),
-                        new_path: item.dst.to_string_lossy().to_string(),
-                        original_name: item.original_name.clone(),
-                        new_name: item.new_name.clone(),
-                    });
-                }
-            }
-        }
-
-        let renamed_count = executed_ops.len();
-        let can_undo = !executed_ops.is_empty();
-
-        // Guardar operaciones en el estado para permitir "Deshacer"
-        if let Ok(mut hist) = hist_arc.lock() {
-            *hist = executed_ops.clone();
-        }
-
-        Ok(RenameBatchResult {
-            renamed_count,
-            errors,
-            can_undo,
-            operations: executed_ops,
-        })
-    })
-    .await
-    .map_err(|e| format!("Error procesando lote de renombrado: {e}"))?
+        // Serializar la operación completa, incluido deshacer y su historial.
+        let mut history = history.lock().map_err(|_| "No se pudo acceder al historial")?;
+        Ok(safe_batch::execute_recorded(&operations, &mut history))
+    }).await.map_err(|e| format!("Error procesando lote de renombrado: {e}"))?
 }
 
 #[tauri::command]
 pub async fn renamer_undo_batch(
     state: tauri::State<'_, RenamerState>,
 ) -> Result<RenameBatchResult, String> {
-    let hist_arc = state.0.clone();
+    let history = state.0.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let last_ops = match hist_arc.lock() {
-            Ok(hist) => hist.clone(),
-            Err(_) => return Err("No se pudo acceder al historial de renombrado".to_string()),
-        };
+        let mut history = history.lock().map_err(|_| "No se pudo acceder al historial")?;
+        if history.is_empty() { return Err("No hay operaciones previas para deshacer".into()); }
+        Ok(safe_batch::undo(&mut history))
+    }).await.map_err(|e| format!("Error al deshacer el lote de renombrado: {e}"))?
+}
 
-        if last_ops.is_empty() {
-            return Err("No hay operaciones previas para deshacer".to_string());
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    static COUNTER: AtomicU32 = AtomicU32::new(0);
+
+    #[test]
+    fn occupied_names_include_files_outside_selection_and_folders() {
+        let dir = temp_fixture("occupied");
+        fs::write(dir.join(".hidden.png"), b"hidden").unwrap();
+        let selection = vec![dir.join("a.png").to_string_lossy().into_owned(), dir.join("b.png").to_string_lossy().into_owned()];
+        let occupied = occupied_paths(&selection).unwrap();
+        assert_eq!(occupied.len(), 5); // a.png, b.png, c.mp4, sub y .hidden.png.
+        for name in ["a.png", "b.png", "c.mp4", "sub", ".hidden.png"] {
+            assert!(occupied.contains(&dir.join(name).to_string_lossy().into_owned()));
         }
+        assert!(occupied_paths(&[dir.join("missing/a.png").to_string_lossy().into_owned()]).is_err());
+        fs::remove_dir_all(dir).unwrap();
+    }
 
-        let mut reverted_ops = Vec::new();
-        let mut errors = Vec::new();
-
-        // Estructura staging para deshacer sin colisiones
-        struct UndoStaging {
-            current_path: PathBuf,
-            original_path: PathBuf,
-            temp: Option<PathBuf>,
-            original_name: String,
-            new_name: String,
+    #[cfg(windows)]
+    #[test]
+    fn skipped_number_plan_preserves_occupied_files_and_can_be_undone() {
+        use sha2::{Digest, Sha256};
+        let dir = temp_fixture("skip_and_undo");
+        let mut protected = Vec::new();
+        for number in 7..=14 {
+            let name = format!("Summertime {number:02}.png");
+            fs::write(dir.join(&name), [number as u8]).unwrap();
+            protected.push((name, Sha256::digest([number as u8])));
         }
-
-        let mut staging: Vec<UndoStaging> = Vec::new();
-
-        for op in &last_ops {
-            let current = PathBuf::from(&op.new_path);
-            let orig = PathBuf::from(&op.old_path);
-
-            if !current.exists() {
-                errors.push(format!("No se encontró el archivo renombrado: {}", op.new_path));
-                continue;
-            }
-
-            staging.push(UndoStaging {
-                current_path: current,
-                original_path: orig,
-                temp: None,
-                original_name: op.original_name.clone(),
-                new_name: op.new_name.clone(),
+        let mut operations = Vec::new();
+        for index in 0..20 {
+            let original_name = format!("picture{index}.png");
+            let number = if index < 6 { index + 1 } else { index + 9 };
+            let new_name = format!("Summertime {number:02}.png");
+            fs::write(dir.join(&original_name), [100 + index as u8]).unwrap();
+            operations.push(RenameOperation {
+                old_path: dir.join(&original_name).to_string_lossy().into_owned(),
+                new_path: dir.join(&new_name).to_string_lossy().into_owned(),
+                original_name, new_name,
             });
         }
-
-        let undo_batch_id = std::time::SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(67890);
-
-        // Paso 1: Mover a temporal
-        for (idx, item) in staging.iter_mut().enumerate() {
-            if let Some(parent) = item.current_path.parent() {
-                let temp_name = format!(".__prisma_undo_tmp_{}_{}", undo_batch_id, idx);
-                let temp_path = parent.join(&temp_name);
-
-                if let Err(e) = fs::rename(&item.current_path, &temp_path) {
-                    errors.push(format!(
-                        "Error al preparar reversión de \"{}\": {}",
-                        item.new_name, e
-                    ));
-                } else {
-                    item.temp = Some(temp_path);
-                }
-            }
+        let occupied = occupied_paths(&operations.iter().map(|op| op.old_path.clone()).collect::<Vec<_>>()).unwrap();
+        assert!(protected.iter().all(|(name, _)| occupied.contains(&dir.join(name).to_string_lossy().into_owned())));
+        let mut history = Vec::new();
+        let result = safe_batch::execute_recorded(&operations, &mut history);
+        assert!(result.errors.is_empty(), "{:?}", result.errors);
+        assert_eq!(result.renamed_count, 20);
+        for (index, op) in operations.iter().enumerate() {
+            assert_eq!(fs::read(&op.new_path).unwrap(), [100 + index as u8]);
         }
-
-        // Paso 2: Mover al original
-        for item in &staging {
-            if let Some(ref temp_path) = item.temp {
-                if let Err(e) = fs::rename(temp_path, &item.original_path) {
-                    errors.push(format!(
-                        "Error al revertir a \"{}\": {}",
-                        item.original_name, e
-                    ));
-                    let _ = fs::rename(temp_path, &item.current_path);
-                } else {
-                    reverted_ops.push(RenameOperation {
-                        old_path: item.current_path.to_string_lossy().to_string(),
-                        new_path: item.original_path.to_string_lossy().to_string(),
-                        original_name: item.new_name.clone(),
-                        new_name: item.original_name.clone(),
-                    });
-                }
-            }
+        for (name, digest) in &protected { assert_eq!(&Sha256::digest(fs::read(dir.join(name)).unwrap()), digest); }
+        let reverted = safe_batch::undo(&mut history);
+        assert!(reverted.errors.is_empty());
+        assert_eq!(reverted.renamed_count, 20);
+        for (index, op) in operations.iter().enumerate() {
+            assert_eq!(fs::read(&op.old_path).unwrap(), [100 + index as u8]);
         }
+        for (name, digest) in &protected { assert_eq!(&Sha256::digest(fs::read(dir.join(name)).unwrap()), digest); }
+        fs::remove_dir_all(dir).unwrap();
+    }
 
-        // Limpiar el historial una vez deshecho
-        if let Ok(mut hist) = hist_arc.lock() {
-            hist.clear();
+    /// Crea una carpeta temporal con archivos de prueba.
+    fn temp_fixture(label: &str) -> PathBuf {
+        let unique = COUNTER.fetch_add(1, Ordering::SeqCst);
+        let dir = std::env::temp_dir().join(format!(
+            "prisma_renamer_test_{}_{}_{}",
+            label,
+            std::process::id(),
+            unique
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("crear carpeta de prueba");
+        for name in ["a.png", "b.png", "c.mp4"] {
+            fs::write(dir.join(name), b"x").expect("escribir archivo de prueba");
         }
+        let sub = dir.join("sub");
+        fs::create_dir_all(&sub).expect("crear subcarpeta");
+        fs::write(sub.join("d.png"), b"x").expect("escribir archivo en subcarpeta");
+        dir
+    }
 
-        Ok(RenameBatchResult {
-            renamed_count: reverted_ops.len(),
-            errors,
-            can_undo: false,
-            operations: reverted_ops,
-        })
-    })
-    .await
-    .map_err(|e| format!("Error al deshacer el lote de renombrado: {e}"))?
+    #[test]
+    fn una_carpeta_escanea_todo_su_contenido() {
+        let dir = temp_fixture("folder");
+        let result = resolve_source_paths(
+            vec![dir.to_string_lossy().to_string()],
+            "all",
+            None,
+            false,
+            Some("files"),
+        )
+        .expect("resolver carpeta");
+
+        assert_eq!(result.kind, "folder");
+        // 3 archivos en la raíz, la subcarpeta no se incluye (sin subcarpetas).
+        assert_eq!(result.items.len(), 3);
+        assert!(result.items.iter().all(|i| !i.is_dir));
+        assert_eq!(result.display, dir.to_string_lossy());
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn una_seleccion_de_archivos_no_expande_la_carpeta() {
+        let dir = temp_fixture("selection");
+        let selection = vec![
+            dir.join("a.png").to_string_lossy().to_string(),
+            dir.join("c.mp4").to_string_lossy().to_string(),
+        ];
+
+        let result = resolve_source_paths(selection.clone(), "all", None, false, Some("files"))
+            .expect("resolver selección");
+
+        assert_eq!(result.kind, "files");
+        // Solo los 2 archivos elegidos: ni b.png, ni la subcarpeta.
+        assert_eq!(result.items.len(), 2);
+        let names: Vec<&str> = result.items.iter().map(|i| i.name.as_str()).collect();
+        assert!(names.contains(&"a.png"));
+        assert!(names.contains(&"c.mp4"));
+        assert!(!names.contains(&"b.png"));
+        assert!(result.display.contains("2 archivos seleccionados"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn un_solo_archivo_suelto_no_carga_su_carpeta() {
+        let dir = temp_fixture("single");
+        let file = dir.join("a.png").to_string_lossy().to_string();
+
+        let result = resolve_source_paths(vec![file], "all", None, false, Some("files"))
+            .expect("resolver archivo suelto");
+
+        assert_eq!(result.kind, "files");
+        assert_eq!(result.items.len(), 1);
+        assert_eq!(result.items[0].name, "a.png");
+        assert!(result.display.contains("1 archivo seleccionado"));
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn la_seleccion_respeta_el_filtro_de_extension() {
+        let dir = temp_fixture("filter");
+        let selection = vec![
+            dir.join("a.png").to_string_lossy().to_string(),
+            dir.join("c.mp4").to_string_lossy().to_string(),
+        ];
+
+        let result = resolve_source_paths(selection, "image", None, false, Some("files"))
+            .expect("resolver selección filtrada");
+
+        assert_eq!(result.items.len(), 1);
+        assert_eq!(result.items[0].name, "a.png");
+
+        let _ = fs::remove_dir_all(&dir);
+    }
 }

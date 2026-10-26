@@ -1,301 +1,151 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { emitTo } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { Icon } from "../../shared/ui/Icon";
 import { handleNativeDragPointerDown } from "../../shared/useNativeFileDrag";
+import { quickLookClient } from "../../features/quick_look/tauri/client";
 import { loadDropZonePreferences } from "../useSystemSettings";
+import { resolveCaptureFolder } from "../../shared/captureFolders";
+import { PhoneTransfer } from "./synapse-notch/PhoneTransfer";
+import { useNotch } from "./synapse-notch/useNotch";
+import { useClipboardPaste } from "./synapse-notch/useClipboardPaste";
+import { SLOT_COUNT, itemAtSlot, textFromTransfer, type DropAction, type VaultItem } from "./synapse-notch/model";
 import "./file-drop-zone.css";
 
-/** Evento que la bóveda envía a la ventana principal. */
-export const SYSTEM_DROP_EVENT = "prisma:system-drop";
+export { SYSTEM_DROP_EVENT, VAULT_SEND_EVENT, VAULT_OPEN_EVENT } from "./synapse-notch/model";
+export type { VaultItem } from "./synapse-notch/model";
 
-/** Evento para enviar un elemento de la bóveda al teléfono. */
-export const VAULT_SEND_EVENT = "prisma:vault-send";
+const destinations: { action: DropAction; label: string; icon: "pin" | "clock" | "smartphone" }[] = [
+  { action: "pin", label: "Fijar", icon: "pin" },
+  { action: "temporary", label: "Temporal", icon: "clock" },
+  { action: "phone", label: "Enviar al teléfono", icon: "smartphone" },
+];
 
-export interface VaultItem {
-  id: string;
-  name: string;
-  path?: string | null;
-  url?: string | null;
-  kind: "image" | "video" | "file";
-  size: number;
-  pinned: boolean;
-  addedAt: number;
-}
-
-const CARD_WIDTH = 78;
-const CARD_GAP = 8;
-const SHELF_HEIGHT = 76;
-/** Alto de la franja visible. El resto de la ventana queda transparente. */
-const HANDLE_HEIGHT = 4;
-/** Alto mínimo de la ventana: por debajo de 20 px el navegador no pinta. */
-const MIN_WINDOW_HEIGHT = 20;
-
-function formatBytes(bytes: number): string {
-  if (!bytes) return "";
-  const units = ["B", "KB", "MB", "GB"];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  return `${value.toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
-}
-
-/**
- * Bóveda flotante del sistema.
- *
- * Vive en una ventana propia, siempre encima, en el borde superior central de
- * la pantalla. Guarda hasta tres elementos: el primero se puede fijar y no se
- * expulsa nunca. Desde cada elemento se puede enviar al teléfono, guardar en
- * una carpeta o arrastrarlo fuera hacia el Explorador, que hace una copia.
- */
+/** Ventana independiente: notch de 100×3 px, cinco espacios y envío directo LAN. */
 export function SystemDropZone() {
-  const [items, setItems] = useState<VaultItem[]>([]);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [folder, setFolder] = useState("");
-  const isDragOverRef = useRef(false);
-
-  const refresh = useCallback(async () => {
-    const list = await invoke<VaultItem[]>("vault_list").catch(() => []);
-    setItems(list);
-    return list;
-  }, []);
-
-  useEffect(() => {
-    // La webview arranca antes de que el backend registre el estado de la
-    // bóveda: se reintenta unas veces hasta que responda.
-    let cancelled = false;
-    const attempt = async (remaining: number) => {
-      if (cancelled) return;
-      const list = await invoke<VaultItem[]>("vault_list").catch(() => null);
-      if (cancelled) return;
-      if (list) {
-        setItems(list);
-        return;
+  const vault = useNotch();
+  const [hoverHint, setHoverHint] = useState("");
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const savingRef = useRef(false);
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(copiedTimer.current), []);
+  const { setError, setMessage, setItems } = vault;
+  const hoveredSlot = useRef<number | null>(null);
+  const getPasteSlot = useCallback(() => (hoveredSlot.current !== null ? hoveredSlot.current : undefined), []);
+  useClipboardPaste(vault.importContent, setError, getPasteSlot, vault.open);
+  const preview = async (item: VaultItem) => {
+    if ((item.kind === "text" || item.kind === "link") && item.path) {
+      try {
+        const text = await invoke<string>("vault_read_text", { id: item.id });
+        await navigator.clipboard.writeText(text);
+        setError(""); setMessage("Copiado"); setHoverHint("Copiado");
+        clearTimeout(copiedTimer.current);
+        copiedTimer.current = setTimeout(() => { setMessage(""); setHoverHint(value => value === "Copiado" ? "" : value); }, 1600);
       }
-      if (remaining > 0) setTimeout(() => void attempt(remaining - 1), 400);
-    };
-    void attempt(12);
-    void invoke<string>("drop_zone_default_folder")
-      .then((value) => setFolder(value))
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // La ventana flotante no monta la aplicación, así que el tema hay que
-  // aplicarlo a mano: si no, la pestañita saldría del color que no es.
-  useEffect(() => {
-    const applyTheme = () => {
-      const root = document.documentElement;
-      const mode = localStorage.getItem("prisma_theme") ?? "system";
-      const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const isDark = mode === "system" ? systemDark : mode === "dark";
-      root.classList.toggle("dark", isDark);
-      root.setAttribute("data-theme", mode);
-      const accent = localStorage.getItem("prisma_accent");
-      if (accent) root.setAttribute("data-accent", accent);
-      const bg = localStorage.getItem("prisma_bg_variant");
-      if (bg) root.setAttribute("data-bg", bg);
-    };
-    applyTheme();
-    const onStorage = () => applyTheme();
-    window.addEventListener("storage", onStorage);
-    const timer = setInterval(applyTheme, 1500);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      clearInterval(timer);
-    };
-  }, []);
-
-  // La ventana se dimensiona según lo que hay en la bóveda: una muesca de
-  // 80 × 3 px cuando está cerrada, la estantería cuando se abre.
-  const isShelfVisible = isOpen && items.length > 0;
-  const shelfWidth = useMemo(
-    () => (isShelfVisible ? items.length * CARD_WIDTH + (items.length - 1) * CARD_GAP + 16 : 80),
-    [isShelfVisible, items.length]
-  );
-  const shelfHeight = isShelfVisible ? SHELF_HEIGHT : MIN_WINDOW_HEIGHT;
-
-  useEffect(() => {
-    void invoke("system_drop_zone_set_size", { width: shelfWidth, height: shelfHeight }).catch(
-      () => {}
-    );
-  }, [shelfHeight, shelfWidth]);
-
-  // Al perder el foco, la bóveda se repliega: solo se ve mientras se está usando.
-  useEffect(() => {
-    const handleBlur = () => setIsOpen(false);
-    window.addEventListener("blur", handleBlur);
-    return () => window.removeEventListener("blur", handleBlur);
-  }, []);
-
-  // Los eventos nativos son los que traen las rutas: el DOM no expone archivos
-  // del sistema operativo.
-  useEffect(() => {
-    let unlisten: (() => void) | null = null;
-    let disposed = false;
-
-    try {
-      const webview = getCurrentWebview();
-      webview
-        .onDragDropEvent((event) => {
-          const payload = event.payload;
-          if (payload.type === "over") {
-            isDragOverRef.current = true;
-            setIsDragOver(true);
-            return;
-          }
-          if (payload.type === "leave") {
-            isDragOverRef.current = false;
-            setIsDragOver(false);
-            return;
-          }
-          if (payload.type === "drop") {
-            const paths = payload.paths ?? [];
-            isDragOverRef.current = false;
-            setIsDragOver(false);
-            if (paths.length === 0) return;
-            void (async () => {
-              for (const path of paths) {
-                await invoke("vault_add", { path, url: null }).catch(() => {});
-              }
-              await refresh();
-              setIsOpen(true);
-            })();
-          }
-        })
-        .then((fn) => {
-          if (disposed) fn();
-          else unlisten = fn;
-        })
-        .catch(() => undefined);
-    } catch {
-      // Fuera del contexto de webview no hay bóveda.
+      catch (err) { setError(String(err)); }
+      return;
     }
-
-    return () => {
-      disposed = true;
-      if (unlisten) unlisten();
-    };
-  }, [refresh]);
-
-  const handleRemove = useCallback(
-    async (id: string) => {
-      setItems(await invoke<VaultItem[]>("vault_remove", { id }).catch(() => []));
-    },
-    []
-  );
-
-  const handleTogglePin = useCallback(async (id: string) => {
-    setItems(await invoke<VaultItem[]>("vault_toggle_pin", { id }).catch(() => []));
-  }, []);
-
-  const handleSend = useCallback(async (item: VaultItem) => {
+    if (item.kind !== "image" || !item.path) return;
+    try {
+      if (!await quickLookClient.showFile(item.path)) throw new Error("No se pudo abrir esta imagen en Quick Look");
+      setError("");
+      vault.hide();
+    } catch (err) { setError(String(err)); }
+  };
+  const save = useCallback(async (item: VaultItem) => {
+    if (savingRef.current) return;
+    if (item.locationPath) {
+      try {
+        await invoke("show_in_file_manager", { path: item.locationPath });
+        setError(""); setMessage(item.locationPath);
+      } catch (err) { setError(String(err)); }
+      return;
+    }
     if (!item.path) return;
-    await emitTo("main", VAULT_SEND_EVENT, { path: item.path, title: item.name }).catch(() => {});
-  }, []);
+    savingRef.current = true;
+    setSavingId(item.id);
+    try {
+    const folder = loadDropZonePreferences().folder || (!["image", "video"].includes(item.kind)
+        ? await invoke<string>("drop_zone_default_folder")
+        : await resolveCaptureFolder(item.kind === "video" ? "video" : "image"));
+      const items = await invoke<VaultItem[]>("vault_save_item", { id: item.id, folder });
+      setItems(items);
+      const location = items.find((entry) => entry.id === item.id)?.locationPath;
+      setError(""); setMessage(location ? `Guardado en ${location}` : "Archivo guardado");
+      setHoverHint(location || "Archivo guardado");
+    } catch (err) { setError(String(err)); }
+    finally { savingRef.current = false; setSavingId(null); }
+  }, [setError, setMessage, setItems]);
 
-  const handleSave = useCallback(
-    async (item: VaultItem) => {
-      if (!item.path) return;
-      const preferences = loadDropZonePreferences();
-      const target = preferences.folder || folder;
-      if (!target) return;
-      await invoke("drop_zone_copy_file", { sourcePath: item.path, folder: target }).catch(() => {});
-    },
-    [folder]
-  );
+  const mutate = async (command: string, id: string) => {
+    try { setItems(await invoke<VaultItem[]>(command, { id })); setError(""); }
+    catch (err) { setError(String(err)); }
+  };
 
-  return (
-    <div
-      className={`vault-shelf ${isDragOver ? "is-drag-over" : ""} ${isOpen ? "is-open" : ""}`}
-    >
-      {/* La franja es el único punto visible: al pulsarla se despliega la bóveda. */}
-      <button
-        type="button"
-        className="vault-handle"
-        onClick={() => setIsOpen((value) => !value)}
-        title={isOpen ? "Ocultar la bóveda" : "Mostrar la bóveda"}
-        aria-expanded={isOpen}
-      >
-        <span className="file-drop-zone-notch" aria-hidden="true" />
-      </button>
-      {isShelfVisible && (
-        <div className="vault-items">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className={`vault-card ${item.pinned ? "is-pinned" : ""}`}
-              onPointerDown={(event) => {
-                if (!item.path) return;
-                handleNativeDragPointerDown(event, item.path, { mode: "copy" });
-              }}
-              title={`${item.name}${item.size ? ` · ${formatBytes(item.size)}` : ""}\nArrastra para copiarlo donde quieras`}
-            >
-              <div className="vault-card-preview">
-                {item.kind === "image" && item.path ? (
-                  <img src={convertFileSrc(item.path)} alt="" draggable={false} />
-                ) : (
-                  <Icon
-                    name={item.kind === "video" ? "film" : "file"}
-                    width={20}
-                    height={20}
-                  />
-                )}
-                {item.pinned && (
-                  <span className="vault-card-pin" title="Fijado: no se expulsa">
-                    <Icon name="pin" width={10} height={10} />
-                  </span>
-                )}
-              </div>
+  // Etiqueta del destino señalado: se anuncia en la barra de estado mientras arrastras.
+  const targetLabel = destinations.find((item) => item.action === vault.action)?.label ?? "Temporal";
 
-              <span className="vault-card-name">{item.name}</span>
-
-              <div className="vault-card-actions">
-                <button
-                  type="button"
-                  onClick={() => void handleSend(item)}
-                  title="Enviar al teléfono (Super Galería)"
-                >
-                  <Icon name="smartphone" width={12} height={12} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleSave(item)}
-                  title="Guardar una copia en la carpeta"
-                >
-                  <Icon name="folder" width={12} height={12} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleTogglePin(item.id)}
-                  title={item.pinned ? "Desfijar" : "Fijar: siempre primero y no se expulsa"}
-                >
-                  <Icon name="pin" width={12} height={12} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleRemove(item.id)}
-                  title="Quitar de la bóveda"
-                >
-                  <Icon name="close" width={12} height={12} />
-                </button>
-              </div>
+  return <div className={`vault-shelf ${vault.open ? "is-open" : ""} ${vault.revealed ? "is-revealed" : ""} ${vault.busy || savingId !== null ? "is-busy" : ""} ${vault.dragging ? "is-drag-over" : ""}`}
+    onPointerEnter={vault.show}
+    onPointerLeave={() => { hoveredSlot.current = null; }}
+    onKeyDown={(event) => { if (event.key === "Escape" && !vault.pendingPaths.length && !vault.busy) vault.hide(); }}
+    onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; vault.setDrag(true); }}
+    onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) vault.setDrag(false); }}
+    onDrop={(event) => {
+      event.preventDefault(); vault.setDrag(false);
+      const text = textFromTransfer(event.dataTransfer);
+      if (text) void vault.importContent([], text, vault.action);
+    }}
+  >
+    <button type="button" className="vault-strip" onClick={vault.show} onFocus={vault.show}
+      aria-label="Abrir barra Synapse" aria-expanded={vault.open} />
+    {vault.expanded && <div className="vault-panel" ref={vault.panelRef} style={{ width: vault.width }} aria-label="Barra superior Synapse" aria-busy={vault.busy || savingId !== null}>
+      <div className="vault-destinations" aria-label="Destino al soltar">
+        {vault.dragging && destinations.map(({ action, label, icon }) => <button key={action} type="button"
+          className={`vault-destination ${vault.action === action ? "is-target" : ""}`}
+          onDragEnter={() => vault.setAction(action)}
+          onClick={() => { vault.setAction(action); setMessage(`Arrastra aquí para ${label.toLowerCase()}`); }}>
+          <Icon name={icon} width={18} height={18} /><span>{label}</span>
+        </button>)}
+      </div>
+      {vault.pendingPaths.length ? <PhoneTransfer paths={vault.pendingPaths} onClose={() => vault.setPendingPaths([])} /> : <div className="vault-items">
+        {Array.from({ length: SLOT_COUNT }, (_, index) => {
+          const item = itemAtSlot(vault.items, index);
+          if (!item) return <div key={`empty-${index}`} className="vault-card vault-empty" aria-label={`Espacio ${index + 1} vacío`}
+            onMouseEnter={() => { hoveredSlot.current = index; setHoverHint("Ctrl+V para pegar en esta casilla"); }}
+            onMouseLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}><Icon name="plus" width={24} height={24} /><span>Ctrl+V</span></div>;
+          return <div key={item.id} className={`vault-card ${item.pinned ? "is-pinned" : ""}`}
+            onDoubleClick={(event) => {
+              if (event.defaultPrevented || event.button !== 0 || (event.target instanceof Element && event.target.closest("button"))) return;
+              void preview(item);
+            }}
+            onPointerDown={(event) => { if (item.path) handleNativeDragPointerDown(event, item.path, { mode: "copy" }); }}
+            onMouseEnter={() => { hoveredSlot.current = index; setHoverHint(item.text || item.name); }}
+            onMouseLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}
+            onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHoverHint(""); }}
+            aria-label={item.name}>
+            <div className="vault-card-preview">
+              {item.kind === "text" || item.kind === "link" ? <div className="vault-text-preview"><Icon name={item.kind === "link" ? "link" : "file-text"} width={16} height={16} /><span>{item.text}</span></div>
+                : item.kind === "image" && item.path ? <img src={convertFileSrc(item.path)} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <Icon name={item.kind === "video" ? "film" : "file"} width={28} height={28} />}
+              {item.pinned && <span className="vault-card-pin" aria-label="Fijado"><Icon name="pin" width={12} height={12} /></span>}
             </div>
-          ))}
-        </div>
-      )}
-
-      {isDragOver && !isShelfVisible && (
-        <div className="vault-drop-hint">Suelta el archivo para guardarlo aquí</div>
-      )}
-    </div>
-  );
+            <span className="vault-card-name">{item.name}</span>
+            <div className="vault-card-actions" onMouseLeave={() => setHoverHint(item.name)}>
+              <button type="button" onClick={() => { if (item.path) vault.setPendingPaths([item.path]); }} onMouseEnter={() => setHoverHint("Enviar al teléfono")} onFocus={() => setHoverHint("Enviar al teléfono")} aria-label={`Enviar ${item.name} al teléfono`}><Icon name="smartphone" width={15} height={15} /></button>
+              <button type="button" onClick={() => void save(item)} disabled={savingId !== null || !item.path}
+                onMouseEnter={() => setHoverHint(item.locationPath || "Guardar en carpeta")}
+                onFocus={() => setHoverHint(item.locationPath || "Guardar en carpeta")}
+                aria-label={item.locationPath ? `Mostrar ${item.name} en su carpeta` : `Guardar ${item.name}`}>
+                <Icon name={item.locationPath ? "folder" : "save"} width={15} height={15} />
+              </button>
+              <button type="button" onClick={() => void mutate("vault_toggle_pin", item.id)} onMouseEnter={() => setHoverHint(item.pinned ? "Desfijar" : "Fijar")} onFocus={() => setHoverHint(item.pinned ? "Desfijar" : "Fijar")} aria-label={`${item.pinned ? "Desfijar" : "Fijar"} ${item.name}`} aria-pressed={item.pinned}><Icon name="pin" width={15} height={15} /></button>
+              <button type="button" onClick={() => void mutate("vault_remove", item.id)} onMouseEnter={() => setHoverHint("Quitar de la barra")} onFocus={() => setHoverHint("Quitar de la barra")} aria-label={`Quitar ${item.name}`}><Icon name="close" width={15} height={15} /></button>
+            </div>
+          </div>;
+        })}
+      </div>}
+      <div className={`vault-status ${vault.error ? "vault-error" : ""}`} role={vault.error ? "alert" : "status"}>
+        {vault.error || (vault.busy || savingId !== null ? "Guardando…" : vault.dragging ? `Suelta para ${targetLabel.toLowerCase()}` : hoverHint || vault.message) || "Arrastra archivos, imágenes o texto · Ctrl+V para pegar"}
+      </div>
+    </div>}
+  </div>;
 }

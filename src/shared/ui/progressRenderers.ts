@@ -11,8 +11,27 @@ export interface Particle {
   color: string;
 }
 
+/** Célula de la matriz binaria: dígito 0/1 y temporizador de refresco. */
+export interface BinaryCell {
+  val: "0" | "1";
+  updateTimer: number;
+}
+
+/** Partícula de fuego cinético: sube, mengua y se apaga. */
+export interface FireParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  life: number;
+  color: string;
+}
+
 export interface RenderState {
   phase: number;
+  /** Segundos de animación activa, sin reinicios de fase; se congela al pausar. */
+  animationTime: number;
   lastTime: number;
   currentAmp: number;
   particles: Particle[];
@@ -20,6 +39,12 @@ export interface RenderState {
   lastProgressX: number;
   elasticAmp: number;
   elasticPhase: number;
+  /** Matriz de dígitos del estilo binario. */
+  binaryMatrix: BinaryCell[];
+  /** Columnas con las que se creó la matriz binaria (para detectar cambios de ancho). */
+  binaryColumns: number;
+  /** Partículas de llama del estilo de fuego cinético. */
+  fireParticles: FireParticle[];
 }
 
 export interface RenderContext {
@@ -34,6 +59,7 @@ export interface RenderContext {
   delta: number;
   state: RenderState;
   primaryColor: string;
+  secondaryColor: string;
   trackColor: string;
   thumbColor: string;
 }
@@ -179,37 +205,49 @@ export function renderPrism(rc: RenderContext) {
 
 /**
  * 3. ESPECTRO SOUNDWAVE (Soundwave) - Micro-barras de audio verticales
+ *
+ * Referencia: barras centradas, modulación de ruido suave y lenta y halo
+ * luminoso en la barra justo antes del cabezal de reproducción.
  */
 export function renderSoundwave(rc: RenderContext) {
-  const { ctx, width, centerY, progressX, isPlaying, state, primaryColor, trackColor, thumbColor } = rc;
+  const { ctx, width, height, centerY, progressX, isPlaying, state, primaryColor, trackColor, thumbColor } = rc;
 
-  const barPitch = 4.5;
-  const barWidth = 2.5;
-  const numBars = Math.floor(width / barPitch);
+  const barWidth = 4;
+  const gap = 3;
+  const numBars = Math.floor(width / (barWidth + gap));
+  const totalWidth = numBars * (barWidth + gap);
+  const startX = (width - totalWidth) / 2;
+  const time = state.animationTime;
 
   for (let i = 0; i < numBars; i++) {
-    const x = i * barPitch + barPitch / 2;
+    const x = startX + i * (barWidth + gap);
     const isActive = x <= progressX;
 
-    let h = 4;
+    let barHeight = 4;
     if (isActive) {
       if (isPlaying) {
-        const mod1 = Math.sin(i * 0.35 + state.phase * 3.5);
-        const mod2 = Math.cos(i * 0.18 - state.phase * 2.2);
-        const harmonic = (mod1 * mod2 * 0.5 + 0.5);
-        h = 4 + harmonic * 13;
+        const noise = Math.sin(i * 0.3 + time * 1.5) + Math.cos(i * 0.17 - time * 1.1);
+        barHeight = Math.max(4, Math.abs(noise) * (height * 0.55));
       } else {
-        h = 4 + (Math.sin(i * 0.4) * 0.5 + 0.5) * 7;
+        barHeight = 6;
       }
     } else {
-      h = 3.5;
+      barHeight = 4;
     }
 
     ctx.fillStyle = isActive ? primaryColor : trackColor;
+    if (isActive && Math.abs(progressX - x) < 20) {
+      ctx.shadowColor = primaryColor;
+      ctx.shadowBlur = 8;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
     ctx.beginPath();
-    ctx.roundRect(x - barWidth / 2, centerY - h / 2, barWidth, h, barWidth / 2);
+    ctx.roundRect(x, centerY - barHeight / 2, barWidth, barHeight, 2);
     ctx.fill();
   }
+  ctx.shadowBlur = 0;
 
   // Thumb: Marcador vertical luminoso
   drawCapsuleThumb(ctx, progressX, centerY, 4, 18, 2, thumbColor, width);
@@ -281,7 +319,7 @@ export function renderFluid(rc: RenderContext) {
  * 5. DOBLE HÉLICE CUÁNTICA (Helix) - Dos ondas entrelazadas en contrafase 3D
  */
 export function renderHelix(rc: RenderContext) {
-  const { ctx, width, centerY, progressX, isPlaying, state, primaryColor, trackColor, thumbColor } = rc;
+  const { ctx, width, centerY, progressX, isPlaying, state, primaryColor, secondaryColor, trackColor, thumbColor } = rc;
 
   // Inactivo
   if (progressX < width) {
@@ -300,7 +338,7 @@ export function renderHelix(rc: RenderContext) {
     const maxAmp = 6.5 * (isPlaying ? 1 : 0.4);
 
     // Peldaños de enlace cuántico cada 14px
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+    ctx.strokeStyle = `color-mix(in srgb, ${secondaryColor} 40%, transparent)`;
     ctx.lineWidth = 1.5;
     for (let x = 6; x <= progressX - 4; x += 14) {
       const angle = (x / wavelength) * (2 * Math.PI) - state.phase;
@@ -325,10 +363,10 @@ export function renderHelix(rc: RenderContext) {
     }
     ctx.stroke();
 
-    // Hebra 2 (Luminosa / Contrafase)
+    // Hebra 2 (Variante secundaria del tema / Contrafase)
     ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.strokeStyle = secondaryColor;
     ctx.moveTo(0, centerY);
     for (let x = 0; x <= progressX; x += 1.5) {
       const angle = (x / wavelength) * (2 * Math.PI) - state.phase + Math.PI;
@@ -417,77 +455,80 @@ export function renderNeonPulse(rc: RenderContext) {
 }
 
 /**
- * 7. ESTELA CÓSMICA (Particles) - Micro-núcleo estelar emisor de partículas vivas
+ * 7. ESTELA CÓSMICA (Particles) - Núcleo estelar emisor de partículas vivas
+ *
+ * Referencia: pista oscura, núcleo con degradado luminoso, partículas que
+ * quedan atrás del cabezal y cabeza de cometa blanca con halo.
  */
 export function renderParticles(rc: RenderContext) {
-  const { ctx, width, centerY, progressX, isPlaying, state, delta, primaryColor, trackColor, thumbColor } = rc;
+  const { ctx, width, centerY, progressX, isPlaying, state, delta, primaryColor, thumbColor } = rc;
 
-  // Inactivo
-  if (progressX < width) {
+  // Pista oscura y delgada
+  ctx.fillStyle = "rgba(30, 41, 59, 0.55)";
+  ctx.beginPath();
+  ctx.roundRect(0, centerY - 2, width, 4, 2);
+  ctx.fill();
+
+  // Núcleo con degradado desde el origen hasta el cabezal
+  if (progressX > 0) {
+    const grad = ctx.createLinearGradient(0, 0, progressX, 0);
+    grad.addColorStop(0, "rgba(245, 158, 11, 0)");
+    grad.addColorStop(1, primaryColor);
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.strokeStyle = trackColor;
-    ctx.lineWidth = 3.5;
-    ctx.lineCap = "round";
-    ctx.moveTo(progressX, centerY);
-    ctx.lineTo(width, centerY);
-    ctx.stroke();
+    ctx.roundRect(0, centerY - 2, progressX, 4, 2);
+    ctx.fill();
   }
 
-  // Activo: Haz de plasma
-  if (progressX > 0) {
-    ctx.beginPath();
-    ctx.strokeStyle = primaryColor;
-    ctx.lineWidth = 4;
-    ctx.lineCap = "round";
-    ctx.moveTo(0, centerY);
-    ctx.lineTo(progressX, centerY);
-    ctx.stroke();
-
-    // Generar nuevas partículas en la posición del thumb
-    if (isPlaying && state.particles.length < 35 && Math.random() < 0.65) {
+  // Emisión de partículas en la cabeza del cometa
+  if (isPlaying && progressX > 0 && progressX < width && state.particles.length < 48) {
+    if (Math.random() > 0.28) {
       state.particles.push({
         x: progressX,
         y: centerY + (Math.random() - 0.5) * 4,
-        vx: -(Math.random() * 25 + 15 + Math.abs(state.fluidVelocity) * 20),
-        vy: (Math.random() - 0.5) * 12,
+        vx: -(Math.random() * 30 + 12 + Math.abs(state.fluidVelocity) * 14),
+        vy: (Math.random() - 0.5) * 9,
         life: 0,
-        maxLife: Math.random() * 0.8 + 0.5,
-        size: Math.random() * 2.2 + 1.2,
-        color: Math.random() > 0.3 ? primaryColor : "#ffffff",
+        maxLife: Math.random() * 0.8 + 0.4,
+        size: Math.random() * 2.4 + 1,
+        color: Math.random() > 0.55 ? "#f59e0b" : Math.random() > 0.4 ? "#ec4899" : "#ffffff",
       });
     }
-
-    // Actualizar y dibujar partículas vivas
-    ctx.save();
-    for (let i = state.particles.length - 1; i >= 0; i--) {
-      const p = state.particles[i];
-      p.life += delta;
-      if (p.life >= p.maxLife || p.x < 0) {
-        state.particles.splice(i, 1);
-        continue;
-      }
-
-      p.x += p.vx * delta;
-      p.y += p.vy * delta;
-
-      const alpha = Math.max(1 - p.life / p.maxLife, 0);
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
   }
 
-  // Thumb: Estrella brillante
-  const thumbX = Math.min(Math.max(progressX, 5), width - 5);
+  // Actualizar y dibujar partículas vivas
   ctx.save();
-  ctx.shadowColor = primaryColor;
-  ctx.shadowBlur = 8;
+  for (let i = state.particles.length - 1; i >= 0; i--) {
+    const p = state.particles[i];
+    p.life += delta;
+    if (p.life >= p.maxLife || p.x < 0) {
+      state.particles.splice(i, 1);
+      continue;
+    }
+
+    p.x += p.vx * delta;
+    p.y += p.vy * delta;
+
+    const alpha = Math.max(1 - p.life / p.maxLife, 0);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.shadowBlur = 0;
+
+  // Cabeza de cometa
+  const thumbX = Math.min(Math.max(progressX, 6), width - 6);
+  ctx.save();
+  ctx.shadowColor = "#fef3c7";
+  ctx.shadowBlur = 18;
   ctx.fillStyle = thumbColor;
   ctx.beginPath();
-  ctx.arc(thumbX, centerY, 5.5, 0, Math.PI * 2);
+  ctx.arc(thumbX, centerY, 6, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
@@ -657,6 +698,352 @@ export function renderClassic(rc: RenderContext) {
 }
 
 /**
+ * 11. MATRIZ BINARIA (Binary) - Dígitos 0/1 que se descifran hacia el cabezal
+ */
+export function renderBinary(rc: RenderContext) {
+  const { ctx, width, centerY, progressX, isPlaying, state, delta } = rc;
+
+  const charWidth = 10;
+  const columns = Math.max(1, Math.ceil(width / charWidth));
+
+  // Inicializar o redimensionar la matriz de dígitos
+  if (state.binaryMatrix.length !== columns) {
+    state.binaryMatrix = Array.from({ length: columns }, () => ({
+      val: (Math.random() > 0.5 ? "1" : "0") as "0" | "1",
+      updateTimer: Math.random() * 60,
+    }));
+    state.binaryColumns = columns;
+  }
+
+  // Contenedor oscuro
+  ctx.fillStyle = "rgba(17, 24, 39, 0.85)";
+  ctx.beginPath();
+  ctx.roundRect(0, centerY - 12, width, 24, 5);
+  ctx.fill();
+
+  ctx.save();
+  ctx.font = "bold 12px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  for (let i = 0; i < state.binaryMatrix.length; i++) {
+    const cell = state.binaryMatrix[i];
+    const x = i * charWidth + charWidth / 2;
+    if (x > width) break;
+
+    const isActive = x <= progressX;
+
+    // Refresco aleatorio de dígitos (más rápido cerca del cabezal)
+    if (isPlaying) {
+      cell.updateTimer -= delta * 60;
+      if (cell.updateTimer <= 0) {
+        cell.val = Math.random() > 0.5 ? "1" : "0";
+        const distance = Math.abs(progressX - x);
+        cell.updateTimer = distance < 50 ? Math.random() * 5 + 2 : Math.random() * 30 + 10;
+      }
+    }
+
+    if (isActive) {
+      const nearHead = Math.abs(progressX - x) < 20;
+      ctx.fillStyle = nearHead ? "#ffffff" : "#22c55e";
+      ctx.shadowColor = "#22c55e";
+      ctx.shadowBlur = nearHead ? 10 : 0;
+    } else {
+      ctx.fillStyle = "rgba(55, 65, 81, 0.9)";
+      ctx.shadowBlur = 0;
+    }
+
+    ctx.fillText(cell.val, x, centerY);
+  }
+  ctx.restore();
+  ctx.shadowBlur = 0;
+
+  // Lector de escaneo
+  if (progressX > 0 && progressX < width) {
+    ctx.save();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    ctx.shadowColor = "#22c55e";
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.moveTo(progressX, centerY - 13);
+    ctx.lineTo(progressX, centerY + 13);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/**
+ * 12. LABERINTO PAC-MAN (Pacman) - Personaje que devora la pista punto a punto
+ */
+export function renderPacman(rc: RenderContext) {
+  const { ctx, width, centerY, progressX, isPlaying, state } = rc;
+
+  const pacSize = 10;
+
+  // Fondo del laberinto
+  ctx.fillStyle = "rgba(0, 0, 0, 0.9)";
+  ctx.fillRect(0, centerY - 11, width, 22);
+
+  // Bordes azules
+  ctx.strokeStyle = "#1d4ed8";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, centerY - 10);
+  ctx.lineTo(width, centerY - 10);
+  ctx.moveTo(0, centerY + 10);
+  ctx.lineTo(width, centerY + 10);
+  ctx.stroke();
+
+  // Puntos pendientes de devorar
+  ctx.fillStyle = "#fef08a";
+  for (let x = 15; x < width; x += 18) {
+    if (x > progressX + pacSize) {
+      ctx.beginPath();
+      ctx.arc(x, centerY, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Píldora final
+  if (width - 15 > progressX + pacSize) {
+    ctx.save();
+    ctx.shadowColor = "#fef08a";
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = "#fef08a";
+    ctx.beginPath();
+    ctx.arc(width - 15, centerY, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Personaje con la boca abriendo y cerrando
+  const mouthAngle = isPlaying
+    ? (Math.sin(state.animationTime * (2 * Math.PI / 0.6)) + 1) / 2 * (Math.PI / 4)
+    : Math.PI / 8;
+
+  ctx.fillStyle = "#eab308";
+  ctx.beginPath();
+  ctx.arc(progressX, centerY, pacSize, mouthAngle, Math.PI * 2 - mouthAngle);
+  ctx.lineTo(progressX, centerY);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/**
+ * 13. CIBER-GLITCH (Glitch) - Canales RGB desfasados con artefactos
+ */
+export function renderGlitch(rc: RenderContext) {
+  const { ctx, width, centerY, progressX, isPlaying, state } = rc;
+
+  // Pista gris
+  ctx.fillStyle = "rgba(55, 65, 81, 0.9)";
+  ctx.fillRect(0, centerY - 2, width, 4);
+
+  if (progressX <= 0) return;
+
+  // Desfase lento y continuo: sin vibración de alta frecuencia ni saltos de fase.
+  const time = state.animationTime;
+  const offX = Math.sin(time * 1.8) * 2;
+  const offY = Math.sin(time * 1.4) * 1.1;
+
+  // Canal cian
+  ctx.fillStyle = "rgba(6, 182, 212, 0.8)";
+  ctx.fillRect(-offX, centerY - 2 - offY, progressX, 4);
+
+  // Canal magenta
+  ctx.fillStyle = "rgba(236, 72, 153, 0.8)";
+  ctx.fillRect(offX, centerY - 2 + offY, progressX, 4);
+
+  // Núcleo blanco
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, centerY - 1, progressX, 2);
+
+  // Bloques persistentes que se desplazan suavemente en lugar de destellar.
+  for (let block = 0; block < 2; block++) {
+    const offset = block * Math.PI;
+    const blockWidth = Math.min(18 + block * 6, progressX);
+    ctx.fillStyle = block === 0 ? "rgba(6, 182, 212, 0.65)" : "rgba(236, 72, 153, 0.65)";
+    ctx.fillRect(
+      (Math.sin(time * 0.8 + offset) * 0.5 + 0.5) * (progressX - blockWidth),
+      centerY + (block === 0 ? -6 : 5),
+      blockWidth,
+      2,
+    );
+  }
+
+  // Cabeza estable que acompaña el desfase de los canales.
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(progressX - 4 + offX, centerY - 8, 8, 16);
+}
+
+/**
+ * 14. FUEGO CINÉTICO (Fire) - Llama que sube desde la cabeza de reproducción
+ */
+export function renderFire(rc: RenderContext) {
+  const { ctx, width, centerY, progressX, isPlaying, state, delta } = rc;
+
+  // Pista ámbar muy oscura
+  ctx.fillStyle = "rgba(69, 26, 3, 0.9)";
+  ctx.fillRect(0, centerY - 1, width, 2);
+
+  if (progressX > 0) {
+    const grad = ctx.createLinearGradient(0, 0, progressX, 0);
+    grad.addColorStop(0, "#7f1d1d");
+    grad.addColorStop(1, "#ef4444");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, centerY - 2, progressX, 4);
+  }
+
+  if (isPlaying && progressX > 0 && progressX < width && state.fireParticles.length < 90) {
+    const spawn = (x: number) => {
+      state.fireParticles.push({
+        x: x - 5 + Math.random() * 10,
+        y: centerY,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: Math.random() * -12 - 8,
+        size: Math.random() * 3 + 1.5,
+        life: 1,
+        color: Math.random() > 0.6 ? "#ef4444" : Math.random() > 0.3 ? "#f97316" : "#facc15",
+      });
+    };
+
+    for (let i = 0; i < 3; i++) spawn(progressX);
+    if (Math.random() > 0.55) spawn(Math.random() * progressX);
+  }
+
+  const shrink = Math.pow(0.93, delta * 60);
+  for (let i = state.fireParticles.length - 1; i >= 0; i--) {
+    const p = state.fireParticles[i];
+    if (isPlaying) {
+      p.x += p.vx * delta;
+      p.y += p.vy * delta;
+      p.life -= delta * 1.8;
+      p.size *= shrink;
+    }
+
+    if (p.life <= 0 || p.size < 0.5) {
+      state.fireParticles.splice(i, 1);
+      continue;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(p.life, 0);
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.shadowBlur = 0;
+}
+
+/**
+ * 15. RAYO TESLA (Tesla) - Descarga eléctrica bifurcada hacia el cabezal
+ */
+export function renderTesla(rc: RenderContext) {
+  const { ctx, width, centerY, progressX, state } = rc;
+
+  // Pista oscura
+  ctx.fillStyle = "rgba(30, 41, 59, 0.9)";
+  ctx.fillRect(0, centerY - 1, width, 2);
+
+  if (progressX <= 0) return;
+
+  for (let branch = 0; branch < 2; branch++) {
+    ctx.beginPath();
+    ctx.moveTo(0, centerY);
+
+    // Nodos estables con oscilación lenta: conserva la descarga quebrada sin
+    // regenerar el rayo entero con ruido aleatorio en cada fotograma.
+    for (let x = 12, node = 1; x < progressX; x += 12, node++) {
+      const shape = Math.sin(node * 2.37 + branch * 1.7);
+      const motion = Math.sin(state.animationTime * 1.8 + node * 1.13 + branch);
+      const taper = Math.min(x / 24, (progressX - x) / 24, 1);
+      ctx.lineTo(x, centerY + (shape * 4 + motion * 2) * taper);
+    }
+    ctx.lineTo(progressX, centerY);
+
+    ctx.strokeStyle = branch === 0 ? "#ffffff" : "#38bdf8";
+    ctx.lineWidth = branch === 0 ? 2 : 1;
+    ctx.shadowColor = "#0ea5e9";
+    ctx.shadowBlur = branch === 0 ? 12 : 5;
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+
+  // Esfera receptora
+  ctx.save();
+  ctx.fillStyle = "#bae6fd";
+  ctx.shadowColor = "#0284c7";
+  ctx.shadowBlur = 15;
+  ctx.beginPath();
+  ctx.arc(progressX, centerY, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+/**
+ * 16. SABLE LÁSER (Laser) - Hoja incandescente con empuñadura metálica
+ */
+export function renderLaser(rc: RenderContext) {
+  const { ctx, width, centerY, progressX, isPlaying, state } = rc;
+
+  // Fondo
+  ctx.fillStyle = "rgba(17, 24, 39, 0.9)";
+  ctx.fillRect(0, centerY - 2, width, 4);
+
+  if (progressX <= 0) return;
+
+  // Empuñadura
+  const hiltWidth = 20;
+  ctx.fillStyle = "#cbd5e1";
+  ctx.fillRect(0, centerY - 5, hiltWidth, 10);
+  ctx.fillStyle = "#475569";
+  ctx.fillRect(5, centerY - 6, 4, 12);
+  ctx.fillRect(15, centerY - 6, 2, 12);
+
+  if (progressX <= hiltWidth) return;
+
+  const bladeWidth = progressX - hiltWidth;
+
+  // Resplandor exterior
+  ctx.save();
+  ctx.shadowColor = "#ef4444";
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = "#ef4444";
+  ctx.fillRect(hiltWidth, centerY - 4, bladeWidth, 8);
+
+  // Resplandor interior
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = "#fca5a5";
+  ctx.fillRect(hiltWidth, centerY - 2, bladeWidth, 4);
+
+  // Núcleo blanco con punta redondeada
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.moveTo(hiltWidth, centerY - 1);
+  ctx.lineTo(progressX - 3, centerY - 1);
+  ctx.arc(progressX - 3, centerY, 1.5, -Math.PI / 2, Math.PI / 2);
+  ctx.lineTo(hiltWidth, centerY + 1);
+  ctx.closePath();
+  ctx.fill();
+
+  // Zumbido en la punta
+  if (isPlaying) {
+    const breath = Math.sin(state.animationTime * (2 * Math.PI / 2.8)) * 0.5 + 0.5;
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + breath * 0.15})`;
+    ctx.beginPath();
+    ctx.arc(progressX - 1.5, centerY, 2.3 + breath * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/**
  * Helper compartido para dibujar el thumb en forma de cápsula vertical
  */
 function drawCapsuleThumb(
@@ -721,6 +1108,24 @@ export function dispatchProgressRender(mode: ProgressBarStyle, rc: RenderContext
       break;
     case "elastic_string":
       renderElasticString(rc);
+      break;
+    case "binary":
+      renderBinary(rc);
+      break;
+    case "pacman":
+      renderPacman(rc);
+      break;
+    case "glitch":
+      renderGlitch(rc);
+      break;
+    case "fire":
+      renderFire(rc);
+      break;
+    case "tesla":
+      renderTesla(rc);
+      break;
+    case "laser":
+      renderLaser(rc);
       break;
     case "classic":
     default:

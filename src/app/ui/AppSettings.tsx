@@ -1,5 +1,4 @@
-import { CAPTURE_FORMATS } from "../../shared/captureFormat";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { LibrarySources } from "./LibrarySources";
 import { ModularLibrariesPanel } from "./ModularLibrariesPanel";
 import { ToolsSettingsPanel } from "./ToolsSettingsPanel";
@@ -19,8 +18,6 @@ import { ShortcutsSettingsPanel } from "./ShortcutsSettingsPanel";
 import { Icon } from "../../shared/ui/Icon";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
-import { getDefaultPicturesDir } from "../../shared/mediaOperations";
-import { useCaptureShortcut } from "../../features/screen_capture/useCaptureShortcut";
 import {
   getFlyoutSettings,
   saveFlyoutSettings,
@@ -57,7 +54,7 @@ interface AppSettingsProps {
   isMusicPaletteActive?: boolean;
 }
 
-type SettingsTab = "general" | "libraries" | "folders" | "tools" | "progress" | "synapse" | "shortcuts" | "aurora" | "topbar";
+type SettingsTab = "general" | "libraries" | "folders" | "tools" | "progress" | "synapse" | "shortcuts" | "aurora";
 
 const THEMES: { mode: ThemeMode; label: string; desc: string; previewClass: string }[] = [
   { mode: "light", label: "Claro", desc: "Luminoso", previewClass: "light-preview" },
@@ -122,8 +119,6 @@ export function AppSettings({
     auroraOnlineServicesEnabled,
     auroraWallpapersEnabled,
     auroraServerUrl,
-    videoSnapshotFolder,
-    captureFormat,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
@@ -133,96 +128,11 @@ export function AppSettings({
     setAuroraOnlineServicesEnabled,
     setAuroraWallpapersEnabled,
     setAuroraServerUrl,
-    setVideoSnapshotFolder,
-    setCaptureFormat,
-    screenCaptureFolder,
-    setScreenCaptureFolder,
     systemDropZoneEnabled,
     systemDropZoneFolder,
     setSystemDropZoneEnabled,
     setSystemDropZoneFolder,
   } = useSystemSettings();
-
-  const { status: captureShortcutStatus, isUpdating: isUpdatingCaptureShortcut, configure: configureCaptureShortcut } =
-    useCaptureShortcut();
-
-  const captureShortcutEnabled = captureShortcutStatus?.enabled ?? true;
-  const captureShortcutEffective = captureShortcutStatus?.shortcut || "Shift+PrintScreen";
-  const captureShortcutRequested = captureShortcutStatus?.requestedShortcut || captureShortcutEffective;
-  const captureShortcutConflict = captureShortcutStatus?.error ?? null;
-  const captureShortcutActive = Boolean(captureShortcutStatus?.isRegistered);
-  const captureShortcutBlocked = captureShortcutRequested !== captureShortcutEffective;
-  const captureShortcutMessage = !captureShortcutEnabled
-    ? "Atajo global desactivado. Actívalo para capturar desde cualquier aplicación, incluso con Prisma en la bandeja."
-    : captureShortcutConflict
-      ? captureShortcutConflict
-      : captureShortcutActive
-        ? `Atajo activo: «${captureShortcutEffective}». Funciona con Prisma minimizado o en la bandeja.`
-        : "No hay ningún atajo activo en el sistema. Revisa el atajo elegido.";
-
-  const [defaultPicturesDir, setDefaultPicturesDir] = useState<string>("");
-
-  useEffect(() => {
-    void getDefaultPicturesDir()
-      .then((dir) => {
-        if (dir) setDefaultPicturesDir(dir);
-      })
-      .catch(() => {});
-  }, []);
-
-  const handleSelectSnapshotFolder = async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: "Seleccionar carpeta para capturas de vídeo y assets",
-        defaultPath: videoSnapshotFolder || defaultPicturesDir || undefined,
-      });
-      if (typeof selected === "string" && selected.trim()) {
-        setVideoSnapshotFolder(selected.trim());
-      }
-    } catch (err) {
-      console.error("Error al seleccionar carpeta de capturas:", err);
-    }
-  };
-
-  const handleOpenSnapshotFolder = () => {
-    const target = videoSnapshotFolder || defaultPicturesDir;
-    if (target) {
-      void invoke("show_in_file_manager", { path: target }).catch(() => {});
-    }
-  };
-
-  const handleResetSnapshotFolder = () => {
-    setVideoSnapshotFolder("");
-  };
-
-  const handleSelectScreenCaptureFolder = async () => {
-    try {
-      const selected = await open({
-        directory: true,
-        multiple: false,
-        title: "Seleccionar carpeta para guardado automático de capturas de pantalla",
-        defaultPath: screenCaptureFolder || (defaultPicturesDir ? `${defaultPicturesDir}\\Capturas` : undefined),
-      });
-      if (typeof selected === "string" && selected.trim()) {
-        setScreenCaptureFolder(selected.trim());
-      }
-    } catch (err) {
-      console.error("Error al seleccionar carpeta de capturas de pantalla:", err);
-    }
-  };
-
-  const handleOpenScreenCaptureFolder = () => {
-    const target = screenCaptureFolder || (defaultPicturesDir ? `${defaultPicturesDir}\\Capturas` : "");
-    if (target) {
-      void invoke("show_in_file_manager", { path: target }).catch(() => {});
-    }
-  };
-
-  const handleResetScreenCaptureFolder = () => {
-    setScreenCaptureFolder("");
-  };
 
   const [flyoutSettings, setFlyoutSettingsState] = useState<FlyoutSettings>(() => getFlyoutSettings());
 
@@ -284,13 +194,6 @@ export function AppSettings({
             onClick={() => setActiveTab("synapse")}
           >
             <Icon name="synapse" />
-            <span>Aurora Synapse</span>
-          </button>
-          <button
-            className={activeTab === "topbar" ? "is-active" : ""}
-            onClick={() => setActiveTab("topbar")}
-          >
-            <Icon name="upload" />
             <span>Synapse</span>
           </button>
           <button
@@ -453,7 +356,7 @@ export function AppSettings({
                 </div>
               </div>
 
-              {/* ── Columna 2: Apariencia, Flyout de Escritorio ── */}
+              {/* ── Columna 2: Apariencia ── */}
               <div className="settings-column">
                 {/* Apariencia */}
                 <div className="settings-card">
@@ -558,6 +461,10 @@ export function AppSettings({
 
                 </div>
 
+              </div>
+
+              {/* ── Columna 3: Flyout de Escritorio ── */}
+              <div className="settings-column">
                 {/* Flyout de Escritorio */}
                 <div className="settings-card">
                   <div className="settings-card-header-row">
@@ -667,258 +574,6 @@ export function AppSettings({
                   )}
                 </div>
               </div>
-
-              {/* ── Columna 3: Capturas de Vídeo y Assets, Capturador de Pantalla ── */}
-              <div className="settings-column">
-                {/* Capturas de Vídeo y Assets */}
-                <div className="settings-card">
-                  <div className="settings-card-header-row">
-                    <div>
-                      <h3>Formato de Capturas</h3>
-                      <p>
-                        Formato global para capturas de pantalla y fotogramas de vídeo.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="snapshot-format-options capture-format-options">
-                    {CAPTURE_FORMATS.map(({ id, label, description }) => (
-                      <button key={id} type="button"
-                        className={`snapshot-format-chip ${captureFormat === id ? "is-selected" : ""}`}
-                        aria-pressed={captureFormat === id}
-                        onClick={() => setCaptureFormat(id)}
-                        title={id === "elx" ? "ElyX experimental: RGB sin pérdidas. La transparencia se guarda sobre blanco." : description}>
-                        <Icon name={captureFormat === id ? "check" : "image"} />
-                        <div className="snapshot-format-info">
-                          <strong>{label}</strong>
-                          <small>{description}</small>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {captureFormat === "elx" ? <p style={{ marginTop: 8 }}>ELX es experimental: RGB sin pérdidas. La transparencia se guarda sobre blanco.</p> : null}
-                </div>
-
-                <div className="settings-card">
-                  <h3>Capturas de Vídeo</h3>
-                  <p>Carpeta de guardado de los fotogramas capturados.</p>
-                  <div className="snapshot-folder-config-box">
-                    <div className="snapshot-folder-path-display">
-                      <div className="snapshot-folder-header-row">
-                        <span className="snapshot-folder-label">Carpeta de fotogramas de vídeo</span>
-                        <span className={`snapshot-folder-badge ${videoSnapshotFolder ? "is-custom" : "is-default"}`}>
-                          {videoSnapshotFolder ? "Personalizada" : "Predeterminada"}
-                        </span>
-                      </div>
-                      <div className="snapshot-folder-path-text" title={videoSnapshotFolder || defaultPicturesDir}>
-                        <Icon name="folder" />
-                        <span>{videoSnapshotFolder || defaultPicturesDir || "Carpeta Imágenes"}</span>
-                      </div>
-                    </div>
-
-                    <div className="snapshot-folder-actions-row">
-                      <button
-                        type="button"
-                        className="snapshot-action-btn primary"
-                        onClick={handleSelectSnapshotFolder}
-                      >
-                        <Icon name="folder-open" />
-                        <span>Cambiar...</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="snapshot-action-btn secondary"
-                        onClick={handleOpenSnapshotFolder}
-                        title="Abrir carpeta en el Explorador de Windows"
-                      >
-                        <Icon name="external-link" />
-                        <span>Abrir</span>
-                      </button>
-                      {videoSnapshotFolder ? (
-                        <button
-                          type="button"
-                          className="snapshot-action-btn tertiary"
-                          onClick={handleResetSnapshotFolder}
-                          title="Restablecer a la carpeta de Imágenes predeterminada"
-                        >
-                          <Icon name="undo" />
-                          <span>Restablecer</span>
-                        </button>
-                      ) : null}
-                    </div>
-
-                  </div>
-                </div>
-
-                {/* Capturador de Pantalla */}
-                <div className="settings-card">
-                  <div className="settings-card-header-row">
-                    <div>
-                      <h3>Capturador de Pantalla</h3>
-                      <p>
-                        Captura de región o ventana con anotaciones vectoriales y copia directa a memoria.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="snapshot-folder-config-box">
-                    <div className="system-toggle-item">
-                      <div className="system-toggle-info">
-                        <strong>Atajo global de captura</strong>
-                        <p>
-                          Invoca el capturador en cualquier momento desde segundo plano.
-                        </p>
-                      </div>
-                      <label className="toggle-switch">
-                        <input
-                          type="checkbox"
-                          checked={captureShortcutEnabled}
-                          onChange={(e) => void configureCaptureShortcut(e.target.checked, captureShortcutRequested)}
-                          disabled={isUpdatingCaptureShortcut}
-                          aria-label="Habilitar atajo global de captura de pantalla"
-                        />
-                        <span className="toggle-slider" />
-                      </label>
-                    </div>
-
-                    <div
-                      className={`capture-shortcut-state ${captureShortcutConflict ? "is-conflict" : captureShortcutActive ? "is-active" : "is-idle"}`}
-                      role="status"
-                    >
-                      <Icon name={captureShortcutConflict ? "info" : captureShortcutActive ? "check" : "keyboard"} width={15} height={15} />
-                      <span>{captureShortcutMessage}</span>
-                    </div>
-
-                    <div className="settings-section-divider" style={{ margin: "10px 0" }} />
-
-                    <h4 className="settings-subheading" style={{ margin: "4px 0 8px" }}>Atajo de Teclado</h4>
-                    <div className="snapshot-format-options capture-shortcut-options">
-                      <button
-                        type="button"
-                        className={`snapshot-format-chip ${captureShortcutEffective === "Shift+PrintScreen" ? "is-selected" : ""}`}
-                        onClick={() => void configureCaptureShortcut(true, "Shift+PrintScreen")}
-                        disabled={isUpdatingCaptureShortcut}
-                        title="Mayús + Impr Pant (Recomendado sin conflictos)"
-                      >
-                        <Icon name={captureShortcutEffective === "Shift+PrintScreen" ? "check" : "keyboard"} />
-                        <div className="snapshot-format-info">
-                          <strong>Mayús + Impr Pant</strong>
-                          <small>Recomendado</small>
-                        </div>
-                      </button>
-                      <button
-                        type="button"
-                        className={`snapshot-format-chip ${captureShortcutEffective === "PrintScreen" ? "is-selected" : ""}`}
-                        onClick={() => void configureCaptureShortcut(true, "PrintScreen")}
-                        disabled={isUpdatingCaptureShortcut}
-                        title="Impr Pant (Requiere desactivar Herramienta Recortes en Windows 11)"
-                      >
-                        <Icon name={captureShortcutEffective === "PrintScreen" ? "check" : "keyboard"} />
-                        <div className="snapshot-format-info">
-                          <strong>Impr Pant</strong>
-                          <small>{captureShortcutBlocked ? "En uso por otra aplicación" : "Directo (Win 11)"}</small>
-                        </div>
-                      </button>
-                    </div>
-
-                    <div className="settings-section-divider" style={{ margin: "14px 0 10px" }} />
-
-                    <div className="snapshot-folder-path-display">
-                      <div className="snapshot-folder-header-row">
-                        <span className="snapshot-folder-label">Carpeta de Guardado Automático (Ctrl + S)</span>
-                        <span className={`snapshot-folder-badge ${screenCaptureFolder ? "is-custom" : "is-default"}`}>
-                          {screenCaptureFolder ? "Personalizada" : "Predeterminada (Capturas)"}
-                        </span>
-                      </div>
-                      <div
-                        className="snapshot-folder-path-text"
-                        title={screenCaptureFolder || (defaultPicturesDir ? `${defaultPicturesDir}\\Capturas` : "Imágenes\\Capturas")}
-                      >
-                        <Icon name="folder" />
-                        <span>
-                          {screenCaptureFolder || (defaultPicturesDir ? `${defaultPicturesDir}\\Capturas` : "Imágenes\\Capturas")}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="snapshot-folder-actions-row">
-                      <button
-                        type="button"
-                        className="snapshot-action-btn primary"
-                        onClick={handleSelectScreenCaptureFolder}
-                      >
-                        <Icon name="folder-open" />
-                        <span>Cambiar...</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="snapshot-action-btn secondary"
-                        onClick={handleOpenScreenCaptureFolder}
-                        title="Abrir carpeta en el Explorador de Windows"
-                      >
-                        <Icon name="external-link" />
-                        <span>Abrir</span>
-                      </button>
-                      {screenCaptureFolder ? (
-                        <button
-                          type="button"
-                          className="snapshot-action-btn tertiary"
-                          onClick={handleResetScreenCaptureFolder}
-                          title="Restablecer a la carpeta de Capturas predeterminada"
-                        >
-                          <Icon name="undo" />
-                          <span>Restablecer</span>
-                        </button>
-                      ) : null}
-                    </div>
-
-                    <details className="screen-capture-tip-box">
-                      <summary className="screen-capture-tip-summary">
-                        <Icon name="info" width={15} height={15} />
-                        <span>¿Cómo liberar Impr Pant en Windows 11?</span>
-                      </summary>
-                      <div className="screen-capture-tip-content">
-                        <p>Windows 11 reserva Impr Pant para Recortes. Para usarla con Prisma:</p>
-                        <ol>
-                          <li>Abre <strong>Configuración &gt; Accesibilidad &gt; Teclado</strong>.</li>
-                          <li>Desactiva <em>«Usar botón Impr Pant para abrir Recortes»</em>.</li>
-                          <li>O vía <code>regedit</code>: en <code>HKCU\Control Panel\Keyboard</code> asigna <code>PrintScreenKeyForSnippingEnabled = 0</code>.</li>
-                        </ol>
-                        <a
-                          href="https://github.com/biglexj/Prisma/blob/main/docs/guides/screen-capture-printscreen.md"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="screen-capture-tip-link"
-                        >
-                          <span>Guía completa en GitHub</span>
-                          <Icon name="external-link" width={12} height={12} />
-                        </a>
-                      </div>
-                    </details>
-
-                    <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
-                      <button
-                        type="button"
-                        className="snapshot-action-btn primary"
-                        onClick={async () => {
-                          try {
-                            const { screenCaptureClient } = await import("../../features/screen_capture/services/screenCaptureClient");
-                            await screenCaptureClient.startCapture("window");
-                          } catch (err) {
-                            console.error("Error al probar captura:", err);
-                          }
-                        }}
-                        title="Probar capturador en pantalla ahora"
-                      >
-                        <Icon name="camera" />
-                        <span>Probar Captura</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
             </div>
           </div>
         )}
@@ -960,126 +615,118 @@ export function AppSettings({
           />
         )}
 
-        {/* ==== PESTAÑA: BARRA SUPERIOR SYNAPSE ==== */}
-        {activeTab === "topbar" && (
-          <div className="settings-panel">
-            <div className="settings-columns">
-              <div className="settings-card">
-                <div className="settings-card-header-row">
-                  <div>
-                    <h3>Barra superior Synapse</h3>
-                    <p>
-                      Una boveda flotante en el borde superior de la pantalla, por encima de todas
-                      las ventanas. Arrastra hacia ella una imagen de la web, un documento o
-                      cualquier archivo y queda guardado para enviarlo, copiarlo o arrastrarlo
-                      hacia donde quieras.
-                    </p>
-                  </div>
-                  <label className="toggle-switch">
-                    <input
-                      type="checkbox"
-                      checked={systemDropZoneEnabled}
-                      onChange={(e) => setSystemDropZoneEnabled(e.target.checked)}
-                      aria-label="Mostrar la barra superior Synapse"
-                    />
-                    <span className="toggle-slider" />
-                  </label>
-                </div>
-
-                <div className="system-toggle-item">
-                  <div className="system-toggle-info">
-                    <strong>Visible en la pantalla</strong>
-                    <p>
-                      {systemDropZoneEnabled
-                        ? "La franja aparece arriba al centro, con Prisma minimizado o en la bandeja. Se despliega al pulsarla."
-                        : "Oculta. Los archivos arrastrados vuelven a ir a las bibliotecas segun la vista activa."}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="settings-card">
-                <div className="settings-card-header-row">
-                  <div>
-                    <h3>Carpeta de destino</h3>
-                    <p>Donde se copian los archivos que guardas desde la barra.</p>
-                  </div>
-                </div>
-
-                <div className="snapshot-folder-path-display">
-                  <div className="snapshot-folder-header-row">
-                    <span className="snapshot-folder-label">Carpeta de las copias</span>
-                    <span className={`snapshot-folder-badge ${systemDropZoneFolder ? "is-custom" : "is-default"}`}>
-                      {systemDropZoneFolder ? "Personalizada" : "Predeterminada (Descargas\\Prisma)"}
-                    </span>
-                  </div>
-                  <div
-                    className="snapshot-folder-path-text"
-                    title={systemDropZoneFolder || "Descargas\\Prisma"}
-                  >
-                    <Icon name="folder" />
-                    <span>{systemDropZoneFolder || "Descargas\\Prisma"}</span>
-                  </div>
-                </div>
-
-                <div className="snapshot-folder-actions-row">
-                  <button
-                    type="button"
-                    className="snapshot-action-btn primary"
-                    onClick={async () => {
-                      try {
-                        const selected = await open({
-                          directory: true,
-                          multiple: false,
-                          title: "Seleccionar carpeta para los archivos de la barra superior Synapse",
-                          defaultPath: systemDropZoneFolder || undefined,
-                        });
-                        if (typeof selected === "string" && selected.trim()) {
-                          setSystemDropZoneFolder(selected.trim());
-                        }
-                      } catch (err) {
-                        console.error("Error al seleccionar carpeta de la barra superior:", err);
-                      }
-                    }}
-                  >
-                    <Icon name="folder-open" />
-                    <span>Cambiar...</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="snapshot-action-btn secondary"
-                    onClick={() => {
-                      const target = systemDropZoneFolder || "Descargas\\Prisma";
-                      void invoke("show_in_file_manager", { path: target }).catch(() => {});
-                    }}
-                    title="Abrir carpeta en el Explorador de Windows"
-                  >
-                    <Icon name="external-link" />
-                    <span>Abrir</span>
-                  </button>
-                  {systemDropZoneFolder ? (
-                    <button
-                      type="button"
-                      className="snapshot-action-btn tertiary"
-                      onClick={() => setSystemDropZoneFolder("")}
-                      title="Restablecer a la carpeta predeterminada"
-                    >
-                      <Icon name="undo" />
-                      <span>Restablecer</span>
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* ══════════════════════════════════════════════════════════════════════════
-            PESTAÑA 6: AURORA SYNAPSE
+            PESTAÑA 6: SYNAPSE (LAN + BARRA SUPERIOR)
         ══════════════════════════════════════════════════════════════════════════ */}
         {activeTab === "synapse" && (
           <div className="settings-panel">
-            <SynapseSettingsPanel />
+            <SynapseSettingsPanel
+              topbarColumn={
+                <>
+                  <div className="settings-card">
+                    <div className="settings-card-header-row">
+                      <div>
+                        <h3>Barra superior Synapse</h3>
+                        <p>Arrastra cualquier archivo y queda listo para compartir al instante.</p>
+                      </div>
+                      <label className="toggle-switch">
+                        <input
+                          type="checkbox"
+                          checked={systemDropZoneEnabled}
+                          onChange={(e) => setSystemDropZoneEnabled(e.target.checked)}
+                          aria-label="Mostrar la barra superior Synapse"
+                        />
+                        <span className="toggle-slider" />
+                      </label>
+                    </div>
+
+                    <div className="system-toggle-item">
+                      <div className="system-toggle-info">
+                        <strong>Visible en la pantalla</strong>
+                        <p>
+                          {systemDropZoneEnabled
+                            ? "Tus archivos, siempre a un arrastre de distancia."
+                            : "Los archivos arrastrados se guardan en las bibliotecas según la vista activa."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="settings-card">
+                    <div className="settings-card-header-row">
+                      <div>
+                        <h3>Carpeta de destino</h3>
+                        <p>Donde se copian los archivos que guardas desde la barra.</p>
+                      </div>
+                    </div>
+
+                    <div className="snapshot-folder-path-display">
+                      <div className="snapshot-folder-header-row">
+                        <span className="snapshot-folder-label">Carpeta de las copias</span>
+                        <span className={`snapshot-folder-badge ${systemDropZoneFolder ? "is-custom" : "is-default"}`}>
+                          {systemDropZoneFolder ? "Personalizada" : "Predeterminada"}
+                        </span>
+                      </div>
+                      <div
+                        className="snapshot-folder-path-text"
+                        title={systemDropZoneFolder || "Descargas\\Prisma"}
+                      >
+                        <Icon name="folder" />
+                        <span>{systemDropZoneFolder || "Descargas\\Prisma"}</span>
+                      </div>
+                    </div>
+
+                    <div className="snapshot-folder-actions-row synapse-folder-actions">
+                      <button
+                        type="button"
+                        className="snapshot-action-btn primary"
+                        onClick={async () => {
+                          try {
+                            const selected = await open({
+                              directory: true,
+                              multiple: false,
+                              title: "Seleccionar carpeta para los archivos de la barra superior Synapse",
+                              defaultPath: systemDropZoneFolder || undefined,
+                            });
+                            if (typeof selected === "string" && selected.trim()) {
+                              setSystemDropZoneFolder(selected.trim());
+                            }
+                          } catch (err) {
+                            console.error("Error al seleccionar carpeta de la barra superior:", err);
+                          }
+                        }}
+                      >
+                        <Icon name="folder-open" />
+                        <span>Cambiar...</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="snapshot-action-btn secondary"
+                        onClick={() => {
+                          const target = systemDropZoneFolder || "Descargas\\Prisma";
+                          void invoke("show_in_file_manager", { path: target }).catch(() => {});
+                        }}
+                        title="Abrir carpeta en el Explorador de Windows"
+                      >
+                        <Icon name="external-link" />
+                        <span>Abrir</span>
+                      </button>
+                      {systemDropZoneFolder ? (
+                        <button
+                          type="button"
+                          className="snapshot-action-btn tertiary"
+                          onClick={() => setSystemDropZoneFolder("")}
+                          title="Restablecer a la carpeta predeterminada"
+                        >
+                          <Icon name="undo" />
+                          <span>Restablecer</span>
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                </>
+              }
+            />
           </div>
         )}
 

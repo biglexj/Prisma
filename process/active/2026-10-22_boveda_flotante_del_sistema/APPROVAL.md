@@ -13,3 +13,10 @@ Decisiones tomadas al implementar, con criterio propio y sujetas a la revisión 
 - El destino por defecto es `Descargas\Prisma`, configurable en Configuración → General y Sistema.
 
 Validación final del comportamiento de arrastre con el ratón pendiente de Biglex.
+
+
+## Alcance actualizado por Biglex — 2026-10-22
+
+La solicitud actual autoriza ampliar la implementación a un notch que se despliega por proximidad, cinco espacios, fijado/temporal/teléfono y conexión con capturas. Se interpreta el selector como izquierda = fijar, centro = temporal y derecha = teléfono, conforme al orden funcional descrito. La dirección posterior de Biglex limita los fijados a dos y hace que capturas y archivos llenen de izquierda a derecha las cinco casillas compartidas, sin reservar una para capturas. Al llenarse, sale el más antiguo no fijado y el nuevo entra al final. El mensaje «y del otro también» autoriza aplicar esta política ya debatida.
+
+El build y las pruebas técnicas no constituyen aprobación humana ni demuestran recepción en un teléfono. Las comprobaciones de esta ampliación se registran por separado de las afirmaciones del informe anterior. No se publica ni cambia la versión.

@@ -415,7 +415,11 @@ pub fn run() {
             app.manage(synapse_state);
             let wallpaper_controller = features::wallpapers::WallpaperController::new(data_directory.clone());
             if wallpaper_controller.should_auto_start() {
-                let _ = wallpaper_controller.start();
+                // El fallo del autoarranque se registra: si el fondo no levanta
+                // solo, el usuario tiene que poder saber por qué.
+                if let Err(error) = wallpaper_controller.start() {
+                    eprintln!("[Fondos Vivos] No se pudo iniciar el fondo al arrancar: {error}");
+                }
             }
             // Se conserva un clon para el menú de la bandeja: `manage` consume el valor.
             let wallpaper_controller_for_tray = wallpaper_controller.clone();

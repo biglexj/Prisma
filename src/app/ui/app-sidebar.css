@@ -69,7 +69,7 @@
 
 .sidebar-footer {
   margin-top: auto;
-  padding: 8px 10px;
+  padding: 8px 10px 14px;
   border-top: 1px solid var(--outline-variant);
   display: flex;
   flex-direction: column;
@@ -205,7 +205,7 @@
 }
 .music-sidebar[data-density="compact"] .sidebar-footer,
 .music-sidebar.density-compact .sidebar-footer {
-  padding: 5px 7px;
+  padding: 5px 7px 10px;
   gap: 4px;
 }
 .music-sidebar[data-density="compact"] .sidebar-settings-button,
@@ -287,7 +287,7 @@
 }
 .music-sidebar[data-density="intermediate"] .sidebar-footer,
 .music-sidebar.density-intermediate .sidebar-footer {
-  padding: 9px 11px;
+  padding: 9px 11px 14px;
   gap: 6px;
 }
 .music-sidebar[data-density="intermediate"] .sidebar-settings-button,
@@ -368,7 +368,7 @@
 }
 .music-sidebar[data-density="comfortable"] .sidebar-footer,
 .music-sidebar.density-comfortable .sidebar-footer {
-  padding: 12px;
+  padding: 12px 12px 18px;
   gap: 8px;
 }
 .music-sidebar[data-density="comfortable"] .sidebar-settings-button,

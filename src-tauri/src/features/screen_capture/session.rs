@@ -27,6 +27,8 @@ pub struct CaptureSessionInit {
     pub default_mode: String,
     /// `image` para una captura puntual, `video` para preparar una grabación.
     pub intent: String,
+    /// Imagen del instante inicial para seleccionar sin depender del escritorio en vivo.
+    pub snapshot_data_url: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -89,6 +91,11 @@ pub fn init_capture_session(
 ) -> Result<CaptureSessionInit, String> {
     // 1. Capturar pantalla virtual completa antes de interactuar con la interfaz
     let snapshot = capture_virtual_screen()?;
+    let snapshot_data_url = if intent == "video" {
+        None
+    } else {
+        Some(encode_snapshot(&snapshot)?)
+    };
     let targets = enumerate_visible_windows();
     let monitors = enumerate_monitors();
 
@@ -121,12 +128,48 @@ pub fn init_capture_session(
         monitors,
         default_mode: "window".to_string(), // Modo por defecto requerido: Ventana
         intent: intent.to_string(),
+        snapshot_data_url,
     };
 
     // Guardar la sesión para que el overlay pueda recuperarla aunque el evento se pierda.
     lock.session = Some(init.clone());
 
     Ok(init)
+}
+
+/// Cambia imagen/vídeo conservando la misma instantánea y sesión. No vuelve a
+/// fotografiar el escritorio con la barra de selección encima.
+pub fn set_capture_intent(
+    state: &SharedCaptureState,
+    session_id: u64,
+    intent: &str,
+) -> Result<CaptureSessionInit, String> {
+    if !matches!(intent, "image" | "video") {
+        return Err("Tipo de captura no válido".into());
+    }
+    let mut lock = state.lock().map_err(|_| "Error al bloquear sesión de captura")?;
+    let mut session = lock.session.clone()
+        .filter(|session| session.session_id == session_id)
+        .ok_or("La sesión de captura ya no está activa")?;
+    if intent == "image" && session.snapshot_data_url.is_none() {
+        session.snapshot_data_url = Some(encode_snapshot(
+            lock.snapshot.as_ref().ok_or("No hay una captura disponible")?
+        )?);
+    }
+    session.intent = intent.to_string();
+    lock.session = Some(session.clone());
+    Ok(session)
+}
+
+fn encode_snapshot(snapshot: &ScreenSnapshot) -> Result<String, String> {
+    use image::codecs::png::{CompressionType, FilterType, PngEncoder};
+    use image::ImageEncoder;
+
+    let mut bytes = Vec::new();
+    PngEncoder::new_with_quality(&mut bytes, CompressionType::Fast, FilterType::NoFilter)
+        .write_image(&snapshot.rgba, snapshot.width, snapshot.height, image::ExtendedColorType::Rgba8)
+        .map_err(|e| format!("No se pudo preparar la imagen congelada: {e}"))?;
+    Ok(format!("data:image/png;base64,{}", STANDARD.encode(bytes)))
 }
 
 /// Devuelve la sesión de captura vigente, si existe.
@@ -226,4 +269,64 @@ pub fn pick_color_at(
 
     let hex = format!("#{:02X}{:02X}{:02X}", r, g, b);
     Ok(PickColorResult { hex, r, g, b })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn switching_intent_keeps_original_pixels_and_rejects_expired_sessions() {
+        let state = Arc::new(Mutex::new(CaptureSessionState {
+            snapshot: Some(ScreenSnapshot {
+                x: 0, y: 0, width: 1, height: 1, rgba: vec![12, 34, 56, 255],
+            }),
+            session: Some(CaptureSessionInit {
+                session_id: 7, intent: "video".into(), snapshot_data_url: None,
+                virtual_x: 0, virtual_y: 0, virtual_width: 1, virtual_height: 1,
+                targets: vec![], monitors: vec![], default_mode: "window".into(),
+            }),
+            ..Default::default()
+        }));
+        let image = set_capture_intent(&state, 7, "image").unwrap();
+        let background = image.snapshot_data_url.as_ref().unwrap();
+        let bytes = STANDARD.decode(background.strip_prefix("data:image/png;base64,").unwrap()).unwrap();
+        assert_eq!(image::load_from_memory(&bytes).unwrap().to_rgba8().as_raw(), &[12, 34, 56, 255]);
+        let video = set_capture_intent(&state, 7, "video").unwrap();
+        assert_eq!(video.session_id, 7);
+        assert_eq!(video.intent, "video");
+        assert_eq!(video.snapshot_data_url, image.snapshot_data_url);
+        assert!(set_capture_intent(&state, 6, "image").is_err());
+        assert!(set_capture_intent(&state, 7, "invalid").is_err());
+        assert_eq!(get_session(&state).unwrap().intent, "video");
+        clear_session(&state);
+        assert!(set_capture_intent(&state, 7, "image").is_err());
+    }
+
+    #[test]
+    fn frozen_background_and_repeated_crops_keep_the_initial_pixels() {
+        // Monitor situado a la izquierda del principal, con píxeles distintos.
+        let snapshot = ScreenSnapshot {
+            x: -2, y: -1, width: 2, height: 2,
+            rgba: vec![255, 0, 0, 255, 0, 255, 0, 255,
+                       0, 0, 255, 255, 255, 255, 0, 255],
+        };
+        let background = encode_snapshot(&snapshot).unwrap();
+        let decode = |url: &str| {
+            let bytes = STANDARD.decode(url.strip_prefix("data:image/png;base64,").unwrap()).unwrap();
+            image::load_from_memory(&bytes).unwrap().to_rgba8()
+        };
+        assert_eq!(decode(&background).as_raw(), &snapshot.rgba);
+
+        let state = Arc::new(Mutex::new(CaptureSessionState {
+            snapshot: Some(snapshot), ..Default::default()
+        }));
+        for (x, y, expected) in [(-1, -1, [0, 255, 0, 255]), (-2, 0, [0, 0, 255, 255])] {
+            let crop = confirm_crop(&state, RectSelection { x, y, width: 1, height: 1 }).unwrap();
+            assert_eq!(decode(&crop.data_url).get_pixel(0, 0).0, expected);
+        }
+        assert!(state.lock().unwrap().snapshot.is_some());
+        clear_session(&state);
+        assert!(confirm_crop(&state, RectSelection { x: -2, y: -1, width: 1, height: 1 }).is_err());
+    }
 }

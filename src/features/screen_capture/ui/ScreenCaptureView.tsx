@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { CaptureSaveSettings } from "./CaptureSaveSettings";
+import { CustomSelect } from "../../../shared/ui/CustomSelect";
 import { Icon } from "../../../shared/ui/Icon";
 import { CaptureKindSwitch } from "./CaptureKindSwitch";
 import type { CaptureIntent, CaptureMode } from "../model/types";
@@ -109,14 +111,14 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
 
   const handleShortcutToggle = async (enabled: boolean) => {
     try {
-      await configureShortcut(enabled, shortcutLabel);
+      await configureShortcut(enabled, shortcutStatus?.requestedShortcut || shortcutLabel);
     } catch (err) {
       console.error("Error al cambiar el atajo global:", err);
     }
   };
 
   return (
-    <div className="screen-capture-view">
+    <div className={`screen-capture-view ${isVideo ? "is-video" : ""}`}>
       {/* ── Cabecera ── */}
       <section className="capture-topbar">
         <div className="capture-topbar-icon">
@@ -158,6 +160,7 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
                 type="button"
                 className={`snapshot-format-chip ${selectedMode === option.id ? "is-selected" : ""}`}
                 onClick={() => setSelectedMode(option.id)}
+                aria-pressed={selectedMode === option.id}
                 title={option.label}
               >
                 <Icon name={option.icon} width={18} height={18} />
@@ -176,7 +179,6 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
           >
             <Icon name={isVideo ? "video" : "camera"} width={18} height={18} />
             <span>{isVideo ? "Iniciar Grabación" : "Iniciar Captura"}</span>
-            {!isVideo && <span className="capture-shortcut-pill">{shortcutLabel}</span>}
           </button>
         </section>
 
@@ -190,95 +192,30 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
             </div>
 
             <div className="capture-fields">
-              <label className="capture-select-field">
+              <div className="capture-select-field">
                 <span className="capture-select-label">Fotogramas</span>
-                <select
-                  className="capture-select"
-                  value={recordingPreferences.fps}
-                  onChange={(event) =>
-                    handlePreferencesChange({ ...recordingPreferences, fps: Number(event.target.value) })
-                  }
-                >
-                  {RECORDING_FPS_OPTIONS.map((fps) => (
-                    <option key={fps} value={fps}>{fps} fps</option>
-                  ))}
-                </select>
-              </label>
+                <CustomSelect aria-label="Fotogramas" value={recordingPreferences.fps} options={RECORDING_FPS_OPTIONS.map(fps => ({ value: fps, label: `${fps} fps` }))} onChange={(value) => handlePreferencesChange({ ...recordingPreferences, fps: value })} />
+              </div>
 
-              <label className="capture-select-field">
+              <div className="capture-select-field">
                 <span className="capture-select-label">Calidad</span>
-                <select
-                  className="capture-select"
-                  value={recordingPreferences.quality}
-                  onChange={(event) =>
-                    handlePreferencesChange({
-                      ...recordingPreferences,
-                      quality: event.target.value as RecordingPreferences["quality"],
-                    })
-                  }
-                >
-                  <option value="high">Alta</option>
-                  <option value="medium">Media</option>
-                  <option value="low">Baja</option>
-                </select>
-              </label>
+                <CustomSelect aria-label="Calidad" value={recordingPreferences.quality} options={[{ value: "high", label: "Alta" }, { value: "medium", label: "Media" }, { value: "low", label: "Baja" }]} onChange={(value) => handlePreferencesChange({ ...recordingPreferences, quality: value as RecordingPreferences["quality"] })} />
+              </div>
 
-              <label className="capture-select-field">
+              <div className="capture-select-field">
                 <span className="capture-select-label">Codificación</span>
-                <select
-                  className="capture-select"
-                  value={recordingPreferences.encoder}
-                  onChange={(event) =>
-                    handlePreferencesChange({
-                      ...recordingPreferences,
-                      encoder: event.target.value as RecordingPreferences["encoder"],
-                    })
-                  }
-                >
-                  <option value="auto">Automática</option>
-                  <option value="cpu">CPU</option>
-                  <option value="nvenc">NVIDIA</option>
-                  <option value="qsv">Intel</option>
-                  <option value="amf">AMD</option>
-                </select>
-              </label>
+                <CustomSelect aria-label="Codificación" value={recordingPreferences.encoder} options={[{ value: "auto", label: "Automática" }, { value: "cpu", label: "CPU" }, { value: "nvenc", label: "NVIDIA" }, { value: "qsv", label: "Intel" }, { value: "amf", label: "AMD" }]} onChange={(value) => handlePreferencesChange({ ...recordingPreferences, encoder: value as RecordingPreferences["encoder"] })} />
+              </div>
 
-              <label className="capture-select-field">
+              <div className="capture-select-field">
                 <span className="capture-select-label">Tamaño</span>
-                <select
-                  className="capture-select"
-                  value={recordingPreferences.maxHeight ?? ""}
-                  onChange={(event) =>
-                    handlePreferencesChange({
-                      ...recordingPreferences,
-                      maxHeight: event.target.value ? Number(event.target.value) : null,
-                    })
-                  }
-                >
-                  {RECORDING_SIZE_OPTIONS.map((option) => (
-                    <option key={option.label} value={option.value ?? ""}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
+                <CustomSelect aria-label="Tamaño" value={recordingPreferences.maxHeight ?? ""} options={RECORDING_SIZE_OPTIONS.map(option => ({ value: option.value ?? "", label: option.label }))} onChange={(value) => handlePreferencesChange({ ...recordingPreferences, maxHeight: value === "" ? null : Number(value) })} />
+              </div>
 
-              <label className="capture-select-field">
-                <span className="capture-select-label">Audio</span>
-                <select
-                  className="capture-select"
-                  value={recordingPreferences.audioDevice ?? ""}
-                  onChange={(event) =>
-                    handlePreferencesChange({
-                      ...recordingPreferences,
-                      audioDevice: event.target.value || null,
-                    })
-                  }
-                >
-                  <option value="">Sin audio</option>
-                  {audioDevices.map((device) => (
-                    <option key={device} value={device}>{device}</option>
-                  ))}
-                </select>
-              </label>
+              <div className="capture-select-field">
+                <span className="capture-select-label">Micrófono</span>
+                <CustomSelect aria-label="Micrófono" value={recordingPreferences.audioDevice ?? ""} options={[{ value: "", label: "Sin micrófono" }, ...audioDevices.map(device => ({ value: device, label: device }))]} onChange={(value) => handlePreferencesChange({ ...recordingPreferences, audioDevice: value || null })} />
+              </div>
 
               <label className="capture-checkbox-field">
                 <span className="capture-select-label">Audio del sistema</span>
@@ -300,11 +237,17 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
           </section>
         )}
 
-        {/* ── Atajo global ── */}
-        <section className="settings-card capture-card">
+        <CaptureSaveSettings
+          kind={captureKind}
+          recordingPreferences={recordingPreferences}
+          onRecordingPreferencesChange={handlePreferencesChange}
+        />
+        {/* El atajo se muestra siempre: no hay forma de plegarlo. */}
+        <section className="settings-card capture-card capture-shortcut-settings">
           <div className="settings-card-header-row">
             <div>
               <h3>Atajo global</h3>
+              <p>Atajo actual: {shortcutLabel}</p>
             </div>
             <label className="toggle-switch">
               <input
@@ -350,6 +293,29 @@ export function ScreenCaptureView({ onStartCapture }: ScreenCaptureViewProps) {
                   : "Sin atajo global activo."}
             </span>
           </div>
+                    <details className="screen-capture-tip-box">
+                      <summary className="screen-capture-tip-summary">
+                        <Icon name="info" width={15} height={15} />
+                        <span>¿Cómo liberar Impr Pant en Windows 11?</span>
+                      </summary>
+                      <div className="screen-capture-tip-content">
+                        <p>Windows 11 reserva Impr Pant para Recortes. Para usarla con Prisma:</p>
+                        <ol>
+                          <li>Abre <strong>Configuración &gt; Accesibilidad &gt; Teclado</strong>.</li>
+                          <li>Desactiva <em>«Usar botón Impr Pant para abrir Recortes»</em>.</li>
+                          <li>O vía <code>regedit</code>: en <code>HKCU\Control Panel\Keyboard</code> asigna <code>PrintScreenKeyForSnippingEnabled = 0</code>.</li>
+                        </ol>
+                        <a
+                          href="https://github.com/biglexj/Prisma/blob/main/docs/guides/screen-capture-printscreen.md"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="screen-capture-tip-link"
+                        >
+                          <span>Guía completa en GitHub</span>
+                          <Icon name="external-link" width={12} height={12} />
+                        </a>
+                      </div>
+                    </details>
         </section>
       </div>
     </div>

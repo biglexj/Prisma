@@ -23,8 +23,12 @@ export function BatchRenamerView() {
     searchQuery,
     isScanning,
     isExecuting,
+    isCheckingConflicts,
+    skippedNumberCount,
+    conflictCheckError,
     canUndo,
     isDraggingOver,
+    isAppendingDrop,
     lastResult,
     error,
     totalCount,
@@ -79,8 +83,12 @@ export function BatchRenamerView() {
             <div className="renamer-drop-pulse">
               <Icon name="folder-open" />
             </div>
-            <h3>Suelta tu carpeta aquí</h3>
-            <p>Se cargarán y prepararán todos los archivos para el renombrado por lotes</p>
+            <h3>{isAppendingDrop ? "Añadir a la selección actual" : "Cargar una nueva selección"}</h3>
+            <p>
+              {isAppendingDrop
+                ? "Los archivos nuevos se añadirán al final, sin duplicados."
+                : "Mantén Shift al soltar para añadir esta tanda a los archivos ya cargados."}
+            </p>
           </div>
         </div>
       )}
@@ -94,7 +102,7 @@ export function BatchRenamerView() {
             </span>
             <div>
               <h1>Renombrador por Lotes</h1>
-              <p>Encadena reglas modulares, previsualiza cambios en vivo y renombra con seguridad total</p>
+              <p>Shift + arrastrar añade archivos. La numeración salta automáticamente los nombres ocupados.</p>
             </div>
           </div>
         </div>
@@ -114,6 +122,21 @@ export function BatchRenamerView() {
       </header>
 
       {/* Notificaciones y Alertas */}
+      {skippedNumberCount > 0 && !isCheckingConflicts && (
+        <div className="renamer-alert is-success" role="status">
+          Se han saltado {skippedNumberCount} valores de numeración para evitar nombres ocupados. Revisa la numeración final en la vista previa.
+        </div>
+      )}
+      {conflictCount > 0 && (
+        <div className="renamer-alert is-warning" role="alert">
+          Hay nombres en conflicto. Revisa los archivos marcados y cambia el nombre o el inicio de la numeración antes de renombrar.
+        </div>
+      )}
+      {conflictCheckError && (
+        <div className="renamer-alert is-danger" role="alert">
+          No se pudieron comprobar los nombres existentes. {conflictCheckError}
+        </div>
+      )}
       {error && (
         <div className="renamer-alert is-danger" role="alert">
           <Icon name="close" />
@@ -261,13 +284,15 @@ export function BatchRenamerView() {
           <button
             type="button"
             className="renamer-execute-btn"
-            disabled={readyCount === 0 || conflictCount > 0 || invalidCount > 0 || isExecuting}
+            disabled={readyCount === 0 || conflictCount > 0 || invalidCount > 0 || isExecuting || isScanning || isCheckingConflicts || !!conflictCheckError}
             onClick={executeRename}
           >
             <Icon name={isExecuting ? "refresh" : "check"} className={isExecuting ? "is-spinning" : ""} />
             <span>
               {isExecuting
                 ? "Renombrando..."
+                : isCheckingConflicts
+                ? "Comprobando conflictos..."
                 : readyCount > 0
                 ? `Renombrar ${readyCount} Archivo(s)`
                 : "Sin cambios pendientes"}

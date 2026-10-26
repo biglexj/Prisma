@@ -83,7 +83,11 @@ export function useMediaConverter(incomingRequest?: ConverterOpenRequest | null,
     converterClient
       .getStatus()
       .then(setStatus)
-      .catch((e) => console.warn("No se pudo verificar FFmpeg:", e));
+      .catch((e) => {
+        console.warn("No se pudo verificar FFmpeg:", e);
+        // Sin respuesta no se puede afirmar que FFmpeg esté: se marca como ausente.
+        setStatus({ is_available: false, ffmpeg_path: null, ffprobe_path: null, version: null });
+      });
   }, []);
 
   const calculateOutputFilename = useCallback(
@@ -204,7 +208,7 @@ export function useMediaConverter(incomingRequest?: ConverterOpenRequest | null,
       // Si la cola está vacía, auto-detectar el tipo de archivo o carpeta
       if (queue.length === 0 && paths.length > 0) {
         const directExt = paths[0].split(".").pop()?.toLowerCase() || "";
-        if (["jpg", "jpeg", "png", "webp", "avif", "bmp", "tiff", "gif", "heic", "svg"].includes(directExt)) {
+        if (["jpg", "jpeg", "png", "webp", "avif", "bmp", "tiff", "gif", "heic", "heif", "svg"].includes(directExt)) {
           requestedMode = "image";
         } else if (["mp4", "mkv", "webm", "avi", "mov", "wmv", "m4v", "flv", "ts"].includes(directExt) && requestedMode !== "video_transcode" && requestedMode !== "video_to_audio") {
           requestedMode = "video_to_audio";
@@ -217,7 +221,7 @@ export function useMediaConverter(incomingRequest?: ConverterOpenRequest | null,
             if (sampled.length > 0) {
               const audioMatches = sampled.filter((f) => /\.(mp3|flac|wav|ogg|aac|m4a|opus|wma|aiff|alac)$/i.test(f)).length;
               const videoMatches = sampled.filter((f) => /\.(mp4|mkv|webm|avi|mov|wmv|m4v|flv|ts)$/i.test(f)).length;
-              const imageMatches = sampled.filter((f) => /\.(jpg|jpeg|png|webp|avif|bmp|tiff|tif|gif|svg|heic)$/i.test(f)).length;
+              const imageMatches = sampled.filter((f) => /\.(jpg|jpeg|png|webp|avif|bmp|tiff|tif|gif|svg|heic|heif)$/i.test(f)).length;
 
               if (audioMatches > videoMatches && audioMatches > imageMatches) {
                 requestedMode = "audio_transcode";

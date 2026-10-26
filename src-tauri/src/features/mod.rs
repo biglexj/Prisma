@@ -7,5 +7,6 @@ pub mod quick_look;
 pub mod synapse;
 pub mod visual_library;
 pub mod screen_capture;
+pub mod wallpapers;
 
 

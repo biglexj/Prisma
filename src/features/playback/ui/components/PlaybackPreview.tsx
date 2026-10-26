@@ -322,9 +322,14 @@ export function PlaybackPreview({
             {artwork ? <span className="preview-cover-artwork"><img alt={`Carátula de ${trackTitle}`} src={artwork} /></span> : null}
             {isImage && effectivePath ? <VisualThumbnail key={effectivePath} className="preview-cover-artwork" path={effectivePath} alt={trackTitle} eager fit="contain" /> : null}
             {isVideo && effectivePath ? <VideoThumbnail key={effectivePath} className="preview-cover-artwork" path={effectivePath} title={trackTitle} /> : null}
-            {isAudio ? <div className="artwork-record" aria-hidden="true"><i /></div> : null}
-            {isAudio ? <div className="artwork-wave" aria-hidden="true">{WAVE_BARS}</div> : null}
-            {!isVideo && !artwork && !isImage ? <span className="artwork-monogram">{hasEffectiveMedia ? trackTitle.slice(0, 1).toUpperCase() : "P"}</span> : null}
+            {isAudio && hasEffectiveMedia ? <div className="artwork-record" aria-hidden="true"><i /></div> : null}
+            {isAudio && hasEffectiveMedia ? <div className="artwork-wave" aria-hidden="true">{WAVE_BARS}</div> : null}
+            {!hasEffectiveMedia ? (
+              <span className="preview-cover-artwork is-idle">
+                <img alt="Prisma Música" src="/icons/prisma/music-idle.webp" draggable={false} />
+              </span>
+            ) : null}
+            {!isVideo && !artwork && !isImage && hasEffectiveMedia ? <span className="artwork-monogram">{trackTitle.slice(0, 1).toUpperCase()}</span> : null}
 
             {isAudio && hasEffectiveMedia ? (
               <span className="preview-artwork-lyrics-hint" aria-hidden="true">

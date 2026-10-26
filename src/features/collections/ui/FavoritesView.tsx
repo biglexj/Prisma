@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
 import { ContextMenu, type ContextMenuItem } from "../../../shared/ui/ContextMenu";
@@ -9,7 +9,8 @@ import type { VisualLibraryItem } from "../../visual_library/model/types";
 import { VisualThumbnail } from "../../visual_library/ui/VisualThumbnail";
 import { VideoThumbnail } from "../../visual_library/ui/VideoThumbnail";
 import { copyImageToClipboard } from "../../visual_library/services/imageClipboard";
-import { cleanPath } from "../../../shared/mediaTree";
+import { cleanPath, isPathExcludedByFolder, isPathHiddenBySystem } from "../../../shared/mediaTree";
+import { filterExistingMediaPaths } from "../../../shared/mediaOperations";
 import { useFavorites } from "../useFavorites";
 import { FavoriteFullView } from "./FavoriteFullView";
 import type { FavoriteMediaType } from "../model/types";
@@ -23,6 +24,7 @@ interface FavoritesViewProps {
   musicItems: MusicLibraryItem[];
   images: VisualLibraryItem[];
   videos: VisualLibraryItem[];
+  excludedFolders?: string[];
   onPlayMusic: (path: string, sessionItems?: MusicLibraryItem[], queueName?: string) => void;
   onOpenImage?: (path: string, sessionItems?: VisualLibraryItem[]) => void;
   onPlayVideo: (path: string, sessionItems?: VisualLibraryItem[]) => void;

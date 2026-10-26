@@ -13,6 +13,25 @@ import type {
 } from "../model/types";
 
 export const screenCaptureClient = {
+  async setIntent(sessionId: number, intent: CaptureIntent): Promise<CaptureSessionInit> {
+    return invoke<CaptureSessionInit>("screen_capture_set_intent", { sessionId, intent });
+  },
+  /** Copiar también conserva la captura en Synapse, sin pedir una ruta de guardado. */
+  async copyToClipboard(blob: Blob): Promise<void> {
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error("No se pudo leer la captura"));
+        reader.readAsDataURL(blob);
+      });
+      await invoke("vault_import", { path: null, text: dataUrl, pinned: false });
+    } catch (error) {
+      throw new Error(`Captura copiada, pero no se pudo añadir a Synapse: ${String(error)}`);
+    }
+  },
+
   async startCapture(mode?: CaptureMode, intent: CaptureIntent = "image"): Promise<CaptureSessionInit> {
     return invoke<CaptureSessionInit>("screen_capture_start", { mode, intent });
   },

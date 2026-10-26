@@ -1,7 +1,8 @@
 import { Icon, type IconName } from "../../shared/ui/Icon";
 import { useCustomLibraries } from "../../features/custom_libraries/hooks/useCustomLibraries";
 import { useSystemSettings, type SidebarDensity } from "../useSystemSettings";
-import { APP_VERSION, APP_AUTHOR } from "../../shared/version";
+import { APP_AUTHOR } from "../../shared/version";
+import { useAppVersion } from "../../shared/useAppVersion";
 import "./app-sidebar.css";
 
 const APP_ICON_SRC = "/icon/icon.png";
@@ -68,6 +69,7 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const { activeLibraries } = useCustomLibraries();
   const { auroraOnlineServicesEnabled, auroraWallpapersEnabled, enabledTools } = useSystemSettings();
+  const version = useAppVersion();
 
   const dynamicLibraryItems: SidebarItem[] = [
     ...libraryItems,
@@ -91,6 +93,8 @@ export function AppSidebar({
     { key: "renamer", item: { icon: "edit", label: "Renombrador", view: "renamer" } },
     { key: "comparator", item: { icon: "compare", label: "Comparador", view: "comparator" } },
     { key: "duplicates", item: { icon: "copy", label: "Duplicados", view: "duplicates" } },
+    { key: "screen_capture", item: { icon: "camera", label: "Capturador", view: "screen_capture" } },
+    { key: "live_wallpapers", item: { icon: "sparkles", label: "Fondos Vivos", view: "live_wallpapers" } },
   ];
 
   const ecosystemToolItems: { key: keyof typeof enabledTools; item: SidebarItem }[] = [
@@ -106,9 +110,6 @@ export function AppSidebar({
   const activeNativeTools = nativeToolItems
     .filter(({ key }) => isToolVisible(key))
     .map(({ item }) => item);
-
-  // El capturador es una capacidad propia de Prisma: siempre disponible.
-  const captureItem: SidebarItem = { icon: "camera", label: "Capturador", view: "screen_capture" };
 
   const activeEcosystemTools = ecosystemToolItems
     .filter(({ key }) => isToolVisible(key))
@@ -152,12 +153,6 @@ export function AppSidebar({
                 onNavigate={onNavigate}
               />
             ))}
-            <SidebarItemButton
-              key={captureItem.label}
-              item={captureItem}
-              activeView={activeView}
-              onNavigate={onNavigate}
-            />
             {activeNativeTools.length > 0 && activeEcosystemTools.length > 0 && (
               <div
                 className="sidebar-tools-divider"
@@ -205,7 +200,7 @@ export function AppSidebar({
           </span>
           <div className="sidebar-copy">
             <strong>Acerca de</strong>
-            <span>v{APP_VERSION} · {APP_AUTHOR}</span>
+            <span>v{version} · {APP_AUTHOR}</span>
           </div>
         </button>
       </footer>

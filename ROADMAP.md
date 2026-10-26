@@ -10,6 +10,10 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 - [ ] **Fondos vivos — vídeos y capas Aurora**: catálogo de 25 efectos, galería, controles por efecto, ambiente independiente como capa 2, dinámicos, escenarios, partículas 3D/2D y parallax opcional. Coexistencia con imagen/vídeo y pausas comprobadas en WebView2; capturas PNG 1080p reutilizables. Pendientes ecualizador real, políticas automáticas, recuperación de Explorer, aceptación física final y rendimiento. [Proceso](process/active/2026-10-25_motor_wallpapers_nativo/PLAN.md).
 
+- [ ] **Capturadora compacta y movimiento Synapse**: selector por iconos de imagen/vídeo, recortes en una pill desplegable y cuentagotas; cierre de captura antes de limpiar el lienzo y transiciones nativas desactivadas. Synapse incorpora apertura continua, entrada escalonada y señal al guardar. Control de grabación movible centrado abajo, con iconos; carpetas predeterminadas Prisma en Imágenes/Vídeos y tres rutas independientes. Build y pruebas correctos; grabación real 1080p con audio y controles verificada en Windows tras corregir tamaño de ventana y bloqueo por silencio. Pendientes el zoom intermitente, arrastre y exclusión visual de la barra. [Proceso](process/active/2026-10-25_capturadora_y_movimiento_synapse/PLAN.md).
+
+- [ ] **Renombrado sin sobrescrituras y tandas acumulables**: Numeración que salta nombres ocupados, movimientos protegidos, deshacer que conserva el historial ante conflictos y Shift + arrastrar para añadir tandas sin duplicados. Implementación local; pendiente de validación funcional en la aplicación con este ajuste. [Proceso](process/active/2026-10-23_renombrado_sin_sobrescrituras/PLAN.md).
+
 - [ ] **Capturador de Pantalla — Extractor de Texto (OCR)**: Reconocimiento óptico de caracteres directamente sobre la captura de pantalla en memoria para copiar texto al portapapeles con un solo clic.
 
 - [ ] **Grabadora de Vídeo de Pantalla**: Grabación fluida y ligera de pantalla completa o ventana seleccionada a formato MP4/WebM con controles flotantes de inicio/parada y guardado directo en la carpeta de capturas.
@@ -26,6 +30,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 ---
 
 ## 🟡 Intermedio (Prioridad Media/Baja)
+
+- [ ] **Investigar y analizar el peso de la compilación y del instalador**: Medir el aporte del ejecutable, recursos y dependencias, especialmente FFmpeg, FFprobe y libmpv; revisar componentes duplicados, opciones de compilación, bibliotecas compartidas y alternativas. Comparar ahorro de tamaño, compatibilidad de formatos, mantenimiento y funcionamiento antes de proponer cambios. Pendiente de investigación, sin implementación ni fecha comprometida.
 
 Ideas de evolución registradas el 1 de octubre de 2026 para el uso personal de Biglex. Se evaluarán según necesidades reales; no tienen fecha comprometida ni carácter urgente.
 
@@ -50,7 +56,52 @@ Ideas de evolución registradas el 1 de octubre de 2026 para el uso personal de 
 
 ## 🟢 Completado
 
-- [x] **v1.1.8 — 2026-10-19**
+- [x] **v2.0.0 — 2026-10-26**
+  - **Conmutador Imagen | Vídeo en el Capturador de Pantalla**:
+    - Modo vídeo que inicia la grabación al confirmar la región, con selección de fotogramas (24/30/60 fps) y de audio.
+    - Grabación nativa con el FFmpeg ya empotrado (GDIGRAB), sin dependencias ni binarios nuevos.
+    - Cierre elegante del MP4 escribiendo `q` en la entrada estándar, para no dejar el archivo sin índice.
+    - Overlay oculto 220 ms antes de iniciar la captura, para que no aparezca en el vídeo.
+  - **Grabar una ventana que se mueve**:
+    - Modo título con `-i title=…`: la captura sigue a la ventana aunque se desplace por la pantalla.
+    - Ajuste a dimensiones pares, porque H.264 rechaza los rectángulos impares.
+    - Sonda de motores a la resolución exacta de la toma y respaldo automático al siguiente motor si uno falla.
+  - **Barra flotante de Control de Grabación**:
+    - Ventana propia de 320 × 64, siempre encima, con cronómetro y botón «Detener», colocada fuera de la región grabada.
+    - Atajo global `Ctrl + Mayús + R` para detener, registrado al arrancar.
+  - **Codificador de Hardware y Calidad**:
+    - Selector Automático / CPU / NVIDIA / Intel / AMD, con `h264_nvenc`, `h264_qsv` y `h264_amf`.
+    - Sonda previa de un fotograma por motor, cacheada por proceso, que evita los falsos positivos de codificadores que arrancan pero no entregan imagen.
+    - Presets Alta / Media / Baja (CRF 20, 23 y 28) y límite de altura Original / 1080p / 720p.
+  - **Audio del Sistema, Cuenta Atrás, Pausa y Recorte**:
+    - Captura por WASAPI loopback entregada a FFmpeg por socket local en PCM, opcionalmente mezclada con micrófono mediante `amix`.
+    - Cuenta atrás de tres segundos, pausa y reanudación, y aviso de grabación guardada con acceso a la biblioteca de Vídeos.
+    - Recorte instantáneo sin recodificar (`-c copy`), con el corte en el fotograma clave más cercano.
+  - **Bóveda Flotante del Sistema (Notch Synapse de cinco espacios)**:
+    - Ventana propia siempre encima, de 100 × 3 px en reposo, anclada en el borde superior central del escritorio virtual, con región Win32 y esquinas recortadas.
+    - Cinco espacios cuadrados de 106 × 106 px con controles al pasar el ratón o recibir el foco; destinos solo durante el arrastre.
+    - Dos elementos fijados protegidos y temporales ordenados por antigüedad, con rotación compartida entre capturas y archivos.
+    - Persistencia en `vault.json` entre sesiones, con envío al teléfono, guardado en carpeta, arrastre nativo hacia fuera y pegado con `Ctrl + V`.
+  - **Zona de Recepción con Destinos Múltiples**:
+    - Menú al soltar con Super Galería, Imágenes, Vídeos, Música, «Abrir con la aplicación predeterminada» y «Mostrar en el Explorador».
+    - Vista previa durante el arrastre con nombre, tamaño y número de archivos, y envío en cola a Super Galería.
+  - **Ecosistema Aurora en Configuración**:
+    - Detección de Aurora Synapse, Ely Intelligence, DaVinci Flow, Luna Fetch y Gallery-DL GUI, con estado de instalación, ruta del ejecutable, presencia del código fuente y acceso directo para lanzarlas.
+    - Nueva pestaña Aurora con el origen oficial sin «www», que evita la redirección 307 sin CORS y desbloquea los wallpapers en la app de escritorio, más test de conexión con latencia.
+  - **Barras de Progreso, Temas y Herramientas**:
+    - Seis estilos nuevos (Binary, Pacman, Glitch, Fire, Tesla y Laser), hasta dieciséis renderizadores, con previsualización en vivo.
+    - Fondos Azul Bruma, Blanco Puro / Negro Puro y Prisma Clásico, con par claro y oscuro propio.
+    - El Capturador de Pantalla pasa a ser una herramienta conmutable en el panel de Herramientas.
+  - **Acerca de Renovado**:
+    - Comprobación de actualizaciones real contra la API de Aurora y GitHub Releases, con descarga directa del instalador cuando hay versión nueva.
+    - Tarjeta del ecosistema consciente del equipo: estado real de instalación de cada app y arranque desde Acerca de.
+    - Rediseño en tres bloques que ocupan la pantalla completa, sin hueco vacío en las tarjetas ni desplazamiento de página, con adaptación por container queries.
+  - **Quick Look, Colecciones e Instalador**:
+    - Paginador «N / total» para recorrer la selección múltiple del Explorador.
+    - Depuración automática en Historial y Favoritos de rutas inexistentes, ocultas o excluidas.
+    - Instalador de Windows en Inno Setup, con pantalla única de entrada, progreso y éxito nativos, tema automático, instalación por usuario sin elevación y actualización sin instalación paralela.
+
+- [x] **v1.1.8 — 2026-10-19** · No publicada (integrada en v2.0.0)
   - **Capturador de Pantalla Inteligente y Anotaciones In-situ**:
     - Detección automática de ventanas, selector de región rectangular con guías dimensionales y modo de pantalla completa.
     - Barra de herramientas horizontal ergonómica in-situ con paleta de anotaciones: lápiz libre, flechas directrices, marcos rectangulares y cuadro de texto interactivo.
@@ -237,3 +288,8 @@ Ideas de evolución registradas el 1 de octubre de 2026 para el uso personal de 
   - **Ecosistema Luna Fetch & Gallery-DL, Aurora Synapse Apps Hub, Convertidor por Lotes y Álbumes Inteligentes**: Centros de herramientas dedicados para Luna Fetch y Gallery-DL GUI con analizador y envío rápido de enlaces o galerías masivas con 4 estructuras de carpetas, panel de aplicaciones vinculadas en Aurora Synapse con iconos empaquetados y estado de sinergia, integración del Convertidor Prisma con soporte por lotes y carpetas completas, menú contextual para conversión directa, agrupación de música por etiquetas de álbum con vista de detalle dedicada, doble interacción en tarjetas, selector de densidad de altura en configuración y perfeccionamiento de alta precisión en Quick Look para Windows 11 con pestañas.
 - [x] **v1.0.0**
   - **Lanzamiento oficial de Prisma**: Estación multimedia local-first integral para Windows. Reproducción de audio de alta fidelidad, reproductor de vídeo con PiP, visor y editor de imágenes, Quick Look universal, **Bibliotecas Modulares Personalizables** con lector y editor interactivo in-app (*Split View*, fuentes y zoom), **Editor de Tags ID3/Metadatos (Prisma Tag Editor)**, **Editor Visual y Sincronizador de Letras LRC (LyricsEditor)**, **Visor de Metadatos EXIF fotográfico**, listas universales M3U/PLS/XSPF y control remoto LAN mediante Aurora Synapse.
+
+
+### Barra superior Synapse — notch de cinco espacios (2026-10-22)
+
+Implementación local y comprobación visual en Tauri aislado: 100×3 px, apertura por proximidad, cinco espacios, fijar/temporal/teléfono y capturas recientes. [Proceso y aceptación pendiente](process/active/2026-10-22_boveda_flotante_del_sistema/PLAN.md). Pendientes de aceptación real: arrastre Explorador/navegador y recepción en el teléfono.

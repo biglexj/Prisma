@@ -68,6 +68,7 @@ export function MediaProgressBar({
   // Estado continuo del motor físico / matemático
   const animStateRef = useRef<RenderState>({
     phase: 0,
+    animationTime: 0,
     lastTime: performance.now(),
     currentAmp: isPlaying ? 3 : 0,
     particles: [],
@@ -75,6 +76,9 @@ export function MediaProgressBar({
     lastProgressX: 0,
     elasticAmp: 0,
     elasticPhase: 0,
+    binaryMatrix: [],
+    binaryColumns: 0,
+    fireParticles: [],
   });
 
   // Tamaño en memoria para evitar layout thrashing y parpadeos en 60/120 FPS
@@ -133,6 +137,7 @@ export function MediaProgressBar({
       // Calcular avance de fase continua
       const playing = isPlayingRef.current && !disabledRef.current;
       if (playing) {
+        animStateRef.current.animationTime += delta;
         animStateRef.current.phase = (animStateRef.current.phase + delta * ((2 * Math.PI) / 1.8)) % (2 * Math.PI);
       }
 
@@ -160,6 +165,8 @@ export function MediaProgressBar({
       // Obtener colores del contenedor o props
       const computedStyles = getComputedStyle(container);
       const resolvedPrimary = activeColorRef.current || computedStyles.getPropertyValue("--primary").trim() || "#e06b9b";
+      const resolvedSecondary = computedStyles.getPropertyValue("--secondary").trim()
+        || `color-mix(in srgb, ${resolvedPrimary} 45%, ${computedStyles.getPropertyValue("--on-surface-variant").trim() || resolvedPrimary} 55%)`;
       const resolvedTrack = inactiveColorRef.current || computedStyles.getPropertyValue("--outline-variant").trim() || "rgba(255, 255, 255, 0.2)";
       const resolvedThumb = thumbColorRef.current || "#ffffff";
 
@@ -175,6 +182,7 @@ export function MediaProgressBar({
         delta,
         state: animStateRef.current,
         primaryColor: resolvedPrimary,
+        secondaryColor: resolvedSecondary,
         trackColor: resolvedTrack,
         thumbColor: resolvedThumb,
       };

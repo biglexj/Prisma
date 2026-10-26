@@ -1,4 +1,4 @@
-import { getDefaultPicturesDir } from "../../../shared/mediaOperations";
+import { resolveCaptureFolder } from "../../../shared/captureFolders";
 
 /** Preferencias de la grabadora de vídeo, compartidas entre ventanas. */
 export interface RecordingPreferences {
@@ -14,13 +14,16 @@ export interface RecordingPreferences {
   maxHeight: number | null;
   /** Capturar el audio del sistema por WASAPI loopback. */
   systemAudio: boolean;
+  /** Contenedor del vídeo grabado: `mp4`, `mkv` o `mov`. */
+  container: RecordingContainer;
 }
 
 export type RecordingEncoder = "auto" | "cpu" | "nvenc" | "qsv" | "amf";
 export type RecordingQuality = "high" | "medium" | "low";
+/** Contenedores disponibles para la grabación: todos llevan H.264 + AAC. */
+export type RecordingContainer = "mp4" | "mkv" | "mov";
 
 const STORAGE_KEY = "prisma.recording-settings.v1";
-const SETTINGS_KEY = "prisma.system-settings.v1";
 
 export const DEFAULT_RECORDING_PREFERENCES: RecordingPreferences = {
   fps: 30,
@@ -29,7 +32,15 @@ export const DEFAULT_RECORDING_PREFERENCES: RecordingPreferences = {
   quality: "medium",
   maxHeight: null,
   systemAudio: true,
+  container: "mp4",
 };
+
+/** Contenedores de vídeo ofrecidos en el capturador. */
+export const RECORDING_CONTAINER_OPTIONS: { id: RecordingContainer; label: string; description: string }[] = [
+  { id: "mp4", label: "MP4", description: "Universal" },
+  { id: "mkv", label: "MKV", description: "Matroska" },
+  { id: "mov", label: "MOV", description: "QuickTime" },
+];
 
 export const RECORDING_FPS_OPTIONS = [24, 30, 60];
 
@@ -81,6 +92,10 @@ export function loadRecordingPreferences(): RecordingPreferences {
           typeof parsed.systemAudio === "boolean"
             ? parsed.systemAudio
             : DEFAULT_RECORDING_PREFERENCES.systemAudio,
+        container:
+          parsed.container === "mkv" || parsed.container === "mov"
+            ? parsed.container
+            : DEFAULT_RECORDING_PREFERENCES.container,
       };
     }
   } catch {
@@ -97,32 +112,7 @@ export function saveRecordingPreferences(preferences: RecordingPreferences): voi
   }
 }
 
-/**
- * Carpeta donde se guardan las grabaciones. Reutiliza la carpeta configurada
- * para las capturas y, si no existe, la carpeta de Imágenes del sistema.
- */
-export async function resolveRecordingFolder(): Promise<string> {
-  let folder = "";
-  try {
-    const stored = localStorage.getItem(SETTINGS_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (typeof parsed.screenCaptureFolder === "string" && parsed.screenCaptureFolder.trim()) {
-        folder = parsed.screenCaptureFolder.trim();
-      }
-    }
-  } catch {
-    // Sin ajustes guardados: se usa la carpeta por defecto del sistema.
-  }
-
-  if (folder) return folder;
-
-  try {
-    const picturesDir = await getDefaultPicturesDir();
-    if (picturesDir) return `${picturesDir}\\Grabaciones`;
-  } catch {
-    // Sin carpeta de Imágenes disponible.
-  }
-
-  return "C:\\Grabaciones";
+/** Carpeta independiente para las grabaciones de pantalla. */
+export function resolveRecordingFolder(): Promise<string> {
+  return resolveCaptureFolder("video");
 }

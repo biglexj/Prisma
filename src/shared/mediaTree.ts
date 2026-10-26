@@ -181,3 +181,29 @@ export function resolveTreeLevel<T extends { path: string; relativeFolder?: stri
     allRecursiveItems: items,
   };
 }
+
+/**
+ * Determina si una ruta de archivo pertenece o desciende de alguna de las carpetas excluidas.
+ */
+export function isPathExcludedByFolder(
+  filePath: string | null | undefined,
+  excludedFolderPaths: string[]
+): boolean {
+  if (!filePath || !excludedFolderPaths || excludedFolderPaths.length === 0) return false;
+  const normTarget = normalizePathSeparators(filePath).toLowerCase();
+  return excludedFolderPaths.some((ex) => {
+    const normEx = normalizePathSeparators(ex).toLowerCase();
+    if (!normEx) return false;
+    return normTarget === normEx || normTarget.startsWith(`${normEx}/`);
+  });
+}
+
+/**
+ * Determina si algún segmento de la ruta es una carpeta o archivo oculto (empieza por punto).
+ */
+export function isPathHiddenBySystem(filePath: string | null | undefined): boolean {
+  if (!filePath) return false;
+  const norm = normalizePathSeparators(filePath);
+  const segments = norm.split("/").filter(Boolean);
+  return segments.some((seg) => seg.startsWith(".") && seg !== ".");
+}

@@ -48,6 +48,23 @@ const TOOL_DEFINITIONS: ToolItemDef[] = [
     category: "native",
   },
 
+  {
+    key: "screen_capture",
+    label: "Capturador de Pantalla",
+    icon: "camera",
+    description: "Capturas de imagen y grabación de pantalla, ventana o región con atajo global.",
+    tags: ["Imagen", "Vídeo", "Anotaciones", "Atajo global"],
+    category: "native",
+  },
+  {
+    key: "live_wallpapers",
+    label: "Fondos Vivos",
+    icon: "sparkles",
+    description: "Fondos de escritorio con vídeo continuo local y composición Aurora tras los iconos de Windows.",
+    tags: ["Vídeo", "Multicarpeta", "Escritorio Windows", "Sin Wallpaper Engine"],
+    category: "native",
+  },
+
   // ── Herramientas de Aurora Synapse / Ecosistema ──
   {
     key: "luna_fetch",

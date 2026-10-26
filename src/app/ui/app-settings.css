@@ -2,8 +2,9 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  min-height: 100%;
-  padding-top: clamp(14px, 2vw, 24px);
+  min-width: 0;
+  width: 100%;
+  padding-top: var(--page-top-space, 24px);
 }
 
 @media (max-width: 900px) {
@@ -20,6 +21,8 @@
 
 .settings-tab-nav {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
   gap: 8px;
   border-bottom: 1px solid var(--outline-variant);
   padding-bottom: 12px;
@@ -27,6 +30,7 @@
 
 .settings-tab-nav button {
   display: flex;
+  white-space: nowrap;
   align-items: center;
   gap: 8px;
   border: 0;
@@ -63,6 +67,8 @@
 }
 
 .settings-panel {
+  min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -83,6 +89,23 @@
   align-items: start;
 }
 
+/* Synapse: presencia LAN, carpeta de recibidos y barra superior en tres columnas. */
+.settings-cards-grid.is-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 1400px) {
+  .settings-cards-grid.is-three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .settings-cards-grid.is-three {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 1200px) {
   .settings-columns {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -90,7 +113,7 @@
   .settings-columns > .settings-column:nth-child(3) {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 16px;
   }
 }
@@ -141,7 +164,7 @@
 
 .progress-style-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(220px, calc((100% - 56px) / 5))), 1fr));
   gap: 14px;
 }
 
@@ -703,7 +726,7 @@
 
 .preview-wave-svg {
   width: 100%;
-  height: 24px;
+  height: auto;
   display: block;
 }
 
@@ -1657,16 +1680,19 @@
   letter-spacing: 0.02em;
 }
 
+/* Las píldoras se colorean con tokens del tema: un color fijo se
+   ilegibiliza en modo claro. La tonalidad distingue la opción activa
+   (la oficial, por defecto) de la alternativa. */
 .aurora-status-pill.is-prod {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
 .aurora-status-pill.is-dev {
-  background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: var(--surface-container-highest);
+  color: var(--on-surface-variant);
+  border: 1px solid var(--outline-variant);
 }
 
 .aurora-env-url {
@@ -1822,35 +1848,25 @@
 }
 
 .aurora-test-feedback.is-success {
-  background: rgba(34, 197, 94, 0.12);
-  color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.28);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface-container));
+  color: var(--on-surface);
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
 }
 
 .aurora-test-feedback.is-error {
-  background: rgba(239, 68, 68, 0.12);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.28);
+  background: color-mix(in srgb, var(--error) 12%, var(--surface-container));
+  color: var(--on-surface);
+  border: 1px solid color-mix(in srgb, var(--error) 45%, transparent);
 }
 
 .aurora-upcoming-badge {
-  background: rgba(99, 102, 241, 0.18);
-  color: #a5b4fc;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
   padding: 4px 10px;
   border-radius: 12px;
   font-size: 0.72rem;
   font-weight: 800;
-  border: 1px solid rgba(99, 102, 241, 0.3);
-}
-
-.aurora-active-badge {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  border: 1px solid var(--outline-variant);
 }
 
 /* ── Suite Musical de Aurora Cloud (Música, Instrumentales, Karaokes) ── */
@@ -1907,19 +1923,22 @@
   flex-shrink: 0;
 }
 
+/* Los iconos de categoría conservan su tono, pero el color del glifo se
+   mezcla con el del texto del tema: un tono claro fijo se perdía en modo
+   claro. */
 .aurora-music-service-icon.is-music {
-  background: rgba(99, 102, 241, 0.16);
-  color: #818cf8;
+  background: color-mix(in srgb, #6366f1 16%, var(--surface-container));
+  color: color-mix(in srgb, #6366f1 72%, var(--on-surface));
 }
 
 .aurora-music-service-icon.is-instrumental {
-  background: rgba(234, 179, 8, 0.16);
-  color: #facc15;
+  background: color-mix(in srgb, #eab308 16%, var(--surface-container));
+  color: color-mix(in srgb, #eab308 72%, var(--on-surface));
 }
 
 .aurora-music-service-icon.is-karaoke {
-  background: rgba(236, 72, 153, 0.16);
-  color: #f472b6;
+  background: color-mix(in srgb, #ec4899 16%, var(--surface-container));
+  color: color-mix(in srgb, #ec4899 72%, var(--on-surface));
 }
 
 .aurora-music-service-icon svg {
@@ -1981,6 +2000,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .snapshot-folder-label {
@@ -2006,9 +2027,9 @@
 }
 
 .snapshot-folder-badge.is-custom {
-  background: rgba(34, 197, 94, 0.14);
-  color: #22c55e;
-  border: 1px solid rgba(34, 197, 94, 0.28);
+  background: color-mix(in srgb, #22c55e 14%, var(--surface-container));
+  color: color-mix(in srgb, #22c55e 72%, var(--on-surface));
+  border: 1px solid color-mix(in srgb, #22c55e 28%, transparent);
 }
 
 .snapshot-folder-path-text {
@@ -2033,6 +2054,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* Los botones de la carpeta de destino no van pegados a la caja de la ruta. */
+.synapse-folder-actions {
+  margin-top: 14px;
 }
 
 .snapshot-action-btn {

@@ -84,9 +84,10 @@
   gap: 16px;
 }
 
+/* Las herramientas se reparten en cuatro columnas en pantallas anchas. */
 @media (min-width: 1200px) {
   .tools-cards-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

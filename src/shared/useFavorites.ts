@@ -4,7 +4,7 @@ import { favoritesGetAll, favoritesToggle } from "../features/collections/tauri/
 
 const FAVORITES_STORAGE_KEY = "prisma_favorites_v2";
 
-const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"]);
+const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg", "heic", "heif"]);
 const VIDEO_EXTENSIONS = new Set(["mp4", "mkv", "avi", "mov", "webm", "flv", "wmv", "m4v"]);
 
 export function detectMediaType(path: string): FavoriteMediaType {

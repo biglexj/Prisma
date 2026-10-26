@@ -84,11 +84,13 @@ export function RenamerToolbar({
 
           <div
             className={`renamer-folder-display ${currentFolder ? "has-folder" : "is-empty"}`}
-            title={currentFolder || "Ninguna carpeta seleccionada"}
+            title={currentFolder || "Ninguna carpeta o selección cargada"}
           >
             <Icon name="folder" />
             <span className="renamer-folder-path">
-              {currentFolder ? currentFolder : "Arrastra una carpeta o haz clic en Examinar"}
+              {currentFolder
+                ? currentFolder
+                : "Arrastra archivos o una carpeta, o haz clic en Examinar"}
             </span>
           </div>
 

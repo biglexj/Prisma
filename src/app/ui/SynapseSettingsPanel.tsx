@@ -1,8 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../shared/ui/Icon";
+import { EcosystemAppCard } from "../../shared/ui/EcosystemAppCard";
+import {
+  ECOSYSTEM_APPS,
+  ECOSYSTEM_KIND_FILTERS,
+  resolveEcosystemStatus,
+  type EcosystemApp,
+  type EcosystemAppState,
+  type EcosystemKind,
+} from "../../shared/ecosystemApps";
 import "./synapse-settings.css";
+
+interface SynapseSettingsPanelProps {
+  /** Controles de la barra superior Synapse: van en la tercera columna. */
+  topbarColumn?: ReactNode;
+}
 
 interface SynapseStatus {
   beaconActive: boolean;
@@ -13,103 +27,13 @@ interface SynapseStatus {
   downloadsDir: string;
 }
 
-interface EcosystemApp {
-  id: string;
-  name: string;
-  category: string;
-  statusBadge: "active" | "coming_soon";
-  statusText: string;
-  iconPath: string;
-  description: string;
-  repoUrl: string;
-  downloadLabel: string;
-  canLaunch: boolean;
-  launchCommand?: string;
-}
-
-const ECOSYSTEM_APPS: EcosystemApp[] = [
-  {
-    id: "luna-fetch",
-    name: "Luna Fetch",
-    category: "Descargas · Audio & Vídeo",
-    statusBadge: "active",
-    statusText: "Sinergia Activa",
-    iconPath: "/icons/luna-fetch/icon.webp",
-    description: "Gestor y analizador de descargas multimedia de alta fidelidad conectado directamente con Prisma.",
-    repoUrl: "https://github.com/biglexj/Luna---Fetch/releases",
-    downloadLabel: "Releases",
-    canLaunch: true,
-    launchCommand: "launch_luna_fetch",
-  },
-  {
-    id: "gallery-dl",
-    name: "Gallery-DL GUI",
-    category: "Descargas · Galerías",
-    statusBadge: "active",
-    statusText: "Sinergia Activa",
-    iconPath: "/icons/gallery-dl-gui/icon.webp",
-    description: "Descargador masivo de álbumes, perfiles de artistas y colecciones (+100 sitios de arte).",
-    repoUrl: "https://github.com/biglexj/Gallery-DL-GUI/releases",
-    downloadLabel: "Releases",
-    canLaunch: true,
-    launchCommand: "launch_gallery_dl",
-  },
-  {
-    id: "prisma-upscaler",
-    name: "Prisma Upscaler",
-    category: "IA Neuronal · Super-Resolución",
-    statusBadge: "active",
-    statusText: "Sinergia Activa",
-    iconPath: "/icons/prisma-upscaler/icon.webp",
-    description: "Suite de super-resolución e inferencia neuronal de imágenes (2x, 4x) con aceleración GPU NVIDIA Vulkan.",
-    repoUrl: "https://github.com/biglexj/prisma-upscaler/releases",
-    downloadLabel: "Releases",
-    canLaunch: true,
-    launchCommand: "launch_prisma_upscaler",
-  },
-  {
-    id: "super-gallery",
-    name: "Super Gallery",
-    category: "Móvil · Android LAN",
-    statusBadge: "active",
-    statusText: "Sinergia Activa",
-    iconPath: "/icons/lienzo-gallery/icon.webp",
-    description: "Galería móvil inteligente con visor fluido y recepción directa LAN sin cables en Prisma.",
-    repoUrl: "https://www.biglexj.com/desarrollo/lienzo-gallery",
-    downloadLabel: "Descargar APK",
-    canLaunch: false,
-  },
-  {
-    id: "lyraflow",
-    name: "LyraFlow",
-    category: "IA Local · Transcripción",
-    statusBadge: "coming_soon",
-    statusText: "Próximamente",
-    iconPath: "/icons/lyraflow/icon.webp",
-    description: "Asistente inteligente de transcripción, subtítulos y análisis de voz con modelos locales.",
-    repoUrl: "https://github.com/biglexj/LyraFlow/releases",
-    downloadLabel: "Descargar",
-    canLaunch: false,
-  },
-  {
-    id: "ely-tesia",
-    name: "Ely-Tesia",
-    category: "Música · Reproductor MIDI",
-    statusBadge: "coming_soon",
-    statusText: "Próximamente",
-    iconPath: "/icons/ely-tesia/icon.webp",
-    description: "Lector y sintetizador MIDI multi-instancia de alta precisión para compositores y creadores.",
-    repoUrl: "https://github.com/biglexj/Ely-Tesia/releases",
-    downloadLabel: "Descargar",
-    canLaunch: false,
-  },
-];
-
-export function SynapseSettingsPanel() {
+export function SynapseSettingsPanel({ topbarColumn }: SynapseSettingsPanelProps) {
   const [status, setStatus] = useState<SynapseStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingDir, setSavingDir] = useState(false);
   const [launchingAppId, setLaunchingAppId] = useState<string | null>(null);
+  const [appStates, setAppStates] = useState<Record<string, EcosystemAppState>>({});
+  const [kindFilter, setKindFilter] = useState<EcosystemKind | "all">("all");
 
   const fetchStatus = async () => {
     try {
@@ -124,7 +48,17 @@ export function SynapseSettingsPanel() {
 
   useEffect(() => {
     void fetchStatus();
+    void invoke<EcosystemAppState[]>("ecosystem_apps_state")
+      .then((list) => {
+        setAppStates(Object.fromEntries(list.map((item) => [item.id, item])));
+      })
+      .catch((err) => console.error("Error al detectar apps del ecosistema:", err));
   }, []);
+
+  const visibleApps = useMemo(
+    () => ECOSYSTEM_APPS.filter((app) => kindFilter === "all" || app.kind === kindFilter),
+    [kindFilter],
+  );
 
   const handleChangeFolder = async () => {
     try {
@@ -157,20 +91,22 @@ export function SynapseSettingsPanel() {
   };
 
   const handleLaunchApp = async (app: EcosystemApp) => {
-    if (app.canLaunch && app.launchCommand) {
-      setLaunchingAppId(app.id);
-      try {
-        const launched = await invoke<boolean>(app.launchCommand, { url: null });
-        if (!launched) {
-          void invoke("open_external_url", { url: app.repoUrl });
-        }
-      } catch {
-        void invoke("open_external_url", { url: app.repoUrl });
-      } finally {
-        setLaunchingAppId(null);
+    const appState = appStates[app.id];
+    if (!appState?.installed) {
+      void invoke("open_external_url", { url: app.linkUrl });
+      return;
+    }
+
+    setLaunchingAppId(app.id);
+    try {
+      const launched = await invoke<boolean>("ecosystem_app_launch", { id: app.id });
+      if (!launched) {
+        void invoke("open_external_url", { url: app.linkUrl });
       }
-    } else {
-      void invoke("open_external_url", { url: app.repoUrl });
+    } catch {
+      void invoke("open_external_url", { url: app.linkUrl });
+    } finally {
+      setLaunchingAppId(null);
     }
   };
 
@@ -186,15 +122,15 @@ export function SynapseSettingsPanel() {
 
   return (
     <div className="synapse-settings-panel">
-      {/* ── Cuadrícula de 2 columnas al estilo M3 de Prisma ── */}
-      <div className="settings-cards-grid">
+      {/* ── Cuadrícula de 3 columnas al estilo M3 de Prisma ── */}
+      <div className="settings-cards-grid is-three">
         {/* ── Tarjeta 1: Estado del Nodo LAN ── */}
         <div className="settings-card">
           <div className="settings-card-header-row">
             <div>
               <h3>Presencia y Conectividad LAN</h3>
               <p>
-                Emisión de presencia Zero-Config y microservidor de continuidad multimedia para la red local.
+                Tu ecosistema, siempre presente en la red local.
               </p>
             </div>
             <div className="synapse-status-pill">
@@ -229,7 +165,7 @@ export function SynapseSettingsPanel() {
             <div>
               <h3>Carpeta de Archivos Recibidos</h3>
               <p>
-                Destino en tu equipo para fotos, vídeos y audios transferidos desde la app móvil u otras aplicaciones del ecosistema.
+                Donde llegan tus fotos, vídeos y audios desde el móvil o el ecosistema.
               </p>
             </div>
           </div>
@@ -262,63 +198,51 @@ export function SynapseSettingsPanel() {
             </div>
           </div>
         </div>
+
+        {/* ── Columna 3: Barra superior Synapse (bóveda flotante) ── */}
+        {topbarColumn ? <div className="synapse-column-stack">{topbarColumn}</div> : null}
       </div>
 
-      {/* ── Tarjeta 3: Sinergia del Ecosistema Aurora ── */}
+      {/* ── Tarjeta 4: Ecosistema de Aplicaciones Vinculadas ── */}
       <div className="settings-card">
         <div className="settings-card-header-row">
           <div>
             <h3>Ecosistema de Aplicaciones Vinculadas</h3>
             <p>
-              Aurora Synapse conecta instantáneamente las aplicaciones del ecosistema biglexj. Si una app no está instalada, puedes abrir directamente su repositorio o enlace de descarga.
+              Todo el ecosistema biglexj, con lo que tienes instalado a la vista.
             </p>
+          </div>
+          <div className="eco-filter-row">
+            {ECOSYSTEM_KIND_FILTERS.map((filter) => (
+              <button
+                key={filter.id}
+                type="button"
+                className={`eco-filter-chip ${kindFilter === filter.id ? "is-active" : ""}`}
+                onClick={() => setKindFilter(filter.id)}
+              >
+                {filter.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="synapse-ecosystem-grid">
-          {ECOSYSTEM_APPS.map((app) => (
-            <div key={app.id} className="synapse-eco-card">
-              <div className="eco-card-header">
-                <div className="eco-app-icon-wrap">
-                  <img src={app.iconPath} alt={app.name} />
-                </div>
-                <div className="eco-app-titles">
-                  <strong>{app.name}</strong>
-                  <div className="eco-badges-row">
-                    <span className="eco-badge">{app.category}</span>
-                    <span className={`eco-status-pill is-${app.statusBadge}`}>
-                      {app.statusText}
-                    </span>
-                  </div>
-                </div>
-              </div>
+        <div className="eco-grid">
+          {visibleApps.map((app) => {
+            const appState = appStates[app.id];
+            const appStatus = resolveEcosystemStatus(app, appState);
 
-              <p>{app.description}</p>
-
-              <div className="eco-card-actions">
-                {app.canLaunch && (
-                  <button
-                    type="button"
-                    className="eco-btn filled"
-                    onClick={() => void handleLaunchApp(app)}
-                    disabled={launchingAppId === app.id}
-                  >
-                    <Icon name="external-link" />
-                    <span>Abrir App</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="eco-btn outline"
-                  onClick={() => void invoke("open_external_url", { url: app.repoUrl })}
-                  title="Abrir enlace oficial de descarga o ficha de desarrollo"
-                >
-                  <Icon name="download" />
-                  <span>{app.downloadLabel}</span>
-                </button>
-              </div>
-            </div>
-          ))}
+            return (
+              <EcosystemAppCard
+                key={app.id}
+                app={app}
+                state={appState}
+                status={appStatus}
+                busy={launchingAppId === app.id}
+                onPrimary={(target) => void handleLaunchApp(target)}
+                onSecondary={(target) => void invoke("open_external_url", { url: target.linkUrl })}
+              />
+            );
+          })}
         </div>
       </div>
     </div>

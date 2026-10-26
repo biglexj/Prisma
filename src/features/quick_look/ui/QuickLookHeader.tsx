@@ -51,35 +51,6 @@ export function QuickLookHeader({
     });
   };
 
-  const getMediaIcon = (type: string) => {
-    switch (type) {
-      case "audio":
-        return "music";
-      case "video":
-        return "video";
-      case "image":
-        return "image";
-      case "archive":
-        return "archive";
-      case "epub":
-        return "book";
-      case "folder":
-        return "folder";
-      case "project":
-        return "layers";
-      case "playlist":
-        return "list";
-      case "pdf":
-      case "text":
-      case "markdown":
-      case "html":
-      case "lyrics":
-        return "file-text";
-      default:
-        return "file";
-    }
-  };
-
   const handleCopyPath = async () => {
     try {
       await navigator.clipboard.writeText(payload.path);
@@ -108,25 +79,53 @@ export function QuickLookHeader({
         payload.exifFocalLength
     );
 
+  const format = payload.extension.replace(/^\./, "").trim().toUpperCase();
+  const title = format && payload.fileName.toLowerCase().endsWith(`.${format.toLowerCase()}`)
+    ? payload.fileName.slice(0, -(format.length + 1))
+    : payload.fileName;
+  const renderSelectionPager = () => payload.selectionTotal && payload.selectionTotal > 1 ? (
+    <div className="quicklook-selection-pager" title="Navegar lote seleccionado en Explorer">
+      <button type="button" className="quicklook-pager-btn"
+        onClick={() => onStepSelection(false)} title="Elemento anterior">
+        <Icon name="chevron-left" />
+      </button>
+      <span className="quicklook-pager-label">{payload.selectionIndex || 1} / {payload.selectionTotal}</span>
+      <button type="button" className="quicklook-pager-btn"
+        onClick={() => onStepSelection(true)} title="Elemento siguiente">
+        <Icon name="chevron-right" />
+      </button>
+    </div>
+  ) : null;
+
   return (
     <header
-      className="quicklook-header"
+      data-media-type={payload.mediaType}
+      className={`quicklook-header${showExif ? " has-open-panel" : ""}`}
+      tabIndex={0}
+      aria-label={`${payload.fileName}. Controles de vista previa`}
       data-tauri-drag-region
       onPointerDown={handlePointerDown}
       onDoubleClick={onToggleMaximize}
     >
-      <div className="quicklook-header-drag">
-        <span className="quicklook-file-icon">
-          <Icon name={getMediaIcon(payload.mediaType)} />
-        </span>
+      <div className="quicklook-header-summary">
         <div className="quicklook-file-info">
-          <span className="quicklook-file-name" title={payload.path}>
-            {payload.fileName}
-          </span>
-          <span className="quicklook-file-badge">
-            {payload.formattedSize}
-          </span>
+          <span className="quicklook-file-name" title={payload.path}>{title}</span>
+          {effectiveDims ? (
+            <span className="quicklook-file-badge quicklook-dims-badge" title="Resolución">
+              {effectiveDims.width} × {effectiveDims.height} px
+            </span>
+          ) : (
+            <>
+              {format ? <span className="quicklook-file-badge quicklook-format-badge" title="Formato del archivo">{format}</span> : null}
+              <span className="quicklook-file-badge quicklook-size-badge">{payload.formattedSize}</span>
+            </>
+          )}
         </div>
+        {renderSelectionPager()}
+      </div>
+      <div className="quicklook-header-details">
+        {format ? <span className="quicklook-file-badge quicklook-format-badge" title="Formato del archivo">{format}</span> : null}
+        <span className="quicklook-file-badge quicklook-size-badge" title="Tamaño del archivo">{payload.formattedSize}</span>
       </div>
 
       <div
@@ -134,40 +133,6 @@ export function QuickLookHeader({
         onPointerDown={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {/* Paginación de selección múltiple */}
-        {payload.selectionTotal && payload.selectionTotal > 1 && onStepSelection && (
-          <div className="quicklook-selection-pager" title="Navegar lote seleccionado en Explorer">
-            <button
-              type="button"
-              className="quicklook-pager-btn"
-              onClick={() => onStepSelection(false)}
-              title="Elemento anterior"
-            >
-              <Icon name="chevron-left" />
-            </button>
-            <span className="quicklook-pager-label">
-              {payload.selectionIndex || 1} / {payload.selectionTotal}
-            </span>
-            <button
-              type="button"
-              className="quicklook-pager-btn"
-              onClick={() => onStepSelection(true)}
-              title="Elemento siguiente"
-            >
-              <Icon name="chevron-right" />
-            </button>
-          </div>
-        )}
-
-        {effectiveDims && (
-          <span
-            className="quicklook-file-badge quicklook-dims-badge"
-            title="Resolución"
-          >
-            {effectiveDims.width} × {effectiveDims.height} px
-          </span>
-        )}
-
         {/* Inspector EXIF flotante */}
         {hasExif && (
           <div className="quicklook-exif-wrapper">
@@ -238,7 +203,7 @@ export function QuickLookHeader({
         {/* 1. Abrir en Prisma */}
         <button
           type="button"
-          className="quicklook-btn-icon-action quicklook-btn-primary-action"
+          className="quicklook-btn-icon-action quicklook-btn-primary-action ql-action-open"
           onClick={(e) => {
             e.stopPropagation();
             onOpenInMain();
@@ -252,7 +217,7 @@ export function QuickLookHeader({
         {onTogglePin && (
           <button
             type="button"
-            className={`quicklook-btn-icon-action ${isPinned ? "is-pinned is-active" : ""}`}
+            className={`quicklook-btn-icon-action ql-action-pin ${isPinned ? "is-pinned is-active" : ""}`}
             onClick={(e) => {
               e.stopPropagation();
               onTogglePin();
@@ -267,7 +232,7 @@ export function QuickLookHeader({
         {onEdit && (
           <button
             type="button"
-            className="quicklook-btn-icon-action"
+            className="quicklook-btn-icon-action ql-action-edit"
             onClick={(e) => {
               e.stopPropagation();
               onEdit();
@@ -281,7 +246,7 @@ export function QuickLookHeader({
         {/* 3. Copiar ruta */}
         <button
           type="button"
-          className="quicklook-btn-icon-action"
+          className="quicklook-btn-icon-action ql-action-copy"
           onClick={handleCopyPath}
           title={copiedPath ? "¡Ruta copiada!" : "Copiar ruta del archivo"}
         >
@@ -292,7 +257,7 @@ export function QuickLookHeader({
         {onCompare && payload.mediaType === "image" && (
           <button
             type="button"
-            className="quicklook-btn-icon-action"
+            className="quicklook-btn-icon-action ql-action-compare"
             onClick={(e) => {
               e.stopPropagation();
               onCompare();
@@ -307,7 +272,7 @@ export function QuickLookHeader({
         {onToggleMaximize && (
           <button
             type="button"
-            className="quicklook-btn-icon-action"
+            className="quicklook-btn-icon-action ql-action-maximize"
             onClick={(e) => {
               e.stopPropagation();
               onToggleMaximize();

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "synapse-notch",
+  "description": "Barra Synapse: eventos locales y arrastre de copias hacia Windows.",
+  "windows": ["system_drop_zone"],
+  "permissions": ["core:default", "drag:default"]
+}

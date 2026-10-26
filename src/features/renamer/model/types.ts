@@ -109,6 +109,8 @@ export interface RuleStep {
 export type PreviewStatus = "ready" | "unchanged" | "conflict" | "invalid" | "excluded";
 
 export interface PreviewItem {
+  /** Cantidad de valores saltados antes de asignar el contador a este archivo. */
+  skippedNumbers?: number;
   original: RenamerFileItem;
   newName: string;
   newPath: string;
@@ -132,7 +134,20 @@ export interface RenameBatchResult {
   operations: RenameOperation[];
 }
 
+export interface RenameConflict {
+  oldPath: string;
+  message: string;
+}
+
 export type FilterMode = "all" | "image" | "video" | "audio" | "document" | "custom";
+
+export interface RenamerLoadResult {
+  /** "folder" = se escaneó una carpeta, "files" = se cargó una selección explícita. */
+  kind: "folder" | "files";
+  /** Texto a mostrar en la barra de herramientas. */
+  display: string;
+  items: RenamerFileItem[];
+}
 
 export interface PresetTemplate {
   id: string;

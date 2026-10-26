@@ -62,21 +62,10 @@ export function QuickLookImage({ payload, onDimensionsLoad }: QuickLookImageProp
         const headerH = 48;
         const maxContentH = maxAvailH - headerH;
 
-        const aspect = nw / nh;
         const scale = Math.min(1, maxAvailW / nw, maxContentH / nh);
-        let fittedW = Math.round(nw * scale);
-        let fittedH = Math.round(nh * scale);
-
-        const minW = 340;
-        if (fittedW < minW) {
-          fittedW = minW;
-          fittedH = Math.round(fittedW / aspect);
-        }
-
-        if (fittedH > maxContentH) {
-          fittedH = maxContentH;
-          fittedW = Math.round(fittedH * aspect);
-        }
+        // El mínimo solo añade margen; no ampliar la imagen para llenar la ventana.
+        const fittedW = Math.max(96, Math.round(nw * scale));
+        const fittedH = Math.max(48, Math.round(nh * scale));
 
         const targetW = fittedW;
         const targetH = fittedH + headerH;

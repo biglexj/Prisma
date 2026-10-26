@@ -1,0 +1,301 @@
+/* ─────────────────────────────────────────────────────────────
+   Tarjetas del ecosistema biglexj.
+   Compartidas entre el panel de Aurora Synapse (Configuración) y
+   la vista "Acerca de". Sin dependencias: sólo variables de tema.
+   ───────────────────────────────────────────────────────────── */
+
+.eco-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* Tarjeta base: descripción y dos acciones. */
+.eco-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 16px;
+  padding: 12px;
+  color: var(--on-surface);
+  background: var(--surface-container-low, #fdf2f2);
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.eco-card:hover {
+  background: var(--surface-container, #f7eeee);
+  border-color: var(--outline, #9e898d);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.eco-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.eco-app-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--surface-container-high, #f1e8e8);
+  border: 1px solid var(--outline-variant);
+  padding: 4px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eco-app-icon-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.eco-app-icon-wrap svg {
+  width: 20px;
+  height: 20px;
+  color: var(--on-surface-variant);
+}
+
+.eco-app-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.eco-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.eco-card .eco-badge {
+  display: inline-block;
+  width: fit-content;
+  padding: 1.5px 6px;
+  border-radius: 6px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-highest, #ebe1e2);
+  border: 1px solid var(--outline-variant);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.eco-card .eco-status-pill {
+  display: inline-block;
+  width: fit-content;
+  padding: 1.5px 5px;
+  border-radius: 5px;
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.eco-card .eco-status-pill.is-active {
+  background: var(--primary-container, #ffd9df);
+  color: var(--on-primary-container, #3f0012);
+  border: 1px solid var(--outline-variant);
+}
+
+.eco-card .eco-status-pill.is-installed {
+  background: color-mix(in srgb, var(--primary) 18%, var(--surface-container-highest, #ebe1e2));
+  color: var(--primary, #c90045);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.eco-card .eco-status-pill.is-source {
+  background: var(--surface-container-high, #f1e8e8);
+  color: var(--on-surface-variant);
+  border: 1px solid var(--outline-variant);
+}
+
+.eco-card .eco-status-pill.is-online {
+  background: var(--surface-container-highest, #ebe1e2);
+  color: var(--on-surface-variant);
+  border: 1px solid var(--outline-variant);
+}
+
+.eco-card .eco-status-pill.is-missing {
+  background: transparent;
+  color: var(--on-surface-variant);
+  border: 1px dashed var(--outline-variant);
+}
+
+.eco-card .eco-status-pill.is-soon {
+  background: var(--surface-container-high, #f1e8e8);
+  color: var(--primary, #c90045);
+  border: 1px solid var(--outline-variant);
+}
+
+.eco-card strong {
+  font-size: 0.86rem;
+  font-weight: 750;
+  color: var(--on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eco-card p {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  /* Subtítulos compactos: máximo 2 líneas (texto completo en el title). */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.8em;
+}
+
+.eco-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.eco-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.eco-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.eco-btn.filled {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.eco-btn.filled:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.eco-btn.outline {
+  background: transparent;
+  color: var(--on-surface);
+  border: 1px solid var(--outline-variant);
+}
+
+.eco-btn.outline:hover {
+  background: var(--surface-container-high);
+  border-color: var(--outline);
+}
+
+.eco-btn.icon-only {
+  padding: 5px;
+  min-width: 26px;
+  justify-content: center;
+  background: transparent;
+  color: var(--on-surface-variant);
+  border: 1px solid var(--outline-variant);
+}
+
+.eco-btn.icon-only:hover {
+  background: var(--surface-container-high);
+  color: var(--on-surface);
+}
+
+/* Variante compacta: sin descripción y con un solo botón.
+   Es la que permite mostrar las trece aplicaciones sin alargar la página. */
+.eco-card.is-compact {
+  padding: 8px 10px;
+  gap: 8px;
+}
+
+.eco-card.is-compact .eco-app-icon-wrap {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+
+.eco-card.is-compact .eco-app-icon-wrap svg {
+  width: 16px;
+  height: 16px;
+}
+
+.eco-card.is-compact .eco-app-titles {
+  gap: 2px;
+}
+
+.eco-card.is-compact strong {
+  font-size: 0.8rem;
+}
+
+.eco-card.is-compact .eco-card-actions {
+  margin-top: 0;
+}
+
+.eco-card.is-compact .eco-btn {
+  padding: 4px 9px;
+}
+
+/* ── Filtros por tipo de aplicación ── */
+.eco-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.eco-filter-chip {
+  background: var(--surface-container, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.1));
+  color: var(--on-surface-variant, #cfb9bc);
+  padding: 4px 12px;
+  min-height: 32px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.eco-filter-chip:hover {
+  background: var(--state-hover-surface);
+  color: var(--on-surface);
+}
+
+.eco-filter-chip.is-active {
+  background: var(--primary-container, #8f003a);
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  color: var(--primary, #ffb1c0);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 24%, transparent);
+}

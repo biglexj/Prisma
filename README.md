@@ -1,4 +1,4 @@
-# 🌌 Prisma — v1.0.0
+# 🌌 Prisma — v2.0.0
 
 <div align="center">
 
@@ -6,7 +6,7 @@
 
 **Estación y reproductor multimedia local-first diseñada bajo Material 3 Expressive para Windows.**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-6366f1.svg?style=flat-square)](https://github.com/biglexj/Prisma/releases)
+[![Version](https://img.shields.io/badge/version-2.0.0-6366f1.svg?style=flat-square)](https://github.com/biglexj/Prisma/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2011%20%7C%2010-0078d4.svg?style=flat-square)](https://github.com/biglexj/Prisma)
 [![Tech Stack](https://img.shields.io/badge/Stack-Tauri%20v2%20%7C%20React%2019%20%7C%20Rust%20%7C%20libmpv-orange.svg?style=flat-square)](https://github.com/biglexj/Prisma)
@@ -71,11 +71,15 @@ El icono canónico de identidad se conserva en [`assets/branding/icons/icon-tran
 ### 👁️ 5. Prisma Quick Look Universal
 - **Previsualización Rápida Global**: Pulsa la barra espaciadora en el Explorador de Windows o el Escritorio para abrir al instante cualquier archivo de audio, vídeo, imagen, PDF, Markdown, código o proyecto creativo sin abrir ventanas pesadas.
 
-### 📡 6. Aurora Synapse LAN Remote Control
+### 📸 6. Capturas de Pantalla y Fotogramas
+- **Capturador de Pantalla**: Selecciona ventanas, regiones rectangulares o la pantalla completa; añade anotaciones y copia o guarda el resultado.
+- **Formato Global de Captura**: Elige PNG (predeterminado), WebP, JPG o ElyX (`.elx`) experimental. La preferencia se comparte entre capturas de pantalla y fotogramas de vídeo.
+
+### 📡 7. Aurora Synapse LAN Remote Control
 - **Mando a Distancia Wi-Fi/LAN**: Protocolo de comunicación local de baja latencia para controlar reproducción, volumen, subtítulos y navegación entre fotos y documentos desde cualquier dispositivo móvil o cliente conectado a tu red.
 - **Resolución Inteligente de Archivos**: Sincronización transparente de comandos y recepción fluida de medios.
 
-### 🛡️ 7. Aislamiento Estricto de Carpetas Excluidas
+### 🛡️ 8. Aislamiento Estricto de Carpetas Excluidas
 - **Privacidad y Limpieza Total**: Las carpetas ignoradas por el usuario y los directorios ocultos del sistema (`.git`, `.gemini`, `.vscode`, `node_modules`, `build`, etc.) quedan automáticamente excluidos de la línea de tiempo, álbumes, árbol y colas de reproducción.
 
 ---
@@ -95,7 +99,7 @@ El icono canónico de identidad se conserva en [`assets/branding/icons/icon-tran
 
 ### Descarga del Instalador Oficial (Windows)
 Descarga la última versión de **Prisma** desde la sección oficial de [Releases](https://github.com/biglexj/Prisma/releases):
-- `Prisma_1.0.0_x64-setup.exe` (Instalador NSIS con inicio automático opcional y bandeja del sistema).
+- `Prisma_2.0.0-setup.exe` (Instalador Inno Setup con inicio automático opcional y bandeja del sistema).
 
 ---
 

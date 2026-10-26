@@ -1,7 +1,7 @@
 {
   "name": "prisma",
   "private": true,
-  "version": "1.1.8",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "predev": "bun run scripts/free-port.ts 1421",
@@ -26,9 +26,10 @@
     "tauri:dev": "bun run icons:generate && tauri dev --config src-tauri/tauri.dev.conf.json",
     "pretauri:dev:isolated": "bun run scripts/free-port.ts 1421",
     "tauri:dev:isolated": "bun run icons:generate && tauri dev --config src-tauri/tauri.dev.conf.json -- -- --dev --multi-instance",
-    "tauri:build": "bun run icons:generate && tauri build",
-    "tauri:build:debug": "bun run icons:generate && tauri build --debug",
-    "posttauri:build": "bun scripts/copy-build-releases.ts",
+    "tauri:build": "bun run icons:generate && tauri build --no-bundle",
+    "tauri:build:debug": "bun run icons:generate && tauri build --debug --no-bundle",
+    "posttauri:build": "powershell -ExecutionPolicy Bypass -File ./scripts/packaging/Build-Installer.ps1 -SkipAppBuild",
+    "build:installer": "powershell -ExecutionPolicy Bypass -File ./scripts/packaging/Build-Installer.ps1",
     "release": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -LocalOnly",
     "release:local": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -LocalOnly",
     "release:publish": "powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1",
@@ -53,10 +54,10 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "0.185.0",
     "@vitejs/plugin-react": "^5",
     "bun-types": "^1.4.2",
     "typescript": "^5.9",
-    "vite": "^7",
-    "@types/three": "0.185.0"
+    "vite": "^7"
   }
 }

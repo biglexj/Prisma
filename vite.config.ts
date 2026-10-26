@@ -9,10 +9,13 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL("./index.html", import.meta.url)),
-        compositor: fileURLToPath(new URL("./compositor.html", import.meta.url)),
+        audioToast: fileURLToPath(new URL("./audio-toast.html", import.meta.url)),
         // Entrada propia de la barra superior Synapse: así esa ventana no
         // comparte caché con el resto de ventanas de la aplicación.
         zone: fileURLToPath(new URL("./zone.html", import.meta.url)),
+        // Superficie web de la composición del escritorio (capas 2 a 6). Viaja
+        // en su propia ventana, colgada de la capa de fondo de Windows.
+        compositor: fileURLToPath(new URL("./compositor.html", import.meta.url)),
       },
     },
   },

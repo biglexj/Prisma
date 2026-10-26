@@ -1,4 +1,5 @@
 import { resolveCaptureFormat, type CaptureFormat } from "../shared/captureFormat";
+import { OFFICIAL_AURORA_ORIGIN, normalizeAuroraServerUrl } from "../shared/auroraServer";
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
@@ -15,15 +16,23 @@ export type ProgressBarStyle =
   | "neon_pulse"
   | "particles"
   | "vinyl_tape"
-  | "elastic_string";
+  | "elastic_string"
+  | "binary"
+  | "pacman"
+  | "glitch"
+  | "fire"
+  | "tesla"
+  | "laser";
 
-export type ToolKey = "converter" | "renamer" | "comparator" | "duplicates" | "luna_fetch" | "gallery_dl" | "prisma_upscaler" | "wallpapers";
+export type ToolKey = "screen_capture" | "converter" | "renamer" | "comparator" | "duplicates" | "live_wallpapers" | "luna_fetch" | "gallery_dl" | "prisma_upscaler" | "wallpapers";
 
 export interface EnabledToolsConfig {
+  screen_capture: boolean;
   converter: boolean;
   renamer: boolean;
   comparator: boolean;
   duplicates: boolean;
+  live_wallpapers: boolean;
   luna_fetch: boolean;
   gallery_dl: boolean;
   prisma_upscaler: boolean;
@@ -31,10 +40,12 @@ export interface EnabledToolsConfig {
 }
 
 export const DEFAULT_ENABLED_TOOLS: EnabledToolsConfig = {
+  screen_capture: true,
   converter: true,
   renamer: true,
   comparator: true,
   duplicates: true,
+  live_wallpapers: true,
   luna_fetch: true,
   gallery_dl: true,
   prisma_upscaler: true,
@@ -58,6 +69,7 @@ interface SystemSettings {
   /** @deprecated El atajo global del capturador vive ahora en el backend. */
   screenCaptureShortcut: string;
   screenCaptureFolder?: string;
+  screenRecordingFolder?: string;
   /** Zona de recepción del sistema (muesca flotante en la pantalla). */
   systemDropZoneEnabled: boolean;
   /** Carpeta donde se copian los archivos soltados en la zona del sistema. */
@@ -78,12 +90,13 @@ const DEFAULT_SETTINGS: SystemSettings = {
   sidebarDensity: "standard",
   auroraOnlineServicesEnabled: false,
   auroraWallpapersEnabled: true,
-  auroraServerUrl: "https://www.biglexj.com",
+  auroraServerUrl: OFFICIAL_AURORA_ORIGIN,
   videoSnapshotFolder: "",
   videoSnapshotFormat: "png",
   screenCaptureEnabled: false,
   screenCaptureShortcut: "Shift+PrintScreen",
   screenCaptureFolder: "",
+  screenRecordingFolder: "",
   systemDropZoneEnabled: true,
   systemDropZoneFolder: "",
   enabledTools: DEFAULT_ENABLED_TOOLS,
@@ -97,6 +110,7 @@ function loadStoredSettings(): SystemSettings {
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
+      auroraServerUrl: normalizeAuroraServerUrl(parsed.auroraServerUrl),
       videoSnapshotFormat: resolveCaptureFormat(parsed.videoSnapshotFormat).id,
       enabledTools: {
         ...DEFAULT_SETTINGS.enabledTools,
@@ -189,6 +203,7 @@ export function useSystemSettings() {
               screenCaptureEnabled: stored.screenCaptureEnabled ?? prev.screenCaptureEnabled,
               screenCaptureShortcut: stored.screenCaptureShortcut ?? prev.screenCaptureShortcut,
               screenCaptureFolder: stored.screenCaptureFolder ?? prev.screenCaptureFolder,
+              screenRecordingFolder: stored.screenRecordingFolder ?? prev.screenRecordingFolder,
               systemDropZoneEnabled: stored.systemDropZoneEnabled ?? prev.systemDropZoneEnabled,
               systemDropZoneFolder: stored.systemDropZoneFolder ?? prev.systemDropZoneFolder,
               enabledTools: stored.enabledTools ?? prev.enabledTools,
@@ -321,7 +336,7 @@ export function useSystemSettings() {
 
   const setAuroraServerUrl = useCallback((url: string) => {
     setSettings((prev) => {
-      const next = { ...prev, auroraServerUrl: url };
+      const next = { ...prev, auroraServerUrl: normalizeAuroraServerUrl(url) };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       notifySettingsChanged(next);
       return next;
@@ -370,6 +385,15 @@ export function useSystemSettings() {
     });
   }, []);
 
+  const setScreenRecordingFolder = useCallback((folder: string) => {
+    setSettings((prev) => {
+      const next = { ...prev, screenRecordingFolder: folder };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, []);
+
   const setSystemDropZoneEnabled = useCallback((enabled: boolean) => {
     setSettings((prev) => {
       const next = { ...prev, systemDropZoneEnabled: enabled };
@@ -406,6 +430,7 @@ export function useSystemSettings() {
     captureFormat: settings.videoSnapshotFormat || "png",
     setCaptureFormat: setVideoSnapshotFormat,
     screenCaptureFolder: settings.screenCaptureFolder || "",
+    screenRecordingFolder: settings.screenRecordingFolder || "",
     systemDropZoneEnabled: settings.systemDropZoneEnabled !== false,
     systemDropZoneFolder: settings.systemDropZoneFolder || "",
     enabledTools: settings.enabledTools,
@@ -421,6 +446,7 @@ export function useSystemSettings() {
     setVideoSnapshotFolder,
     setVideoSnapshotFormat,
     setScreenCaptureFolder,
+    setScreenRecordingFolder,
     setSystemDropZoneEnabled,
     setSystemDropZoneFolder,
     setToolEnabled,
