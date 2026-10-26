@@ -2,6 +2,8 @@
 { Ajustes propios de Prisma; la plantilla compartida permanece intacta. }
 var
   PrismaOriginalClose: TCloseEvent;
+  PrismaFooterRight, PrismaFooterTop, PrismaFooterWidth, PrismaFooterHeight,
+    PrismaFooterGap: Integer;
 
 function PrismaGetSystemMenu(Window: HWND; Revert: Boolean): THandle;
   external 'GetSystemMenu@user32.dll stdcall';
@@ -30,7 +32,7 @@ begin
   C.Pen.Color := ModernLine;
   if Emphasized then C.Pen.Color := ModernAccent;
   C.Brush.Color := Background;
-  Radius := ScaleX(12);
+  Radius := ScaleX(8);
   if Button = ModernInstall then
   begin
     C.Brush.Color := ModernAccent;
@@ -40,7 +42,7 @@ begin
   C.RoundRect(1, 1, W - 1, H - 1, Radius, Radius);
   C.Brush.Style := bsClear;
   C.Font.Name := 'Segoe UI';
-  C.Font.Height := -ScaleY(13);
+  C.Font.Height := -ScaleY(12);
   C.Font.Color := ModernText;
   if Emphasized then C.Font.Style := [fsBold] else C.Font.Style := [];
   if Button = ModernInstall then
@@ -90,6 +92,13 @@ end;
 
 procedure PrismaInitialize;
 begin
+  { Conservar las medidas y separacion originales de los botones de Inno. }
+  PrismaFooterRight := WizardForm.CancelButton.Left + WizardForm.CancelButton.Width;
+  PrismaFooterTop := WizardForm.NextButton.Top;
+  PrismaFooterWidth := WizardForm.NextButton.Width;
+  PrismaFooterHeight := WizardForm.NextButton.Height;
+  PrismaFooterGap := WizardForm.CancelButton.Left -
+    (WizardForm.NextButton.Left + WizardForm.NextButton.Width);
   PrismaOriginalClose := WizardForm.OnClose;
   WizardForm.OnClose := @PrismaClose;
   ModernNextBtn.OnClick := @PrismaNextClick;
@@ -118,15 +127,15 @@ begin
   end
   else
   begin
-    ButtonWidth := ScaleX(108);
-    ButtonHeight := ScaleY(34);
-    RightEdge := WizardForm.ClientWidth - ScaleX(16);
-    FooterTop := WizardForm.ClientHeight - ScaleY(42);
+    ButtonWidth := PrismaFooterWidth;
+    ButtonHeight := PrismaFooterHeight;
+    RightEdge := PrismaFooterRight;
+    FooterTop := PrismaFooterTop;
     ModernNextBtn.SetBounds(RightEdge - ButtonWidth, FooterTop, ButtonWidth, ButtonHeight);
     if ModernCancelBtn.Visible then
     begin
       ModernCancelBtn.SetBounds(RightEdge - ButtonWidth, FooterTop, ButtonWidth, ButtonHeight);
-      ModernNextBtn.Left := ModernCancelBtn.Left - ButtonWidth - ScaleX(8);
+      ModernNextBtn.Left := ModernCancelBtn.Left - ButtonWidth - PrismaFooterGap;
     end;
     Caption := WizardForm.NextButton.Caption;
     StringChangeEx(Caption, '&', '', True);
@@ -142,6 +151,10 @@ begin
     if ModernCancelBtn.Visible then ModernCancelBtn.BringToFront;
     if CurPageID = wpFinished then WinSetFocus(ModernNextBtn.Handle);
   end;
+  { Las posiciones de los radios cambian cuando Inno compone el mensaje.
+    Conservar los radios nativos evita indicadores duplicados sobre el texto. }
+  ModernYesRadioImg.Visible := False;
+  ModernNoRadioImg.Visible := False;
   { Siguen disponibles para el motor y los atajos; no quedan rectangulos
     nativos asomando por debajo de los controles mas amplios. }
   WizardForm.NextButton.Left := -ScaleX(1000);
