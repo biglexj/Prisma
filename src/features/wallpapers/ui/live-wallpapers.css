@@ -304,7 +304,7 @@
   display: flex;
   background: var(--surface-container-high, #e9e2e9);
   padding: 3px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid var(--outline-variant, #ded5df);
   gap: 2px;
 }
@@ -314,7 +314,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.38rem 0.75rem;
-  border-radius: 7px;
+  border-radius: 9px;
   font-size: 0.8rem;
   font-weight: 600;
   border: 1px solid transparent;
