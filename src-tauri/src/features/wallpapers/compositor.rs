@@ -44,7 +44,7 @@ pub struct CompositorConfig {
 }
 
 fn no_particles() -> String { "none".into() }
-fn default_color() -> String { "#263b62".into() }
+fn default_color() -> String { "#00C9B9".into() }
 fn default_color2() -> String { "#703ca5".into() }
 fn full_opacity() -> f32 { 1.0 }
 
@@ -217,7 +217,7 @@ mod tests {
         let host=super::super::window::DesktopWallpaperWindow::create().unwrap();
         let child=unsafe{CreateWindowExW(WS_EX_LAYERED|WS_EX_TRANSPARENT|WS_EX_NOACTIVATE,w!("STATIC"),w!("Prisma overlay test"),
             WS_POPUP|WS_VISIBLE,0,0,4,4,None,None,None,None)}.unwrap();
-        let result=(||{
+        let result=||{
             // Mismo orden que Tauri: ventana superior, después convertir en hija.
             unsafe {
                 let style=GetWindowLongPtrW(child,GWL_STYLE);
@@ -229,7 +229,7 @@ mod tests {
             initialize_overlay_opacity(child).unwrap();
             unsafe{GetLayeredWindowAttributes(child,None,Some(&mut alpha),Some(&mut flags))}.unwrap();
             assert_eq!(alpha,255);assert_ne!(flags.0 & LWA_ALPHA.0,0);
-        });
+        };
         let outcome=std::panic::catch_unwind(result);
         let _=unsafe{DestroyWindow(child)};
         outcome.unwrap();

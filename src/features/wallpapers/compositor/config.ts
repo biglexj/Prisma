@@ -4,8 +4,8 @@ import type { BackgroundControls } from "./aurora/controls";
 export { BACKGROUND_MOTIONS, BACKGROUND_VIEWS } from "./aurora/controls";
 import { AMBIENT_BACKGROUNDS } from "./aurora/Backgrounds/themes";
 export const AMBIENTS = [...AMBIENT_BACKGROUNDS,
-  { value: "solid", label: "Color sólido", colors: "#263b62" },
-  { value: "gradient", label: "Degradado", colors: "linear-gradient(135deg,#263b62,#703ca5)" }];
+  { value: "solid", label: "Color sólido", colors: "#00C9B9" },
+  { value: "gradient", label: "Degradado", colors: "linear-gradient(135deg,#00C9B9,#703ca5)" }];
 export const SCENARIOS = catalog;
 export type SceneEntry = typeof catalog[number];
 
@@ -59,7 +59,7 @@ export interface OverlayParticlesConfig {
 /** Mismos valores por defecto que la capa nativa, para que la ida y vuelta no cambie nada. */
 export const DEFAULT_OVERLAY_PARTICLES: OverlayParticlesConfig = {
   enabled: false, paused: false, shape: "circle", direction: "float",
-  color: "#b8efff", size: 1, density: 1, speed: 1, opacity: 1,
+  color: "#00C9B9", size: 1, density: 1, speed: 1, opacity: 1,
 };
 
 export interface CompositionConfig {
@@ -103,13 +103,14 @@ function clamp(value: number, min: number, max: number, fallback: number): numbe
 export function normalizeComposition(config: CompositionConfig): CompositionConfig {
   const overlay = { ...DEFAULT_OVERLAY_PARTICLES, ...config.overlay };
   return { ...config,
-    ambientColor: config.ambientColor ?? "#263b62", ambientColor2: config.ambientColor2 ?? "#703ca5",
+    ambientColor: (!config.ambientColor || config.ambientColor === "#263b62") ? "#00C9B9" : config.ambientColor, ambientColor2: config.ambientColor2 ?? "#703ca5",
     ambientOpacity: clamp(config.ambientOpacity, 0, 1, 1),
     dynamic: config.dynamic ?? "none",
     particle: config.particle ?? "none",
     overlay: {
       ...overlay,
       shape: OVERLAY_SHAPES.some(item => item.value === overlay.shape) ? overlay.shape : DEFAULT_OVERLAY_PARTICLES.shape,
+      color: (!overlay.color || overlay.color === "#b8efff") ? "#00C9B9" : overlay.color,
       direction: OVERLAY_DIRECTIONS.some(item => item.value === overlay.direction) ? overlay.direction : DEFAULT_OVERLAY_PARTICLES.direction,
       size: clamp(overlay.size, 0.25, 4, DEFAULT_OVERLAY_PARTICLES.size),
       density: clamp(overlay.density, 0.1, 3, DEFAULT_OVERLAY_PARTICLES.density),

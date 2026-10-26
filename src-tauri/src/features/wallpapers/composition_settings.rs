@@ -72,7 +72,7 @@ pub struct OverlayParticles {
 }
 impl Default for OverlayParticles {
     fn default() -> Self { Self { enabled:false,paused:false,shape:"circle".into(),direction:"float".into(),
-        color:"#b8efff".into(),size:1.0,density:1.0,speed:1.0,opacity:1.0 } }
+        color:"#00C9B9".into(),size:1.0,density:1.0,speed:1.0,opacity:1.0 } }
 }
 impl OverlayParticles {
     pub fn validate(&self) -> Result<(), String> {

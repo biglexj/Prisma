@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { OVERLAY_DIRECTIONS, OVERLAY_SHAPES, SCENARIOS, BACKGROUND_MOTIONS, BACKGROUND_VIEWS,
   DEFAULT_LAYER_CONTROLS, getLayerControls, layerKey,
   type EffectLayer, type Layer, type LayerControls } from "../compositor/config";
 import { useCompositionConfig } from "./useCompositionConfig";
 import { SceneGallery } from "./SceneGallery";
+import "./composition-studio.css";
 
 export type CompositionCategory = "ambient" | "scene" | "particles" | "parallax";
 const HINTS: Record<CompositionCategory,string> = {
@@ -15,9 +17,94 @@ const HINTS: Record<CompositionCategory,string> = {
 function Slider({label,value,min,max,step=0.1,onChange}: {
   label:string;value:number;min:number;max:number;step?:number;onChange(value:number):void;
 }) {
-  return <label className="scene-slider"><span>{label} <output>{Number(value.toFixed(2))}</output></span>
+  return <label className="scene-field scene-slider">
+    <span className="scene-field-title"><span>{label}</span><output>{Number(value.toFixed(2))}</output></span>
     <input aria-label={label} type="range" min={min} max={max} step={step} value={value} onChange={e=>onChange(Number(e.target.value))}/>
   </label>;
+}
+
+function ColorField({
+  label,
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  label: string;
+  value: string;
+  onChange: (color: string) => void;
+  ariaLabel?: string;
+}) {
+  const normalized = value && /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#00C9B9";
+  const [text, setText] = useState(normalized.replace(/^#/, "").toUpperCase());
+
+  useEffect(() => {
+    setText(normalized.replace(/^#/, "").toUpperCase());
+  }, [normalized]);
+
+  const handlePickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = e.target.value;
+    setText(next.replace(/^#/, "").toUpperCase());
+    onChange(next);
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = e.target.value.trim();
+    if (val.startsWith("#")) val = val.slice(1);
+    const cleaned = val.replace(/[^0-9a-fA-F]/g, "").slice(0, 6).toUpperCase();
+    setText(cleaned);
+    if (cleaned.length === 6) {
+      onChange(`#${cleaned}`);
+    }
+  };
+
+  const handleBlur = () => {
+    if (text.length === 6) {
+      onChange(`#${text}`);
+    } else if (text.length === 3) {
+      const expanded = text.split("").map(c => c + c).join("");
+      setText(expanded);
+      onChange(`#${expanded}`);
+    } else {
+      setText(normalized.replace(/^#/, "").toUpperCase());
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleBlur();
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+
+  return (
+    <div className="scene-field scene-color-field">
+      <span className="scene-field-title">{label}</span>
+      <div className="scene-color-picker-wrapper">
+        <input
+          type="color"
+          aria-label={ariaLabel ?? label}
+          value={normalized}
+          onChange={handlePickerChange}
+          className="scene-color-picker-input"
+        />
+      </div>
+      <div className="scene-hex-row" title={`Código hexadecimal para ${label}`}>
+        <span className="scene-hex-prefix">#</span>
+        <input
+          type="text"
+          className="scene-hex-input"
+          aria-label={`Código hexadecimal para ${label}`}
+          placeholder="00C9B9"
+          maxLength={6}
+          value={text}
+          onChange={handleTextChange}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          spellCheck={false}
+        />
+      </div>
+    </div>
+  );
 }
 
 export function CompositionControls({ enabled, category }: { enabled: boolean; category: CompositionCategory }) {
@@ -76,13 +163,24 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
           <p>Desplaza el fondo y las capas con cámara al mover el cursor. Los clics del escritorio permanecen libres.
             {!parallaxAvailable && " También funciona con una foto o un vídeo como base."}</p>
         </div> : layer === "overlay" ? <div className="scene-control-grid">
-          <label>Forma<select aria-label="Forma de la partícula" value={overlay.shape} onChange={e=>patchOverlay({shape:e.target.value as typeof overlay.shape})}>
-            {OVERLAY_SHAPES.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
-          </select></label>
-          <label>Dirección<select aria-label="Dirección de la partícula" value={overlay.direction} onChange={e=>patchOverlay({direction:e.target.value as typeof overlay.direction})}>
-            {OVERLAY_DIRECTIONS.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
-          </select></label>
-          <label>Color<input aria-label="Color de la partícula" type="color" value={overlay.color} onChange={e=>patchOverlay({color:e.target.value})}/></label>
+          <label className="scene-field">
+            <span className="scene-field-title">Forma</span>
+            <select aria-label="Forma de la partícula" value={overlay.shape} onChange={e=>patchOverlay({shape:e.target.value as typeof overlay.shape})}>
+              {OVERLAY_SHAPES.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
+            </select>
+          </label>
+          <label className="scene-field">
+            <span className="scene-field-title">Dirección</span>
+            <select aria-label="Dirección de la partícula" value={overlay.direction} onChange={e=>patchOverlay({direction:e.target.value as typeof overlay.direction})}>
+              {OVERLAY_DIRECTIONS.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
+            </select>
+          </label>
+          <ColorField
+            label="Color"
+            ariaLabel="Color de la partícula"
+            value={overlay.color}
+            onChange={color => patchOverlay({ color })}
+          />
           <Slider label="Tamaño" min={0.25} max={4} value={overlay.size} onChange={size=>patchOverlay({size})}/>
           <Slider label="Densidad" min={0.1} max={3} value={overlay.density} onChange={density=>patchOverlay({density})}/>
           <Slider label="Velocidad" min={0.1} max={3} value={overlay.speed} onChange={speed=>patchOverlay({speed})}/>
@@ -90,18 +188,36 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
           <p>Esta capa se dibuja sobre cualquier fondo: un vídeo, una foto o un escenario 3D.</p>
         </div> : <>
           {layer === "ambient" && flatAmbient && <div className="scene-control-grid">
-            <label>Color<input aria-label="Color del ambiente" type="color" value={config.ambientColor} onChange={e=>update(c=>({...c,ambientColor:e.target.value}))}/></label>
-            {config.ambient === "gradient" && <label>Segundo color<input aria-label="Segundo color del ambiente" type="color" value={config.ambientColor2} onChange={e=>update(c=>({...c,ambientColor2:e.target.value}))}/></label>}
+            <ColorField
+              label="Color"
+              ariaLabel="Color del ambiente"
+              value={config.ambientColor}
+              onChange={ambientColor => update(c => ({ ...c, ambientColor }))}
+            />
+            {config.ambient === "gradient" && (
+              <ColorField
+                label="Segundo color"
+                ariaLabel="Segundo color del ambiente"
+                value={config.ambientColor2}
+                onChange={ambientColor2 => update(c => ({ ...c, ambientColor2 }))}
+              />
+            )}
             <Slider label="Opacidad del ambiente" min={0} max={1} step={0.05} value={config.ambientOpacity} onChange={ambientOpacity=>update(c=>({...c,ambientOpacity}))}/>
           </div>}
           {hasEffect && !flatAmbient ? <><div className="scene-control-grid">
             {spatial && <>
-              <label>Vista de cámara<select aria-label="Vista de cámara" value={settings.view} onChange={e=>patch({view:e.target.value as LayerControls['view']})}>
-                {BACKGROUND_VIEWS.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
-              </select></label>
-              <label>Movimiento<select aria-label="Movimiento de cámara" value={settings.motion} onChange={e=>patch({motion:e.target.value as LayerControls['motion']})}>
-                {BACKGROUND_MOTIONS.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
-              </select></label>
+              <label className="scene-field">
+                <span className="scene-field-title">Vista de cámara</span>
+                <select aria-label="Vista de cámara" value={settings.view} onChange={e=>patch({view:e.target.value as LayerControls['view']})}>
+                  {BACKGROUND_VIEWS.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
+                </select>
+              </label>
+              <label className="scene-field">
+                <span className="scene-field-title">Movimiento</span>
+                <select aria-label="Movimiento de cámara" value={settings.motion} onChange={e=>patch({motion:e.target.value as LayerControls['motion']})}>
+                  {BACKGROUND_MOTIONS.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
+                </select>
+              </label>
             </>}
             <Slider label="Velocidad" min={0.1} max={3} value={settings.speed} onChange={speed=>patch({speed})}/>
             <Slider label="Zoom" min={0.1} max={2.5} step={0.05} value={settings.zoom} onChange={zoom=>patch({zoom})}/>
@@ -114,8 +230,16 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
           </div>
           <div className="scene-control-extras">
             <label><input type="checkbox" checked={settings.colorCycle} onChange={e=>patch({colorCycle:e.target.checked})}/> Colores cambiantes</label>
-            {layer === "scene" && selected?.type === "gargantua" && <label>Detalle<select aria-label="Detalle de Gargantúa" value={settings.quality} onChange={e=>patch({quality:Number(e.target.value) as 0|1|2})}>
-              <option value={0}>Ligero</option><option value={1}>Alto</option><option value={2}>Cine</option></select></label>}
+            {layer === "scene" && selected?.type === "gargantua" && (
+              <label className="scene-field scene-inline-field">
+                <span className="scene-field-title">Detalle</span>
+                <select aria-label="Detalle de Gargantúa" value={settings.quality} onChange={e=>patch({quality:Number(e.target.value) as 0|1|2})}>
+                  <option value={0}>Ligero</option>
+                  <option value={1}>Alto</option>
+                  <option value={2}>Cine</option>
+                </select>
+              </label>
+            )}
           </div>
           </> : !hasEffect && <p>Elige un efecto para ajustar esta capa.</p>}
         </>}
@@ -126,7 +250,7 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
     </section>
     {layer !== "parallax" && <SceneGallery key={category} layer={category === "particles" ? "overlay" : category === "ambient" ? "ambient" : "scene"} selected={selectedType}
       onSelect={(kind,type)=>{
-        if(kind==="ambient") void select(c=>({...c,ambient:type,visibility:{...c.visibility,ambient:true}}),enabled || type === "original");
+        if(kind==="ambient") void select(c=>({...c,ambient:type,ambientColor:(!c.ambientColor||c.ambientColor==="#263b62")?"#00C9B9":c.ambientColor,visibility:{...c.visibility,ambient:true}}),enabled || type === "original");
         else if(kind==="scene") void select(c=>{
           const effect = SCENARIOS.find(item=>item.type===type);
           const field = effect?.category === "dynamic" ? "dynamic" : effect?.category === "particles" ? "particle" : "scenario";
@@ -134,7 +258,7 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
           return {...c,scenario:"none",dynamic:"none",particle:"none",[field]:type,
             visibility:{...c.visibility,[visibility]:true}};
         },enabled || type === "none");
-        else void select(c=>({...c,overlay:{...c.overlay,...(type === "none" ? {enabled:false} : {shape:type as typeof c.overlay.shape,enabled:true})}}),enabled || type === "none");
+        else void select(c=>({...c,overlay:{...c.overlay,...(type === "none" ? {enabled:false} : {shape:type as typeof c.overlay.shape,enabled:true,color:c.overlay.color||"#00C9B9"})}}),enabled || type === "none");
       }}/>}
   </div>;
 }
