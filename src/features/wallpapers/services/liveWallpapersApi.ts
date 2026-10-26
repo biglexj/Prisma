@@ -155,8 +155,6 @@ export const liveWallpapersApi = {
   setFit: (fit: WallpaperFit) => invoke<WallpaperStateSnapshot>("live_wallpaper_set_fit", { fit }),
   setAudioEnabled: (enabled: boolean) =>
     invoke<WallpaperStateSnapshot>("live_wallpaper_set_audio_enabled", { enabled }),
-  setFolderHidden: (id: string, hidden: boolean) =>
-    invoke<WallpaperStateSnapshot>("live_wallpaper_set_folder_hidden", { id, hidden }),
   setMediaHidden: (path: string, hidden: boolean) =>
     invoke<WallpaperStateSnapshot>("live_wallpaper_set_media_hidden", { path, hidden }),
   setMediaKindMode: (mode: MediaKindMode) =>

@@ -178,16 +178,6 @@ export function LiveWallpapersView() {
     }
   };
 
-  const handleToggleFolderHidden = async (id: string, hidden: boolean) => {
-    try {
-      const snap = await liveWallpapersApi.setFolderHidden(id, hidden);
-      setState(snap);
-      setError(null);
-    } catch (err) {
-      setError(String(err));
-    }
-  };
-
   const handleToggleMediaHidden = async (path: string, hidden: boolean) => {
     try {
       const snap = await liveWallpapersApi.setMediaHidden(path, hidden);
@@ -704,7 +694,7 @@ export function LiveWallpapersView() {
                 key={source.id}
                 className={`compact-folder-chip ${source.enabled ? "is-enabled" : "is-disabled"} ${
                   !source.available ? "is-unavailable" : ""
-                } ${source.hidden ? "is-hidden" : ""}`}
+                }`}
                 title={getSourceTooltip(source)}
               >
                 <span className="chip-letter">{String.fromCharCode(65 + (index % 26))}</span>
@@ -713,25 +703,12 @@ export function LiveWallpapersView() {
                 <label className="chip-toggle-switch" title={source.enabled ? "Desactivar" : "Activar"}>
                   <input
                     type="checkbox"
+                    aria-label={`${source.enabled ? "Desactivar" : "Activar"} carpeta ${source.name}`}
                     checked={source.enabled}
                     onChange={(e) => handleToggleFolder(source.id, e.target.checked)}
                   />
                   <span className="chip-toggle-slider" />
                 </label>
-                <button
-                  type="button"
-                  className="chip-eye-btn"
-                  onClick={() => handleToggleFolderHidden(source.id, !source.hidden)}
-                  title={
-                    source.hidden
-                      ? "Mostrar esta carpeta y sus medios"
-                      : "Ocultar esta carpeta y sus medios"
-                  }
-                  aria-label={source.hidden ? "Mostrar carpeta" : "Ocultar carpeta"}
-                  aria-pressed={source.hidden}
-                >
-                  <Icon name={source.hidden ? "eye-slash" : "eye"} width={13} height={13} />
-                </button>
                 <button
                   type="button"
                   className="chip-remove-btn"
@@ -852,6 +829,10 @@ export function LiveWallpapersView() {
                   title={
                     item.hidden
                       ? `"${item.name}" está oculto y no se reproduce`
+                      : item.kind === "image"
+                      ? isCurrent
+                        ? `"${item.name}" está en pantalla`
+                        : `Mostrar "${item.name}" como fondo de pantalla`
                       : `Reproducir "${item.name}" en el fondo de pantalla`
                   }
                   role="button"
@@ -880,15 +861,15 @@ export function LiveWallpapersView() {
                         title={item.name}
                       />
                     )}
-                    <div className="live-video-card-overlay">
-                      <span className="live-card-play-btn" title="Reproducir en fondo de pantalla">
+                    {!(item.kind === "image" && isCurrent) && <div className="live-video-card-overlay">
+                      <span className="live-card-play-btn" title={item.kind === "image" ? "Mostrar como fondo de pantalla" : "Reproducir en fondo de pantalla"}>
                         <Icon
-                          name={item.hidden ? "eye-slash" : isCurrent ? "volume" : "play"}
+                          name={item.hidden ? "eye-slash" : item.kind === "image" ? "image" : isCurrent ? "volume" : "play"}
                           width={18}
                           height={18}
                         />
                       </span>
-                    </div>
+                    </div>}
                     <span className="live-video-card-format">
                       {getFileExtension(item.name) || (item.kind === "image" ? "IMG" : "VÍDEO")}
                     </span>

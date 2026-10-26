@@ -63,7 +63,12 @@ function Write-Utf8File {
 function Invoke-Checked {
     param([string]$Command, [string[]]$Arguments, [string]$Label)
     Write-Host "==> $Label"
-    & $Command @Arguments
+    Push-Location $root
+    try {
+        & $Command @Arguments
+    } finally {
+        Pop-Location
+    }
     if ($LASTEXITCODE -ne 0) { throw "$Label falló (código $LASTEXITCODE): $Command $($Arguments -join ' ')" }
 }
 
@@ -409,12 +414,23 @@ if ((Get-Item -LiteralPath $builtInstaller).LastWriteTime -lt $compileStarted) {
     throw "El instalador generado es anterior a esta compilación: $builtInstaller"
 }
 
-# --- 8. Publicar en la carpeta release -------------------------------------
+# --- 8. Publicar en la carpeta release y sincronizar con 12. Releases ------
 if (-not $SkipCopyToRelease) {
     $releaseDir = Join-Path $root 'release'
     New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
-    Copy-Item -LiteralPath $builtInstaller -Destination (Join-Path $releaseDir $installerName) -Force
+    $releaseTarget = Join-Path $releaseDir $installerName
+    Copy-Item -LiteralPath $builtInstaller -Destination $releaseTarget -Force
     Write-Host "==> Instalador copiado a release\$installerName"
+
+    $releasesGlobalDir = 'D:\Proyectos\biglexj\12. Releases'
+    if (Test-Path -LiteralPath $releasesGlobalDir) {
+        # Limpiar versiones previas de la misma app en 12. Releases
+        Get-ChildItem -LiteralPath $releasesGlobalDir -Filter "Prisma_*-setup.exe" -File |
+            Where-Object { $_.Name -ne $installerName } |
+            ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }
+        Copy-Item -LiteralPath $builtInstaller -Destination (Join-Path $releasesGlobalDir $installerName) -Force
+        Write-Host "==> Copia sincronizada en 12. Releases\$installerName"
+    }
 } else {
     Write-Host "==> Instalador en $builtInstaller (no copiado a release)"
 }

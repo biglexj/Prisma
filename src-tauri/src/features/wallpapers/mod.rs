@@ -321,6 +321,7 @@ impl WallpaperController {
         let curr = inner.source_manager.current_media();
         inner.source_manager.toggle_folder(id, enabled);
         inner.source_manager.rebuild_queue(curr.as_deref());
+        Self::sync_engine(&mut inner)?;
         Ok(self.build_snapshot(&inner))
     }
 

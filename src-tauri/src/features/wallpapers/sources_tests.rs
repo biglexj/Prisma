@@ -80,7 +80,7 @@ fn ocultar_video_lo_saca_de_la_cola_pero_lo_conserva_en_el_listado() {
 }
 
 #[test]
-fn la_configuracion_oculta_sobrevive_a_reiniciar() {
+fn las_carpetas_ocultas_antiguas_se_migran_al_switch() {
     let root = temp_dir("persistencia");
     let folder = root.join("videos");
     fs::create_dir_all(&folder).unwrap();
@@ -96,15 +96,22 @@ fn la_configuracion_oculta_sobrevive_a_reiniciar() {
         source.id
     };
 
-    let reloaded = SourceManager::new(config_dir);
+    let mut reloaded = SourceManager::new(config_dir.clone());
     let restored = reloaded
         .settings()
         .sources
         .iter()
         .find(|s| s.id == source_id)
         .expect("carpeta persistida");
-    assert!(restored.hidden, "el estado oculto debe persistir en disco");
+    assert!(!restored.hidden, "la marca antigua debe desaparecer");
+    assert!(!restored.enabled, "la carpeta debe conservarse excluida con el switch apagado");
     assert_eq!(reloaded.total_media(), 0);
+    assert!(reloaded.toggle_folder(&source_id, true));
+    assert_eq!(reloaded.total_media(), 1, "el switch permite recuperar la carpeta");
+    let persisted = SourceManager::new(config_dir);
+    assert!(persisted.settings().sources[0].enabled);
+    assert!(!persisted.settings().sources[0].hidden);
+    assert_eq!(persisted.total_media(), 1);
 }
 
 /// El modo de medio decide qué entra en la cola y en la cuadrícula.

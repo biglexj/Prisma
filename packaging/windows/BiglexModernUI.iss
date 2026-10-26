@@ -4,22 +4,6 @@
 ; Biglex Modern UI 2.0. Copiar junto al setup.iss; sin dependencias externas.
 ; Requiere MyAppName y MyAppIcon definidos por el instalador.
 ; Coordenadas lógicas a 96 DPI. ScaleX/ScaleY se aplican UNA vez a todo.
-;
-; ---------------------------------------------------------------------------
-; AJUSTES DE TECLADO VERIFICADOS FISICAMENTE (21-10-2026, LyraFlow)
-; ---------------------------------------------------------------------------
-; 1) WinSetFocus: WizardForm.ActiveControl no mueve el foco a controles que
-;    viven dentro de un panel, asi que se usa la API de Windows.
-; 2) ModernPathKeyDown: el motor de Inno no enruta al formulario las teclas
-;    que consume el control de edicion, de modo que el campo de ruta gestiona
-;    su propio Tab y su propia Enter.
-; 3) ModernKeyUp atiende Enter y Espacio sobre los botones: el motor de Inno
-;    tampoco enruta al formulario esas teclas sobre los botones de la plantilla.
-; 4) Los botones nativos Siguiente y Cancelar salen del recorrido del tab
-;    (quedan tapados por el panel opaco) y Siguiente deja de ser el boton por
-;    defecto, para que Enter no avance el asistente por su cuenta. Siguen
-;    visibles: el motor los necesita en modo silencioso.
-; ---------------------------------------------------------------------------
 [Code]
 const
   ModernWidth = 560;
@@ -33,7 +17,6 @@ var
   ModernHost: TPanel;
   ModernPath: TEdit;
   ModernInstall, ModernFolder: TBitmapButton;
-  ModernInstallFocus, ModernFolderFocus: TBitmapImage;
   ModernBackground, ModernSurface, ModernText, ModernMuted, ModernLine,
     ModernLogoSurface: TColor;
   ModernFocusSet: Boolean;
@@ -41,13 +24,37 @@ var
   ModernExitYes, ModernExitNo: TBitmapButton;
   ModernExitAccepted: Boolean;
   ModernNextBtn, ModernCancelBtn: TBitmapButton;
-  ModernYesRadioImg, ModernNoRadioImg: TBitmapImage;
+  ModernOriginalClose: TCloseEvent;
+  ModernFooterRight, ModernFooterTop, ModernFooterWidth, ModernFooterHeight,
+    ModernFooterGap: Integer;
+  ModernYesGlyph, ModernNoGlyph, ModernRunGlyph: TBitmapButton;
 
-{ Foco real de un control. WizardForm.ActiveControl solo admite controles
-  directos del formulario y los de esta plantilla viven en un panel, asi que
-  se usa la API de Windows. }
+{ Funciones de la API de Windows }
+procedure ModernExitProcess(ExitCode: Integer);
+  external 'ExitProcess@kernel32.dll stdcall';
 function WinSetFocus(hWnd: Longint): Longint;
   external 'SetFocus@user32.dll stdcall';
+function ModernGetSystemMenu(Window: HWND; Revert: Boolean): THandle;
+  external 'GetSystemMenu@user32.dll stdcall';
+function ModernEnableMenuItem(Menu: THandle; Item, Flags: Longword): Longword;
+  external 'EnableMenuItem@user32.dll stdcall';
+function ModernDrawMenuBar(Window: HWND): Boolean;
+  external 'DrawMenuBar@user32.dll stdcall';
+function ModernGetWindowLong(Window: HWND; Index: Integer): Longint;
+  external 'GetWindowLongW@user32.dll stdcall';
+function ModernSetWindowLong(Window: HWND; Index: Integer; Value: Longint): Longint;
+  external 'SetWindowLongW@user32.dll stdcall';
+function ModernAlphaBlend(DestDC: Longint; X, Y, W, H: Integer;
+  SourceDC: Longint; SourceX, SourceY, SourceW, SourceH: Integer; Blend: Longword): Boolean;
+  external 'AlphaBlend@msimg32.dll stdcall';
+function ModernBitBlt(DestDC: Longint; X, Y, W, H: Integer;
+  SourceDC: Longint; SourceX, SourceY: Integer; Raster: Longword): Boolean;
+  external 'BitBlt@gdi32.dll stdcall';
+function ModernItemRect(Window: HWND; Msg: Longword; Index: Longword;
+  var Bounds: TRect): Longint;
+  external 'SendMessageW@user32.dll stdcall';
+function ModernSetWindowTheme(Window: HWND; SubApp, SubId: String): Integer;
+  external 'SetWindowTheme@uxtheme.dll stdcall';
 
 procedure ModernLabel(const Text: String; X, Y, W, H, Size: Integer;
   Color: TColor; Bold, Centered: Boolean);
@@ -69,24 +76,12 @@ begin
   if Centered then L.Alignment := taCenter;
 end;
 
-{ Etiqueta de la cabecera de la app con ajuste automatico: si el nombre no cabe
-  en el ancho disponible se reduce el cuerpo de la fuente, en lugar de dejar el
-  texto recortado a media palabra.
-
-  IMPORTANTE: la medicion se hace sobre un TCanvas auxiliar. Ese canvas NO
-  conserva la fuente que se le asigna, asi que TextWidth devuelve el ancho con
-  la fuente del sistema y el ajuste automatico nunca se activa (sintoma: el
-  ultimo caracter del nombre quedaba cortado). Por eso el nombre va con
-  WordWrap activado y una banda de dos lineas: aunque la medicion falle, el
-  texto se reparte en dos lineas y NO se recorta. }
 procedure ModernAppName(const Text: String; X, Y, W, H, Size: Integer; Color: TColor);
 var
   L: TNewStaticText;
   M: TBitmapImage;
   S: Integer;
 begin
-  { Se mide con el canvas de un bitmap auxiliar para decidir el cuerpo de la
-    fuente: si el nombre no cabe, se reduce en lugar de recortarse. }
   M := TBitmapImage.Create(WizardForm);
   M.SetBounds(0, 0, 8, 8);
   M.Visible := False;
@@ -102,8 +97,6 @@ begin
   L := TNewStaticText.Create(WizardForm);
   L.Parent := ModernHost;
   L.AutoSize := False;
-  { WordWrap con banda de dos lineas: garantiza que un nombre largo se
-    reparta en lugar de recortarse, aunque la medicion no sea fiable. }
   L.WordWrap := True;
   L.SetBounds(ScaleX(X), ScaleY(Y), ScaleX(W), ScaleY(H));
   L.Caption := Text;
@@ -113,7 +106,6 @@ begin
   L.Color := ModernBackground;
   L.StyleElements := [];
   L.ShowAccelChar := False;
-  L.WordWrap := False;
   L.Font.Style := [fsBold];
 end;
 
@@ -153,11 +145,68 @@ begin
   InitializeBitmapImageFromIcon(Image, ExpandConstant('{tmp}\{#MyAppIcon}'),
     Background, [16, 24, 32, 48, 64, 128, 256]);
   Image.Stretch := True;
-  { InitializeBitmapImageFromIcon REDIMENSIONA el control al tamano del icono
-    cargado (por ejemplo 32 en una caja de 40), de modo que el grafico se
-    quedaba pegado a la esquina superior izquierda del recuadro. Se restauran
-    los limites para que el icono quede centrado en su caja. }
   Image.SetBounds(ScaleX(X), ScaleY(Y), ScaleX(Size), ScaleY(Size));
+end;
+
+procedure ModernPaintButton(Button: TBitmapButton; const Caption: String;
+  Background: TColor; Emphasized: Boolean);
+var C: TCanvas; Bounds: TRect; W, H, Radius: Integer;
+begin
+  if Button = nil then Exit;
+  W := Button.Width - 4;
+  H := Button.Height - 4;
+  Button.BackColor := Background;
+  Button.Caption := Caption;
+  Button.Bitmap.Width := W;
+  Button.Bitmap.Height := H;
+  C := Button.Bitmap.Canvas;
+  Bounds.Left := 0; Bounds.Top := 0; Bounds.Right := W; Bounds.Bottom := H;
+  C.Brush.Color := Background;
+  C.FillRect(Bounds);
+  C.Pen.Width := ScaleX(1);
+  C.Pen.Color := ModernLine;
+  if Emphasized then C.Pen.Color := ModernAccent;
+  C.Brush.Color := Background;
+  Radius := ScaleX(8);
+  if Button = ModernInstall then
+  begin
+    C.Brush.Color := ModernAccent;
+    C.Pen.Color := ModernAccent;
+    Radius := ScaleX(ModernControlRadius * 2);
+  end;
+  C.RoundRect(1, 1, W - 1, H - 1, Radius, Radius);
+  C.Brush.Style := bsClear;
+  C.Font.Name := 'Segoe UI';
+  C.Font.Height := -ScaleY(12);
+  C.Font.Color := ModernText;
+  C.Font.Style := [];
+  if Button = ModernInstall then
+  begin
+    C.Font.Style := [fsBold];
+    C.Font.Color := $211C18;
+    C.Font.Height := -ScaleY(14);
+    while (C.TextWidth(Caption) > W - ScaleX(24)) and (C.Font.Height < -ScaleY(9)) do
+      C.Font.Height := C.Font.Height + 1;
+  end;
+  if Button = ModernFolder then
+  begin
+    C.Font.Style := [];
+    C.Font.Height := -ScaleY(10);
+    C.Pen.Color := ModernAccent;
+    C.MoveTo(ScaleX(7), ScaleY(9));
+    C.LineTo(ScaleX(7), ScaleY(6));
+    C.LineTo(ScaleX(13), ScaleY(6));
+    C.LineTo(ScaleX(16), ScaleY(9));
+    C.LineTo(ScaleX(21), ScaleY(9));
+    C.LineTo(ScaleX(21), ScaleY(18));
+    C.LineTo(ScaleX(7), ScaleY(18));
+    C.LineTo(ScaleX(7), ScaleY(9));
+    C.LineTo(ScaleX(21), ScaleY(9));
+    C.TextOut(ScaleX(28), (H - C.TextHeight(Caption)) div 2, Caption);
+    Exit;
+  end;
+  C.TextOut((W - C.TextWidth(Caption)) div 2,
+    (H - C.TextHeight(Caption)) div 2, Caption);
 end;
 
 procedure ModernBrowse(Sender: TObject);
@@ -170,19 +219,12 @@ end;
 
 procedure ModernStartInstall(Sender: TObject);
 begin
-  // Mantener la navegación, validaciones y motor originales de Inno.
   WizardForm.NextButton.OnClick(WizardForm.NextButton);
 end;
 
 procedure ModernKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   if WizardForm.CurPageID <> ModernPage.ID then Exit;
-  ModernInstallFocus.Visible := ModernInstall.Focused;
-  ModernFolderFocus.Visible := ModernFolder.Focused;
-  { El motor de Inno no enruta al formulario la pulsacion de Enter y Espacio
-    sobre los botones de la plantilla, asi que se atienden aqui. El boton
-    Siguiente nativo no es el boton por defecto, de modo que Enter no avanza
-    el asistente por su cuenta. }
   if (Key = 13) or (Key = 32) then
   begin
     if ModernFolder.Focused then
@@ -198,8 +240,6 @@ begin
   end;
 end;
 
-{ El campo de ruta tiene su propio manejador de teclado: el motor de Inno no
-  enruta al formulario las teclas que consume el control de edicion. }
 procedure ModernPathKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   if not ModernPath.Focused then Exit;
@@ -221,13 +261,9 @@ end;
 procedure ModernKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   if WizardForm.CurPageID <> ModernPage.ID then Exit;
-  { El campo de ruta gestiona su propio teclado (ModernPathKeyDown). }
   if ModernPath.Focused then Exit;
   if Key = 9 then
   begin
-    // Mantener Tab dentro de los dos controles interactivos del panel inicial:
-    // el boton de carpeta y el boton de instalar. El campo de ruta ya no es
-    // editable y queda fuera del recorrido.
     Key := 0;
     if ssShift in Shift then
     begin
@@ -252,433 +288,116 @@ begin
   end;
 end;
 
-procedure ModernPaintRadioBullet(Img: TBitmapImage; Checked: Boolean);
-var
-  Sz, Center, R, InnerR: Integer;
-  Rc: TRect;
+{ Glifos personalizados para radios y casillas (sin indicadores azules ni saltos) }
+procedure ModernPaintSelector(Button: TBitmapButton);
+var Canvas: TCanvas; Bounds: TRect; Checked: Boolean; W, H, Inset: Integer;
 begin
-  Sz := Img.Width;
-  Center := Sz div 2;
-  R := Sz div 2 - 1;
-  InnerR := Sz div 4;
-
-  Img.Bitmap.Width := Sz;
-  Img.Bitmap.Height := Sz;
-  Img.Bitmap.Canvas.Brush.Color := WizardForm.Color;
-  Rc.Left := 0;
-  Rc.Top := 0;
-  Rc.Right := Sz;
-  Rc.Bottom := Sz;
-  Img.Bitmap.Canvas.FillRect(Rc);
-
-  if Checked then
+  if Button = nil then Exit;
+  W := Button.Bitmap.Width; H := Button.Bitmap.Height;
+  Canvas := Button.Bitmap.Canvas;
+  Button.BackColor := ModernBackground;
+  Checked := False;
+  if Button = ModernYesGlyph then Checked := WizardForm.PreparingYesRadio.Checked;
+  if Button = ModernNoGlyph then Checked := WizardForm.PreparingNoRadio.Checked;
+  if (Button = ModernRunGlyph) and (WizardForm.RunList <> nil) and (WizardForm.RunList.Items.Count > 0) then
+    Checked := WizardForm.RunList.Checked[0];
+  Bounds.Left := 0; Bounds.Top := 0; Bounds.Right := W; Bounds.Bottom := H;
+  Canvas.Brush.Color := ModernBackground;
+  Canvas.FillRect(Bounds);
+  Canvas.Pen.Width := ScaleX(1);
+  Canvas.Pen.Color := ModernMuted;
+  if Checked then Canvas.Pen.Color := ModernAccent;
+  Inset := ScaleX(1);
+  if Button = ModernRunGlyph then
   begin
-    Img.Bitmap.Canvas.Pen.Color := ModernAccent;
-    Img.Bitmap.Canvas.Pen.Width := ScaleX(2);
-    Img.Bitmap.Canvas.Brush.Color := WizardForm.Color;
-    Img.Bitmap.Canvas.Ellipse(Center - R, Center - R, Center + R, Center + R);
-
-    Img.Bitmap.Canvas.Pen.Color := ModernAccent;
-    Img.Bitmap.Canvas.Brush.Color := ModernAccent;
-    Img.Bitmap.Canvas.Ellipse(Center - InnerR, Center - InnerR, Center + InnerR, Center + InnerR);
-  end
-  else
-  begin
-    Img.Bitmap.Canvas.Pen.Color := ModernLine;
-    Img.Bitmap.Canvas.Pen.Width := ScaleX(1);
-    Img.Bitmap.Canvas.Brush.Color := WizardForm.Color;
-    Img.Bitmap.Canvas.Ellipse(Center - R, Center - R, Center + R, Center + R);
-  end;
-end;
-
-procedure ModernRadioBulletClick(Sender: TObject);
-begin
-  if Sender = ModernYesRadioImg then
-    WizardForm.PreparingYesRadio.Checked := True
-  else
-    WizardForm.PreparingNoRadio.Checked := True;
-    
-  ModernPaintRadioBullet(ModernYesRadioImg, WizardForm.PreparingYesRadio.Checked);
-  ModernPaintRadioBullet(ModernNoRadioImg, WizardForm.PreparingNoRadio.Checked);
-end;
-
-procedure ModernRadioClick(Sender: TObject);
-begin
-  ModernPaintRadioBullet(ModernYesRadioImg, WizardForm.PreparingYesRadio.Checked);
-  ModernPaintRadioBullet(ModernNoRadioImg, WizardForm.PreparingNoRadio.Checked);
-end;
-
-procedure ModernPaintNextButton();
-var
-  C: TCanvas;
-  Cap: String;
-begin
-  ModernRound(ModernNextBtn.Bitmap, 92, 26, 4, WizardForm.Color, ModernAccent);
-  C := ModernNextBtn.Bitmap.Canvas;
-  C.Brush.Style := bsClear;
-  C.Font.Name := 'Segoe UI';
-  C.Font.Height := -ScaleY(12);
-  C.Font.Color := $211C18;
-  C.Font.Style := [fsBold];
-  Cap := WizardForm.NextButton.Caption;
-  StringChangeEx(Cap, '&', '', True);
-  C.TextOut((ModernNextBtn.Width - C.TextWidth(Cap)) div 2,
-            (ModernNextBtn.Height - C.TextHeight(Cap)) div 2, Cap);
-end;
-
-procedure ModernPaintCancelButton();
-var
-  C: TCanvas;
-  Cap: String;
-begin
-  ModernRound(ModernCancelBtn.Bitmap, 92, 26, 4, WizardForm.Color, ModernSurface);
-  C := ModernCancelBtn.Bitmap.Canvas;
-  C.Brush.Style := bsClear;
-  C.Pen.Color := ModernLine;
-  C.Pen.Width := ScaleX(1);
-  C.RoundRect(ScaleX(1), ScaleY(1), ModernCancelBtn.Width - ScaleX(1),
-    ModernCancelBtn.Height - ScaleY(1), ScaleX(8), ScaleY(8));
-  C.Font.Name := 'Segoe UI';
-  C.Font.Height := -ScaleY(12);
-  C.Font.Color := ModernText;
-  Cap := WizardForm.CancelButton.Caption;
-  StringChangeEx(Cap, '&', '', True);
-  C.TextOut((ModernCancelBtn.Width - C.TextWidth(Cap)) div 2,
-            (ModernCancelBtn.Height - C.TextHeight(Cap)) div 2, Cap);
-end;
-
-procedure ModernNextBtnClick(Sender: TObject);
-begin
-  WizardForm.NextButton.OnClick(WizardForm.NextButton);
-end;
-
-procedure ModernCancelBtnClick(Sender: TObject);
-begin
-  WizardForm.CancelButton.OnClick(WizardForm.CancelButton);
-end;
-
-procedure ModernInitialize();
-var Caption: String; C: TCanvas;
-begin
-  if IsDarkInstallMode then
-  begin
-    ModernBackground := $1C1915; // #15191C
-    ModernSurface := $302B22;    // #222B30
-    ModernText := $F1F0EE;
-    ModernMuted := $BDB7AF;
-    ModernLine := $37312B;
-    ModernLogoSurface := $32361E;
-  end
-  else
-  begin
-    ModernBackground := $FAF9F7;
-    ModernSurface := $F0EBE5;
-    ModernText := $211C18;
-    ModernMuted := $6F6358;
-    ModernLine := $DED6CE;
-    ModernLogoSurface := $E9EFE0;
-  end;
-  WizardForm.ClientWidth := ScaleX(ModernWidth);
-  WizardForm.ClientHeight := ScaleY(ModernHeight);
-  WizardForm.Caption := 'Instalar {#MyAppName}';
-  ModernPage := CreateCustomPage(wpWelcome, '', '');
-  ModernHost := TPanel.Create(WizardForm);
-  ModernHost.Parent := WizardForm;
-  ModernHost.SetBounds(0, 0, WizardForm.ClientWidth, WizardForm.ClientHeight);
-  ModernHost.BevelOuter := bvNone;
-  ModernHost.StyleElements := [];
-  ModernHost.Color := ModernBackground;
-  ModernHost.Visible := False;
-  ExtractTemporaryFile('{#MyAppIcon}');
-  ModernLogo(ModernMargin, 19, 20, ModernBackground);
-  ModernAppName('{#MyAppName}', 48, 21, 366, 26, 10, ModernText);
-  ModernLabel('INSTALADOR', 422, 22, 118, 20, 9, ModernMuted, False, True);
-  ModernTile(ModernMargin, 60, 520, 1, 0, ModernLine);
-  ModernTile(248, 96, 64, 64, ModernLogoRadius, ModernLogoSurface);
-  ModernLogo(254, 102, 52, ModernLogoSurface);
-  ModernLabel('Todo listo para comenzar', ModernMargin, 174, 520, 38,
-    20, ModernText, True, True);
-  ModernLabel('{#MyAppSubtitle}',
-    ModernMargin, 218, 520, 40, 10, ModernMuted, False, True);
-  ModernTile(ModernMargin, 262, 520, 70, ModernControlRadius, ModernSurface);
-  ModernLabel('Ubicación de instalación', 32, 274, 464, 20,
-    9, ModernMuted, False, False);
-  // La etiqueta tiene el mismo fondo que la tarjeta.
-  TNewStaticText(ModernHost.Controls[ModernHost.ControlCount - 1]).Color := ModernSurface;
-  ModernPath := TEdit.Create(WizardForm);
-  ModernPath.Parent := ModernHost;
-  ModernPath.StyleElements := [];
-  ModernPath.BorderStyle := bsNone;
-  ModernPath.Color := ModernSurface;
-  ModernPath.Font.Name := 'Segoe UI';
-  ModernPath.Font.Size := 9;
-  ModernPath.Font.Color := ModernText;
-  ModernPath.SetBounds(ScaleX(32), ScaleY(302), ScaleX(376), ScaleY(22));
-  ModernPath.Text := WizardForm.DirEdit.Text;
-  { La ruta se informa, no se escribe: la ubicacion se elige con el boton de
-    carpeta. En solo lectura el texto se puede seleccionar y copiar, pero no
-    editar a mano, que es lo que nadie hace. }
-  ModernPath.ReadOnly := True;
-  { Fuera del recorrido del tab: al recibir el foco un campo de texto selecciona
-    todo su contenido, y la ruta aparecia resaltada al abrir el instalador. }
-  ModernPath.TabStop := False;
-  ModernPath.TabOrder := 0;
-  ModernPath.OnKeyDown := @ModernPathKeyDown;
-  ModernFolderFocus := TBitmapImage.Create(WizardForm);
-  ModernFolderFocus.Parent := ModernHost;
-  ModernFolderFocus.SetBounds(ScaleX(414), ScaleY(292), ScaleX(100), ScaleY(32));
-  ModernRound(ModernFolderFocus.Bitmap, 100, 32, 6, ModernSurface, ModernText);
-  ModernFolderFocus.Visible := False;
-  ModernFolder := TBitmapButton.Create(WizardForm);
-  ModernFolder.Parent := ModernHost;
-  ModernFolder.SetBounds(ScaleX(416), ScaleY(294), ScaleX(96), ScaleY(28));
-  ModernFolder.Caption := 'Examinar...';
-  ModernFolder.Hint := 'Elegir carpeta de instalacion';
-  ModernFolder.ShowHint := True;
-  ModernFolder.TabStop := True;
-  ModernFolder.TabOrder := 1;
-  ModernFolder.Cursor := crHand;
-  ModernFolder.BackColor := ModernSurface;
-  ModernRound(ModernFolder.Bitmap, 96, 28, 4, ModernSurface, ModernSurface);
-  C := ModernFolder.Bitmap.Canvas;
-  C.Pen.Color := ModernAccent;
-  C.Pen.Width := ScaleX(1);
-  C.MoveTo(ScaleX(9), ScaleY(10));
-  C.LineTo(ScaleX(9), ScaleY(8));
-  C.LineTo(ScaleX(15), ScaleY(8));
-  C.LineTo(ScaleX(18), ScaleY(10));
-  C.LineTo(ScaleX(23), ScaleY(10));
-  C.LineTo(ScaleX(23), ScaleY(19));
-  C.LineTo(ScaleX(9), ScaleY(19));
-  C.LineTo(ScaleX(9), ScaleY(10));
-  C.LineTo(ScaleX(23), ScaleY(10));
-  { Etiqueta del boton: deja claro que la ubicacion se busca, no se escribe. }
-  C.Font.Name := 'Segoe UI';
-  C.Font.Height := -ScaleY(10);
-  C.Font.Color := ModernText;
-  C.TextOut(ScaleX(30), ScaleY(7), 'Examinar...');
-  ModernFolder.OnClick := @ModernBrowse;
-  ModernLabel('✓', 20, 350, 20, 24, 12, ModernAccent, True, False);
-  ModernLabel('Instalación para el usuario actual', 44, 352, 496, 24,
-    9, ModernMuted, False, False);
-  ModernInstallFocus := TBitmapImage.Create(WizardForm);
-  ModernInstallFocus.Parent := ModernHost;
-  ModernInstallFocus.SetBounds(ScaleX(18), ScaleY(386), ScaleX(524), ScaleY(50));
-  { Indicador de foco del boton principal: en el color de la superficie, para
-    que se vea sin parecer un contorno negro sobre el boton de acento. }
-  ModernRound(ModernInstallFocus.Bitmap, 524, 50, 12, ModernBackground, ModernSurface);
-  ModernInstallFocus.Visible := False;
-  ModernInstall := TBitmapButton.Create(WizardForm);
-  ModernInstall.Parent := ModernHost;
-  ModernInstall.SetBounds(ScaleX(ModernMargin), ScaleY(388), ScaleX(520), ScaleY(46));
-  ModernInstall.Caption := 'Instalar {#MyAppName}';
-  ModernInstall.TabStop := True;
-  ModernInstall.TabOrder := 2;
-  ModernInstall.Cursor := crHand;
-  ModernInstall.BackColor := ModernBackground;
-  ModernRound(ModernInstall.Bitmap, 520, 46, ModernControlRadius,
-    ModernBackground, ModernAccent);
-  C := ModernInstall.Bitmap.Canvas;
-  C.Font.Name := 'Segoe UI';
-  C.Font.Height := -ScaleY(14);
-  C.Font.Color := $211C18;
-  C.Font.Style := [fsBold];
-  Caption := ModernInstall.Caption;
-  { Con nombres largos el texto puede no caber en el boton: se reduce el cuerpo
-    de la fuente hasta que quepa, con un minimo legible. }
-  while (C.TextWidth(Caption) > ModernInstall.Width - ScaleX(28)) and
-        (C.Font.Height < -ScaleY(9)) do
-    C.Font.Height := C.Font.Height + 1;
-  C.TextOut((ModernInstall.Width - C.TextWidth(Caption)) div 2,
-    (ModernInstall.Height - C.TextHeight(Caption)) div 2, Caption);
-  ModernInstall.OnClick := @ModernStartInstall;
-  WizardForm.KeyPreview := True;
-  WizardForm.OnKeyDown := @ModernKeyDown;
-  WizardForm.OnKeyUp := @ModernKeyUp;
-  WizardForm.WizardSmallBitmapImage.Visible := False;
-  // Ajuste verificado en LyraFlow: los botones nativos Siguiente y Cancelar
-  // quedan tapados por el panel opaco, asi que el foco no debe quedarse en
-  // ellos. Se retiran del recorrido del tab SOLO en la pantalla de entrada;
-  // el motor los sigue usando (modo silencioso y navegacion interna). Con esto
-  // el recorrido queda exactamente carpeta -> instalar.
-  WizardForm.NextButton.TabStop := False;
-  WizardForm.CancelButton.TabStop := False;
-  // Siguiente deja de ser el boton por defecto en la entrada: Enter y Espacio
-  // se atienden desde el panel y no deben avanzar el asistente por su cuenta.
-  // ModernPageChanged lo restaura en progreso y exito, donde Enter debe poder
-  // cerrar el instalador con "Finalizar".
-  WizardForm.NextButton.Default := False;
-
-  ModernNextBtn := TBitmapButton.Create(WizardForm);
-  ModernNextBtn.Parent := WizardForm;
-  ModernNextBtn.SetBounds(WizardForm.NextButton.Left, WizardForm.NextButton.Top,
-                          WizardForm.NextButton.Width, WizardForm.NextButton.Height);
-  ModernNextBtn.Cursor := crHand;
-  ModernNextBtn.OnClick := @ModernNextBtnClick;
-  ModernNextBtn.Visible := False;
-
-  ModernCancelBtn := TBitmapButton.Create(WizardForm);
-  ModernCancelBtn.Parent := WizardForm;
-  ModernCancelBtn.SetBounds(WizardForm.CancelButton.Left, WizardForm.CancelButton.Top,
-                            WizardForm.CancelButton.Width, WizardForm.CancelButton.Height);
-  ModernCancelBtn.Cursor := crHand;
-  ModernCancelBtn.OnClick := @ModernCancelBtnClick;
-  ModernCancelBtn.Visible := False;
-
-  ModernYesRadioImg := TBitmapImage.Create(WizardForm);
-  ModernYesRadioImg.Parent := WizardForm.PreparingYesRadio.Parent;
-  ModernYesRadioImg.SetBounds(WizardForm.PreparingYesRadio.Left,
-                              WizardForm.PreparingYesRadio.Top + (WizardForm.PreparingYesRadio.Height - ScaleX(16)) div 2,
-                              ScaleX(16), ScaleX(16));
-  ModernYesRadioImg.Cursor := crHand;
-  ModernYesRadioImg.OnClick := @ModernRadioBulletClick;
-  ModernYesRadioImg.Visible := False;
-
-  ModernNoRadioImg := TBitmapImage.Create(WizardForm);
-  ModernNoRadioImg.Parent := WizardForm.PreparingNoRadio.Parent;
-  ModernNoRadioImg.SetBounds(WizardForm.PreparingNoRadio.Left,
-                             WizardForm.PreparingNoRadio.Top + (WizardForm.PreparingNoRadio.Height - ScaleX(16)) div 2,
-                             ScaleX(16), ScaleX(16));
-  ModernNoRadioImg.Cursor := crHand;
-  ModernNoRadioImg.OnClick := @ModernRadioBulletClick;
-  ModernNoRadioImg.Visible := False;
-
-  WizardForm.PreparingYesRadio.OnClick := @ModernRadioClick;
-  WizardForm.PreparingNoRadio.OnClick := @ModernRadioClick;
-end;
-
-function ModernSetWindowTheme(Window: HWND; SubApp, SubId: String): Integer;
-  external 'SetWindowTheme@uxtheme.dll stdcall';
-
-procedure ModernPageChanged(CurPageID: Integer);
-begin
-  if CurPageID = wpInstalling then
-  begin
-    WizardForm.ProgressGauge.StyleElements := [];
-    ModernSetWindowTheme(WizardForm.ProgressGauge.Handle, ' ', ' ');
-    SendMessage(WizardForm.ProgressGauge.Handle, $2001, 0, ModernSurface);
-    SendMessage(WizardForm.ProgressGauge.Handle, $0409, 0, ModernAccent);
-  end;
-
-  ModernHost.Visible := CurPageID = ModernPage.ID;
-  if ModernHost.Visible then
-  begin
-    ModernHost.BringToFront;
-    { El foco inicial caia en el boton nativo "Siguiente", que esta tapado por
-      el panel: no se veia indicador de foco hasta pulsar Tab. El campo de ruta
-      ya no es editable, asi que el foco va al boton principal: la accion por
-      defecto es instalar y la ubicacion se cambia con el boton de carpeta. }
-    if not ModernFocusSet then
+    if Checked then Canvas.Brush.Color := ModernAccent;
+    Canvas.RoundRect(Inset, Inset, W - Inset, H - Inset, ScaleX(4), ScaleY(4));
+    if Checked then
     begin
-      ModernFocusSet := True;
-      WinSetFocus(ModernInstall.Handle);
+      Canvas.Pen.Color := $211C18;
+      Canvas.Pen.Width := ScaleX(2);
+      Canvas.MoveTo(ScaleX(4), H div 2);
+      Canvas.LineTo(ScaleX(7), H - ScaleY(5));
+      Canvas.LineTo(W - ScaleX(4), ScaleY(5));
+    end;
+  end
+  else
+  begin
+    Canvas.Ellipse(Inset, Inset, W - Inset, H - Inset);
+    if Checked then
+    begin
+      Canvas.Brush.Color := ModernAccent;
+      Canvas.Ellipse(ScaleX(5), ScaleY(5), W - ScaleX(5), H - ScaleY(5));
     end;
   end;
-  WizardForm.BackButton.Visible := False;
-
-  // Botón Siguiente: oculto en la instalación (no tiene sentido mientras se extraen archivos),
-  // visible en el resto de páginas (es el botón "Finalizar" en la pantalla de éxito).
-  WizardForm.NextButton.Visible := CurPageID <> wpInstalling;
-
-  // Botón Cancelar: visible durante la instalación por si se aborta, pero OCULTO
-  // en la pantalla de éxito (wpFinished) porque la instalación ya concluyó.
-  WizardForm.CancelButton.Visible := (CurPageID <> wpFinished) and (CurPageID <> ModernPage.ID);
-
-  WizardForm.NextButton.TabStop := CurPageID <> ModernPage.ID;
-  WizardForm.CancelButton.TabStop := (CurPageID <> ModernPage.ID) and (CurPageID <> wpFinished);
-  WizardForm.NextButton.Default := CurPageID <> ModernPage.ID;
-
-  { En la pantalla de exito el foco caia en la casilla "Ejecutar <App>", que se
-    traga el Enter y deja al usuario sin poder cerrar el instalador con el
-    teclado. Se lleva a "Finalizar". }
-  if CurPageID = wpFinished then
-    WinSetFocus(WizardForm.NextButton.Handle);
-
-  // Botones modernos con identidad Biglex #00C9B9
-  ModernNextBtn.Visible := WizardForm.NextButton.Visible and (CurPageID <> ModernPage.ID);
-  ModernCancelBtn.Visible := WizardForm.CancelButton.Visible and (CurPageID <> ModernPage.ID);
-  if ModernNextBtn.Visible then
-  begin
-    ModernPaintNextButton;
-    ModernNextBtn.BringToFront;
-  end;
-  if ModernCancelBtn.Visible then
-  begin
-    ModernPaintCancelButton;
-    ModernCancelBtn.BringToFront;
-  end;
-
-  ModernYesRadioImg.Visible := CurPageID = wpPreparing;
-  ModernNoRadioImg.Visible := CurPageID = wpPreparing;
-  if CurPageID = wpPreparing then
-  begin
-    WizardForm.PreparingMemo.StyleElements := [];
-    WizardForm.PreparingMemo.Font.Name := 'Segoe UI';
-    WizardForm.PreparingMemo.Font.Size := 9;
-    WizardForm.PreparingMemo.Color := ModernSurface;
-    WizardForm.PreparingMemo.Font.Color := ModernText;
-    WizardForm.PreparingYesRadio.Font.Name := 'Segoe UI';
-    WizardForm.PreparingYesRadio.Font.Size := 9;
-    WizardForm.PreparingYesRadio.Font.Color := ModernText;
-    WizardForm.PreparingNoRadio.Font.Name := 'Segoe UI';
-    WizardForm.PreparingNoRadio.Font.Size := 9;
-    WizardForm.PreparingNoRadio.Font.Color := ModernText;
-    ModernPaintRadioBullet(ModernYesRadioImg, WizardForm.PreparingYesRadio.Checked);
-    ModernPaintRadioBullet(ModernNoRadioImg, WizardForm.PreparingNoRadio.Checked);
-    ModernYesRadioImg.BringToFront;
-    ModernNoRadioImg.BringToFront;
-  end;
 end;
 
-function ModernNextButtonClick(CurPageID: Integer): Boolean;
-var Path: String;
+procedure ModernRadioChanged(Sender: TObject);
 begin
-  Result := True;
-  if CurPageID <> ModernPage.ID then Exit;
-  Path := Trim(ModernPath.Text);
-  if (Path = '') or (Pos(':\', Path) <> 2) or (Length(Path) <= 3) then
-  begin
-    MsgBox('Indica una carpeta de instalación con ruta absoluta, por ejemplo C:\Apps\{#MyAppName}.', mbError, MB_OK);
-    Result := False;
-    Exit;
-  end;
-  WizardForm.DirEdit.Text := Path;
+  ModernPaintSelector(ModernYesGlyph);
+  ModernPaintSelector(ModernNoGlyph);
 end;
 
-// Confirmación de salida con el mismo acento que Instalar. Solo sustituye la
-// presentación del aviso; CancelButtonClick mantiene la cancelación de Inno.
-procedure ModernExitPaintButton(Button: TBitmapButton; Emphasized: Boolean);
-var C: TCanvas;
+procedure ModernRunChanged(Sender: TObject);
 begin
-  ModernRound(Button.Bitmap, 80, 28, 5, ModernBackground, ModernSurface);
-  C := Button.Bitmap.Canvas;
-  C.Brush.Style := bsClear;
-  C.Pen.Color := ModernLine;
-  if Emphasized or Button.Focused then C.Pen.Color := ModernAccent;
-  C.Pen.Width := ScaleX(1);
-  // Mantener un borde fino también al recibir foco.
-  C.RoundRect(ScaleX(1), ScaleY(1), Button.Width - ScaleX(1),
-    Button.Height - ScaleY(1), ScaleX(10), ScaleY(10));
-  C.Brush.Style := bsSolid;
-  C.Brush.Color := ModernSurface;
-  C.Font.Name := 'Segoe UI';
-  C.Font.Height := -ScaleY(12);
-  C.Font.Color := ModernText;
-  C.TextOut((Button.Width - C.TextWidth(Button.Caption)) div 2,
-    (Button.Height - C.TextHeight(Button.Caption)) div 2, Button.Caption);
+  ModernPaintSelector(ModernRunGlyph);
+end;
+
+procedure ModernSelectorClick(Sender: TObject);
+begin
+  if Sender = ModernYesGlyph then
+  begin
+    WizardForm.PreparingYesRadio.Checked := True;
+    WinSetFocus(WizardForm.PreparingYesRadio.Handle);
+  end
+  else if Sender = ModernNoGlyph then
+  begin
+    WizardForm.PreparingNoRadio.Checked := True;
+    WinSetFocus(WizardForm.PreparingNoRadio.Handle);
+  end
+  else if (WizardForm.RunList <> nil) and (WizardForm.RunList.Items.Count > 0) then
+  begin
+    WizardForm.RunList.Checked[0] := not WizardForm.RunList.Checked[0];
+    WinSetFocus(WizardForm.RunList.Handle);
+    ModernRunChanged(WizardForm.RunList);
+  end;
+  ModernRadioChanged(Sender);
+end;
+
+function ModernCreateGlyph(Parent: TWinControl; const Caption: String): TBitmapButton;
+begin
+  Result := TBitmapButton.Create(WizardForm);
+  Result.Parent := Parent;
+  { Evitar que el dibujo nativo del padre vuelva a pintar azul sobre el glifo. }
+  ModernSetWindowLong(Parent.Handle, -16,
+    ModernGetWindowLong(Parent.Handle, -16) or $02000000);
+  Result.Caption := Caption;
+  Result.TabStop := False;
+  Result.Cursor := crHand;
+  Result.SetBounds(0, (Parent.Height - ScaleY(18)) div 2, ScaleX(18), ScaleY(18));
+  Result.Bitmap.Width := Result.Width - 4;
+  Result.Bitmap.Height := Result.Height - 4;
+  Result.OnClick := @ModernSelectorClick;
+end;
+
+{ Confirmación de salida: botones 78 x 26, mensajes adecuados a entrada vs éxito }
+procedure ModernPaintExitButtons;
+begin
+  ModernPaintButton(ModernExitYes, ModernExitYes.Caption, ModernBackground, ModernExitYes.Focused);
+  ModernPaintButton(ModernExitNo, ModernExitNo.Caption, ModernBackground, True);
+end;
+
+procedure ModernExitActivate(Sender: TObject);
+begin
+  WinSetFocus(ModernExitNo.Handle);
+  ModernPaintExitButtons;
+  SendMessage(ModernExitForm.Handle, $0127, $00010001, 0);
 end;
 
 procedure ModernExitClick(Sender: TObject);
 begin
   ModernExitAccepted := Sender = ModernExitYes;
   ModernExitForm.Close;
-end;
-
-procedure ModernExitActivate(Sender: TObject);
-begin
-  WinSetFocus(ModernExitNo.Handle);
-  ModernExitPaintButton(ModernExitYes, False);
-  ModernExitPaintButton(ModernExitNo, True);
 end;
 
 procedure ModernExitKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -694,6 +413,7 @@ begin
     Key := 0;
     if ModernExitNo.Focused then WinSetFocus(ModernExitYes.Handle)
     else WinSetFocus(ModernExitNo.Handle);
+    ModernPaintExitButtons;
   end;
 end;
 
@@ -706,11 +426,10 @@ begin
     ModernExitForm.Close;
     Exit;
   end;
-  ModernExitPaintButton(ModernExitYes, False);
-  ModernExitPaintButton(ModernExitNo, True);
+  ModernPaintExitButtons;
 end;
 
-function ModernConfirmExit: Boolean;
+function ModernConfirmExit(Finished: Boolean): Boolean;
 var MessageLabel: TNewStaticText; Mark: TBitmapImage; C: TCanvas;
 begin
   ModernExitAccepted := False;
@@ -742,9 +461,14 @@ begin
     MessageLabel.SetBounds(ScaleX(58), ScaleY(18), ScaleX(324), ScaleY(126));
     MessageLabel.Caption := 'La instalación no se ha completado aún. Si cancelas ahora, el programa no se instalará.' + #13#10 + #13#10 +
       'Puedes ejecutar nuevamente el instalador en otra ocasión para completarla.' + #13#10 + #13#10 + '¿Salir de la instalación?';
+    if Finished then
+    begin
+      ModernExitForm.Caption := 'Cerrar instalador';
+      MessageLabel.Caption := 'La instalación de ' + ExpandConstant('{#MyAppName}') + ' ha terminado.' + #13#10 + #13#10 + '¿Quieres cerrar el instalador?';
+    end;
     ModernExitYes := TBitmapButton.Create(ModernExitForm);
     ModernExitYes.Parent := ModernExitForm;
-    ModernExitYes.SetBounds(ScaleX(214), ScaleY(152), ScaleX(80), ScaleY(28));
+    ModernExitYes.SetBounds(ScaleX(215), ScaleY(153), ScaleX(78), ScaleY(26));
     ModernExitYes.Caption := 'Sí';
     ModernExitYes.BackColor := ModernBackground;
     ModernExitYes.TabStop := True;
@@ -752,14 +476,14 @@ begin
     ModernExitYes.OnClick := @ModernExitClick;
     ModernExitNo := TBitmapButton.Create(ModernExitForm);
     ModernExitNo.Parent := ModernExitForm;
-    ModernExitNo.SetBounds(ScaleX(302), ScaleY(152), ScaleX(80), ScaleY(28));
+    ModernExitNo.SetBounds(ScaleX(303), ScaleY(153), ScaleX(78), ScaleY(26));
     ModernExitNo.Caption := 'No';
     ModernExitNo.BackColor := ModernBackground;
     ModernExitNo.TabStop := True;
     ModernExitNo.Cursor := crHand;
     ModernExitNo.OnClick := @ModernExitClick;
-    ModernExitPaintButton(ModernExitYes, False);
-    ModernExitPaintButton(ModernExitNo, True);
+    ModernPaintExitButtons;
+
     ModernExitForm.OnActivate := @ModernExitActivate;
     ModernExitForm.OnKeyDown := @ModernExitKeyDown;
     ModernExitForm.OnKeyUp := @ModernExitKeyUp;
@@ -775,11 +499,368 @@ begin
   end;
 end;
 
+procedure ModernNextClick(Sender: TObject);
+begin
+  if WizardForm.NextButton.Enabled then
+    WizardForm.NextButton.OnClick(WizardForm.NextButton);
+end;
+
+procedure ModernCancelClick(Sender: TObject);
+begin
+  WizardForm.CancelButton.OnClick(WizardForm.CancelButton);
+end;
+
+procedure ModernClose(Sender: TObject; var Action: TCloseAction);
+var I: Integer;
+begin
+  if WizardForm.CurPageID = wpFinished then
+  begin
+    { La X finaliza limpiamente, pero no ejecuta las acciones postinstalación. }
+    Action := caNone;
+    if WizardForm.RunList <> nil then
+      for I := 0 to WizardForm.RunList.Items.Count - 1 do
+        WizardForm.RunList.Checked[I] := False;
+    if WizardForm.NoRadio.Visible then WizardForm.NoRadio.Checked := True;
+    WizardForm.NextButton.OnClick(WizardForm.NextButton);
+  end
+  else
+    { El motor nativo pide confirmación y conserva su cancelación segura. }
+    ModernOriginalClose(Sender, Action);
+end;
+
 procedure ModernCancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
 begin
-  // Conservar los casos en que el motor no pide confirmación y el modo silent.
-  if WizardSilent or (not Confirm) then Exit;
-  Cancel := ModernConfirmExit;
+  if WizardSilent then Exit;
+  Cancel := ModernConfirmExit(False);
   Confirm := False;
 end;
 
+{ Transforma trazos azules del paquete genérico a turquesa conservando disco gris }
+procedure ModernTintGenericPackage;
+var Image: TBitmapImage; CopyBitmap: TBitmap; X, Y, Pixel, R, G, B, MinRed, Mix: Integer;
+  Bounds: TRect;
+begin
+  Image := WizardForm.WizardBitmapImage2;
+  if Image = nil then Exit;
+  CopyBitmap := TBitmap.Create;
+  try
+    CopyBitmap.Width := Image.Bitmap.Width;
+    CopyBitmap.Height := Image.Bitmap.Height;
+    Bounds.Left := 0; Bounds.Top := 0;
+    Bounds.Right := CopyBitmap.Width; Bounds.Bottom := CopyBitmap.Height;
+    CopyBitmap.Canvas.Brush.Color := ModernBackground;
+    CopyBitmap.Canvas.FillRect(Bounds);
+    if not ModernAlphaBlend(CopyBitmap.Canvas.Handle, 0, 0, CopyBitmap.Width, CopyBitmap.Height,
+      Image.Bitmap.Canvas.Handle, 0, 0, Image.Bitmap.Width, Image.Bitmap.Height, $01FF0000) then
+      ModernBitBlt(CopyBitmap.Canvas.Handle, 0, 0, CopyBitmap.Width, CopyBitmap.Height,
+        Image.Bitmap.Canvas.Handle, 0, 0, $00CC0020);
+    MinRed := 255;
+    for Y := 0 to CopyBitmap.Height - 1 do
+      for X := 0 to CopyBitmap.Width - 1 do
+      begin
+        Pixel := CopyBitmap.Canvas.Pixels[X, Y];
+        R := Pixel and $FF; G := (Pixel shr 8) and $FF; B := (Pixel shr 16) and $FF;
+        if (B > R + 15) and (B > G + 8) and (R < MinRed) then MinRed := R;
+      end;
+    if MinRed < 255 then
+      for Y := 0 to CopyBitmap.Height - 1 do
+        for X := 0 to CopyBitmap.Width - 1 do
+        begin
+          Pixel := CopyBitmap.Canvas.Pixels[X, Y];
+          R := Pixel and $FF; G := (Pixel shr 8) and $FF; B := (Pixel shr 16) and $FF;
+          if (B > R + 15) and (B > G + 8) then
+          begin
+            Mix := ((R - MinRed) * 255) div (255 - MinRed);
+            G := 201 + (54 * Mix) div 255;
+            B := 185 + (70 * Mix) div 255;
+            CopyBitmap.Canvas.Pixels[X, Y] := Mix or (G shl 8) or (B shl 16);
+          end;
+        end;
+    Image.Bitmap.Assign(CopyBitmap);
+  finally
+    CopyBitmap.Free;
+  end;
+end;
+
+procedure ModernInitialize();
+begin
+  if IsDarkInstallMode then
+  begin
+    ModernBackground := $1C1915; // #15191C
+    ModernSurface := $302B22;    // #222B30
+    ModernText := $F1F0EE;
+    ModernMuted := $BDB7AF;
+    ModernLine := $37312B;
+    ModernLogoSurface := $32361E;
+  end
+  else
+  begin
+    ModernBackground := $FAF9F7;
+    ModernSurface := $F0EBE5;
+    ModernText := $211C18;
+    ModernMuted := $6F6358;
+    ModernLine := $DED6CE;
+    ModernLogoSurface := $E9EFE0;
+  end;
+
+  WizardForm.ClientWidth := ScaleX(ModernWidth);
+  WizardForm.ClientHeight := ScaleY(ModernHeight);
+  WizardForm.Caption := 'Instalar {#MyAppName}';
+  ModernPage := CreateCustomPage(wpWelcome, '', '');
+  ModernHost := TPanel.Create(WizardForm);
+  ModernHost.Parent := WizardForm;
+  ModernHost.SetBounds(0, 0, WizardForm.ClientWidth, WizardForm.ClientHeight);
+  ModernHost.BevelOuter := bvNone;
+  ModernHost.StyleElements := [];
+  ModernHost.Color := ModernBackground;
+  ModernHost.Visible := False;
+
+  ExtractTemporaryFile('{#MyAppIcon}');
+  ModernLogo(ModernMargin, 19, 20, ModernBackground);
+  ModernAppName('{#MyAppName}', 48, 21, 366, 26, 10, ModernText);
+  ModernLabel('INSTALADOR', 422, 22, 118, 20, 9, ModernMuted, False, True);
+  ModernTile(ModernMargin, 60, 520, 1, 0, ModernLine);
+  ModernTile(248, 96, 64, 64, ModernLogoRadius, ModernLogoSurface);
+  ModernLogo(254, 102, 52, ModernLogoSurface);
+  ModernLabel('Todo listo para comenzar', ModernMargin, 174, 520, 38,
+    20, ModernText, True, True);
+  ModernLabel('{#MyAppSubtitle}',
+    ModernMargin, 218, 520, 40, 10, ModernMuted, False, True);
+  ModernTile(ModernMargin, 262, 520, 70, ModernControlRadius, ModernSurface);
+  ModernLabel('Ubicación de instalación', 32, 274, 464, 20,
+    9, ModernMuted, False, False);
+  TNewStaticText(ModernHost.Controls[ModernHost.ControlCount - 1]).Color := ModernSurface;
+
+  ModernPath := TEdit.Create(WizardForm);
+  ModernPath.Parent := ModernHost;
+  ModernPath.StyleElements := [];
+  ModernPath.BorderStyle := bsNone;
+  ModernPath.Color := ModernSurface;
+  ModernPath.Font.Name := 'Segoe UI';
+  ModernPath.Font.Size := 9;
+  ModernPath.Font.Color := ModernText;
+  ModernPath.SetBounds(ScaleX(32), ScaleY(302), ScaleX(376), ScaleY(22));
+  ModernPath.Text := WizardForm.DirEdit.Text;
+  ModernPath.ReadOnly := True;
+  ModernPath.TabStop := False;
+  ModernPath.TabOrder := 0;
+  ModernPath.OnKeyDown := @ModernPathKeyDown;
+
+  ModernFolder := TBitmapButton.Create(WizardForm);
+  ModernFolder.Parent := ModernHost;
+  ModernFolder.SetBounds(ScaleX(416), ScaleY(294), ScaleX(96), ScaleY(28));
+  ModernFolder.Caption := 'Examinar...';
+  ModernFolder.Hint := 'Elegir carpeta de instalacion';
+  ModernFolder.ShowHint := True;
+  ModernFolder.TabStop := True;
+  ModernFolder.TabOrder := 1;
+  ModernFolder.Cursor := crHand;
+  ModernFolder.OnClick := @ModernBrowse;
+  ModernPaintButton(ModernFolder, 'Examinar...', ModernSurface, True);
+
+  ModernLabel('✓', 20, 350, 20, 24, 12, ModernAccent, True, False);
+  ModernLabel('Instalación para el usuario actual', 44, 352, 496, 24,
+    9, ModernMuted, False, False);
+
+  ModernInstall := TBitmapButton.Create(WizardForm);
+  ModernInstall.Parent := ModernHost;
+  ModernInstall.SetBounds(ScaleX(ModernMargin), ScaleY(388), ScaleX(520), ScaleY(46));
+  ModernInstall.Caption := 'Instalar {#MyAppName}';
+  ModernInstall.TabStop := True;
+  ModernInstall.TabOrder := 2;
+  ModernInstall.Cursor := crHand;
+  ModernInstall.OnClick := @ModernStartInstall;
+  ModernPaintButton(ModernInstall, ModernInstall.Caption, ModernBackground, True);
+
+  WizardForm.KeyPreview := True;
+  WizardForm.OnKeyDown := @ModernKeyDown;
+  WizardForm.OnKeyUp := @ModernKeyUp;
+
+  { Conservar las medidas y separacion originales de los botones de Inno }
+  ModernFooterRight := WizardForm.CancelButton.Left + WizardForm.CancelButton.Width;
+  ModernFooterTop := WizardForm.NextButton.Top - ((ScaleY(26) - WizardForm.NextButton.Height) div 2);
+  ModernFooterWidth := WizardForm.NextButton.Width;
+  ModernFooterHeight := ScaleY(26);
+  ModernFooterGap := WizardForm.CancelButton.Left -
+    (WizardForm.NextButton.Left + WizardForm.NextButton.Width);
+
+  ModernOriginalClose := WizardForm.OnClose;
+  WizardForm.OnClose := @ModernClose;
+
+  ModernNextBtn := TBitmapButton.Create(WizardForm);
+  ModernNextBtn.Parent := WizardForm;
+  ModernNextBtn.SetBounds(WizardForm.NextButton.Left, WizardForm.NextButton.Top,
+                          ModernFooterWidth, ModernFooterHeight);
+  ModernNextBtn.Cursor := crHand;
+  ModernNextBtn.OnClick := @ModernNextClick;
+  ModernNextBtn.Visible := False;
+
+  ModernCancelBtn := TBitmapButton.Create(WizardForm);
+  ModernCancelBtn.Parent := WizardForm;
+  ModernCancelBtn.SetBounds(WizardForm.CancelButton.Left, WizardForm.CancelButton.Top,
+                            ModernFooterWidth, ModernFooterHeight);
+  ModernCancelBtn.Cursor := crHand;
+  ModernCancelBtn.OnClick := @ModernCancelClick;
+  ModernCancelBtn.Visible := False;
+
+  { Glifos personalizados para opciones de preparacion y ejecucion }
+  ModernYesGlyph := ModernCreateGlyph(WizardForm.PreparingYesRadio, 'Cerrar automaticamente las aplicaciones');
+  ModernNoGlyph := ModernCreateGlyph(WizardForm.PreparingNoRadio, 'No cerrar las aplicaciones');
+  WizardForm.PreparingYesRadio.OnClick := @ModernRadioChanged;
+  WizardForm.PreparingNoRadio.OnClick := @ModernRadioChanged;
+
+  if WizardForm.RunList <> nil then
+  begin
+    ModernRunGlyph := ModernCreateGlyph(WizardForm.RunList, 'Ejecutar ' + ExpandConstant('{#MyAppName}'));
+    ModernRunGlyph.Visible := False;
+    WizardForm.RunList.OnClickCheck := @ModernRunChanged;
+  end;
+
+  ModernRadioChanged(WizardForm);
+  ModernPaintSelector(ModernRunGlyph);
+
+  { Cargar icono en la cabecera de las paginas posteriores }
+  InitializeBitmapImageFromIcon(WizardForm.WizardSmallBitmapImage,
+    ExpandConstant('{tmp}\{#MyAppIcon}'), ModernBackground, [16, 24, 32, 48, 64]);
+  WizardForm.WizardSmallBitmapImage.Visible := False;
+
+  { Retocar paquete generico de la pantalla final }
+  ModernTintGenericPackage;
+
+  WizardForm.NextButton.TabStop := False;
+  WizardForm.CancelButton.TabStop := False;
+  WizardForm.NextButton.Default := False;
+
+  { Mantener la X de la barra de título disponible }
+  ModernEnableMenuItem(ModernGetSystemMenu(WizardForm.Handle, False), $F060, 0);
+  ModernDrawMenuBar(WizardForm.Handle);
+end;
+
+procedure ModernPageChanged(CurPageID: Integer);
+var Caption: String; FooterTop, RightEdge, ButtonWidth, ButtonHeight: Integer;
+  ItemBounds: TRect;
+begin
+  if CurPageID = wpInstalling then
+  begin
+    WizardForm.ProgressGauge.StyleElements := [];
+    ModernSetWindowTheme(WizardForm.ProgressGauge.Handle, ' ', ' ');
+    SendMessage(WizardForm.ProgressGauge.Handle, $2001, 0, ModernSurface);
+    SendMessage(WizardForm.ProgressGauge.Handle, $0409, 0, ModernAccent);
+  end;
+
+  ModernHost.Visible := CurPageID = ModernPage.ID;
+  WizardForm.WizardSmallBitmapImage.Visible := CurPageID <> ModernPage.ID;
+
+  if CurPageID = ModernPage.ID then
+  begin
+    ModernHost.BringToFront;
+    WizardForm.CancelButton.Visible := True;
+    WizardForm.CancelButton.TabStop := False;
+    ModernCancelBtn.Visible := False;
+    ModernNextBtn.Visible := False;
+    ModernPaintButton(ModernInstall, ModernInstall.Caption, ModernBackground, True);
+    ModernPaintButton(ModernFolder, 'Examinar...', ModernSurface, True);
+    if not ModernFocusSet then
+    begin
+      ModernFocusSet := True;
+      WinSetFocus(ModernInstall.Handle);
+    end;
+  end
+  else
+  begin
+    ButtonWidth := ModernFooterWidth;
+    ButtonHeight := ModernFooterHeight;
+    RightEdge := ModernFooterRight;
+    FooterTop := ModernFooterTop;
+
+    ModernNextBtn.SetBounds(RightEdge - ButtonWidth, FooterTop, ButtonWidth, ButtonHeight);
+    if (CurPageID <> wpFinished) and (CurPageID <> wpInstalling) then
+    begin
+      ModernCancelBtn.SetBounds(RightEdge - ButtonWidth, FooterTop, ButtonWidth, ButtonHeight);
+      ModernNextBtn.Left := ModernCancelBtn.Left - ButtonWidth - ModernFooterGap;
+      ModernCancelBtn.Visible := True;
+    end
+    else
+      ModernCancelBtn.Visible := False;
+
+    ModernNextBtn.Visible := CurPageID <> wpInstalling;
+
+    Caption := WizardForm.NextButton.Caption;
+    StringChangeEx(Caption, '&', '', True);
+    { El estilo oscuro de Inno no cambia necesariamente la propiedad Color }
+    ModernPaintButton(ModernNextBtn, Caption, ModernBackground, True);
+
+    Caption := WizardForm.CancelButton.Caption;
+    StringChangeEx(Caption, '&', '', True);
+    ModernPaintButton(ModernCancelBtn, Caption, ModernBackground, False);
+
+    ModernNextBtn.TabStop := ModernNextBtn.Visible;
+    ModernCancelBtn.TabStop := ModernCancelBtn.Visible;
+    WizardForm.NextButton.TabStop := False;
+    WizardForm.CancelButton.TabStop := False;
+
+    if ModernNextBtn.Visible then ModernNextBtn.BringToFront;
+    if ModernCancelBtn.Visible then ModernCancelBtn.BringToFront;
+    if CurPageID = wpFinished then WinSetFocus(ModernNextBtn.Handle);
+  end;
+
+  WizardForm.BackButton.Visible := False;
+  WizardForm.NextButton.Visible := CurPageID <> wpInstalling;
+  WizardForm.CancelButton.Visible := CurPageID <> wpFinished;
+
+  { Ocultar glifos antiguos fuera de contexto }
+  ModernRunGlyph.Visible := (CurPageID = wpFinished) and (WizardForm.RunList <> nil) and (WizardForm.RunList.Items.Count > 0);
+  if ModernRunGlyph.Visible then
+  begin
+    if ModernItemRect(WizardForm.RunList.Handle, $0198, 0, ItemBounds) <> -1 then
+      ModernRunGlyph.SetBounds(WizardForm.RunList.Offset,
+        ItemBounds.Top + (ItemBounds.Bottom - ItemBounds.Top - ScaleY(18)) div 2,
+        ScaleX(18), ScaleY(18));
+    ModernRunGlyph.BringToFront;
+    ModernPaintSelector(ModernRunGlyph);
+  end;
+
+  if CurPageID = wpPreparing then
+  begin
+    WizardForm.PreparingMemo.StyleElements := [];
+    WizardForm.PreparingMemo.Font.Name := 'Segoe UI';
+    WizardForm.PreparingMemo.Font.Size := 9;
+    WizardForm.PreparingMemo.Color := ModernSurface;
+    WizardForm.PreparingMemo.Font.Color := ModernText;
+    WizardForm.PreparingYesRadio.Font.Name := 'Segoe UI';
+    WizardForm.PreparingYesRadio.Font.Size := 9;
+    WizardForm.PreparingYesRadio.Font.Color := ModernText;
+    WizardForm.PreparingNoRadio.Font.Name := 'Segoe UI';
+    WizardForm.PreparingNoRadio.Font.Size := 9;
+    WizardForm.PreparingNoRadio.Font.Color := ModernText;
+    ModernRadioChanged(WizardForm);
+  end;
+
+  WizardForm.NextButton.Left := -ScaleX(1000);
+  WizardForm.CancelButton.Left := -ScaleX(1000);
+
+  { Ocultar rectangulo inicial de foco para evitar doble contorno }
+  SendMessage(WizardForm.Handle, $0127, $00010001, 0);
+
+  { Mantener la X de la barra de titulo disponible }
+  if CurPageID <> wpInstalling then
+  begin
+    ModernEnableMenuItem(ModernGetSystemMenu(WizardForm.Handle, False), $F060, 0);
+    ModernDrawMenuBar(WizardForm.Handle);
+  end;
+end;
+
+function ModernNextButtonClick(CurPageID: Integer): Boolean;
+var Path: String;
+begin
+  Result := True;
+  if CurPageID <> ModernPage.ID then Exit;
+  Path := Trim(ModernPath.Text);
+  if (Path = '') or (Pos(':\', Path) <> 2) or (Length(Path) <= 3) then
+  begin
+    MsgBox('Indica una carpeta de instalación con ruta absoluta, por ejemplo C:\Apps\{#MyAppName}.', mbError, MB_OK);
+    Result := False;
+    Exit;
+  end;
+  WizardForm.DirEdit.Text := Path;
+end;

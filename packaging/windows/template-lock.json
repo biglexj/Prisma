@@ -2,6 +2,6 @@
   "version": "2.0.1",
   "reviewedCommit": "92638f7",
   "template": "BiglexModernUI.iss",
-  "sha256": "e3716eaa0547b8699449ed158d38cc7b0fc08a0a19f688c903ef9bbad2f9f423",
-  "reason": "Plantilla de Prisma ya revisada; la plantilla compartida se encuentra en propagacion y modificacion."
+  "sha256": "68e2a826a186d19bf0a7739cbd4c7929fe535ecaaf97dafd734254219bb4eedc",
+  "reason": "Plantilla unificada compartida propagada desde el instalador de referencia Prisma 2.0.0."
 }

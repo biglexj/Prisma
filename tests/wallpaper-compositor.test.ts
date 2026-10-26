@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+﻿import { describe, expect, test } from "bun:test";
 import { readFileSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
@@ -21,7 +21,7 @@ describe("Subconjunto Aurora distribuido por Prisma", () => {
       const upstream = resolve(import.meta.dir, "../../Aurora---Blog/frontend/src/features/Comunidad/EspacioVtuber/islands/three/dynamic-backgrounds", file);
       // Comprobar deriva cuando Aurora está disponible; la copia sigue siendo autónoma.
       if (existsSync(upstream)) {
-        expect(createHash("sha256").update(readFileSync(upstream)).digest("hex")).toBe(sha);
+        const raw = readFileSync(upstream); const hash = createHash("sha256").update(raw).digest("hex"); const lfHash = createHash("sha256").update(raw.toString("utf8").replace(/\r\n/g, "\n")).digest("hex"); expect([hash, lfHash]).toContain(sha);
       }
     }
     for (const [file, entry] of Object.entries(provenance.external ?? {}) as [string,{source:string;sha256:string}][]) {

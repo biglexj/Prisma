@@ -243,7 +243,12 @@ pub struct SourceManager {
 impl SourceManager {
     pub fn new(app_data_dir: PathBuf) -> Self {
         let config_path = app_data_dir.join("live_wallpapers.json");
-        let settings = Self::load_from_disk(&config_path).unwrap_or_default();
+        let mut settings = Self::load_from_disk(&config_path).unwrap_or_default();
+        // El switch es ahora el único estado de exclusión de una carpeta.
+        // Conservar excluidas las carpetas ocultas antiguas, pero permitir reactivarlas.
+        for source in &mut settings.sources {
+            if source.hidden { source.enabled = false; source.hidden = false; }
+        }
         let mut mgr = Self {
             config_path,
             settings,
@@ -342,6 +347,7 @@ impl SourceManager {
     pub fn toggle_folder(&mut self, id: &str, enabled: bool) -> bool {
         if let Some(src) = self.settings.sources.iter_mut().find(|s| s.id == id) {
             src.enabled = enabled;
+            src.hidden = false;
             let _ = self.save_to_disk();
             self.rebuild_queue(None);
             true

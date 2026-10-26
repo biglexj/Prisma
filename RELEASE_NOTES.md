@@ -2,11 +2,13 @@
 
 Registro de cambios y versiones de Prisma.
 
-## [2.0.1] - 2026-10-26 · Compilación local, no publicada
+## [2.0.1] - 2026-10-26
 
-Fondos Vivos incorpora la cesión automática del escritorio entre las ediciones Stable y Dev. Al abrir Dev, Stable suspende su fondo y deshabilita temporalmente sus controles; al salir de Dev, recupera el medio y la composición que tenía activos. Ambas ediciones deben estar actualizadas para utilizar esta coordinación.
+Fondos Vivos incorpora la cesión automática del escritorio entre las ediciones Stable y Dev. Al abrir Dev, la edición Stable suspende su fondo y deshabilita temporalmente sus controles; al salir de Dev, recupera automáticamente el medio y la composición que estaban activos. Ambas ediciones deben estar actualizadas para utilizar esta coordinación.
 
-Quick Look añade el total de archivos y subcarpetas, tamaño, fecha de creación y desglose de imágenes, vídeos y documentos. Los controles de fondos mantienen su posición con un interruptor de sonido de ancho fijo y el nuevo orden de Mezcla y Encuadre.
+Quick Look añade el total de archivos y subcarpetas, tamaño, fecha de creación y desglose de imágenes, vídeos y documentos. Al abrir fondos se navega directamente a la sección de Vídeos, y los controles conservan su alineación mediante un interruptor de sonido de ancho fijo junto al nuevo orden de Mezcla y Encuadre.
+
+Las carpetas de Fondos Vivos utilizan un único interruptor para activarlas o desactivarlas en la rotación. El ocultado individual se conserva para imágenes y vídeos; las carpetas ocultadas con anterioridad pasan a estar desactivadas y pueden recuperarse directamente desde su interruptor.
 
 ## [2.0.0] - 2026-10-26
 

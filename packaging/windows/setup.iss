@@ -122,7 +122,6 @@ Filename: "{win}\explorer.exe"; Parameters: """{app}\{#MyAppExe}"""; Description
 
 ; UI compartida "Biglex Modern 2.0": presentacion y validacion de la entrada.
 #include "BiglexModernUI.iss"
-#include "PrismaInstallerUI.iss"
 
 [Code]
 var
@@ -280,20 +279,12 @@ end;
 procedure InitializeWizard();
 begin
   ModernInitialize;
-  PrismaInitialize;
-  // La entrada tiene su propio logo. Las páginas nativas de progreso también
-  // deben mostrar la identidad de Prisma en lugar de dejar la cabecera vacía.
-  if not InitializeBitmapImageFromIcon(WizardForm.WizardSmallBitmapImage,
-    ExpandConstant('{tmp}\{#MyAppIcon}'), ModernBackground, [16, 24, 32, 48, 64]) then
-    Log('No se pudo cargar el icono de Prisma en la cabecera de progreso.');
   InitAssocData;
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
 begin
   ModernPageChanged(CurPageID);
-  PrismaPageChanged(CurPageID);
-  WizardForm.WizardSmallBitmapImage.Visible := CurPageID <> ModernPage.ID;
 end;
 
 function NextButtonClick(WizardPageID: Integer): Boolean;
@@ -331,5 +322,5 @@ end;
 [Code]
 procedure CancelButtonClick(CurPageID: Integer; var Cancel, Confirm: Boolean);
 begin
-  PrismaCancelButtonClick(CurPageID, Cancel, Confirm);
+  ModernCancelButtonClick(CurPageID, Cancel, Confirm);
 end;

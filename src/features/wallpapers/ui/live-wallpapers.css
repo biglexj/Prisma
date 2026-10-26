@@ -683,43 +683,6 @@
   background: color-mix(in srgb, var(--error, #ba1a1a) 15%, transparent);
 }
 
-/* Botón de ojo: oculta o muestra la carpeta y sus vídeos */
-.chip-eye-btn {
-  background: transparent;
-  border: none;
-  color: var(--on-surface-variant, #6b616d);
-  padding: 0.2rem;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  opacity: 0.7;
-  transition: all 0.12s ease;
-}
-
-.chip-eye-btn:hover {
-  opacity: 1;
-  color: var(--primary, #6366f1);
-  background: color-mix(in srgb, var(--primary, #6366f1) 14%, transparent);
-}
-
-/* Carpeta oculta: estado gris, sin reproducción */
-.compact-folder-chip.is-hidden {
-  background: var(--surface-container, #f3edf4);
-  border-style: dashed;
-  border-color: var(--outline-variant, #ded5df);
-  opacity: 0.62;
-  filter: grayscale(1);
-}
-
-.compact-folder-chip.is-hidden .chip-name {
-  color: var(--on-surface-variant, #6b616d);
-  text-decoration: line-through;
-  text-decoration-thickness: 1px;
-}
-
 /* ── Main Section: Lista de Vídeos ── */
 .live-videos-list-section {
   display: flex;

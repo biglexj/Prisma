@@ -1,24 +1,19 @@
-# ✨ Prisma 2.0.0
+# ⚡ Prisma 2.0.1
 
-Prisma 2.0 reúne Fondos Vivos, composición visual de Aurora, la bandeja flotante Synapse y nuevas herramientas de captura y grabación. También incorpora las mejoras acumuladas del reproductor, la biblioteca multimedia y la personalización.
+Esta actualización de mantenimiento para Prisma 2.0 perfecciona la coordinación de Fondos Vivos entre las ediciones del sistema, amplía los metadatos de carpetas en Quick Look y simplifica la gestión de fuentes multimedia.
 
-- 🌟 **Fondos Vivos y composición de Aurora**: vídeos, imágenes y GIF en el escritorio, reproducción en orden o aleatoria y varias carpetas de origen. Incluye 25 escenarios y efectos de Aurora, ambientes y partículas independientes, efectos que responden al clic y profundidad con Parallax. Sus controles permiten ajustar color, velocidad, zoom y posición.
-- ⚡ **Synapse, la bandeja superior de Prisma**: recibe archivos arrastrados, texto y enlaces pegados. Conserva hasta cinco tarjetas, permite fijar elementos, copiar con doble clic, guardar sin sobrescribir y enviar archivos al móvil con Super Gallery.
-- 📸 **Captura y edición directa**: alterna entre Imagen y Vídeo, dibuja sobre el recorte y accede a las herramientas de edición. Copia la captura al portapapeles y a Synapse con Ctrl + C.
-- 🎥 **Grabación de pantalla**: graba una región fija del escritorio, incluida una ventana que permanezca visible en esa región. Dispone de selección de codificador NVIDIA, Intel, AMD o CPU, audio del sistema y micrófono, controles flotantes, atajos para guardar y recorte de vídeo sin recodificar.
-- 🏷️ **Renombrado por lotes**: detecta destinos ocupados, permite saltar numeraciones existentes y añadir tandas con Shift al soltar. Incluye recuperación ante errores para proteger los archivos.
-- 🔊 **El teléfono como altavoz**: transmite audio a Super Gallery, con aviso flotante de estado y el atajo Shift + T para activar o desactivar la salida móvil.
-- 📐 **Biblioteca, reproducción y ecosistema**: mejoras de Quick Look, vídeo, historial y favoritos; un reproductor de música en Inicio; ajustes de la barra lateral y Acerca de; e integración con Prisma Upscaler y accesos a las herramientas del ecosistema.
-- 🎨 **Personalización y conexión con Aurora**: nuevos temas, controles de color hexadecimal, 16 estilos de barra de progreso y comprobación de actualizaciones mediante Aurora y GitHub.
-- 🚀 **Formatos e instalador**: visualización de ElyX (.elx), JPEG XL y AVIF, y un instalador de Windows renovado con los colores de Prisma y confirmación de salida.
+- 🔄 **Cesión automática de escritorio**: Fondos Vivos coordina el control de pantalla entre las versiones Stable y Dev. Al abrir la edición de desarrollo, la versión estable suspende su fondo y controles de manera transparente, recuperando su estado y composición originales al cerrarse Dev.
+- 📂 **Metadatos extendidos en Quick Look**: la vista rápida ahora informa el total de archivos y subcarpetas contenidas, tamaño total acumulado, fecha de creación y desglose clasificado entre imágenes, vídeos y documentos.
+- 🎛️ **Interruptor unificado para carpetas**: la activación de carpetas en Fondos Vivos se gestiona con un único conmutador por fuente, preservando el ocultado individual para elementos multimedia y migrando limpiamente configuraciones previas.
+- 📐 **Estabilidad visual y controles**: navegación directa a Vídeos al abrir fondos, interruptor de sonido con ancho fijo para evitar saltos en la interfaz y disposición optimizada de controles de mezcla y encuadre.
 
 ## Actualización desde el instalador anterior
 
-Si tu edición de Prisma utiliza el instalador anterior (NSIS), desinstala esa edición antes de instalar la nueva. [Consulta el procedimiento de migración](https://github.com/biglexj/Prisma/blob/v2.0.0/packaging/windows/MIGRATION.md).
+Si migras desde una edición de Prisma que usaba el instalador heredado (NSIS), desinstala dicha versión antes de instalar la nueva. [Consulta la guía de migración](https://github.com/biglexj/Prisma/blob/v2.0.0/packaging/windows/MIGRATION.md).
 
 ## 📦 Windows x64
 
-[Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v2.0.0/Prisma_2.0.0-setup.exe)
+[Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v2.0.1/Prisma_2.0.1-setup.exe)
 
 ## 💖 Apoya el desarrollo
 
