@@ -329,10 +329,7 @@ impl WallpaperController {
             if !inner.compositor_enabled { inner.window = None; }
             inner.source_manager.settings_mut().is_active = false;
             let _ = inner.source_manager.save_to_disk();
-            return Err(format!(
-                "No hay {} en las carpetas activas de Fondos Vivos. El fondo queda detenido.",
-                mode.label()
-            ));
+            return Ok(self.build_snapshot(&inner));
         }
 
         // Si el medio en pantalla dejó de ser elegible, el motor carga el

@@ -86,6 +86,7 @@ impl MediaKindMode {
     }
 
     /// Nombre legible del modo, para los mensajes de diagnóstico.
+    #[allow(dead_code)]
     pub fn label(&self) -> &'static str {
         match self {
             MediaKindMode::Video => "vídeos",
@@ -95,22 +96,61 @@ impl MediaKindMode {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FolderSource {
     pub id: String,
     pub path: String,
     pub name: String,
     pub enabled: bool,
-    /// Archivos de medio hallados en la carpeta (vídeos e imágenes).
-    /// Es el dato real de la carpeta: no depende del modo de medio activo.
-    /// Las configuraciones antiguas guardaban este dato como "videoCount".
-    #[serde(alias = "videoCount")]
+    pub video_count: usize,
+    pub image_count: usize,
     pub media_count: usize,
     pub available: bool,
-    /// Oculta la carpeta: sus medios no se listan ni entran en la cola.
-    #[serde(default)]
     pub hidden: bool,
+}
+
+impl<'de> serde::Deserialize<'de> for FolderSource {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(serde::Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Helper {
+            id: String,
+            path: String,
+            name: String,
+            enabled: bool,
+            #[serde(default)]
+            video_count: usize,
+            #[serde(default)]
+            image_count: usize,
+            #[serde(default)]
+            media_count: usize,
+            available: bool,
+            #[serde(default)]
+            hidden: bool,
+        }
+
+        let helper = Helper::deserialize(deserializer)?;
+        let media_count = if helper.media_count > 0 {
+            helper.media_count
+        } else {
+            helper.video_count + helper.image_count
+        };
+        Ok(FolderSource {
+            id: helper.id,
+            path: helper.path,
+            name: helper.name,
+            enabled: helper.enabled,
+            video_count: helper.video_count,
+            image_count: helper.image_count,
+            media_count,
+            available: helper.available,
+            hidden: helper.hidden,
+        })
+    }
 }
 
 /// Un medio de la cuadrícula: un vídeo o una imagen estática.
@@ -265,7 +305,8 @@ impl SourceManager {
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| canonical_str.clone());
 
-        let (count, available) = scan_folder_media(&canonical);
+        let (video_count, image_count, available) = scan_folder_media(&canonical);
+        let media_count = video_count + image_count;
         let id = format!("src_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis());
 
         let source = FolderSource {
@@ -273,7 +314,9 @@ impl SourceManager {
             path: canonical_str,
             name,
             enabled: true,
-            media_count: count,
+            video_count,
+            image_count,
+            media_count,
             available,
             hidden: false,
         };
@@ -366,8 +409,10 @@ impl SourceManager {
         for src in &mut self.settings.sources {
             src.path = clean_path_str(&src.path);
             let p = Path::new(&src.path);
-            let (count, available) = scan_folder_media(p);
-            src.media_count = count;
+            let (video_count, image_count, available) = scan_folder_media(p);
+            src.video_count = video_count;
+            src.image_count = image_count;
+            src.media_count = video_count + image_count;
             src.available = available;
         }
         let _ = self.save_to_disk();
@@ -583,12 +628,20 @@ pub fn clean_path_str(s: &str) -> String {
 /// Cuenta los medios de una carpeta (vídeos e imágenes) y dice si es
 /// accesible. El recuento no depende del modo de medio activo: es el dato
 /// real de la carpeta.
-fn scan_folder_media(dir: &Path) -> (usize, bool) {
+fn scan_folder_media(dir: &Path) -> (usize, usize, bool) {
     if !dir.is_dir() {
-        return (0, false);
+        return (0, 0, false);
     }
     let list = list_folder_media(dir);
-    (list.len(), true)
+    let mut videos = 0;
+    let mut images = 0;
+    for item in &list {
+        match MediaKind::from_path(item) {
+            MediaKind::Video => videos += 1,
+            MediaKind::Image => images += 1,
+        }
+    }
+    (videos, images, true)
 }
 
 /// Enumera los medios de una carpeta (vídeos e imágenes), sin subcarpetas.

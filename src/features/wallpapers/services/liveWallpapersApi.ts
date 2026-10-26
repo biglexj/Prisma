@@ -17,6 +17,8 @@ export interface FolderSource {
   path: string;
   name: string;
   enabled: boolean;
+  videoCount?: number;
+  imageCount?: number;
   /** Archivos de medio hallados en la carpeta (vídeos e imágenes). */
   mediaCount: number;
   available: boolean;

@@ -16,6 +16,7 @@ import {
   type WallpaperFit,
   type WallpaperMediaItem,
   type MediaKindMode,
+  type FolderSource,
 } from "../services/liveWallpapersApi";
 import "./live-wallpapers.css";
 import { CompositionControls, type CompositionCategory } from "./CompositionControls";
@@ -141,10 +142,11 @@ export function LiveWallpapersView() {
   const handleAddFolder = async () => {
     setIsAdding(true);
     try {
+      const noun = isMixed ? "vídeos o imágenes" : activeTab === "image" ? "imágenes" : "vídeos";
       const selected = await open({
         directory: true,
         multiple: false,
-        title: "Seleccionar carpeta con vídeos para Fondos Vivos",
+        title: `Seleccionar carpeta con ${noun} para Fondos Vivos`,
       });
 
       if (selected && typeof selected === "string") {
@@ -266,14 +268,75 @@ export function LiveWallpapersView() {
   const currentFit = state?.settings.fit ?? "cover";
   const audioEnabled = state?.settings.audioEnabled ?? false;
   const kindMode = state?.settings.mediaKindMode ?? "video";
+  const isMixed = kindMode === "mixed";
   const imageDuration = state?.settings.imageDurationSec ?? 20;
   const compositorEnabled = state?.compositorEnabled ?? false;
   const activeTab = tab ?? (compositorEnabled ? "ambient" : kindMode === "image" ? "image" : "video");
   const showScenes = activeTab !== "video" && activeTab !== "image";
+
   const selectTab = (next: WallpaperTab) => {
     setTab(next);
-    if ((next === "video" || next === "image") && next !== kindMode) void handleSetMediaKindMode(next);
+    if (next === "video" || next === "image") {
+      if (showScenes && isMixed) {
+        return;
+      }
+      if (isMixed) {
+        void handleSetMediaKindMode(next);
+      } else if (next !== kindMode) {
+        void handleSetMediaKindMode(next);
+      }
+    }
   };
+
+  const handleSetCombine = async (combine: boolean) => {
+    try {
+      const targetMode: MediaKindMode = combine
+        ? "mixed"
+        : activeTab === "image"
+        ? "image"
+        : "video";
+      const snap = await liveWallpapersApi.setMediaKindMode(targetMode);
+      setState(snap);
+      setError(null);
+    } catch (err) {
+      setError(String(err));
+      await refreshState();
+    }
+  };
+
+  const displayedSources = useMemo(() => {
+    if (isMixed) return sources;
+    if (activeTab === "image") {
+      return sources.filter(
+        (s) => (s.imageCount ?? 0) > 0 || (s.videoCount ?? 0) === 0
+      );
+    }
+    return sources.filter(
+      (s) => (s.videoCount ?? s.mediaCount) > 0 || (s.imageCount ?? 0) === 0
+    );
+  }, [sources, isMixed, activeTab]);
+
+  const getSourceDisplayCount = useCallback(
+    (source: FolderSource): number => {
+      if (isMixed) return source.mediaCount;
+      if (activeTab === "image") return source.imageCount ?? 0;
+      return source.videoCount ?? source.mediaCount;
+    },
+    [isMixed, activeTab]
+  );
+
+  const getSourceTooltip = useCallback(
+    (source: FolderSource): string => {
+      const count = getSourceDisplayCount(source);
+      const noun = isMixed
+        ? count === 1 ? "medio" : "medios"
+        : activeTab === "image"
+        ? count === 1 ? "imagen" : "imágenes"
+        : count === 1 ? "vídeo" : "vídeos";
+      return `${formatDisplayPath(source.path)} (${count} ${noun})`;
+    },
+    [getSourceDisplayCount, isMixed, activeTab]
+  );
   const totalMedia = state?.totalMedia ?? 0;
   const currentMediaPath = state?.currentMedia ? formatDisplayPath(state.currentMedia) : null;
   const allMedia = state?.media ?? [];
@@ -530,6 +593,30 @@ export function LiveWallpapersView() {
               </button>
             </div>
 
+            <div className="control-segmented-block">
+              <span className="segmented-label">Mezcla</span>
+              <div className="segmented-control" role="group" aria-label="Combinar vídeos e imágenes">
+                <button
+                  type="button"
+                  className={`segmented-item ${!isMixed ? "is-selected" : ""}`}
+                  onClick={() => isMixed && handleSetCombine(false)}
+                  title="Separado: Vídeos solo vídeos, imágenes solo imágenes (por defecto)"
+                >
+                  <Icon name="layers" width={14} height={14} />
+                  <span>Separado</span>
+                </button>
+                <button
+                  type="button"
+                  className={`segmented-item ${isMixed ? "is-selected" : ""}`}
+                  onClick={() => !isMixed && handleSetCombine(true)}
+                  title="Combinar vídeos e imágenes en la rotación de fondo"
+                >
+                  <Icon name="shuffle" width={14} height={14} />
+                  <span>Combinar</span>
+                </button>
+              </div>
+            </div>
+
 
           </div>}
         </div>
@@ -573,7 +660,9 @@ export function LiveWallpapersView() {
       <section className="live-folders-compact-section">
         <div className="compact-folders-header">
           <div className="compact-header-left">
-            <span className="compact-section-title">Carpetas de origen ({sources.length})</span>
+            <span className="compact-section-title">
+              Carpetas de {isMixed ? "medios" : activeTab === "image" ? "imágenes" : "vídeos"} ({displayedSources.length})
+            </span>
             <span className="compact-section-sub">Hasta 5 por fila</span>
           </div>
           <div className="compact-header-actions">
@@ -599,23 +688,25 @@ export function LiveWallpapersView() {
           </div>
         </div>
 
-        {sources.length === 0 ? (
+        {displayedSources.length === 0 ? (
           <div className="compact-empty-folders">
-            <span>No hay carpetas configuradas. Pulsa en <strong>Añadir carpeta</strong> para comenzar.</span>
+            <span>
+              No hay carpetas con {isMixed ? "medios" : activeTab === "image" ? "imágenes" : "vídeos"}. Pulsa en <strong>Añadir carpeta</strong> para comenzar.
+            </span>
           </div>
         ) : (
           <div className="compact-folders-grid">
-            {sources.map((source, index) => (
+            {displayedSources.map((source, index) => (
               <div
                 key={source.id}
                 className={`compact-folder-chip ${source.enabled ? "is-enabled" : "is-disabled"} ${
                   !source.available ? "is-unavailable" : ""
                 } ${source.hidden ? "is-hidden" : ""}`}
-                title={`${formatDisplayPath(source.path)} (${source.mediaCount} medios)`}
+                title={getSourceTooltip(source)}
               >
                 <span className="chip-letter">{String.fromCharCode(65 + (index % 26))}</span>
                 <span className="chip-name">{source.name}</span>
-                <span className="chip-count">({source.mediaCount})</span>
+                <span className="chip-count">({getSourceDisplayCount(source)})</span>
                 <label className="chip-toggle-switch" title={source.enabled ? "Desactivar" : "Activar"}>
                   <input
                     type="checkbox"
@@ -657,13 +748,15 @@ export function LiveWallpapersView() {
         <div className="videos-list-header">
           <div className="videos-header-title-block">
             <h2 className="videos-list-title">
-              {mediaKindLabel(kindMode) === "Combinado"
+              {isMixed
                 ? "Medios disponibles"
-                : `${mediaKindLabel(kindMode)} disponibles`}{" "}
+                : activeTab === "image"
+                ? "Imágenes disponibles"
+                : "Vídeos disponibles"}{" "}
               ({listedCount})
             </h2>
             <p className="videos-list-subtitle">
-              Haz clic en cualquier {mediaNoun(kindMode)} para reproducirlo de inmediato en tu
+              Haz clic en cualquier {isMixed ? "medio" : activeTab === "image" ? "imagen" : "vídeo"} para reproducirlo de inmediato en tu
               fondo de pantalla
               {hiddenMediaCount > 0 && (
                 <> · {hiddenMediaCount} oculto{hiddenMediaCount !== 1 ? "s" : ""}</>
@@ -694,7 +787,7 @@ export function LiveWallpapersView() {
               <Icon name="search" width={15} height={15} />
               <input
                 type="text"
-                placeholder={`Buscar en la lista de ${mediaNounPlural(kindMode)}...`}
+                placeholder={`Buscar en la lista de ${isMixed ? "medios" : activeTab === "image" ? "imágenes" : "vídeos"}...`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -715,20 +808,23 @@ export function LiveWallpapersView() {
         {allMedia.length === 0 ? (
           <div className="videos-empty-state">
             <div className="empty-icon-circle">
-              <Icon name="video" width={32} height={32} />
+              <Icon name={activeTab === "image" ? "image" : "video"} width={32} height={32} />
             </div>
-            <h3 className="empty-title">No hay {mediaNounPlural(kindMode)} disponibles</h3>
+            <h3 className="empty-title">No hay {isMixed ? "medios" : activeTab === "image" ? "imágenes" : "vídeos"} disponibles</h3>
             <p className="empty-desc">
-              Las carpetas activas no contienen medios compatibles (.mp4, .webm, .mkv, .jpg,
-              .png) o están desactivadas.
+              {isMixed
+                ? "Las carpetas activas no contienen vídeos ni imágenes compatibles (.mp4, .webm, .mkv, .jpg, .png, .webp) o están desactivadas."
+                : activeTab === "image"
+                ? "Las carpetas activas no contienen imágenes compatibles (.jpg, .png, .webp, .jpeg) o están desactivadas."
+                : "Las carpetas activas no contienen vídeos compatibles (.mp4, .webm, .mkv) o están desactivadas."}
             </p>
           </div>
         ) : filteredMedia.length === 0 ? (
           <div className="videos-empty-state">
             <p className="empty-desc">
               {searchQuery
-                ? `No se encontraron ${mediaNounPlural(kindMode)} que coincidan con “${searchQuery}”.`
-                : `Todos los ${mediaNounPlural(kindMode)} están ocultos. Activa “Mostrar ocultos” para verlos en gris.`}
+                ? `No se encontraron ${isMixed ? "medios" : activeTab === "image" ? "imágenes" : "vídeos"} que coincidan con “${searchQuery}”.`
+                : `Todos los ${isMixed ? "medios" : activeTab === "image" ? "imágenes" : "vídeos"} están ocultos. Activa “Mostrar ocultos” para verlos en gris.`}
             </p>
           </div>
         ) : (
