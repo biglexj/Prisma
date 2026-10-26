@@ -106,3 +106,11 @@ Sin capa cero. La numeración arranca en 1.
 - [x] Comprobar decodificación a resolución original 4K; ajustar filtros ligeros de escalado.
 - [x] Encerrar interruptores de Parallax en tarjetas visibles, con checkbox y texto alineados.
 - [ ] Confirmación visual del usuario sobre el escritorio y fluidez de sus vídeos reales; sin atribuirla al test sintético.
+
+## Incidencia de composición invisible
+
+- [x] Reabrir incidencia tras confirmación de Biglex; descartar isVisible como prueba visual suficiente.
+- [x] Identificar WS_EX_LAYERED sin alfa nativa inicializada y verificar atributos antes/después en WebView2 real.
+- [x] Inicializar/verificar alfa global 255 y aplicar estilos de hija después de mostrar mediante Tauri.
+- [x] Probar coexistencia de PNG, partículas y escenario en instancia aislada.
+- [ ] Confirmación visual de Biglex sobre imagen en el escritorio; pendiente de respuesta.

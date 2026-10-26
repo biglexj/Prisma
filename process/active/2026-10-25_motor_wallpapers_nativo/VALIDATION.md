@@ -155,3 +155,17 @@ El perfil dev leído contenía Gargantúa y Borealis simultáneos (modelo anteri
 - Prueba nativa anterior recorrió los 25 efectos sin errores del motor; su aserción final de galería estaba desactualizada (46 opciones) y falló. Se usa la prueba actual de categorías/activación para la validación final, sin atribuir éxito a esa aserción antigua.
 - FFprobe del original observado Kanojo Okarimashu - 14.jpg: 1280×720. El GIF original tiene 1560×898 y 18 frames. La lectura original y las pruebas de decodificación no equivalen a una aceptación visual de nitidez ni de fluidez de los archivos del usuario en su escritorio.
 - Filtros de escalado spline36/mitchell configurados y aceptados por libmpv; sin pasos IA ni interpolación temporal. No se promete recuperar detalle ausente de una fuente 720p.
+
+## Composición invisible: ventana layered sin alfa inicializada — 2026-10-26
+
+Biglex confirma que la incidencia seguía abierta. Las pruebas anteriores de captura interna e isVisible no demostraron la aparición sobre la imagen del escritorio.
+
+Causa nativa identificada en Tao 0.35.3: set_ignore_cursor_events activa WS_EX_TRANSPARENT | WS_EX_LAYERED (window_state.rs). No se inicializaban los atributos de la ventana layered. La documentación Win32 requiere SetLayeredWindowAttributes/UpdateLayeredWindow para hacer visible esa superficie; IsWindowVisible o el estado de WebView2 no lo sustituyen.
+
+Se añade SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA), seguido de lectura obligatoria de alfa y flags. Los métodos de mostrar Tauri/WebView se ejecutan antes de aplicar WS_CHILD/SetParent; finaliza con SWP_FRAMECHANGED. El alfa global 255 conserva el alfa por píxel producido por WebView2; no se usa una clave de color.
+
+Prueba nativa aislada (perfil wallpaper-alpha-probe): el log antes de inicializar devuelve atributos de capa no disponibles y alpha=0; después devuelve alpha=255. WebView2 IsVisible=true. temp/test-wallpaper-alpha-native.cjs aplica imagen PNG con partículas de corazones, después escenario Holo Ciudad, conservando mpv y compositor activos; 36 fotogramas en 1.200 ms y sin errores. Evidencias internas: temp/wallpaper-alpha-particles.png y temp/wallpaper-alpha-scene.png; no se presentan como captura del escritorio físico.
+
+Se solicitó confirmación visual a Biglex en la instancia de desarrollo recompilada. Pendiente de respuesta; no atribuir aceptación ni cierre físico a las comprobaciones de atributos nativos. La prueba antigua de creación directa de una ventana hija layered falló en el harness; la regresión se ajusta al flujo real de Tauri (creación superior, conversión a hija y SetParent).
+
+Resultado final automatizado de esta corrección: 23 pruebas Rust correctas. La regresión crea la ventana superior layered, la convierte en hija y verifica atributos ausentes antes de inicializar y alfa 255 después, replicando el flujo Tauri. Confirmación visual del usuario todavía pendiente.

@@ -191,3 +191,7 @@ Pestañas: Vídeos, Imágenes, Ambiente, Escenarios 3D, Partículas y Parallax. 
 Diagnosticar visibilidad real de ambiente/escenarios, nitidez del original y fluidez de vídeo; animar GIF manteniéndolo dentro de Imágenes. Recuadro accesible para interruptores de Parallax. Verificar con medios originales y pruebas nativas en perfil aislado, conservando la sesión del usuario.
 
 El clic en una tarjeta de efecto debe guardar la configuración antes de activar el compositor, igualando la aplicación inmediata de medios. Sincronizar visibilidad de ventana y WebView2. Perfiles del modelo anterior conservan una sola selección de escenario para evitar carga oculta acumulada. Efectos WebGL limitados a 30 fps; mpv mantiene su reloj propio y velocidad 1. GIF permanece en Imágenes con bucle de animación durante su duración configurada. Escalado spline36/mitchell sin interpolación temporal ni reconstrucción IA.
+
+## Incidencia abierta: composición no visible sobre medios — 2026-10-26
+
+Biglex confirma que la corrección anterior no muestra escenarios ni partículas sobre la imagen. No considerar resuelto por isVisible o capturas internas. Revisar WS_EX_LAYERED añadido por set_ignore_cursor_events, inicialización de alfa nativo y orden de show/SetParent/estilos. Verificar lectura de atributos de capa, además del motor y su selección.

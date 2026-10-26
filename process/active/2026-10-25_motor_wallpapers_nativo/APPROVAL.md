@@ -18,3 +18,5 @@ Corrección de navegación solicitada por Biglex: categorías superiores separad
 Biglex corrige la clasificación y solicita usar el orden existente de Aurora, conservando los controles actuales. Se retira Dinámicos como pestaña; catálogo de escenarios y efectos reproducido desde su fuente, con partículas superpuestas independientes. Ajuste local, pendiente aceptación visual del usuario.
 
 Pulido autorizado por Biglex: aplicación inmediata de tarjetas, GIF animado, escalado ligero y control Parallax en recuadro implementados. Validación automatizada y nativa aislada; aceptación física de fluidez/nitidez por el usuario sigue pendiente.
+
+Incidencia reabierta por Biglex: los efectos no se veían sobre la imagen. Corregida inicialización nativa de opacidad de WS_EX_LAYERED y orden show/SetParent. Atributos verificados antes/después; confirmación visual solicitada y todavía pendiente. No cerrar la incidencia por isVisible/capturas internas.

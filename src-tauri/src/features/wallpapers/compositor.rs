@@ -113,6 +113,29 @@ pub fn raise(app:&AppHandle) {
     });
 }
 
+/// Inicializa la opacidad global sin sustituir el alfa por píxel del contenido web.
+#[cfg(windows)]
+fn initialize_overlay_opacity(hwnd: windows::Win32::Foundation::HWND) -> Result<(),String> {
+    use windows::Win32::{Foundation::COLORREF,UI::WindowsAndMessaging::{
+        SetLayeredWindowAttributes,GetLayeredWindowAttributes,LWA_ALPHA,LAYERED_WINDOW_ATTRIBUTES_FLAGS,
+    }};
+    unsafe {
+        // ignore_cursor_events añade WS_EX_LAYERED. Sin inicializar su alfa,
+        // Windows puede marcar la ventana visible y no componer ningún píxel.
+        #[cfg(debug_assertions)] {
+            let mut alpha=0u8; let mut flags=LAYERED_WINDOW_ATTRIBUTES_FLAGS(0);
+            let before=GetLayeredWindowAttributes(hwnd,None,Some(&mut alpha),Some(&mut flags));
+            eprintln!("[Fondos Vivos] Alfa de capa antes: {:?}, alpha={alpha}",before);
+        }
+        SetLayeredWindowAttributes(hwnd,COLORREF(0),255,LWA_ALPHA).map_err(|e|format!("No se pudo inicializar la opacidad del compositor: {e}"))?;
+        let mut alpha=0u8; let mut flags=LAYERED_WINDOW_ATTRIBUTES_FLAGS(0);
+        GetLayeredWindowAttributes(hwnd,None,Some(&mut alpha),Some(&mut flags)).map_err(|e|e.to_string())?;
+        if alpha!=255 || flags.0 & LWA_ALPHA.0==0 { return Err("La superficie de efectos tiene opacidad nativa inválida".into()); }
+        #[cfg(debug_assertions)] eprintln!("[Fondos Vivos] Alfa de capa inicializada: {alpha}");
+    }
+    Ok(())
+}
+
 // Se llama desde spawn_blocking. Crear y alojar el webview corresponde al hilo UI;
 // un comando síncrono que espere ese mismo hilo produciría un interbloqueo.
 #[cfg(windows)]
@@ -123,7 +146,7 @@ pub fn create(app: &AppHandle, parent: isize, width: u32, height: u32) -> Result
         use tauri::{WebviewUrl, WebviewWindowBuilder};
         use windows::Win32::{Foundation::HWND, UI::WindowsAndMessaging::{
             GetWindowLongPtrW, SetParent, SetWindowLongPtrW, SetWindowPos, HWND_TOP,
-            GWL_STYLE, SWP_NOACTIVATE, SWP_SHOWWINDOW, WS_CHILD, WS_POPUP,
+            GWL_STYLE, SWP_NOACTIVATE, SWP_SHOWWINDOW, SWP_FRAMECHANGED, WS_CHILD, WS_POPUP,
         }};
         let result = (|| -> Result<(), String> {
             let window = if let Some(existing) = handle.get_webview_window(COMPOSITOR_LABEL) {
@@ -135,19 +158,19 @@ pub fn create(app: &AppHandle, parent: isize, width: u32, height: u32) -> Result
                     .focusable(false).visible(false).build().map_err(|e| e.to_string())?
             };
             window.set_ignore_cursor_events(true).map_err(|e| e.to_string())?;
+            // Los métodos Tauri actualizan estilos: ejecutarlos antes del alojamiento nativo.
+            window.show().map_err(|e| e.to_string())?;
+            window.as_ref().show().map_err(|e| e.to_string())?;
             let raw = window.hwnd().map_err(|e| e.to_string())?;
             let hwnd = HWND(raw.0 as *mut std::ffi::c_void);
             unsafe {
                 let style = GetWindowLongPtrW(hwnd, GWL_STYLE);
                 SetWindowLongPtrW(hwnd, GWL_STYLE, (style & !(WS_POPUP.0 as isize)) | WS_CHILD.0 as isize);
                 SetParent(hwnd, HWND(parent as *mut std::ffi::c_void)).map_err(|e| e.to_string())?;
+                initialize_overlay_opacity(hwnd)?;
                 SetWindowPos(hwnd, HWND_TOP, 0, 0, width as i32, height as i32,
-                    SWP_SHOWWINDOW | SWP_NOACTIVATE).map_err(|e| e.to_string())?;
+                    SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_FRAMECHANGED).map_err(|e| e.to_string())?;
             }
-            // Sincronizar la visibilidad de la ventana y del controlador WebView2,
-            // además de mostrar el HWND al alojarlo en el escritorio.
-            window.show().map_err(|e| e.to_string())?;
-            window.as_ref().show().map_err(|e| e.to_string())?;
             #[cfg(debug_assertions)]
             window.with_webview(|webview| unsafe {
                 let mut visible = Default::default();
@@ -182,6 +205,36 @@ pub fn destroy(app: &AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(windows)]
+    #[test]
+    fn click_through_layer_needs_native_opacity_initialization() {
+        use windows::{core::w,Win32::{Foundation::HWND,UI::WindowsAndMessaging::{
+            CreateWindowExW,DestroyWindow,GetLayeredWindowAttributes,LAYERED_WINDOW_ATTRIBUTES_FLAGS,
+            WS_EX_LAYERED,WS_EX_TRANSPARENT,WS_EX_NOACTIVATE,WS_CHILD,WS_VISIBLE,WS_POPUP,LWA_ALPHA,
+            GetWindowLongPtrW,SetWindowLongPtrW,SetParent,GWL_STYLE,
+        }}};
+        let _guard=super::super::HOST_WINDOW_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+        let host=super::super::window::DesktopWallpaperWindow::create().unwrap();
+        let child=unsafe{CreateWindowExW(WS_EX_LAYERED|WS_EX_TRANSPARENT|WS_EX_NOACTIVATE,w!("STATIC"),w!("Prisma overlay test"),
+            WS_POPUP|WS_VISIBLE,0,0,4,4,None,None,None,None)}.unwrap();
+        let result=(||{
+            // Mismo orden que Tauri: ventana superior, después convertir en hija.
+            unsafe {
+                let style=GetWindowLongPtrW(child,GWL_STYLE);
+                SetWindowLongPtrW(child,GWL_STYLE,(style & !(WS_POPUP.0 as isize))|WS_CHILD.0 as isize);
+                SetParent(child,HWND(host.host_handle() as *mut _)).unwrap();
+            }
+            let mut alpha=0u8;let mut flags=LAYERED_WINDOW_ATTRIBUTES_FLAGS(0);
+            assert!(unsafe{GetLayeredWindowAttributes(child,None,Some(&mut alpha),Some(&mut flags))}.is_err());
+            initialize_overlay_opacity(child).unwrap();
+            unsafe{GetLayeredWindowAttributes(child,None,Some(&mut alpha),Some(&mut flags))}.unwrap();
+            assert_eq!(alpha,255);assert_ne!(flags.0 & LWA_ALPHA.0,0);
+        });
+        let outcome=std::panic::catch_unwind(result);
+        let _=unsafe{DestroyWindow(child)};
+        outcome.unwrap();
+    }
+
     #[test]
     fn config_rejects_unknown_scenes_and_invalid_intensity() {
         let mut config = CompositorConfig::default();
