@@ -295,3 +295,89 @@
 .scene-interaction-hint { margin: 14px 0 0; font-size: .85rem; color: var(--on-surface-variant, #6b616d); }
 @media (max-width: 1000px) { .scene-parallax-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .scene-parallax-grid > .scene-toggle-card:last-of-type { grid-column: 1 / -1; } }
 @media (max-width: 540px) { .scene-parallax-grid { grid-template-columns: minmax(0,1fr); } }
+
+/* ── Integración de CustomSelect compartido con acento #00C9B9 y bordes suavizados ── */
+.composition-studio .prisma-custom-select-trigger {
+  min-height: 40px;
+  background: var(--surface-container, #f3edf4);
+  border-color: var(--outline-variant, #ded5df);
+  border-radius: 12px;
+  color: var(--on-surface, #29242b);
+  font-size: 0.84rem;
+  font-weight: 600;
+  transition: all 0.16s ease;
+}
+
+.composition-studio .prisma-custom-select-trigger:hover:not(:disabled) {
+  background: var(--surface-container-high, #e9e2e9);
+  border-color: var(--outline, #958995);
+}
+
+.composition-studio .prisma-custom-select-root.is-open .prisma-custom-select-trigger,
+.composition-studio .prisma-custom-select-trigger:focus-visible {
+  border-color: #00C9B9;
+  outline: 2px solid #00C9B9;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #00C9B9 20%, transparent);
+}
+
+.composition-studio .prisma-custom-select-root.is-open .prisma-custom-select-chevron {
+  color: #00C9B9;
+}
+
+.composition-studio .prisma-custom-select-menu {
+  background: var(--surface-container-high, #f3edf4);
+  border: 1px solid var(--outline-variant, #ded5df);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.composition-studio .prisma-custom-select-item {
+  border-radius: 10px;
+  color: var(--on-surface, #29242b);
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.composition-studio .prisma-custom-select-item:hover {
+  background: var(--surface-container-highest, #e1d9e2);
+}
+
+.composition-studio .prisma-custom-select-item.is-selected {
+  background: color-mix(in srgb, #00C9B9 18%, var(--surface-container-high, #e9e2e9));
+  color: #00877c;
+  font-weight: 700;
+}
+
+.composition-studio .prisma-custom-select-item.is-selected .select-item-check {
+  color: #00C9B9;
+}
+
+.dark .composition-studio .prisma-custom-select-trigger {
+  background: var(--surface-container, #201f24);
+  border-color: var(--outline-variant, #49454f);
+  color: var(--on-surface, #ece0eb);
+}
+
+.dark .composition-studio .prisma-custom-select-trigger:hover:not(:disabled) {
+  background: var(--surface-container-high, #2b2930);
+  border-color: var(--outline, #938f99);
+}
+
+.dark .composition-studio .prisma-custom-select-menu {
+  background: var(--surface-container-high, #25232a);
+  border-color: var(--outline-variant, #49454f);
+}
+
+.dark .composition-studio .prisma-custom-select-item {
+  color: var(--on-surface, #ece0eb);
+}
+
+.dark .composition-studio .prisma-custom-select-item:hover {
+  background: var(--surface-container-highest, #323038);
+}
+
+.dark .composition-studio .prisma-custom-select-item.is-selected {
+  background: color-mix(in srgb, #00C9B9 22%, transparent);
+  color: #00F5E1;
+}

@@ -18,7 +18,7 @@
   gap: 0.5rem;
   padding: 0.55rem 0.75rem;
   min-height: 38px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--surface-container-high, rgba(255, 255, 255, 0.06));
   border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.12));
   color: var(--on-surface, #22191b);
@@ -108,7 +108,7 @@
   padding: 6px;
   background: var(--surface-container-high, #1e1e24);
   border: 1px solid var(--outline-variant, rgba(255, 255, 255, 0.15));
-  border-radius: 12px;
+  border-radius: 14px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -142,7 +142,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 8px 10px;
   background: transparent;
   color: var(--on-surface, #22191b);

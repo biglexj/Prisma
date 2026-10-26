@@ -4,6 +4,7 @@ import { OVERLAY_DIRECTIONS, OVERLAY_SHAPES, SCENARIOS, BACKGROUND_MOTIONS, BACK
   type EffectLayer, type Layer, type LayerControls } from "../compositor/config";
 import { useCompositionConfig } from "./useCompositionConfig";
 import { SceneGallery } from "./SceneGallery";
+import { CustomSelect } from "../../../shared/ui/CustomSelect";
 import "./composition-studio.css";
 
 export type CompositionCategory = "ambient" | "scene" | "particles" | "parallax";
@@ -163,18 +164,24 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
           <p>Desplaza el fondo y las capas con cámara al mover el cursor. Los clics del escritorio permanecen libres.
             {!parallaxAvailable && " También funciona con una foto o un vídeo como base."}</p>
         </div> : layer === "overlay" ? <div className="scene-control-grid">
-          <label className="scene-field">
+          <div className="scene-field">
             <span className="scene-field-title">Forma</span>
-            <select aria-label="Forma de la partícula" value={overlay.shape} onChange={e=>patchOverlay({shape:e.target.value as typeof overlay.shape})}>
-              {OVERLAY_SHAPES.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
-            </select>
-          </label>
-          <label className="scene-field">
+            <CustomSelect
+              aria-label="Forma de la partícula"
+              value={overlay.shape}
+              options={OVERLAY_SHAPES.map(item => ({ value: item.value, label: `${item.glyph} ${item.label}` }))}
+              onChange={shape => patchOverlay({ shape: shape as typeof overlay.shape })}
+            />
+          </div>
+          <div className="scene-field">
             <span className="scene-field-title">Dirección</span>
-            <select aria-label="Dirección de la partícula" value={overlay.direction} onChange={e=>patchOverlay({direction:e.target.value as typeof overlay.direction})}>
-              {OVERLAY_DIRECTIONS.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
-            </select>
-          </label>
+            <CustomSelect
+              aria-label="Dirección de la partícula"
+              value={overlay.direction}
+              options={OVERLAY_DIRECTIONS.map(item => ({ value: item.value, label: item.label }))}
+              onChange={direction => patchOverlay({ direction: direction as typeof overlay.direction })}
+            />
+          </div>
           <ColorField
             label="Color"
             ariaLabel="Color de la partícula"
@@ -206,18 +213,24 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
           </div>}
           {hasEffect && !flatAmbient ? <><div className="scene-control-grid">
             {spatial && <>
-              <label className="scene-field">
+              <div className="scene-field">
                 <span className="scene-field-title">Vista de cámara</span>
-                <select aria-label="Vista de cámara" value={settings.view} onChange={e=>patch({view:e.target.value as LayerControls['view']})}>
-                  {BACKGROUND_VIEWS.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
-                </select>
-              </label>
-              <label className="scene-field">
+                <CustomSelect
+                  aria-label="Vista de cámara"
+                  value={settings.view}
+                  options={BACKGROUND_VIEWS.map(item => ({ value: item.value, label: item.label }))}
+                  onChange={view => patch({ view: view as LayerControls['view'] })}
+                />
+              </div>
+              <div className="scene-field">
                 <span className="scene-field-title">Movimiento</span>
-                <select aria-label="Movimiento de cámara" value={settings.motion} onChange={e=>patch({motion:e.target.value as LayerControls['motion']})}>
-                  {BACKGROUND_MOTIONS.map(item=><option value={item.value} key={item.value}>{item.label}</option>)}
-                </select>
-              </label>
+                <CustomSelect
+                  aria-label="Movimiento de cámara"
+                  value={settings.motion}
+                  options={BACKGROUND_MOTIONS.map(item => ({ value: item.value, label: item.label }))}
+                  onChange={motion => patch({ motion: motion as LayerControls['motion'] })}
+                />
+              </div>
             </>}
             <Slider label="Velocidad" min={0.1} max={3} value={settings.speed} onChange={speed=>patch({speed})}/>
             <Slider label="Zoom" min={0.1} max={2.5} step={0.05} value={settings.zoom} onChange={zoom=>patch({zoom})}/>
@@ -231,14 +244,19 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
           <div className="scene-control-extras">
             <label><input type="checkbox" checked={settings.colorCycle} onChange={e=>patch({colorCycle:e.target.checked})}/> Colores cambiantes</label>
             {layer === "scene" && selected?.type === "gargantua" && (
-              <label className="scene-field scene-inline-field">
+              <div className="scene-field scene-inline-field">
                 <span className="scene-field-title">Detalle</span>
-                <select aria-label="Detalle de Gargantúa" value={settings.quality} onChange={e=>patch({quality:Number(e.target.value) as 0|1|2})}>
-                  <option value={0}>Ligero</option>
-                  <option value={1}>Alto</option>
-                  <option value={2}>Cine</option>
-                </select>
-              </label>
+                <CustomSelect
+                  aria-label="Detalle de Gargantúa"
+                  value={settings.quality}
+                  options={[
+                    { value: 0, label: "Ligero" },
+                    { value: 1, label: "Alto" },
+                    { value: 2, label: "Cine" },
+                  ]}
+                  onChange={quality => patch({ quality: Number(quality) as 0 | 1 | 2 })}
+                />
+              </div>
             )}
           </div>
           </> : !hasEffect && <p>Elige un efecto para ajustar esta capa.</p>}
