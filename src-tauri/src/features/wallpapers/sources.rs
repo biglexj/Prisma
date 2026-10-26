@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 /// Extensiones que el fondo reproduce como vídeo.
 const VIDEO_EXTENSIONS: &[&str] = &["mp4", "webm", "mkv", "mov", "avi", "m4v"];
 
-/// Extensiones que el fondo reproduce como imagen estática.
+/// Extensiones de la categoría Imágenes, incluido GIF animado.
 /// mpv las decodifica con su demuxer de imagen: se pintan como un fotograma
 /// y, con "keep-open=always", se quedan en la ventana del escritorio.
 const IMAGE_EXTENSIONS: &[&str] = &[

@@ -45,3 +45,8 @@ Vídeos, Imágenes, Ambiente, Escenarios 3D, Partículas y Parallax tienen pesta
 Escenarios 3D contiene los 25 elementos en los grupos y orden definidos por DYNAMIC_BACKGROUND_GROUPS de Aurora: Escenarios 3D (17) y Efectos 3D (8). El sincronizador registra uiGroup, sin inferir categorías de interfaz de las capacidades de cámara.
 Partículas contiene las partículas superpuestas independientes. Elegir un escenario reemplaza el anterior y conserva el medio, ambiente y partículas superpuestas. Los controles y sus ajustes se conservan por efecto.
 Los campos internos dynamic/scenario/particle mantienen compatibilidad con la configuración anterior y encaminan el renderizado; no definen pestañas ni grupos visuales.
+
+## Reproducción y aplicación
+
+Las tarjetas de ambiente, escenario y partículas guardan la selección antes de activar la superficie si estaba apagada. La creación muestra explícitamente la ventana Tauri y su WebView2. WebGL tiene un límite de 30 fps; la cadencia de mpv es independiente. La migración de perfiles del modelo anterior evita escenarios simultáneos ocultos.
+GIF pertenece a Imágenes y reproduce su animación en bucle durante la duración elegida; no se congela al terminar su primer ciclo. El motor lee archivos originales y conserva resolución de decodificación; spline36/mitchell mejoran el escalado sin reconstruir detalle inexistente.

@@ -20,6 +20,11 @@ pub const WALLPAPER_VOLUME: f64 = 50.0;
 pub const AUDIO_OUTPUT: &str = "wasapi";
 pub const AUDIO_OUTPUT_SILENT: &str = "null";
 
+/// Conserva GIF en Imágenes, pero reproduce su secuencia durante toda la duración elegida.
+fn is_animated_image(path: &str) -> bool {
+    std::path::Path::new(path).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("gif"))
+}
+
 /// Motor del fondo vivo: reproduce vídeos e imágenes estáticas en la misma
 /// sesión de libmpv (misma ventana del escritorio).
 pub struct MediaWallpaperEngine {
@@ -72,6 +77,9 @@ impl MediaWallpaperEngine {
                 ("force-window", initializer.set_property("force-window", "yes")),
                 ("prefetch-playlist", initializer.set_property("prefetch-playlist", "yes")),
                 ("video-sync", initializer.set_property("video-sync", "audio")),
+                // Filtros de escalado sin pasos de reconstrucción ni interpolación temporal.
+                ("scale", initializer.set_property("scale", "spline36")),
+                ("dscale", initializer.set_property("dscale", "mitchell")),
             ];
             for (name, result) in settings {
                 if let Err(error) = result {
@@ -120,7 +128,8 @@ impl MediaWallpaperEngine {
             let kind = MediaKind::from_path(path);
             // Una imagen estática no se repite en bucle: su final lo marca el
             // temporizador de duración, no el reproductor.
-            let loop_val = if loop_single && kind == MediaKind::Video {
+            let animated_image = is_animated_image(path);
+            let loop_val = if animated_image || (loop_single && kind == MediaKind::Video) {
                 "inf"
             } else {
                 "no"
@@ -515,6 +524,39 @@ mod audio_tests {
     use super::MediaWallpaperEngine;
     use crate::features::wallpapers::window::DesktopWallpaperWindow;
     use std::time::Duration;
+
+    #[test]
+    fn gif_anima_en_bucle_e_imagen_se_decodifica_a_resolucion_original() {
+        let _guard=super::super::HOST_WINDOW_LOCK.lock().unwrap_or_else(|e|e.into_inner());
+        let root=std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../temp/wallpaper-engine-regression").join(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos().to_string());
+        std::fs::create_dir_all(&root).unwrap();
+        let gif=root.join("animation.gif");
+        std::fs::write(&gif,include_bytes!("../../../../tests/fixtures/wallpaper-animation.gif")).unwrap();
+        let win=DesktopWallpaperWindow::create().unwrap();
+        let mut engine=MediaWallpaperEngine::new(win.raw_handle(),false).unwrap();
+        engine.load_media(gif.to_str().unwrap(),true,"cover").unwrap();
+        assert_eq!(engine.mpv.get_property::<String>("loop-file").unwrap(),"inf");
+        let mut shots=std::collections::HashSet::new();
+        for n in 0..8 {
+            std::thread::sleep(Duration::from_millis(160));
+            let output=root.join(format!("gif-{n}.png"));
+            engine.mpv.command("screenshot-to-file", &[output.to_str().unwrap(),"video"]).unwrap();
+            let deadline=std::time::Instant::now()+Duration::from_secs(2);
+            while !output.exists() && std::time::Instant::now()<deadline {std::thread::sleep(Duration::from_millis(10));}
+            if n>=4 { shots.insert(image::open(&output).unwrap().to_rgba8().into_raw()); }
+        }
+        assert!(shots.len()>1,"El GIF no continúa animándose después del primer ciclo");
+        let original=root.join("original-4k.png");
+        image::RgbImage::from_pixel(3840,2160,image::Rgb([20,180,90])).save(&original).unwrap();
+        engine.load_media(original.to_str().unwrap(),true,"cover").unwrap();
+        std::thread::sleep(Duration::from_millis(400));
+        let width=engine.mpv.get_property::<i64>("video-params/w").unwrap();
+        let height=engine.mpv.get_property::<i64>("video-params/h").unwrap();
+        assert_eq!((width,height),(3840,2160));
+        assert_eq!(engine.mpv.get_property::<String>("loop-file").unwrap(),"no");
+        assert_eq!(engine.mpv.get_property::<f64>("speed").unwrap(),1.0);
+        eprintln!("GIF: {} fotogramas distintos; imagen decodificada {}x{}",shots.len(),width,height);
+    }
 
     /// El sonido del fondo se gobierna por su propia sesión de libmpv:
     /// activarlo o apagarlo no toca la música del reproductor de Prisma.

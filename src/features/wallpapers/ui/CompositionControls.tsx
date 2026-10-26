@@ -21,7 +21,7 @@ function Slider({label,value,min,max,step=0.1,onChange}: {
 }
 
 export function CompositionControls({ enabled, category }: { enabled: boolean; category: CompositionCategory }) {
-  const {config,error,update} = useCompositionConfig();
+  const {config,error,update,select} = useCompositionConfig();
   if (!config) return <section className="composition-studio">{error ? <p role="alert">{error}</p> : <p>Cargando efectos de Aurora…</p>}</section>;
   const selectedScenario = config.scenario !== "none" ? config.scenario : config.dynamic !== "none" ? config.dynamic : config.particle;
   const scenarioEntry = SCENARIOS.find(item=>item.type === selectedScenario);
@@ -68,11 +68,11 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
           </div>}
         </header>
         {layer === "parallax" ? <div className="scene-control-grid">
-          <label><input type="checkbox" checked={config.parallax.enabled}
+          <label className="scene-toggle-card"><input type="checkbox" checked={config.parallax.enabled}
             onChange={e=>update(c=>({...c,parallax:{...c.parallax,enabled:e.target.checked}}))}/> Seguir el cursor</label>
           <Slider label="Fuerza de profundidad" min={0} max={2} value={config.parallax.strength}
             onChange={strength=>update(c=>({...c,parallax:{...c.parallax,strength}}))}/>
-          <label><input type="checkbox" checked={config.parallax.base ?? true} onChange={e=>update(c=>({...c,parallax:{...c.parallax,base:e.target.checked}}))}/> Aplicar también al vídeo o imagen</label>
+          <label className="scene-toggle-card"><input type="checkbox" checked={config.parallax.base ?? true} onChange={e=>update(c=>({...c,parallax:{...c.parallax,base:e.target.checked}}))}/> Aplicar también al vídeo o imagen</label>
           <p>Desplaza el fondo y las capas con cámara al mover el cursor. Los clics del escritorio permanecen libres.
             {!parallaxAvailable && " También funciona con una foto o un vídeo como base."}</p>
         </div> : layer === "overlay" ? <div className="scene-control-grid">
@@ -124,15 +124,15 @@ export function CompositionControls({ enabled, category }: { enabled: boolean; c
     </section>
     {layer !== "parallax" && <SceneGallery key={category} layer={category === "particles" ? "overlay" : category === "ambient" ? "ambient" : "scene"} selected={selectedType}
       onSelect={(kind,type)=>{
-        if(kind==="ambient") update(c=>({...c,ambient:type,visibility:{...c.visibility,ambient:true}}));
-        else if(kind==="scene") update(c=>{
+        if(kind==="ambient") void select(c=>({...c,ambient:type,visibility:{...c.visibility,ambient:true}}),enabled || type === "original");
+        else if(kind==="scene") void select(c=>{
           const effect = SCENARIOS.find(item=>item.type===type);
           const field = effect?.category === "dynamic" ? "dynamic" : effect?.category === "particles" ? "particle" : "scenario";
           const visibility = field === "scenario" ? "scenario" : field === "particle" ? "particles" : "dynamic";
           return {...c,scenario:"none",dynamic:"none",particle:"none",[field]:type,
             visibility:{...c.visibility,[visibility]:true}};
-        });
-        else update(c=>({...c,overlay:{...c.overlay,...(type === "none" ? {enabled:false} : {shape:type as typeof c.overlay.shape,enabled:true})}}));
+        },enabled || type === "none");
+        else void select(c=>({...c,overlay:{...c.overlay,...(type === "none" ? {enabled:false} : {shape:type as typeof c.overlay.shape,enabled:true})}}),enabled || type === "none");
       }}/>}
   </div>;
 }

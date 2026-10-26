@@ -96,3 +96,13 @@ Sin capa cero. La numeración arranca en 1.
 - [x] Reproducir grupos y orden Aurora: Escenarios 3D (17) y Efectos 3D (8).
 - [x] Mantener partículas superpuestas aparte; seleccionar escenario reemplaza el anterior sin modificar ambiente ni partículas superpuestas.
 - [x] Conservar controles y ajustes por efecto; verificar agrupación, orden, búsqueda y tamaño reducido.
+
+## Pulido funcional de reproducción
+
+- [x] Aplicar ambiente/escenario al hacer clic, guardando antes de activar; propagar errores de guardado/activación.
+- [x] Mostrar explícitamente ventana y WebView2; verificar visibilidad del controlador en prueba nativa.
+- [x] Eliminar escenarios simultáneos heredados y limitar efectos WebGL a 30 fps sin retimar vídeo.
+- [x] Reproducir GIF en bucle dentro de Imágenes y probar animación después del primer ciclo.
+- [x] Comprobar decodificación a resolución original 4K; ajustar filtros ligeros de escalado.
+- [x] Encerrar interruptores de Parallax en tarjetas visibles, con checkbox y texto alineados.
+- [ ] Confirmación visual del usuario sobre el escritorio y fluidez de sus vídeos reales; sin atribuirla al test sintético.

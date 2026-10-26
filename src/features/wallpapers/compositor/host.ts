@@ -57,6 +57,7 @@ export function mountComposition(root: HTMLElement, options: CompositionHostOpti
   let disposed = false;
   let raf = 0;
   let last = performance.now();
+  let lastDraw = 0;
   let selected = "", selectedParticle = "", selectedDynamic = "";
   let unlisten: UnlistenFn | undefined;
   let polling = false, pointerPolling = false;
@@ -148,9 +149,16 @@ export function mountComposition(root: HTMLElement, options: CompositionHostOpti
       publishOverlay();
       if (!config.paused && ((ambientVisible && !ambient.paused) || (dynamicVisible && !dynamic.paused)
         || (scenarioVisible && !scene.paused) || (particlesVisible && !particles.paused))) {
-        raf = requestAnimationFrame(paint);
+        raf = requestAnimationFrame(frame);
       }
     } catch (error) { report(error); }
+  }
+  // Los efectos decorativos se limitan a 30 fps; la reproducción mpv conserva su cadencia.
+  function frame(time: number) {
+    if (disposed) return;
+    if (time - lastDraw < 1000 / 30 - 0.5) { raf = requestAnimationFrame(frame); return; }
+    lastDraw = time;
+    paint(time);
   }
   async function selectParticle(type: string) {
     const version = ++particleVersion;

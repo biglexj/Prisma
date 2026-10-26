@@ -8,18 +8,24 @@ export function useCompositionConfig() {
   const [config, setConfig] = useState<CompositionConfig | null>(null);
   const [error, setError] = useState("");
   const latest = useRef<CompositionConfig | null>(null);
-  const alive = useRef(false), dirty = useRef(false), writing = useRef(false);
+  const alive = useRef(false), dirty = useRef(false);
+  const writing = useRef<Promise<boolean> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const flush = useCallback(async () => {
-    if (writing.current || !dirty.current || !latest.current) return;
-    writing.current = true;
-    dirty.current = false;
-    try { await liveWallpapersApi.setCompositorConfig(latest.current); }
-    catch (reason) { if (alive.current) setError(String(reason)); }
-    finally {
-      writing.current = false;
-      if (dirty.current) void flush();
-    }
+  const flush = useCallback((): Promise<boolean> => {
+    if (writing.current) return writing.current;
+    writing.current = (async () => {
+      try {
+        while (dirty.current && latest.current) {
+          dirty.current = false;
+          await liveWallpapersApi.setCompositorConfig(latest.current);
+        }
+        return true;
+      } catch (reason) {
+        if (alive.current) setError(String(reason));
+        return false;
+      }
+    })().finally(() => { writing.current = null; });
+    return writing.current;
   }, []);
   useEffect(() => {
     let cancelled = false;
@@ -50,5 +56,12 @@ export function useCompositionConfig() {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => { void flush(); }, 180);
   }, [flush]);
-  return { config, error, update };
+  const select = useCallback(async (change: (current: CompositionConfig) => CompositionConfig, enabled: boolean) => {
+    update(change);
+    clearTimeout(timer.current);
+    if (!await flush() || enabled) return;
+    try { await liveWallpapersApi.setCompositorEnabled(true); }
+    catch (reason) { if (alive.current) setError(String(reason)); }
+  }, [update, flush]);
+  return { config, error, update, select };
 }

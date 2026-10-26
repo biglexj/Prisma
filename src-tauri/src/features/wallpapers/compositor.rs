@@ -59,6 +59,10 @@ impl Default for CompositorConfig {
 
 impl CompositorConfig {
     pub fn migrate_layers(&mut self) {
+        // La galería canónica elige un escenario. Evitar que perfiles de la UI
+        // anterior sigan renderizando escenarios adicionales ocultos a la vez.
+        if self.scenario != "none" { self.dynamic="none".into(); self.particle="none".into(); }
+        else if self.dynamic != "none" { self.particle="none".into(); }
         let prefix=match super::composition_settings::scene_category(&self.scenario) {
             Some("dynamic") if self.dynamic=="none" => { self.dynamic=self.scenario.clone(); "dynamic:" },
             Some("particles") if self.particle=="none" => { self.particle=self.scenario.clone(); "particles:" },
@@ -140,6 +144,17 @@ pub fn create(app: &AppHandle, parent: isize, width: u32, height: u32) -> Result
                 SetWindowPos(hwnd, HWND_TOP, 0, 0, width as i32, height as i32,
                     SWP_SHOWWINDOW | SWP_NOACTIVATE).map_err(|e| e.to_string())?;
             }
+            // Sincronizar la visibilidad de la ventana y del controlador WebView2,
+            // además de mostrar el HWND al alojarlo en el escritorio.
+            window.show().map_err(|e| e.to_string())?;
+            window.as_ref().show().map_err(|e| e.to_string())?;
+            #[cfg(debug_assertions)]
+            window.with_webview(|webview| unsafe {
+                let mut visible = Default::default();
+                if webview.controller().IsVisible(&mut visible).is_ok() {
+                    eprintln!("[Fondos Vivos] Superficie WebView2 visible: {}", visible.as_bool());
+                }
+            }).map_err(|e| e.to_string())?;
             Ok(())
         })();
         if result.is_err() { destroy(&handle); }
@@ -250,6 +265,14 @@ mod tests {
         assert_eq!(config.controls["particles:nebula"].speed,1.7);
         config.migrate_layers();
         assert_eq!(config.particle,"nebula");
+    }
+
+    #[test]
+    fn old_multi_scenario_profile_keeps_the_visible_selection_only() {
+        let mut config=CompositorConfig::default();
+        config.scenario="gargantua".into();config.dynamic="borealis".into();config.particle="nebula".into();
+        config.migrate_layers();
+        assert_eq!(config.scenario,"gargantua");assert_eq!(config.dynamic,"none");assert_eq!(config.particle,"none");
     }
 
     #[test]

@@ -140,3 +140,18 @@ Prueba Edge de LiveWallpapersView completo con backend simulado: seis pestañas,
 Prueba de contrato añadida contra DYNAMIC_BACKGROUND_GROUPS vendorizado, cuyo original se comprueba por SHA-256. Esta validación es de frontend; no implica una nueva prueba del escritorio instalado.
 
 Resultado final: build TypeScript/Vite correcto; 15 pruebas Bun y prueba UI completa correctas, sin fallos. Advertencia habitual de tamaño de chunks conservada.
+
+## Pulido de aplicación, GIF y nitidez — 2026-10-26
+
+Causa de flujo confirmada: seleccionar una tarjeta solo guardaba configuración; notify_wallpaper_change montaba capas únicamente si is_active ya era true. Vídeo sí activaba el fondo al hacer clic. Ahora la selección persiste y espera el guardado serializado antes de activar el compositor si estaba apagado. Elegir Sin ambiente/Sin escenario no activa una superficie vacía.
+La creación también sincroniza visibilidad de la ventana Tauri y del Webview, además del HWND. No se atribuye el fallo anterior exclusivamente a la visibilidad sin una comparación física antes/después.
+
+El perfil dev leído contenía Gargantúa y Borealis simultáneos (modelo anterior). migrate_layers conserva la selección visible única y sus controles; prueba de regresión añadida. WebGL limita sus fotogramas a 30 fps; no cambia el reloj de mpv ni inventa un nivel de audio.
+
+- 22 pruebas Rust correctas, incluida animación GIF después del primer ciclo comparando píxeles decodificados distintos y comprobación de imagen 3840×2160 recibida por mpv sin reducción previa. GIF sigue en Imágenes, loop-file=inf; imagen estática vuelve a loop-file=no. Fixture GIF propia en tests/fixtures/wallpaper-animation.gif.
+- Prueba Edge con backend simulado partiendo de fondo apagado: tarjeta guarda Holo Ciudad antes de activar; conserva controles por efecto, catálogos, ambiente y partículas; ancho 375 y cero errores. Captura de Parallax inspeccionada: temp/wallpaper-parallax-toggle.png.
+- Binario de prueba separado con cargo rustc --bin prisma -- -o temp/prisma-wallpaper-probe.exe; perfil wallpaper-polish-probe y CDP 9334. No sustituye el binario que usa la sesión del usuario.
+- Prueba nativa temp/test-wallpaper-polish-native.cjs: clic real de tarjeta Ambiente monta sin medio, isVisible=true y controlador WebView2 IsVisible=true registrado; cambia a Holo Ciudad y luego Borealis; conserva ambiente y sustituye escenario previo. Vídeo MP4 propio reproduce junto a las capas. 36 limpiezas de fotograma WebGL en 1.200 ms, coherentes con 30 fps. Fondo detenido al acabar.
+- Prueba nativa anterior recorrió los 25 efectos sin errores del motor; su aserción final de galería estaba desactualizada (46 opciones) y falló. Se usa la prueba actual de categorías/activación para la validación final, sin atribuir éxito a esa aserción antigua.
+- FFprobe del original observado Kanojo Okarimashu - 14.jpg: 1280×720. El GIF original tiene 1560×898 y 18 frames. La lectura original y las pruebas de decodificación no equivalen a una aceptación visual de nitidez ni de fluidez de los archivos del usuario en su escritorio.
+- Filtros de escalado spline36/mitchell configurados y aceptados por libmpv; sin pasos IA ni interpolación temporal. No se promete recuperar detalle ausente de una fuente 720p.

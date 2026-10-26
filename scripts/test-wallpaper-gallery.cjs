@@ -18,17 +18,19 @@ function assert(value,message){if(!value)throw Error(message)}
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{
    window.savedConfig={scenario:'none',dynamic:'prisma',ambient:'original',intensity:0.5,audioLevel:0,paused:false,enabled:true,particle:'none',controls:{},visibility:{ambient:true,dynamic:true,scenario:true,particles:true},parallax:{enabled:false,strength:0.5}};
-   window.wallpaperState={isActive:true,isPaused:false,baseActive:false,compositorEnabled:true,currentMedia:null,currentFolder:null,totalMedia:0,media:[],settings:{sources:[],mode:'sequential',fit:'cover',audioEnabled:false,mediaKindMode:'video',imageDurationSec:20}};
+   window.wallpaperState={isActive:false,isPaused:false,baseActive:false,compositorEnabled:false,currentMedia:null,currentFolder:null,totalMedia:0,media:[],settings:{sources:[],mode:'sequential',fit:'cover',audioEnabled:false,mediaKindMode:'video',imageDurationSec:20}};
    let id=0;window.__TAURI_INTERNALS__={transformCallback:()=>++id,unregisterCallback(){},invoke:async(cmd,args)=>{
     if(cmd==='live_wallpaper_get_state')return structuredClone(window.wallpaperState);
     if(cmd==='live_wallpaper_set_media_kind_mode'){window.wallpaperState.settings.mediaKindMode=args.mode;return structuredClone(window.wallpaperState);}
     if(cmd==='live_wallpaper_compositor_config_get')return structuredClone(window.savedConfig);
+    if(cmd==='live_wallpaper_compositor_set'){window.activationConfig=structuredClone(window.savedConfig);window.wallpaperState.isActive=args.enabled;window.wallpaperState.compositorEnabled=args.enabled;return structuredClone(window.wallpaperState);}
     if(cmd==='live_wallpaper_compositor_config_set'){window.savedConfig=structuredClone(args.config);return;}
     return 1;
    }};window.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener(){}};
   });
   const tab=name=>page.getByRole('tab',{name,exact:true}),card=name=>page.getByRole('button',{name:`Seleccionar ${name}`,exact:true});
   await page.goto(`${process.env.PRISMA_PREVIEW_ORIGIN||'http://127.0.0.1:1421'}/test/${name}`);
+  await tab('Ambiente').click();
   await page.locator('.scene-card').first().waitFor();
   assert(await page.getByRole('tab').count()===6,'Pestañas incorrectas');
   assert(await tab('Dinámicos').count()===0,'Dinámicos sigue como categoría inventada');
@@ -45,6 +47,7 @@ function assert(value,message){if(!value)throw Error(message)}
    assert(JSON.stringify(labels)===JSON.stringify(catalog.filter(item=>item.uiGroup===group).map(item=>item.label)),`Orden de Aurora alterado: ${group}`);
   }
   await card('Holo Ciudad').click();
+  await page.waitForFunction(()=>window.activationConfig?.scenario==='cybercity');
   await page.getByRole('slider',{name:'Velocidad',exact:true}).press('End');
   await page.getByRole('slider',{name:'Velocidad',exact:true}).press('ArrowLeft');await page.waitForTimeout(300);
   assert(await page.evaluate(()=>window.savedConfig.controls['scene:cybercity'].speed===2.9),'Se pierde el último slider');
@@ -70,6 +73,7 @@ function assert(value,message){if(!value)throw Error(message)}
   await tab('Imágenes').click();assert(await page.locator('.scene-card').count()===0,'Imágenes mezcla efectos');
   await tab('Parallax').click();assert(await page.locator('.scene-card').count()===0,'Parallax mezcla galerías');
   await page.getByLabel('Seguir el cursor',{exact:true}).check();await page.waitForTimeout(250);
+  await page.screenshot({path:path.join(root,'temp/wallpaper-parallax-toggle.png'),fullPage:true});
   const before=await page.evaluate(()=>JSON.stringify(window.savedConfig));
   await tab('Parallax').press('ArrowLeft');assert(await tab('Partículas').getAttribute('aria-selected')==='true','Navegación de teclado');await page.waitForTimeout(250);
   assert(before===await page.evaluate(()=>JSON.stringify(window.savedConfig)),'Navegar cambia capas');
