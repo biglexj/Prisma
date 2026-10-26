@@ -966,6 +966,7 @@ pub fn run() {
             favorites_get_all,
             favorites_toggle,
             favorites_is_favorite,
+            features::quick_look::folder_statistics::quick_look_folder_statistics,
             quick_look_close_window,
             quick_look_edit_file,
             quick_look_toggle,
@@ -1147,4 +1148,3 @@ pub fn run() {
         });
 }
 // Trigger rebuild for native drag preview (CreateBitmap with 32bppPBGRA)
-

@@ -80,7 +80,7 @@ export function QuickLookHeader({
     );
 
   const format = payload.extension.replace(/^\./, "").trim().toUpperCase();
-  const title = format && payload.fileName.toLowerCase().endsWith(`.${format.toLowerCase()}`)
+  const title = payload.mediaType !== "folder" && format && payload.fileName.toLowerCase().endsWith(`.${format.toLowerCase()}`)
     ? payload.fileName.slice(0, -(format.length + 1))
     : payload.fileName;
   const renderSelectionPager = () => payload.selectionTotal && payload.selectionTotal > 1 ? (
@@ -116,16 +116,16 @@ export function QuickLookHeader({
             </span>
           ) : (
             <>
-              {format ? <span className="quicklook-file-badge quicklook-format-badge" title="Formato del archivo">{format}</span> : null}
-              <span className="quicklook-file-badge quicklook-size-badge">{payload.formattedSize}</span>
+              {format && payload.mediaType !== "folder" ? <span className="quicklook-file-badge quicklook-format-badge" title="Formato del archivo">{format}</span> : null}
+              {payload.mediaType !== "folder" && <span className="quicklook-file-badge quicklook-size-badge">{payload.formattedSize}</span>}
             </>
           )}
         </div>
         {renderSelectionPager()}
       </div>
       <div className="quicklook-header-details">
-        {format ? <span className="quicklook-file-badge quicklook-format-badge" title="Formato del archivo">{format}</span> : null}
-        <span className="quicklook-file-badge quicklook-size-badge" title="Tamaño del archivo">{payload.formattedSize}</span>
+        {format && payload.mediaType !== "folder" ? <span className="quicklook-file-badge quicklook-format-badge" title="Formato del archivo">{format}</span> : null}
+        {payload.mediaType !== "folder" && <span className="quicklook-file-badge quicklook-size-badge" title="Tamaño del archivo">{payload.formattedSize}</span>}
       </div>
 
       <div

@@ -2100,3 +2100,8 @@ input[type="range"].quicklook-seek-bar::-webkit-slider-thumb {
   .quicklook-header .quicklook-pager-btn { display: none; }
   .quicklook-header .quicklook-selection-pager { max-width: 64px; }
 }
+.quicklook-folder-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+.quicklook-folder-stat-grid div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.quicklook-folder-stat-grid span, .quicklook-folder-stat-note { font-size: 0.72rem; color: var(--on-surface-variant); }
+.quicklook-folder-stat-grid strong { font-size: 0.8rem; color: var(--on-surface); }
+.quicklook-folder-container { overflow-y: auto; }
