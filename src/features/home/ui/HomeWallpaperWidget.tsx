@@ -104,43 +104,32 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
 
   const isActive = Boolean(snapshot?.isActive);
   const isPaused = Boolean(snapshot?.isPaused);
-  const hasVideos = (snapshot?.totalVideos ?? 0) > 0;
+  const totalVideos = snapshot?.totalVideos ?? 0;
+  const hasVideos = totalVideos > 0;
   const currentPath = snapshot?.currentVideo;
 
   const videoName = currentPath
     ? currentPath.split(/[/\\]/).pop()?.replace(/\.[^.]+$/, "") || "Fondo de escritorio"
-    : "Sin reproducción";
+    : isActive
+    ? "Reproduciendo fondo"
+    : "Fondo vivo apagado";
 
-  const folderName = snapshot?.currentFolder || "Fondos vivos Prisma";
+  const folderSubtitle = isActive
+    ? snapshot?.currentFolder
+      ? `Carpeta: ${snapshot.currentFolder}`
+      : "Fondo activo en escritorio"
+    : hasVideos
+    ? `${totalVideos} vídeo${totalVideos === 1 ? "" : "s"} configurado${totalVideos === 1 ? "" : "s"} en tus carpetas`
+    : "Sin vídeos configurados. Añade una carpeta de vídeos para comenzar.";
 
   return (
-    <div
+    <section
       className={`home-wallpaper-widget ${isActive ? "is-active" : "is-idle"} ${
         isPaused ? "is-paused" : ""
       }`}
-      aria-label="Control de Fondos Vivos"
+      aria-label="Panel de Fondos Vivos Prisma"
     >
-      <div className="home-wallpaper-header">
-        <div className="home-wallpaper-badge">
-          <Icon name="sparkles" width={14} height={14} />
-          <span>FONDOS VIVOS</span>
-        </div>
-        <div className="home-wallpaper-status-pill">
-          {isActive ? (
-            isPaused ? (
-              <span className="pill-paused">En pausa</span>
-            ) : (
-              <span className="pill-active">
-                <i className="pill-indicator-dot" /> En escritorio
-              </span>
-            )
-          ) : (
-            <span className="pill-idle">Apagado</span>
-          )}
-        </div>
-      </div>
-
-      <div className="home-wallpaper-body">
+      <div className="home-wallpaper-left">
         <div
           className="home-wallpaper-preview"
           onClick={onOpenLiveWallpapers}
@@ -157,82 +146,110 @@ export function HomeWallpaperWidget({ onOpenLiveWallpapers }: HomeWallpaperWidge
             />
           ) : (
             <div className="home-wallpaper-placeholder">
-              <Icon name="sparkles" width={22} height={22} />
+              <Icon name="sparkles" width={26} height={26} />
             </div>
           )}
+          {isActive ? (
+            <div className="home-wallpaper-preview-badge">
+              <i className="pill-indicator-dot" />
+            </div>
+          ) : null}
         </div>
+
         <div className="home-wallpaper-info">
-          <strong title={videoName}>{videoName}</strong>
-          <span title={folderName}>
-            {isActive
-              ? folderName
-              : hasVideos
-              ? `${snapshot?.totalVideos} vídeos disponibles`
-              : "Añade una carpeta de vídeos"}
+          <div className="home-wallpaper-header-line">
+            <span className="home-wallpaper-kicker">
+              <Icon name="sparkles" width={13} height={13} />
+              FONDOS VIVOS PRISMA
+            </span>
+            <div className="home-wallpaper-status-pill">
+              {isActive ? (
+                isPaused ? (
+                  <span className="pill-paused">En pausa</span>
+                ) : (
+                  <span className="pill-active">
+                    <i className="pill-indicator-dot" /> En escritorio
+                  </span>
+                )
+              ) : (
+                <span className="pill-idle">Apagado</span>
+              )}
+            </div>
+          </div>
+
+          <strong className="home-wallpaper-title" title={videoName}>
+            {videoName}
+          </strong>
+          <span className="home-wallpaper-subtitle" title={folderSubtitle}>
+            {folderSubtitle}
           </span>
         </div>
       </div>
 
-      <div className="home-wallpaper-controls" aria-label="Controles de fondo vivo">
-        {/* Retroceder */}
-        <button
-          type="button"
-          aria-label="Fondo anterior"
-          title="Fondo anterior"
-          onClick={handlePrev}
-          disabled={loading || !isActive || (snapshot?.totalVideos ?? 0) <= 1}
-        >
-          <Icon name="chevron-left" width={19} height={19} />
-        </button>
+      <div className="home-wallpaper-right">
+        <div className="home-wallpaper-controls" aria-label="Controles de fondo vivo">
+          {/* Retroceder */}
+          <button
+            type="button"
+            className="home-wallpaper-btn"
+            aria-label="Fondo anterior"
+            title="Fondo anterior"
+            onClick={handlePrev}
+            disabled={loading || !isActive || totalVideos <= 1}
+          >
+            <Icon name="chevron-left" width={20} height={20} />
+          </button>
 
-        {/* Pausar / Reanudar */}
-        <button
-          type="button"
-          className="home-wallpaper-toggle"
-          aria-label={isPaused ? "Reanudar fondo vivo" : "Pausar fondo vivo"}
-          title={isPaused ? "Reanudar fondo vivo" : "Pausar fondo vivo"}
-          onClick={handleTogglePause}
-          disabled={loading || !isActive}
-        >
-          <Icon name={isPaused ? "play" : "pause"} width={20} height={20} />
-        </button>
+          {/* Pausar / Reanudar */}
+          <button
+            type="button"
+            className="home-wallpaper-btn home-wallpaper-toggle"
+            aria-label={isPaused ? "Reanudar fondo vivo" : "Pausar fondo vivo"}
+            title={isPaused ? "Reanudar fondo vivo" : "Pausar fondo vivo"}
+            onClick={handleTogglePause}
+            disabled={loading || !isActive}
+          >
+            <Icon name={isPaused ? "play" : "pause"} width={20} height={20} />
+          </button>
 
-        {/* Avanzar */}
-        <button
-          type="button"
-          aria-label="Fondo siguiente"
-          title="Fondo siguiente"
-          onClick={handleNext}
-          disabled={loading || !isActive || (snapshot?.totalVideos ?? 0) <= 1}
-        >
-          <Icon name="chevron-right" width={19} height={19} />
-        </button>
+          {/* Avanzar */}
+          <button
+            type="button"
+            className="home-wallpaper-btn"
+            aria-label="Fondo siguiente"
+            title="Fondo siguiente"
+            onClick={handleNext}
+            disabled={loading || !isActive || totalVideos <= 1}
+          >
+            <Icon name="chevron-right" width={20} height={20} />
+          </button>
 
-        {/* Encender / Apagar */}
-        <button
-          type="button"
-          className={`home-wallpaper-power ${isActive ? "is-active" : ""}`}
-          aria-label={isActive ? "Apagar fondo vivo" : "Encender fondo vivo"}
-          title={isActive ? "Apagar fondo vivo" : "Encender fondo vivo"}
-          onClick={handleTogglePower}
-          disabled={loading || (!isActive && !hasVideos)}
-        >
-          <Icon name={isActive ? "close" : "sparkles"} width={17} height={17} />
-        </button>
+          {/* Encender / Apagar */}
+          <button
+            type="button"
+            className={`home-wallpaper-btn home-wallpaper-power ${isActive ? "is-on" : "is-off"}`}
+            aria-label={isActive ? "Apagar fondo vivo" : "Encender fondo vivo"}
+            title={isActive ? "Apagar fondo vivo" : "Encender fondo vivo"}
+            onClick={handleTogglePower}
+            disabled={loading || (!isActive && !hasVideos)}
+          >
+            <Icon name={isActive ? "close" : "sparkles"} width={18} height={18} />
+          </button>
+        </div>
 
         {/* Abrir galería completa */}
         {onOpenLiveWallpapers ? (
           <button
             type="button"
             className="home-wallpaper-open-btn"
-            aria-label="Abrir galería de fondos"
-            title="Abrir galería de fondos"
             onClick={onOpenLiveWallpapers}
+            title="Abrir galería de fondos vivos"
           >
-            <Icon name="expand" width={16} height={16} />
+            <span>Ver galería</span>
+            <Icon name="chevron-right" width={14} height={14} />
           </button>
         ) : null}
       </div>
-    </div>
+    </section>
   );
 }

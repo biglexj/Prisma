@@ -78,7 +78,6 @@ export function HomeDashboard({
   const [selectedImage, setSelectedImage] = useState<VisualLibraryItem | null>(null);
   const [activatingPath, setActivatingPath] = useState<string | null>(null);
   const [wallpaperCount, setWallpaperCount] = useState<number | null>(null);
-  const [widgetTab, setWidgetTab] = useState<"music" | "wallpaper">("music");
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -212,39 +211,7 @@ export function HomeDashboard({
           <h1>Tu biblioteca,<br />en un solo lugar</h1>
           <p>Música, imágenes y vídeos de tus carpetas, con los archivos más recientes al frente.</p>
         </div>
-        <div className="home-welcome-widget-area">
-          {hasMusicPlaying ? (
-            <div className="home-dual-widgets">
-              <div className="home-widget-tab-bar" role="tablist" aria-label="Selector de widget">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={widgetTab === "music"}
-                  className={widgetTab === "music" ? "is-selected" : ""}
-                  onClick={() => setWidgetTab("music")}
-                >
-                  <Icon name="music" width={13} height={13} /> Música
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={widgetTab === "wallpaper"}
-                  className={widgetTab === "wallpaper" ? "is-selected" : ""}
-                  onClick={() => setWidgetTab("wallpaper")}
-                >
-                  <Icon name="sparkles" width={13} height={13} /> Fondos vivos
-                </button>
-              </div>
-              {widgetTab === "music" ? (
-                <HomeMusicWidget {...musicPlayback} />
-              ) : (
-                <HomeWallpaperWidget onOpenLiveWallpapers={onOpenLiveWallpapers} />
-              )}
-            </div>
-          ) : (
-            <HomeWallpaperWidget onOpenLiveWallpapers={onOpenLiveWallpapers} />
-          )}
-        </div>
+        <HomeMusicWidget {...musicPlayback} />
       </header>
 
       {error ? (
@@ -276,6 +243,9 @@ export function HomeDashboard({
           <small>Fondos vivos</small>
         </button>
       </div>
+
+      {/* Control Rápido de Fondos Vivos Prisma */}
+      <HomeWallpaperWidget onOpenLiveWallpapers={onOpenLiveWallpapers} />
 
       {!hasLibrary ? (
         <section className="home-first-step">

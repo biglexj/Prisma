@@ -403,6 +403,9 @@ pub fn run() {
             let synapse_state = features::synapse::SynapseState::load(data_directory.clone());
             app.manage(synapse_state);
             let wallpaper_controller = features::wallpapers::WallpaperController::new(data_directory.clone());
+            if wallpaper_controller.should_auto_start() {
+                let _ = wallpaper_controller.start();
+            }
             // Se conserva un clon para el menú de la bandeja: `manage` consume el valor.
             let wallpaper_controller_for_tray = wallpaper_controller.clone();
             app.manage(wallpaper_controller);
@@ -727,6 +730,9 @@ pub fn run() {
                             restart_application(app);
                         }
                         "quit" => {
+                            if let Some(controller) = app.try_state::<features::wallpapers::WallpaperController>() {
+                                let _ = controller.stop();
+                            }
                             app.exit(0);
                         }
                         _ => {}

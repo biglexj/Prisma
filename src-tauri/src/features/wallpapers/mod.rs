@@ -2,6 +2,16 @@ pub mod engine;
 pub mod sources;
 pub mod window;
 
+/// Serializa las pruebas que crean una ventana del escritorio y una sesión de
+/// libmpv: dos instancias concurrentes sobre el mismo WorkerW chocan al
+/// destruirse y provocan un fallo de acceso al cerrar el proceso de pruebas.
+#[cfg(test)]
+pub(crate) static HOST_WINDOW_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+#[cfg(test)]
+mod sources_tests;
+#[cfg(test)]
+mod controller_tests;
+
 use engine::VideoWallpaperEngine;
 use serde::{Deserialize, Serialize};
 use sources::{
@@ -32,6 +42,19 @@ struct InnerState {
     is_paused: bool,
 }
 
+impl Drop for InnerState {
+    fn drop(&mut self) {
+        // El motor debe cerrarse ANTES que la ventana: libmpv sigue usando el
+        // HWND del escritorio al destruirse y, si la ventana desaparece antes,
+        // el cierre de la aplicación termina en un fallo de acceso.
+        if let Some(mut engine) = self.engine.take() {
+            let _ = engine.stop();
+            drop(engine);
+        }
+        self.window = None;
+    }
+}
+
 #[derive(Clone)]
 pub struct WallpaperController {
     inner: Arc<Mutex<InnerState>>,
@@ -53,6 +76,15 @@ impl WallpaperController {
 
         controller.start_monitor_loop();
         controller
+    }
+
+    pub fn should_auto_start(&self) -> bool {
+        if let Ok(inner) = self.inner.lock() {
+            let settings = inner.source_manager.settings();
+            (settings.auto_start || settings.is_active) && inner.source_manager.total_videos() > 0
+        } else {
+            false
+        }
     }
 
     pub fn start(&self) -> Result<WallpaperStateSnapshot, String> {
@@ -79,7 +111,7 @@ impl WallpaperController {
         let wid = win.raw_handle();
 
         // 2. Inicializar motor libmpv apuntando al HWND
-        let mut eng = VideoWallpaperEngine::new(wid)?;
+        let mut eng = VideoWallpaperEngine::new(wid, inner.source_manager.settings().audio_enabled)?;
         let single = inner.source_manager.total_videos() == 1;
         let fit_str = match inner.source_manager.settings().fit {
             WallpaperFit::Contain => "contain",
@@ -111,7 +143,7 @@ impl WallpaperController {
         if inner.engine.is_none() || inner.window.is_none() {
             let win = DesktopWallpaperWindow::create()?;
             let wid = win.raw_handle();
-            let mut eng = VideoWallpaperEngine::new(wid)?;
+            let mut eng = VideoWallpaperEngine::new(wid, inner.source_manager.settings().audio_enabled)?;
             eng.load_video(&clean, single, fit_str)?;
             inner.window = Some(win);
             inner.engine = Some(eng);
@@ -217,6 +249,60 @@ impl WallpaperController {
         Ok(self.build_snapshot(&inner))
     }
 
+    /// Oculta o muestra una carpeta: sus vídeos dejan de listarse y de reproducirse.
+    pub fn set_folder_hidden(&self, id: &str, hidden: bool) -> Result<WallpaperStateSnapshot, String> {
+        let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        if !inner.source_manager.set_folder_hidden(id, hidden) {
+            return Err("No se encontró la carpeta indicada.".to_string());
+        }
+        Self::sync_engine(&mut inner)?;
+        Ok(self.build_snapshot(&inner))
+    }
+
+    /// Oculta o muestra un vídeo concreto: deja de listarse y de reproducirse.
+    pub fn set_video_hidden(&self, path: &str, hidden: bool) -> Result<WallpaperStateSnapshot, String> {
+        let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        inner.source_manager.set_video_hidden(path, hidden);
+        Self::sync_engine(&mut inner)?;
+        Ok(self.build_snapshot(&inner))
+    }
+
+    /// Mantiene el motor alineado con el vídeo actual de la cola.
+    /// Si el vídeo en reproducción fue ocultado, se carga el siguiente disponible.
+    fn sync_engine(inner: &mut InnerState) -> Result<(), String> {
+        if inner.engine.is_none() || inner.window.is_none() {
+            return Ok(());
+        }
+
+        let current = inner.source_manager.current_video();
+        let Some(current) = current else {
+            if let Some(engine) = &mut inner.engine {
+                let _ = engine.stop();
+            }
+            return Ok(());
+        };
+
+        let already_loaded = inner
+            .engine
+            .as_ref()
+            .and_then(|engine| engine.current_path().cloned())
+            .map(|path| path == current)
+            .unwrap_or(false);
+        if already_loaded {
+            return Ok(());
+        }
+
+        let single = inner.source_manager.total_videos() == 1;
+        let fit_str = match inner.source_manager.settings().fit {
+            WallpaperFit::Contain => "contain",
+            WallpaperFit::Cover => "cover",
+        };
+        if let Some(engine) = &mut inner.engine {
+            engine.load_video(&current, single, fit_str)?;
+        }
+        Ok(())
+    }
+
     pub fn refresh_sources(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
         let curr = inner.source_manager.current_video();
@@ -242,6 +328,20 @@ impl WallpaperController {
                 WallpaperFit::Cover => "cover",
             };
             let _ = engine.set_fit(fit_str);
+        }
+        Ok(self.build_snapshot(&inner))
+    }
+
+    /// Activa o desactiva el sonido del fondo vivo.
+    /// El ajuste es local a la sesión de audio del fondo: la música que esté
+    /// sonando en el reproductor de Prisma no se silencia ni cambia de volumen,
+    /// y el fondo nunca toma el dispositivo de audio en modo exclusivo.
+    pub fn set_audio_enabled(&self, enabled: bool) -> Result<WallpaperStateSnapshot, String> {
+        let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
+        inner.source_manager.settings_mut().audio_enabled = enabled;
+        let _ = inner.source_manager.save_to_disk();
+        if let Some(engine) = &mut inner.engine {
+            engine.set_audio_enabled(enabled)?;
         }
         Ok(self.build_snapshot(&inner))
     }
@@ -276,14 +376,22 @@ impl WallpaperController {
             return;
         }
 
-        let inner_clone = Arc::clone(&self.inner);
+        // El hilo usa una referencia débil: si el controlador desaparece, el
+        // estado (con la sesión de libmpv y la ventana del escritorio) se
+        // libera y el hilo termina solo en la siguiente vuelta. Así la
+        // aplicación no se cierra con el motor de fondos todavía vivo.
+        let inner_weak = Arc::downgrade(&self.inner);
         let running_flag = Arc::clone(&self.monitor_running);
 
         std::thread::spawn(move || {
             while running_flag.load(Ordering::Relaxed) {
                 std::thread::sleep(std::time::Duration::from_millis(150));
 
-                if let Ok(mut inner) = inner_clone.lock() {
+                let Some(inner_arc) = inner_weak.upgrade() else {
+                    break;
+                };
+
+                if let Ok(mut inner) = inner_arc.lock() {
                     if !inner.is_paused && inner.engine.is_some() {
                         let is_eof = if let Some(engine) = &inner.engine {
                             engine.is_eof()
