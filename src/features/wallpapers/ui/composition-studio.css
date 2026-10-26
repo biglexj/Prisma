@@ -381,3 +381,155 @@
   background: color-mix(in srgb, #00C9B9 22%, transparent);
   color: #00F5E1;
 }
+
+/* ── Badge inactivo y estado desactivado de tarjetas de escena ── */
+.scene-selected-badge.is-inactive {
+  background: color-mix(in srgb, var(--outline, #958995) 25%, var(--surface-container, #f3edf4));
+  color: var(--on-surface-variant, #6b616d);
+}
+.composition-studio .scene-card.is-selected.is-deactivated {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--outline, #958995) 60%, transparent);
+  opacity: 0.82;
+}
+
+/* ── Switch Toggle M3 Expressive para Escenarios y Ambientes ── */
+.scene-switch-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-container, #f3edf4);
+  border: 1px solid var(--outline-variant, #ded5df);
+  transition: all 180ms ease;
+}
+
+.scene-switch-toggle:hover {
+  background: var(--surface-container-high, #e9e2e9);
+  border-color: var(--outline, #958995);
+}
+
+.dark .scene-switch-toggle {
+  background: var(--surface-container, #201f24);
+  border-color: var(--outline-variant, #49454f);
+}
+
+.dark .scene-switch-toggle:hover {
+  background: var(--surface-container-high, #2b2930);
+  border-color: var(--outline, #938f99);
+}
+
+.scene-switch-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: color 180ms ease;
+  letter-spacing: 0.01em;
+}
+
+.scene-switch-label.is-active {
+  color: #007a70;
+}
+
+.dark .scene-switch-label.is-active {
+  color: #00f0dd;
+}
+
+.scene-switch-label.is-inactive {
+  color: var(--on-surface-variant, #6b616d);
+}
+
+.scene-switch-control {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.scene-switch-control input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.scene-switch-slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background-color: var(--surface-container-highest, #e1d9e2);
+  border: 1.5px solid var(--outline, #958995);
+  transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.dark .scene-switch-slider {
+  background-color: var(--surface-container-highest, #323038);
+  border-color: var(--outline, #938f99);
+}
+
+.scene-switch-slider::before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: var(--outline, #958995);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .scene-switch-slider::before {
+  background-color: var(--outline, #938f99);
+}
+
+.scene-switch-toggle:hover .scene-switch-slider {
+  border-color: var(--on-surface-variant, #6b616d);
+}
+
+.scene-switch-toggle:hover .scene-switch-slider::before {
+  background-color: var(--on-surface-variant, #6b616d);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.scene-switch-control input:checked + .scene-switch-slider {
+  background-color: #00C9B9;
+  border-color: #00C9B9;
+  box-shadow: 0 0 10px rgba(0, 201, 185, 0.35);
+}
+
+.scene-switch-control input:checked + .scene-switch-slider::before {
+  left: calc(100% - 19px);
+  width: 16px;
+  height: 16px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.scene-switch-toggle:hover .scene-switch-control input:checked + .scene-switch-slider {
+  filter: brightness(1.08);
+}
+
+.scene-switch-control input:focus-visible + .scene-switch-slider {
+  outline: 2px solid #00C9B9;
+  outline-offset: 2px;
+}
+
+/* Estado atenuado cuando la capa / efecto está desactivado */
+.scene-controls-content {
+  transition: opacity 220ms cubic-bezier(0.4, 0, 0.2, 1), filter 220ms ease;
+}
+
+.scene-controls-content.is-layer-inactive {
+  opacity: 0.45;
+  pointer-events: none;
+  filter: grayscale(0.25);
+  user-select: none;
+}

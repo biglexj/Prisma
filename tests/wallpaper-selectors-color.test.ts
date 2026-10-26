@@ -58,4 +58,40 @@ describe("Estilizado de selectores y color predefinido #00C9B9", () => {
     expect(normalized.ambientColor).toBe("#00C9B9");
     expect(normalized.overlay.color).toBe("#00C9B9");
   });
+
+  test("soporta switch de activación/desactivación preservando configuración", () => {
+    const activeConfig: CompositionConfig = {
+      ambient: "solid",
+      ambientColor: "#00C9B9",
+      ambientColor2: "#703ca5",
+      ambientOpacity: 0.8,
+      dynamic: "matrix",
+      scenario: "aurora",
+      particle: "bubbles",
+      overlay: { ...DEFAULT_OVERLAY_PARTICLES, enabled: true, color: "#00C9B9" },
+      intensity: 1,
+      audioLevel: 0,
+      paused: false,
+      enabled: true,
+      controls: {},
+      visibility: { ambient: true, dynamic: true, scenario: true, particles: true },
+      parallax: { enabled: true, strength: 0.75 },
+    };
+
+    // Desactivar escenario y ambiente mediante switch
+    const deactivatedConfig: CompositionConfig = {
+      ...activeConfig,
+      visibility: {
+        ...activeConfig.visibility,
+        ambient: false,
+        scenario: false,
+      },
+    };
+
+    const normalized = normalizeComposition(deactivatedConfig);
+    expect(normalized.visibility.ambient).toBe(false);
+    expect(normalized.visibility.scenario).toBe(false);
+    expect(normalized.ambientColor).toBe("#00C9B9");
+    expect(normalized.scenario).toBe("aurora");
+  });
 });

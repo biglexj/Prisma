@@ -54,9 +54,10 @@ const CLEAR_LABEL: Record<GalleryKind, string> = {
   overlay: "Sin partículas",
 };
 
-export function SceneGallery({ layer, selected, onSelect }: {
+export function SceneGallery({ layer, selected, isLayerActive = true, onSelect }: {
   layer: GalleryKind;
   selected: string;
+  isLayerActive?: boolean;
   onSelect(kind: GalleryKind, type: string): void;
 }) {
   const [query, setQuery] = useState("");
@@ -80,18 +81,22 @@ export function SceneGallery({ layer, selected, onSelect }: {
       : [{label:"",items}]).filter(group=>group.items.length>0).map(group=><section key={group.label || layer} aria-label={group.label || TITLES[layer]}>
       {group.label && <h3 className="scene-group-title">{group.label}</h3>}
       <div className="scene-gallery-grid">
-      {group.items.map(item => <button key={`${item.kind}-${item.type}`} type="button"
-        className={`scene-card ${layer === item.kind && selected === item.type ? "is-selected" : ""}`}
-        aria-pressed={layer === item.kind && selected === item.type} onClick={() => onSelect(item.kind, item.type)} aria-label={`Seleccionar ${item.label}`}>
-        <div className="scene-card-preview">
-          {item.colors ? <i className="scene-card-swatch" style={{ background: item.colors }} />
-            : item.glyph ? <i className="scene-card-glyph">{item.glyph}</i>
-            : <img src={item.preview} loading="lazy" decoding="async" alt=""
-              onError={e => { e.currentTarget.style.visibility = "hidden"; }} />}
-          {layer === item.kind && selected === item.type && <span className="scene-selected-badge">Seleccionado</span>}
-        </div>
-        <strong>{item.label}</strong><span>{item.description}</span>
-      </button>)}
+      {group.items.map(item => {
+        const isSelected = layer === item.kind && selected === item.type;
+        return <button key={`${item.kind}-${item.type}`} type="button"
+          className={`scene-card ${isSelected ? (isLayerActive ? "is-selected" : "is-selected is-deactivated") : ""}`}
+          aria-pressed={isSelected} onClick={() => onSelect(item.kind, item.type)} aria-label={`Seleccionar ${item.label}`}
+          title={isSelected && !isLayerActive ? "Efecto desactivado. Pulsa para activarlo" : undefined}>
+          <div className="scene-card-preview">
+            {item.colors ? <i className="scene-card-swatch" style={{ background: item.colors }} />
+              : item.glyph ? <i className="scene-card-glyph">{item.glyph}</i>
+              : <img src={item.preview} loading="lazy" decoding="async" alt=""
+                onError={e => { e.currentTarget.style.visibility = "hidden"; }} />}
+            {isSelected && <span className={`scene-selected-badge ${isLayerActive ? "is-active" : "is-inactive"}`}>{isLayerActive ? "Activo" : "Desactivado"}</span>}
+          </div>
+          <strong>{item.label}</strong><span>{item.description}</span>
+        </button>;
+      })}
       </div>
     </section>)}
     {items.length === 0 && <p>No hay efectos que coincidan con la búsqueda.</p>}
