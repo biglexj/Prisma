@@ -4,7 +4,7 @@ let nativeDragActive = false;
 
 type PointerOrigin = Pick<PointerEvent, "button" | "pointerType" | "pointerId" | "clientX" | "clientY">;
 
-/** Starts OLE from mouse movement, without depending on WebView2's HTML dragstart. */
+/** Starts OLE from mouse or pen movement, without WebView2's HTML dragstart. */
 export function armNativeDragGesture(
   origin: PointerOrigin,
   element: Element,
@@ -15,6 +15,12 @@ export function armNativeDragGesture(
   cancelPendingGesture?.();
   const { pointerId, clientX, clientY } = origin;
 
+  // Keep pen movement on the card until OLE takes over, even when the tip
+  // crosses a child or the edge of the card before reaching the threshold.
+  if (origin.pointerType === "pen") {
+    try { element.setPointerCapture(pointerId); } catch { /* Pointer already ended. */ }
+  }
+
   const cleanup = () => {
     view.removeEventListener("pointermove", move, true);
     view.removeEventListener("pointerup", end, true);
@@ -22,6 +28,11 @@ export function armNativeDragGesture(
     view.removeEventListener("blur", cleanup);
     view.removeEventListener("keydown", key, true);
     view.removeEventListener("dragstart", preventBrowserDrag, true);
+    if (origin.pointerType === "pen") {
+      try {
+        if (element.hasPointerCapture(pointerId)) element.releasePointerCapture(pointerId);
+      } catch { /* The WebView may already have released the pointer. */ }
+    }
     if (cancelPendingGesture === cleanup) cancelPendingGesture = undefined;
   };
   const end = (event: PointerEvent) => {

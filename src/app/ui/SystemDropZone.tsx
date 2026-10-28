@@ -111,16 +111,16 @@ export function SystemDropZone() {
         {Array.from({ length: SLOT_COUNT }, (_, index) => {
           const item = itemAtSlot(vault.items, index);
           if (!item) return <div key={`empty-${index}`} className="vault-card vault-empty" aria-label={`Espacio ${index + 1} vacío`}
-            onMouseEnter={() => { hoveredSlot.current = index; setHoverHint("Ctrl+V para pegar en esta casilla"); }}
-            onMouseLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}><Icon name="plus" width={24} height={24} /><span>Ctrl+V</span></div>;
+            onPointerEnter={() => { hoveredSlot.current = index; setHoverHint("Ctrl+V para pegar en esta casilla"); }}
+            onPointerLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}><Icon name="plus" width={24} height={24} /><span>Ctrl+V</span></div>;
           return <div key={item.id} className={`vault-card ${item.pinned ? "is-pinned" : ""}`}
             onDoubleClick={(event) => {
               if (event.defaultPrevented || event.button !== 0 || (event.target instanceof Element && event.target.closest("button"))) return;
               void preview(item);
             }}
             onPointerDown={(event) => { if (item.path) handleNativeDragPointerDown(event, item.path, { mode: "copy" }); }}
-            onMouseEnter={() => { hoveredSlot.current = index; setHoverHint(item.text || item.name); }}
-            onMouseLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}
+            onPointerEnter={() => { hoveredSlot.current = index; setHoverHint(item.text || item.name); }}
+            onPointerLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}
             onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHoverHint(""); }}
             aria-label={item.name}>
             <div className="vault-card-preview">

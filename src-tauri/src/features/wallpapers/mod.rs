@@ -6,6 +6,7 @@ pub mod sources;
 pub mod window;
 mod desktop_lease;
 mod handoff;
+mod startup;
 pub mod handoff_diagnostics;
 
 /// Serializa las pruebas que crean una ventana del escritorio y una sesión de

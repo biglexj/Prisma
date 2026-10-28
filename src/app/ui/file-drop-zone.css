@@ -35,6 +35,9 @@ html.is-system-drop-zone #root {
 .vault-shelf.is-drag-over .vault-items { display: none; }
 .vault-card { position: relative; isolation: isolate; min-width: 0; flex: 0 1 106px; height: 106px; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0; box-sizing: border-box; border-radius: 14px; border: 1px solid var(--outline-variant); background: var(--surface-container); cursor: grab; user-select: none; transition: border-color 160ms, background 160ms; }
 .vault-empty:hover { border-color: var(--primary); background: var(--primary-container); }
+/* Windows Ink puede convertir el movimiento del lápiz en pan y cancelar el
+   pointermove antes de que Synapse alcance el umbral del arrastre nativo. */
+.vault-card:not(.vault-empty) { touch-action: none; }
 .vault-text-preview { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; width: 100%; height: 100%; box-sizing: border-box; padding: 9px; color: var(--on-surface); overflow: hidden; text-align: left; }
 .vault-text-preview > svg { flex-shrink: 0; color: var(--primary); }
 .vault-text-preview > span { font-size: 10px; line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

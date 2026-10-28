@@ -161,6 +161,10 @@ impl WallpaperController {
 
     fn restore_after_handoff(&self, app: &AppHandle, restore: &Restore) -> Result<(), String> {
         if !self.handoff.running.load(Ordering::SeqCst) { return Ok(()); }
+        if restore.base || restore.composition {
+            self.handoff_message(Some("Esperando a que el escritorio esté listo para iniciar el fondo".into()));
+            if !super::startup::wait_for_desktop(&self.handoff.running) { return Ok(()); }
+        }
         if restore.base {
             let controller = self.clone();
             let (tx, rx) = std::sync::mpsc::channel();
