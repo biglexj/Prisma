@@ -19,6 +19,11 @@
 
     El instalador generado se copia a release\Prisma_<version>-setup.exe,
     que es el nombre que espera el flujo de publicacion (scripts/release/build-release.ps1).
+    Las copias se verifican por SHA-256 antes del reemplazo atomico. Si la
+    copia opcional de 12. Releases sigue bloqueada tras los reintentos, se
+    conserva la anterior y se guarda la nueva con un sufijo build-<hash>.
+    Un fallo de esa sincronizacion opcional muestra la ruta local verificada
+    sin invalidar la compilacion ni cerrar procesos del usuario.
 
 .PARAMETER Version
     Version a empaquetar. Por defecto, la de package.json.
@@ -49,6 +54,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'InstallerCopy.ps1')
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $packagingDir = Join-Path $root 'packaging\windows'
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -70,18 +76,6 @@ function Invoke-Checked {
         Pop-Location
     }
     if ($LASTEXITCODE -ne 0) { throw "$Label falló (código $LASTEXITCODE): $Command $($Arguments -join ' ')" }
-}
-
-function Get-Sha256 {
-    # Se calcula con .NET y no con Get-FileHash: el hook posttauri:build puede
-    # ejecutarse en un entorno donde ese cmdlet no está disponible.
-    param([string]$Path)
-    $sha = [System.Security.Cryptography.SHA256]::Create()
-    try {
-        $stream = [System.IO.File]::OpenRead($Path)
-        try { $bytes = $sha.ComputeHash($stream) } finally { $stream.Dispose() }
-    } finally { $sha.Dispose() }
-    return ([BitConverter]::ToString($bytes)).Replace('-', '').ToLowerInvariant()
 }
 
 function Write-Step {
@@ -415,27 +409,33 @@ if ((Get-Item -LiteralPath $builtInstaller).LastWriteTime -lt $compileStarted) {
 }
 
 # --- 8. Publicar en la carpeta release y sincronizar con 12. Releases ------
+$hash = Get-Sha256 $builtInstaller
 if (-not $SkipCopyToRelease) {
     $releaseDir = Join-Path $root 'release'
     New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
     $releaseTarget = Join-Path $releaseDir $installerName
-    Copy-Item -LiteralPath $builtInstaller -Destination $releaseTarget -Force
+    $releaseTarget = Copy-VerifiedInstaller -Source $builtInstaller -Destination $releaseTarget -ExpectedHash $hash
     Write-Host "==> Instalador copiado a release\$installerName"
 
     $releasesGlobalDir = 'D:\Proyectos\biglexj\12. Releases'
     if (Test-Path -LiteralPath $releasesGlobalDir) {
-        # Limpiar versiones previas de la misma app en 12. Releases
-        Get-ChildItem -LiteralPath $releasesGlobalDir -Filter "Prisma_*-setup.exe" -File |
-            Where-Object { $_.Name -ne $installerName } |
-            ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }
-        Copy-Item -LiteralPath $builtInstaller -Destination (Join-Path $releasesGlobalDir $installerName) -Force
-        Write-Host "==> Copia sincronizada en 12. Releases\$installerName"
+        try {
+            $globalTarget = Copy-VerifiedInstaller -Source $builtInstaller -Destination (Join-Path $releasesGlobalDir $installerName) -ExpectedHash $hash -AllowAlternateName
+            Write-Host "==> Instalador verificado en $globalTarget"
+            # Limpiar versiones anteriores solo después de sincronizar el nombre habitual.
+            if ([IO.Path]::GetFileName($globalTarget) -eq $installerName) {
+                Get-ChildItem -LiteralPath $releasesGlobalDir -Filter "Prisma_*-setup.exe" -File |
+                    Where-Object { $_.Name -ne $installerName } |
+                    ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }
+            }
+        } catch {
+            Write-Warning "No se sincronizó 12. Releases: $($_.Exception.Message). La compilación está disponible y verificada en '$releaseTarget'."
+        }
     }
 } else {
     Write-Host "==> Instalador en $builtInstaller (no copiado a release)"
 }
 
-$hash = Get-Sha256 $builtInstaller
 $size = (Get-Item -LiteralPath $builtInstaller).Length
 Write-Host "==> Instalador: $installerName ($([math]::Round($size / 1MB, 1)) MB) SHA-256 $hash"
 
