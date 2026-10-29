@@ -37,6 +37,25 @@ use windows::{
 
 mod image;
 
+/// Windows 11 puede mantener el contacto del lápiz como WM_POINTER en vez de
+/// mouse. OLE necesita que el mismo hilo lo promueva antes de DoDragDrop.
+/// Resolver por ordinal conserva compatibilidad con Windows sin esta API.
+fn promote_primary_pointer_for_drag() {
+    use windows::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
+    unsafe {
+        let Ok(user32) = GetModuleHandleW(w!("user32.dll")) else { return; };
+        // API documentada por Microsoft: User32, ordinal 2811, BOOL(void).
+        let Some(address) = GetProcAddress(user32, PCSTR(2811usize as *const u8)) else {
+            log::debug!("Pointer-to-mouse drag promotion is unavailable on this Windows version");
+            return;
+        };
+        let convert: unsafe extern "system" fn() -> BOOL = std::mem::transmute(address);
+        let promoted = convert().as_bool();
+        // FALSE es normal con mouse o con un lápiz que ya fue promovido.
+        eprintln!("[drag-native] Primary pointer promoted to mouse for OLE: {promoted}");
+    }
+}
+
 struct OleGuard;
 fn init_ole() -> Result<OleGuard> {
     unsafe { OleInitialize(None)?; }
@@ -54,20 +73,28 @@ struct DataObject {
 }
 
 #[implement(IDropSource)]
-struct DropSource(());
+struct DropSource {
+    queries: std::cell::Cell<u32>,
+}
 
 #[implement(IDropSource)]
 struct DummyDropSource(());
 
 impl DropSource {
     fn new() -> Self {
-        Self(())
+        Self { queries: std::cell::Cell::new(0) }
     }
 }
 
 #[allow(non_snake_case)]
 impl IDropSource_Impl for DropSource {
     fn QueryContinueDrag(&self, fescapepressed: BOOL, grfkeystate: MODIFIERKEYS_FLAGS) -> HRESULT {
+        let queries = self.queries.get();
+        self.queries.set(queries.saturating_add(1));
+        if queries < 3 || fescapepressed.as_bool() || grfkeystate.0 & MK_LBUTTON.0 == 0 {
+            let physical_left = unsafe { windows::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState(1) } < 0;
+            eprintln!("[drag-native] Continue #{queries}: escape={}, OLE buttons={}, physical left={physical_left}", fescapepressed.as_bool(), grfkeystate.0);
+        }
         if fescapepressed.as_bool() {
             DRAGDROP_S_CANCEL
         } else if (grfkeystate & MK_LBUTTON) == MODIFIERKEYS_FLAGS(0) {
@@ -265,8 +292,10 @@ pub fn start_drag<W: HasWindowHandle, F: Fn(DragResult, CursorPosition) + Send +
                         DragMode::Move => DROPEFFECT_MOVE,
                     };
 
+                    promote_primary_pointer_for_drag();
                     let drop_result =
                         DoDragDrop(&data_object, &drop_source, effect, &mut out_dropeffect);
+                    eprintln!("[drag-native] DoDragDrop finished: {drop_result:?}, effect={}", out_dropeffect.0);
                     let mut pt = POINT { x: 0, y: 0 };
                     GetCursorPos(&mut pt)?;
                     if drop_result == DRAGDROP_S_DROP {
@@ -300,6 +329,7 @@ pub fn start_drag<W: HasWindowHandle, F: Fn(DragResult, CursorPosition) + Send +
                     }
 
                     let mut out_dropeffect = DROPEFFECT::default();
+                    promote_primary_pointer_for_drag();
                     let drop_result = DoDragDrop(
                         &data_object,
                         &drop_source,

@@ -23,6 +23,13 @@ export interface VaultDrag { paths: string[]; text?: string | null; position: { 
 export interface ImportedItem { items: VaultItem[]; path: string }
 export interface ImportOptions { clipboard?: boolean; targetSlot?: number }
 
+/** Una tarjeta que vuelve a su propia barra no es una importación nueva. */
+export function isVaultSelfDrop(paths: string[], items: VaultItem[]): boolean {
+  const key = (path: string) => path.replace(/\//g, "\\").toLowerCase();
+  const own = new Set(items.flatMap((item) => item.path ? [key(item.path)] : []));
+  return paths.length > 0 && paths.every((path) => own.has(key(path)));
+}
+
 export function itemAtSlot(items: VaultItem[], slot: number): VaultItem | undefined {
   return items.find((item, index) => (item.slot ?? index) === slot);
 }

@@ -6,6 +6,7 @@ const BORDER_WIDTH = 2;
 
 export type PreviewKind = "image" | "video" | "music" | "file";
 export type PreviewLayout = { width: number; height: number };
+export type PreviewShape = "auto" | "square";
 
 /**
  * Calcula la silueta de arrastre óptima según la proporción y tipo del medio.
@@ -18,10 +19,11 @@ export type PreviewLayout = { width: number; height: number };
 export function nativeDragPreviewLayout(
   width: number,
   height: number,
-  kind?: PreviewKind
+  kind?: PreviewKind,
+  shape: PreviewShape = "auto"
 ): PreviewLayout {
   // 1. Música es siempre cuadrada en Prisma
-  if (kind === "music") {
+  if (kind === "music" || shape === "square") {
     return { width: SQUARE_SIZE, height: SQUARE_SIZE };
   }
 
@@ -278,7 +280,8 @@ function drawFallback(context: CanvasRenderingContext2D, kind: PreviewKind, layo
 export function createNativeDragPreview(
   path: string,
   element?: Element | null,
-  count = 1
+  count = 1,
+  shape: PreviewShape = "auto"
 ): string | null {
   if (typeof document === "undefined") return null;
 
@@ -288,7 +291,7 @@ export function createNativeDragPreview(
     const mediaWidth = media instanceof HTMLImageElement ? media.naturalWidth : media?.videoWidth ?? 0;
     const mediaHeight = media instanceof HTMLImageElement ? media.naturalHeight : media?.videoHeight ?? 0;
 
-    const layout = nativeDragPreviewLayout(mediaWidth, mediaHeight, kind);
+    const layout = nativeDragPreviewLayout(mediaWidth, mediaHeight, kind, shape);
     console.log(
       "[NativeDrag] Vista previa para:",
       path,

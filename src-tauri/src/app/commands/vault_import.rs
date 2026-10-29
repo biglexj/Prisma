@@ -7,6 +7,13 @@ use super::vault::{VaultItem, VaultState};
 pub const VAULT_CHANGED: &str = "prisma:vault-changed";
 const MAX_WEB_BYTES: u64 = 64 * 1024 * 1024;
 
+fn is_cached_path(folder: &Path, path: &Path) -> bool {
+    match (folder.canonicalize(), path.canonicalize()) {
+        (Ok(folder), Ok(path)) => path.starts_with(folder),
+        _ => false,
+    }
+}
+
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportedItem { items: Vec<VaultItem>, path: String }
@@ -25,6 +32,9 @@ fn materialize(folder: &Path, path: Option<String>, text: Option<String>) -> Res
     if let Some(path) = path.filter(|path| !path.trim().is_empty()) {
         let source = PathBuf::from(path);
         if !source.is_file() { return Err("Selecciona un archivo; no se admiten carpetas".into()); }
+        // Un arrastre de regreso a Synapse no debe crear una cadena de copias
+        // con nuevas rutas que el estado interpretaría como tarjetas distintas.
+        if is_cached_path(folder, &source) { return Ok(source); }
         let metadata = source.metadata().map_err(|e| e.to_string())?;
         let fingerprint = format!("{}:{}:{:?}", source.to_string_lossy(), metadata.len(), metadata.modified());
         let directory = folder.join(format!("{:x}", Sha256::digest(fingerprint.as_bytes())));
@@ -98,7 +108,7 @@ fn clipboard_link(value: &str) -> Option<String> {
 pub async fn vault_import(app: tauri::AppHandle, path: Option<String>, text: Option<String>, pinned: bool, clipboard: Option<bool>, target_slot: Option<usize>) -> Result<ImportedItem, String> {
     let folder = app.path().app_data_dir().map_err(|e| e.to_string())?.join("vault-items");
     tauri::async_runtime::spawn_blocking(move || {
-        let location_path = path.as_ref().filter(|path| !path.trim().is_empty()).cloned();
+        let location_path = path.as_ref().filter(|path| !path.trim().is_empty() && !is_cached_path(&folder, Path::new(path))).cloned();
         let content = if clipboard.unwrap_or(false) && path.is_none() {
             text.as_deref().filter(|value| !value.trim().starts_with("data:image/")).map(|value| value.chars().take(16000).collect::<String>())
         } else { None };
@@ -154,6 +164,25 @@ pub fn remember_capture(app: &tauri::AppHandle, path: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn arrastrar_la_cache_de_regreso_no_crea_copias_ni_tarjetas_nuevas() {
+        let root = std::env::temp_dir().join(format!("prisma-self-drop-{}", std::process::id()));
+        let folder = root.join("vault-items");
+        let original = materialize(&folder, None, Some("Archivo de Synapse".into())).unwrap();
+        let state = VaultState::new(root.join("vault.json"));
+        let original_path = original.to_string_lossy().into_owned();
+        let original_id = state.add_with_location(Some(original_path.clone()), None, false, None).unwrap()[0].id.clone();
+        for _ in 0..6 {
+            let copied = materialize(&folder, Some(original_path.clone()), None).unwrap();
+            assert_eq!(copied, original);
+            let items = state.add_with_location(Some(copied.to_string_lossy().into()), None, false, None).unwrap();
+            assert_eq!(items.len(), 1);
+            assert_eq!(items[0].id, original_id);
+            assert!(items[0].location_path.is_none());
+        }
+        assert_eq!(std::fs::read_dir(&folder).unwrap().count(), 1);
+        std::fs::remove_dir_all(root).unwrap();
+    }
     #[test]
     fn copiar_lee_texto_completo_aunque_la_vista_previa_este_limitada() {
         let root = std::env::temp_dir().join(format!("prisma-copy-text-{}", std::process::id()));

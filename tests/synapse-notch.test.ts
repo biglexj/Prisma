@@ -1,5 +1,13 @@
 import { expect, test } from "bun:test";
-import { actionAt, itemAtSlot, type VaultItem } from "../src/app/ui/synapse-notch/model";
+import { actionAt, itemAtSlot, isVaultSelfDrop, type VaultItem } from "../src/app/ui/synapse-notch/model";
+
+test("Synapse rechaza sus propios archivos y admite archivos externos", () => {
+  const item: VaultItem = { id: "foto", name: "Foto.png", path: "C:\\Cache\\Foto.png", kind: "image", size: 3, pinned: false, addedAt: 1 };
+  expect(isVaultSelfDrop(["c:/cache/foto.png"], [item])).toBe(true);
+  expect(isVaultSelfDrop([], [item])).toBe(false);
+  expect(isVaultSelfDrop(["C:/Origen/Foto.png"], [item])).toBe(false);
+  expect(isVaultSelfDrop([item.path!, "C:/Origen/Foto.png"], [item])).toBe(false);
+});
 
 test("casillas estables conservan huecos y admiten estados anteriores", () => {
   const item: VaultItem = { id: "texto", name: "Texto.txt", kind: "text", text: "Contenido", slot: 4, size: 9, pinned: false, addedAt: 1 };

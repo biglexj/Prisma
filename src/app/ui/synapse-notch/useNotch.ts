@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { VAULT_CHANGED_EVENT, VAULT_OPEN_EVENT, actionAt, type DropAction, type ImportedItem, type ImportOptions, type VaultDrag, type VaultItem } from "./model";
+import { VAULT_CHANGED_EVENT, VAULT_OPEN_EVENT, actionAt, isVaultSelfDrop, type DropAction, type ImportedItem, type ImportOptions, type VaultDrag, type VaultItem } from "./model";
+import { isOwnNativeFileDrop } from "../../../shared/useNativeFileDrag";
 
 /** Alto de la franja que siempre se ve (la línea de color). */
 const STRIP_HEIGHT = 3;
@@ -21,6 +22,9 @@ export function useNotch() {
   const [pendingPaths, setPendingPaths] = useState<string[]>([]);
   const [surfaceColor, setSurfaceColor] = useState<[number, number, number, number]>();
   const openRef = useRef(false);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const isSelfDrop = useCallback((paths: string[]) => isOwnNativeFileDrop(paths) || isVaultSelfDrop(paths, itemsRef.current), []);
   const busyRef = useRef(false);
   const draggingRef = useRef(false);
   const holdUntil = useRef(0);
@@ -142,6 +146,7 @@ export function useNotch() {
   }, [show]);
 
   const importContent = useCallback(async (paths: string[], text: string | undefined, selected: DropAction, options?: ImportOptions) => {
+    if (isSelfDrop(paths)) { setDrag(false); return; }
     if (busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
@@ -163,29 +168,32 @@ export function useNotch() {
       setBusy(false);
       setDrag(false);
     }
-  }, [show, setDrag]);
+  }, [show, setDrag, isSelfDrop]);
 
   useEffect(() => {
     const handlers = [
-      listen<VaultDrag>("prisma:vault-drag-enter", () => {
+      listen<VaultDrag>("prisma:vault-drag-enter", ({ payload }) => {
+        if (isSelfDrop(payload.paths)) return;
         setDrag(true);
         // La ventana aún conserva los 100 px de reposo: el destino inicial es temporal.
         setAction("temporary");
       }),
       listen<VaultDrag>("prisma:vault-drag-over", ({ payload }) => {
+        if (isSelfDrop(payload.paths)) return;
         // Mientras arrastras la barra solo muestra los tres destinos: el
         // destino depende de la posición horizontal, no de la vertical.
         setAction(actionAt(payload.position.x, payload.position.y, width, window.devicePixelRatio, true));
       }),
       listen("prisma:vault-drag-leave", () => setDrag(false)),
       listen<VaultDrag>("prisma:vault-drag-drop", ({ payload }) => {
+        if (isSelfDrop(payload.paths)) { setDrag(false); return; }
         const selected = actionAt(payload.position.x, payload.position.y, width, window.devicePixelRatio, true);
         setDrag(false);
         void importContent(payload.paths, payload.text ?? undefined, selected);
       }),
     ];
     return () => { handlers.forEach((handler) => void handler.then((fn) => fn())); };
-  }, [width, setDrag, importContent]);
+  }, [width, setDrag, importContent, isSelfDrop]);
 
   useEffect(() => {
     const apply = () => {

@@ -23,6 +23,8 @@ describe("vista previa del arrastre nativo", () => {
 
     // Vídeo por omisión panorámico 16:9
     expect(nativeDragPreviewLayout(0, 0, "video")).toEqual({ width: 224, height: 126 });
+    expect(nativeDragPreviewLayout(1920, 1080, "image", "square")).toEqual({ width: 184, height: 184 });
+    expect(nativeDragPreviewLayout(1080, 1920, "image", "square")).toEqual({ width: 184, height: 184 });
   });
 
   test("usa la miniatura ya cargada y entrega un PNG acotado con escalado cover", () => {

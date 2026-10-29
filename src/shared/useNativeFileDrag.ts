@@ -1,7 +1,7 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
 import { toPlatformPath } from "./mediaTree";
-import { createNativeDragPreview } from "./nativeDragPreview";
+import { createNativeDragPreview, type PreviewShape } from "./nativeDragPreview";
 import { armNativeDragGesture } from "./nativeDragGesture";
 
 /**
@@ -17,6 +17,8 @@ export interface NativeDragOptions {
   icon?: string;
   mode?: "copy" | "move";
   previewElement?: Element | null;
+  previewShape?: PreviewShape;
+  onError?: (message: string) => void;
 }
 
 let outgoingPaths: string[] = [];
@@ -53,7 +55,7 @@ export async function startNativeFileDrag(
   }
 
   // El plugin acepta PNG base64 o la ruta de un icono. El lienzo siempre produce un PNG pequeño.
-  let dragIcon = options?.icon ?? createNativeDragPreview(validPaths[0], options?.previewElement, validPaths.length);
+  let dragIcon = options?.icon ?? createNativeDragPreview(validPaths[0], options?.previewElement, validPaths.length, options?.previewShape);
   if (!dragIcon || (!dragIcon.startsWith("data:image/png;base64,") && !dragIcon.includes("\\") && !dragIcon.includes("/"))) {
     console.warn("[NativeFileDrag] Cayó al icono por omisión (DEFAULT_DRAG_ICON_BASE64)");
     dragIcon = DEFAULT_DRAG_ICON_BASE64;
@@ -71,6 +73,7 @@ export async function startNativeFileDrag(
     });
   } catch (error) {
     console.warn("[NativeFileDrag] Error iniciando arrastre nativo hacia el SO:", error);
+    options?.onError?.(`No se pudo iniciar el arrastre: ${String(error)}`);
   } finally {
     // El evento de soltado puede llegar justo después de que termine DoDragDrop.
     outgoingUntil = Date.now() + 1200;

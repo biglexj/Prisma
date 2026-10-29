@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../shared/ui/Icon";
 import { handleNativeDragPointerDown } from "../../shared/useNativeFileDrag";
 import { quickLookClient } from "../../features/quick_look/tauri/client";
 import { loadDropZonePreferences } from "../useSystemSettings";
 import { resolveCaptureFolder } from "../../shared/captureFolders";
 import { PhoneTransfer } from "./synapse-notch/PhoneTransfer";
+import { SynapseImage } from "./synapse-notch/SynapseImage";
 import { useNotch } from "./synapse-notch/useNotch";
 import { useClipboardPaste } from "./synapse-notch/useClipboardPaste";
 import { SLOT_COUNT, itemAtSlot, textFromTransfer, type DropAction, type VaultItem } from "./synapse-notch/model";
@@ -118,14 +119,14 @@ export function SystemDropZone() {
               if (event.defaultPrevented || event.button !== 0 || (event.target instanceof Element && event.target.closest("button"))) return;
               void preview(item);
             }}
-            onPointerDown={(event) => { if (item.path) handleNativeDragPointerDown(event, item.path, { mode: "copy" }); }}
+            onPointerDown={(event) => { if (item.path) handleNativeDragPointerDown(event, item.path, { mode: "copy", previewShape: item.kind === "image" ? "square" : "auto", onError: setError }); }}
             onPointerEnter={() => { hoveredSlot.current = index; setHoverHint(item.text || item.name); }}
             onPointerLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}
             onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHoverHint(""); }}
             aria-label={item.name}>
             <div className="vault-card-preview">
               {item.kind === "text" || item.kind === "link" ? <div className="vault-text-preview"><Icon name={item.kind === "link" ? "link" : "file-text"} width={16} height={16} /><span>{item.text}</span></div>
-                : item.kind === "image" && item.path ? <img src={convertFileSrc(item.path)} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <Icon name={item.kind === "video" ? "film" : "file"} width={28} height={28} />}
+                : item.kind === "image" && item.path ? <SynapseImage path={item.path} /> : <Icon name={item.kind === "video" ? "film" : "file"} width={28} height={28} />}
               {item.pinned && <span className="vault-card-pin" aria-label="Fijado"><Icon name="pin" width={12} height={12} /></span>}
             </div>
             <span className="vault-card-name">{item.name}</span>
