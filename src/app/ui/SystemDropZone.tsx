@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../shared/ui/Icon";
-import { handleNativeDragPointerDown } from "../../shared/useNativeFileDrag";
+import { useBrowserFileDrag, sendBrowserFileDrop } from "./synapse-notch/useBrowserFileDrag";
 import { quickLookClient } from "../../features/quick_look/tauri/client";
 import { loadDropZonePreferences } from "../useSystemSettings";
 import { resolveCaptureFolder } from "../../shared/captureFolders";
@@ -9,7 +9,7 @@ import { PhoneTransfer } from "./synapse-notch/PhoneTransfer";
 import { SynapseImage } from "./synapse-notch/SynapseImage";
 import { useNotch } from "./synapse-notch/useNotch";
 import { useClipboardPaste } from "./synapse-notch/useClipboardPaste";
-import { SLOT_COUNT, itemAtSlot, textFromTransfer, type DropAction, type VaultItem } from "./synapse-notch/model";
+import { SLOT_COUNT, itemAtSlot, textFromTransfer, actionAt, type DropAction, type VaultItem } from "./synapse-notch/model";
 import "./file-drop-zone.css";
 
 export { SYSTEM_DROP_EVENT, VAULT_SEND_EVENT, VAULT_OPEN_EVENT } from "./synapse-notch/model";
@@ -30,6 +30,7 @@ export function SystemDropZone() {
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(copiedTimer.current), []);
   const { setError, setMessage, setItems } = vault;
+  const browserDrag = useBrowserFileDrag(vault.items, vault.expanded, setError, vault.setOutgoing);
   const hoveredSlot = useRef<number | null>(null);
   const getPasteSlot = useCallback(() => (hoveredSlot.current !== null ? hoveredSlot.current : undefined), []);
   useClipboardPaste(vault.importContent, setError, getPasteSlot, vault.open);
@@ -89,10 +90,25 @@ export function SystemDropZone() {
     onPointerEnter={vault.show}
     onPointerLeave={() => { hoveredSlot.current = null; }}
     onKeyDown={(event) => { if (event.key === "Escape" && !vault.pendingPaths.length && !vault.busy) vault.hide(); }}
-    onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; vault.setDrag(true); }}
+    onDragOver={(event) => {
+      event.preventDefault();
+      if (browserDrag.isOwn(event.dataTransfer)) { event.dataTransfer.dropEffect = "none"; return; }
+      event.dataTransfer.dropEffect = "copy";
+      vault.setDrag(true);
+      const bounds = event.currentTarget.getBoundingClientRect();
+      vault.setAction(actionAt(event.clientX - bounds.left, event.clientY - bounds.top, vault.width, 1, true));
+    }}
     onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) vault.setDrag(false); }}
     onDrop={(event) => {
       event.preventDefault(); vault.setDrag(false);
+      if (browserDrag.isOwn(event.dataTransfer)) return;
+      if (event.dataTransfer.files.length) {
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const action = actionAt(event.clientX - bounds.left, event.clientY - bounds.top, vault.width, 1, true);
+        try { sendBrowserFileDrop(Array.from(event.dataTransfer.files), action, textFromTransfer(event.dataTransfer)); }
+        catch (error) { setError(String(error)); }
+        return;
+      }
       const text = textFromTransfer(event.dataTransfer);
       if (text) void vault.importContent([], text, vault.action);
     }}
@@ -119,7 +135,9 @@ export function SystemDropZone() {
               if (event.defaultPrevented || event.button !== 0 || (event.target instanceof Element && event.target.closest("button"))) return;
               void preview(item);
             }}
-            onPointerDown={(event) => { if (item.path) handleNativeDragPointerDown(event, item.path, { mode: "copy", previewShape: item.kind === "image" ? "square" : "auto", onError: setError }); }}
+            draggable={Boolean(item.path) && browserDrag.ready(item.id)}
+            onDragStart={(event) => browserDrag.start(event, item)}
+            onDragEnd={browserDrag.end}
             onPointerEnter={() => { hoveredSlot.current = index; setHoverHint(item.text || item.name); }}
             onPointerLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}
             onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHoverHint(""); }}

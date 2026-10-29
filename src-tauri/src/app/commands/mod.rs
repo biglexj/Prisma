@@ -12,6 +12,7 @@ pub mod playlists;
 pub mod quick_look;
 pub mod renamer;
 pub mod synapse;
+pub mod synapse_browser_drag;
 pub mod tags;
 pub mod vault;
 pub mod vault_import;

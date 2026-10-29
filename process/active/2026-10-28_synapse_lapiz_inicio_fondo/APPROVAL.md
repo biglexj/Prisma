@@ -1,5 +1,11 @@
 # Estado
 
+## Aceptación parcial — 2026-10-29
+
+Biglex confirmó que al soltar una imagen desde Synapse en el chat con el lápiz ahora aparece como adjunto. Windows Ink permanece activado. Se acepta esa salida y la recepción real de imagen, tras corregir la exportación de rutas. El receptor local ya había registrado un archivo accesible sin fallback a texto.
+
+No extender esta aceptación a la entrada hacia Synapse, otros tipos de archivo, la regresión completa Ink ON/OFF ni el próximo arranque de Windows. Esas comprobaciones siguen pendientes. La conversión nativa que bloqueaba la interfaz permanece retirada.
+
 ## Decisión vigente — 2026-10-28
 
 REWORK: Biglex exige que Synapse funcione con Windows Ink activado y desactivado. La prueba con Ink desactivado confirmó una mitigación para Explorador, entrada y salida de Synapse, pero no constituye aceptación de la solución final. Se restauró Windows Ink activado en XPPen y se verificó visualmente la casilla. No reintroducir la conversión nativa retirada. La prueba no valida presión/inclinación de las aplicaciones de dibujo ni otros controladores.

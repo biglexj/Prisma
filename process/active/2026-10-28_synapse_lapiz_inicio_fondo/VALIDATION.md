@@ -65,3 +65,20 @@ Biglex confirmó que al soltar sobre Temporal tampoco se importaba el archivo y 
 La Dev respondió a la consulta del sistema. El registro de cuatro intentos salientes devolvió `Contacto de mouse disponible para arrastre con lápiz: false`; esos intentos no llegaron a solicitar OLE. Se corrigió la persistencia del aviso anterior: un arrastre entrante nuevo limpia error/mensaje. Se añadieron trazas solo de diagnóstico para enter/leave/drop nativos, recepción UI e importación (cantidades y estados, sin contenido ni nombres de archivos). Build frontend correcto.
 
 Se detectó XPPenTablet 4.0.18.260720 y se abrió su panel: dispositivo Deco 01 V3, perfil global seleccionado, Windows Ink activado y modo de ratón desactivado. Para una prueba temporal se desmarcó únicamente Windows Ink desde la UI. Pendiente comparar Explorador y Synapse; si no mejora, restaurar la casilla original. No considerar este cambio del controlador una solución aceptada hasta tener el resultado real.
+
+## WebView2 y formato de archivo — 2026-10-29
+
+Estado posterior: Windows Ink fue restaurado activado y el requisito vigente incluye los dos modos. Véase RESEARCH.md para las fuentes e intentos del nuevo recorrido DOM.
+
+El FileSystemFileHandle inicial permitió iniciar el gesto, pero Biglex reportó solo nombre de archivo en el chat. Se sustituyó por un input file preparado desde el host y una comprobación de DOM.getFileInfo. Esa segunda ruta conservaba el archivo, pero exportaba el prefijo interno de canonicalize.
+
+El receptor de diagnóstico registró una ruta CF_HDROP con prefijo de dispositivo y una lista FileDrop estándar vacía. Tras normalizar la ruta de exportación, una entrega real posterior devolvió FileDrop con Imagen.png existente, 453.695 bytes, text=null y la misma ruta en DragQueryFileW. Se confirma entrega local interoperable; el dispositivo usado no se deduce del registro. Aceptación final del chat y lápiz Ink ON/OFF pendiente.
+
+También se corrigió el registro entrante durante la navegación inicial about:blank, manteniendo la validación estricta del origen de cada mensaje. Dev recompiló sin error del puente y sigue respondiendo. El watcher de Vite ignora temp/test/scratch tras el EBUSY causado por el compilado del receptor temporal.
+
+- `bun run build`: TypeScript/Vite correctos; aviso de tamaño de chunks conocido.
+- `bun test ./tests/synapse-browser-drag.test.ts ./tests/synapse-notch.test.ts ./tests/capture-pointer.test.ts`: 13 correctas.
+- `scripts/test-wallpapers.ps1 -Filter app::commands::synapse_browser_drag::tests`: dos correctas, incluyendo equivalencia de ruta de un archivo real y restricción de origen.
+- Sin instalación, publicación ni aceptación del siguiente inicio de Windows.
+
+Aceptación manual posterior: Biglex respondió «Sí, aparece la imagen adjunta» a la prueba de soltar desde Synapse al chat con el lápiz. Se acepta esa salida con Windows Ink activado. Se cerró solo el receptor temporal tras guardar el registro; Dev continúa abierta. Entrada hacia Synapse, otros tipos y la matriz completa de regresión siguen pendientes.

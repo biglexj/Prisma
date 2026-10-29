@@ -34,3 +34,15 @@
 - [x] Completar prueba con Windows Ink desactivado: Biglex confirmó que funciona en el Explorador y Synapse. Se restauró activado al aclarar el requisito de compatibilidad en ambos modos.
 - [ ] Sustituir la dependencia del botón de mouse en la entrega a OLE por una ruta compatible con Ink que no bloquee la interfaz; verificar entrada y salida con ambos modos.
 - [ ] Validar el tamaño del fondo en el próximo inicio real de Windows; la espera de estabilidad aún no tiene aceptación de arranque.
+
+## WebView2 y entrega del archivo — 2026-10-29
+
+- [x] Investigar las restricciones de DoDragDrop y File sin respaldo nativo mediante fuentes primarias; registrar en RESEARCH.md.
+- [x] Dejar que WebView2 gestione el gesto y preparar un File con respaldo de disco, comprobado mediante DOM.getFileInfo.
+- [x] Sustituir el prefijo interno VerbatimDisk/VerbatimUNC por una ruta compatible con Shell al exportar; conservar la comprobación canónica de identidad.
+- [x] Confirmar en receptor WinForms real que FileDrop entrega un archivo accesible de 453.695 bytes, sin fallback a texto.
+- [x] Evitar la carrera about:blank durante el registro del receptor entrante; comprobar el origen por mensaje.
+- [x] Recuperar Dev y excluir los temporales del watcher tras el fallo EBUSY del compilador de diagnóstico.
+- [x] Compilación frontend, 13 pruebas frontend y dos pruebas Rust correctas.
+- [x] Aceptar recepción final de imagen en el chat con lápiz e Ink activado: Biglex confirmó que aparece adjunta.
+- [ ] Comprobar entrada hacia Synapse, otros archivos y regresión completa Ink ON/OFF y mouse. No inferirlo de dropEffect=copy.

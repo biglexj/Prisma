@@ -24,7 +24,7 @@ export default defineConfig({
     port: 1421,
     strictPort: true,
     watch: {
-      ignored: ["**/src-tauri/**"],
+      ignored: ["**/src-tauri/**", "**/temp/**", "**/test/**", "**/scratch/**"],
     },
   },
   resolve: {

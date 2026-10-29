@@ -114,6 +114,7 @@ use app::commands::drop_zone::{
 };
 use app::commands::vault::VaultState;
 use app::commands::vault_import::vault_import;
+use app::commands::synapse_browser_drag::synapse_prepare_browser_drag;
 use app::state::{
     FavoritesState, InitialFileState, InitialSynapseSendState, MusicLibraryState,
     PlaybackProbeState, VisualLibraryState,
@@ -515,15 +516,9 @@ pub fn run() {
             let vault_state = VaultState::new(data_directory.join("vault.json"));
             app.manage(vault_state);
             if let Some(zone) = app.get_webview_window("system_drop_zone") {
-                let _ = infrastructure::windows_file_drop::register_or_refresh(&zone);
-                let retry = zone.clone();
-                std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_millis(800));
-                    let target = retry.clone();
-                    let _ = retry.run_on_main_thread(move || {
-                        let _ = infrastructure::windows_file_drop::register_or_refresh(&target);
-                    });
-                });
+                if let Err(error) = app::commands::synapse_browser_drag::install(&zone) {
+                    eprintln!("[Synapse] No se pudo inicializar el arrastre WebView2: {error}");
+                }
             }
 
             let quick_look_state = QuickLookState::new(app.handle().clone());
@@ -804,11 +799,6 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if window.label() == "system_drop_zone" && matches!(event, WindowEvent::Focused(true)) {
-                if let Some(zone) = window.app_handle().get_webview_window("system_drop_zone") {
-                    let _ = infrastructure::windows_file_drop::register_or_refresh(&zone);
-                }
-            }
             if window.label() == "main" {
                 if let WindowEvent::Resized(_) = event {
                     if let Ok(is_min) = window.is_minimized() {
@@ -1132,6 +1122,7 @@ pub fn run() {
             vault_log,
             vault_add,
             vault_import,
+            synapse_prepare_browser_drag,
             app::commands::vault_import::vault_save_item,
             app::commands::vault_import::vault_read_text,
             vault_remove,

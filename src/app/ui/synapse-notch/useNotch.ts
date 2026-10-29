@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { VAULT_CHANGED_EVENT, VAULT_OPEN_EVENT, actionAt, isVaultSelfDrop, type DropAction, type ImportedItem, type ImportOptions, type VaultDrag, type VaultItem } from "./model";
+import { VAULT_CHANGED_EVENT, VAULT_OPEN_EVENT, isVaultSelfDrop, type DropAction, type ImportedItem, type ImportOptions, type VaultItem } from "./model";
 import { isOwnNativeFileDrop } from "../../../shared/useNativeFileDrag";
 
 /** Alto de la franja que siempre se ve (la línea de color). */
@@ -32,6 +32,8 @@ export function useNotch() {
   const busyRef = useRef(false);
   const draggingRef = useRef(false);
   const holdUntil = useRef(0);
+  const outgoingRef = useRef(false);
+  const setOutgoing = useCallback((active: boolean) => { outgoingRef.current = active; holdUntil.current = Date.now() + 1000; }, []);
   const locked = useRef(false);
   const waitForLeave = useRef(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -111,7 +113,7 @@ export function useNotch() {
         if (inside && !waitForLeave.current) {
           if (!openRef.current) show();
           holdUntil.current = Date.now() + 650;
-        } else if (openRef.current && !busyRef.current && !draggingRef.current && !locked.current && Date.now() > holdUntil.current) hide();
+        } else if (openRef.current && !busyRef.current && !draggingRef.current && !outgoingRef.current && !locked.current && Date.now() > holdUntil.current) hide();
       } finally { inFlight = false; }
     };
     const timer = setInterval(() => void check().catch(() => undefined), 180);
@@ -183,29 +185,13 @@ export function useNotch() {
 
   useEffect(() => {
     const handlers = [
-      listen<VaultDrag>("prisma:vault-drag-enter", ({ payload }) => {
-        if (isSelfDrop(payload.paths)) return;
-        setDrag(true);
-        // La ventana aún conserva los 100 px de reposo: el destino inicial es temporal.
-        setAction("temporary");
-      }),
-      listen<VaultDrag>("prisma:vault-drag-over", ({ payload }) => {
-        if (isSelfDrop(payload.paths)) return;
-        // Mientras arrastras la barra solo muestra los tres destinos: el
-        // destino depende de la posición horizontal, no de la vertical.
-        setAction(actionAt(payload.position.x, payload.position.y, width, window.devicePixelRatio, true));
-      }),
-      listen("prisma:vault-drag-leave", () => setDrag(false)),
-      listen<VaultDrag>("prisma:vault-drag-drop", ({ payload }) => {
-        traceDrop(`Drop recibido: ${payload.paths.length} archivos, texto=${Boolean(payload.text)}`);
-        if (isSelfDrop(payload.paths)) { traceDrop("Drop ignorado: archivo propio"); setDrag(false); return; }
-        const selected = actionAt(payload.position.x, payload.position.y, width, window.devicePixelRatio, true);
+      listen<{paths: string[]; text?: string; action: DropAction}>("prisma:synapse-browser-drop", ({payload}) => {
         setDrag(false);
-        void importContent(payload.paths, payload.text ?? undefined, selected);
+        void importContent(payload.paths, payload.text, payload.action);
       }),
     ];
     return () => { handlers.forEach((handler) => void handler.then((fn) => fn())); };
-  }, [width, setDrag, importContent, isSelfDrop]);
+  }, [setDrag, importContent]);
 
   useEffect(() => {
     const apply = () => {
@@ -236,5 +222,5 @@ export function useNotch() {
     return () => { window.removeEventListener("storage", apply); media.removeEventListener("change", apply); };
   }, []);
 
-  return { items, setItems, open, expanded, revealed, show, hide, dragging, setDrag, action, setAction, message, setMessage, error, setError, busy, pendingPaths, setPendingPaths, importContent, panelRef, width };
+  return { items, setItems, open, expanded, revealed, show, hide, dragging, setDrag, setOutgoing, action, setAction, message, setMessage, error, setError, busy, pendingPaths, setPendingPaths, importContent, panelRef, width };
 }
