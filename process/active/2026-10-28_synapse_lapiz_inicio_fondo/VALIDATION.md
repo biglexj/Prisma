@@ -1,5 +1,17 @@
 # Validación
 
+## Compilación release y espacio en disco — 2026-10-29
+
+La compilación local falló al construir el archivo de librería release con `Espacio en disco insuficiente (os error 112)`. D: tenía aproximadamente 0,14 GiB libres. La inspección encontró 47,76 GiB de artefactos debug, incluidos 27,82 GiB de caché incremental.
+
+El borrado directo fue rechazado por la política automática. Se usó la operación oficial acotada `cargo clean --manifest-path src-tauri/Cargo.toml --package prisma --profile dev`: Cargo informó 25.156 archivos y 36,5 GiB de artefactos retirados; el espacio físico libre posterior fue aproximadamente 31,8 GiB. Se verificó que no había rustc/cargo activos antes de limpiar; la aplicación estable permaneció abierta.
+
+Las tres advertencias Rust se corrigieron limitando el import Pointer y el contador de diagnóstico a debug_assertions. No cambian el comportamiento de arrastre. El empaquetado conserva ahora los instaladores anteriores en la carpeta compartida; la compilación local no los elimina.
+
+`bun run build:app`: frontend correcto (408 módulos; aviso de tamaño de chunks conocido) y aplicación nativa release correcta en 2 min 18 s. El empaquetado comprobó ejecutable actualizado, staging de ocho archivos/583,5 MB y plantilla de release 92638f7 con invariantes correctas. La prueba de InstallerCopy pasó copia nueva, reemplazo, bloqueo opcional/obligatorio, copia idéntica y rechazo de hash inválido.
+
+Instalador Inno Setup correcto en 304,844 s; `bun run build:app` finalizó con código 0. Generado `release/Prisma_2.0.1-setup.exe`, 161,5 MB, y copia verificada en la carpeta compartida. SHA-256: `bd6373990e99ea2a00f18cc9d48436dc7b523ddc25e506627e9e90aee9b703b0`. No se instaló ni publicó remotamente. No se repitieron pruebas físicas de arrastre.
+
 ## Ampliación global y auditoría — 2026-10-29
 
 Biglex confirmó arrastre desde Synapse al chat mediante sus adjuntos y luego la sección Imágenes. Se amplía la misma herramienta a Inicio, fuentes musicales/visuales, documentos y proyectos, visores, favoritos, historial, listas, cola y árbol. La recepción en Inicio abre el primer archivo o registra la carpeta como fuente de medios. No se automatizaron gestos físicos.

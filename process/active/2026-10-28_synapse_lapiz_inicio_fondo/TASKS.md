@@ -69,6 +69,8 @@
 
 ## Herramienta global y documentación
 
+- [x] Resolver el error 112 de disco lleno mediante limpieza oficial de artefactos debug, corregir advertencias Rust y completar build release/instalador local verificado.
+
 - [x] Auditar y corregir cambios posteriores que permitían entrar en OLE sin contacto confirmado, conservando avances útiles.
 - [x] Compartir la fuente nativa en Inicio, música, vídeo, imágenes, documentos, bibliotecas personalizadas, favoritos, historial, listas, cola y árbol de medios.
 - [x] Preparar solo fuentes visibles y conservar controles mediante huecos, acciones de clic/menú/scroll y limpieza al navegar.

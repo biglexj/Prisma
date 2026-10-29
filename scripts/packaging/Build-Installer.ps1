@@ -422,12 +422,8 @@ if (-not $SkipCopyToRelease) {
         try {
             $globalTarget = Copy-VerifiedInstaller -Source $builtInstaller -Destination (Join-Path $releasesGlobalDir $installerName) -ExpectedHash $hash -AllowAlternateName
             Write-Host "==> Instalador verificado en $globalTarget"
-            # Limpiar versiones anteriores solo después de sincronizar el nombre habitual.
-            if ([IO.Path]::GetFileName($globalTarget) -eq $installerName) {
-                Get-ChildItem -LiteralPath $releasesGlobalDir -Filter "Prisma_*-setup.exe" -File |
-                    Where-Object { $_.Name -ne $installerName } |
-                    ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }
-            }
+            # Conservar los instaladores anteriores: compilar una versión local
+            # no autoriza a eliminar otros artefactos de la carpeta compartida.
         } catch {
             Write-Warning "No se sincronizó 12. Releases: $($_.Exception.Message). La compilación está disponible y verificada en '$releaseTarget'."
         }

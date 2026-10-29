@@ -160,6 +160,8 @@ mod native {
             atomic::{AtomicBool, AtomicU64, Ordering},
         },
     };
+    #[cfg(debug_assertions)]
+    use windows::Win32::UI::Input::Pointer::*;
     use windows::{
         Win32::{
             Foundation::*,
@@ -173,11 +175,8 @@ mod native {
                 SystemServices::MK_LBUTTON,
             },
             UI::{
-                Input::{
-                    KeyboardAndMouse::{
-                        ReleaseCapture, SetCapture, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
-                    },
-                    Pointer::*,
+                Input::KeyboardAndMouse::{
+                    ReleaseCapture, SetCapture, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
                 },
                 WindowsAndMessaging::*,
             },
@@ -578,6 +577,7 @@ mod native {
             let mut client = RECT::default();
             GetClientRect(parent, &mut client)
                 .map_err(|e| format!("Medir ventana de entrada: {e}"))?;
+            #[cfg(debug_assertions)]
             let mut count = 0;
             for item in prepared {
                 let s = &item.surface;
@@ -666,7 +666,10 @@ mod native {
                     height,
                     SWP_NOACTIVATE | SWP_SHOWWINDOW,
                 );
-                count += 1;
+                #[cfg(debug_assertions)]
+                {
+                    count += 1;
+                }
             }
             #[cfg(debug_assertions)]
             if count > 0 {
