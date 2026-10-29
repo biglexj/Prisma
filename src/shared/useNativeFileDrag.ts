@@ -18,6 +18,7 @@ export interface NativeDragOptions {
   mode?: "copy" | "move";
   previewElement?: Element | null;
   previewShape?: PreviewShape;
+  penDragEnabled?: boolean;
   onError?: (message: string) => void;
 }
 
@@ -91,6 +92,10 @@ export function handleNativeDragPointerDown(
     ? e.target.closest("button, input, select, textarea, a, [contenteditable='true'], [role='slider']")
     : null;
   if (control && control !== element && element.contains(control)) return;
+  if (e.pointerType === "pen" && options?.penDragEnabled === false) {
+    options.onError?.("El arrastre con lápiz sigue en revisión. Usa el mouse por ahora.");
+    return;
+  }
   if (armNativeDragGesture(e, element, () => startNativeFileDrag(files, {
     ...options,
     previewElement: options?.previewElement ?? element,

@@ -24,3 +24,14 @@ Referencia técnica: [DoDragDrop — Microsoft](https://learn.microsoft.com/en-u
 La revisión actual realiza la conversión en `vendor/drag`, en el hilo de OLE y justo antes de DoDragDrop. Usa [ConvertPrimaryPointerToMouseDrag](https://learn.microsoft.com/en-us/windows/win32/winmsg/winuser/nf-winuser-convertprimarypointertomousedrag), resuelta dinámicamente por ordinal para conservar compatibilidad con sistemas que no la ofrecen. El registro `[drag-native] Primary pointer promoted to mouse for OLE` permite observar si Windows convirtió el contacto. FALSE también es normal con mouse o un contacto ya promovido, por lo que no demuestra un fallo por sí solo.
 
 Biglex confirmó que tampoco arrastra con esta conversión. El registro real de Dev mostró `Primary pointer promoted to mouse for OLE: true`, así que la entrada alcanzó el plugin y la conversión devolvió éxito, pero no existe aceptación funcional. Reportó además la barra abierta; una recompilación la cerró antes de verificar Esc. Se añadieron trazas de QueryContinueDrag (estado OLE, estado físico del botón y Escape) y del resultado final de DoDragDrop. Dev recompiló y arrancó correctamente con esas trazas; se espera un único gesto real sin editar código durante la prueba.
+
+## Retirada del experimento nativo
+
+La prueba posterior quedó pegada y Biglex reportó ventana blanca/sin responder. El registro terminó en `Primary pointer promoted to mouse for OLE: true`, sin ninguna llamada registrada de QueryContinueDrag ni retorno de DoDragDrop. Esto acota el bloqueo al inicio de OLE, sin demostrar todavía su causa interna.
+
+Se cerró mediante PID y ruta exacta solamente `src-tauri/target/debug/prisma.exe` (PID 29840) y se retiró toda la conversión y las trazas experimentales de vendor/drag, restaurándolo desde el checkpoint 99bd1f4. Se bloqueó preventivamente el arrastre saliente con lápiz solo en Synapse; sus botones siguen disponibles y el mouse conserva su recorrido.
+
+- [x] Repetición de las 15 pruebas frontend: correctas tras retirar la ruta experimental.
+- [x] Compilación frontend de la contención: TypeScript y Vite correctos.
+- [x] Dev reiniciada con `bun run tauri:dev`: recompiló drag, tauri-plugin-drag y Prisma; inició servidor, atajos y compositor sin la conversión experimental. No equivale a aceptación funcional del lápiz.
+- [ ] Soporte funcional de arrastre con lápiz: pendiente, actualmente deshabilitado en Synapse.

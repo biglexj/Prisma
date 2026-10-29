@@ -9,3 +9,5 @@ REWORK del arrastre: Biglex instaló la compilación del 28 de octubre y confirm
 La espera del evento de mouse compatible tampoco superó la prueba manual. Se reemplazó por conversión nativa antes de OLE. Biglex pidió además miniatura real cuadrada en el arrastre de imágenes desde Synapse. Ambos cambios están pendientes de aceptación visual y con lápiz; ninguna prueba unitaria demuestra su funcionamiento con el dispositivo.
 
 REWORK confirmado también para la conversión nativa: el lápiz sigue sin arrastrar aunque la conversión devuelve true en el registro de Dev. No declarar resuelto el arrastre. La barra permaneció abierta, pero la recompilación la cerró antes de verificar la recuperación con Esc.
+
+RETIRADO: Biglex confirmó después que ni arrastraba ni se recuperaba con Esc y que la aplicación quedó blanca/sin responder. Se cerró exclusivamente la Dev bloqueada y se restauró vendor/drag al estado anterior a estos experimentos. El arrastre saliente de Synapse con lápiz queda deshabilitado temporalmente con aviso; mouse, miniatura y protección de duplicados se conservan. No es una resolución funcional del lápiz.

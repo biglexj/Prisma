@@ -8,11 +8,11 @@
 
 ## Corrección tras la prueba instalada
 
-- [x] Promover el contacto primario a mouse en el hilo nativo justo antes de DoDragDrop, mediante la API dinámica de Windows 11. La espera previa de mousemove en el DOM no resolvió la prueba con lápiz y fue retirada.
+- [ ] Resolver la entrada de lápiz hacia OLE. Se retiraron tanto la espera de mousemove en el DOM como la conversión nativa de Windows 11: no resolvieron el fallo y la segunda quedó asociada a un bloqueo de la aplicación.
 - [x] Ignorar entradas y soltados de los propios archivos en la barra.
 - [x] Reutilizar archivos ya materializados en vault-items para impedir cadenas de copias.
 - [x] Mostrar errores de inicio del arrastre en Synapse.
 - [x] Usar la miniatura de la galería para imágenes de Synapse y exportar una vista previa cuadrada.
 - [x] Validar regresión de importación nativa y nueva compilación frontend.
-- [ ] Resolver el arrastre real del lápiz: la conversión nativa respondió true, pero Biglex confirmó que sigue fallando. Registrar QueryContinueDrag y final de DoDragDrop durante un gesto real.
+- [x] Retirar conversión y trazas experimentales de vendor/drag, cerrar únicamente la instancia Dev bloqueada y deshabilitar temporalmente la salida con lápiz en Synapse con un aviso visible.
 - [ ] Confirmar arrastre con lápiz a una aplicación externa en Dev.

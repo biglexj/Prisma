@@ -44,11 +44,6 @@ export function armNativeDragGesture(
   const preventBrowserDrag = (event: DragEvent) => event.preventDefault();
   const move = (event: PointerEvent) => {
     if (event.pointerId !== pointerId) return;
-    advance(event);
-  };
-  // La promoción del contacto a mouse se realiza en el hilo nativo OLE,
-  // inmediatamente antes de DoDragDrop (vendor/drag).
-  const advance = (event: MouseEvent) => {
     if (!(event.buttons & 1) || !element.isConnected) {
       cleanup();
       return;
