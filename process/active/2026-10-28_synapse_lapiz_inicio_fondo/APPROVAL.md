@@ -1,5 +1,13 @@
 # Estado
 
+## Decisión actual — Synapse e Imágenes aceptados; ampliación global implementada
+
+Biglex confirmó el recorrido de Synapse al chat mediante los archivos adjuntos y después declaró operativo el arrastre desde la sección Imágenes. Se conserva esa aceptación. Música, vídeos, documentos, recepción en Inicio y la matriz completa Ink ON/OFF quedan pendientes de sus pruebas físicas; el estado histórico inferior no sustituye esta decisión.
+
+La misma fuente nativa se comparte ahora desde AppContent con las tarjetas y controles de archivo de Prisma. La guía de Core y el puente local documentan la implementación y sus límites. Build correcto, 20 pruebas frontend y seis Rust correctas. Dev contiene el compilado nativo nuevo y las actualizaciones frontend.
+
+Se revisaron cambios posteriores al checkpoint af17ec3: dos modificaciones permitían iniciar el fallback OLE sin comprobar el contacto compatible. Se restauraron esas comprobaciones; se conservaron las altas de Inicio y la miniatura por omisión. El hook se trasladó de Home a la raíz de la app y se corrigió el contrato de IDs devueltos por Rust. Copia previa acotada en temp/synapse-pen-diagnostics/audit-20261029. No se descartaron cambios ajenos al encargo.
+
 ## Estado vigente — entrada aceptada, salida con lápiz en REWORK
 
 Biglex confirma que arrastrar hacia Synapse ya funciona. También confirmó el recorrido con mouse/modo ratón de la tableta. La salida con lápiz desde la barra hacia otras aplicaciones sigue pendiente de aceptación. Las aceptaciones más generales que figuran debajo son históricas y fueron corregidas por sus pruebas posteriores.

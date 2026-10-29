@@ -1638,6 +1638,7 @@ export function VideoPlayer({
             className="video-player-title"
             draggable={false}
             onDragStart={(event) => event.preventDefault()}
+            data-native-file-path={path || undefined}
             onPointerDown={(e) => {
               if (path) {
                 handleNativeDragPointerDown(e, path);
@@ -1654,6 +1655,7 @@ export function VideoPlayer({
               className="video-drag-handle-pill"
               draggable={false}
               onDragStart={(event) => event.preventDefault()}
+              data-native-file-path={path}
               onPointerDown={(e) => handleNativeDragPointerDown(e, path)}
               title="Mantén presionado y arrastra hacia DaVinci Resolve, Premiere, Explorer, etc."
             >

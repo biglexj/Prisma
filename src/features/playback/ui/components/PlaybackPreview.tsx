@@ -309,6 +309,7 @@ export function PlaybackPreview({
             className={`preview-artwork ${hasEffectiveMedia ? "has-media" : "is-empty"} ${isVideo ? "is-video-surface" : ""} ${isAudio ? "is-interactive" : ""}`}
             draggable={false}
             onDragStart={(event) => event.preventDefault()}
+            data-native-file-path={effectivePath || undefined}
             onPointerDown={(e) => {
               if (effectivePath) {
                 handleNativeDragPointerDown(e, effectivePath);
@@ -347,6 +348,7 @@ export function PlaybackPreview({
               <h2
                 draggable={false}
                 onDragStart={(event) => event.preventDefault()}
+                data-native-file-path={effectivePath || undefined}
                 onPointerDown={(e) => {
                   if (effectivePath) {
                     handleNativeDragPointerDown(e, effectivePath, { previewElement: document.querySelector(".preview-artwork img") });

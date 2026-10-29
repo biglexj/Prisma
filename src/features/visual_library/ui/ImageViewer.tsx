@@ -930,6 +930,8 @@ export function ImageViewer({
             className="image-viewer-title"
             draggable={false}
             onDragStart={(event) => event.preventDefault()}
+            data-native-file-path={currentItem.path}
+            data-native-file-preview=".image-viewer-media-layer.is-current img"
             onPointerDown={(e) => handleNativeDragPointerDown(e, currentItem.path, { previewElement: imgRef.current })}
             title={`${currentItem.title} · Arrastrar hacia apps externas (Affinity, Photoshop, Krita, DaVinci, Explorer)`}
           >
@@ -940,6 +942,8 @@ export function ImageViewer({
             className="image-viewer-drag-pill"
             draggable={false}
             onDragStart={(event) => event.preventDefault()}
+            data-native-file-path={currentItem.path}
+            data-native-file-preview=".image-viewer-media-layer.is-current img"
             onPointerDown={(e) => handleNativeDragPointerDown(e, currentItem.path, { previewElement: imgRef.current })}
             title="Mantén presionado y arrastra hacia Affinity, Photoshop, Krita, DaVinci, Explorer..."
           >

@@ -10,9 +10,17 @@ try {
     } | Where-Object { $_.reason -eq 'compiler-artifact' -and $_.profile.test -and $_.executable } | Select-Object -Last 1
     if (-not $artifact) { throw 'Cargo no devolvió un ejecutable de pruebas.' }
     $testExe = [IO.Path]::GetFullPath($artifact.executable)
+    # mt.exe puede truncar secciones DWARF de binarios gnullvm grandes.
+    # Conservar el artefacto de Cargo; preparar una copia sin símbolos para ejecutar.
+    $runExe = Join-Path (Split-Path $testExe -Parent) (([IO.Path]::GetFileNameWithoutExtension($testExe)) + ".manifested-$PID.exe")
+    Copy-Item -LiteralPath $testExe -Destination $runExe -Force
+    $strip = Get-Command llvm-strip.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source
+    if (-not $strip) { throw 'Se necesita llvm-strip.exe para preparar el harness sin modificar el artefacto de Cargo.' }
+    & $strip --strip-debug $runExe
+    if ($LASTEXITCODE -ne 0) { throw 'No se pudieron retirar los símbolos de la copia de pruebas.' }
     # El harness libtest no recibe el manifiesto del ejecutable principal Tauri.
     # Common Controls v6 es necesario para resolver TaskDialogIndirect al cargar.
-    $manifest = "$testExe.manifest"
+    $manifest = "$runExe.manifest"
     # Mantener también la compatibilidad Windows 10/11: las superficies
     # WS_EX_LAYERED hijas deben probarse con el mismo contrato que la app.
     Copy-Item -LiteralPath (Join-Path $root 'src-tauri/windows-app.manifest') -Destination $manifest -Force
@@ -23,14 +31,14 @@ try {
             Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
     }
     if (-not $mt) { throw 'Se necesita mt.exe del SDK de Windows para el harness de pruebas.' }
-    & $mt -nologo -manifest $manifest "-outputresource:$testExe;#1"
+    & $mt -nologo -manifest $manifest "-outputresource:$runExe;#1"
     if ($LASTEXITCODE -ne 0) { throw 'No se pudo añadir el manifiesto al harness.' }
     $runtime = Split-Path (Split-Path $testExe -Parent) -Parent
     $previousPath = $env:PATH
     $env:PATH = "$runtime;$previousPath"
     Push-Location $runtime
     try {
-        & $testExe $Filter --test-threads=1
+        & $runExe $Filter --test-threads=1
         if ($LASTEXITCODE -ne 0) { throw "Pruebas fallidas: $LASTEXITCODE" }
     } finally {
         Pop-Location

@@ -274,6 +274,8 @@ export function HomeDashboard({
                         key={item.path}
                         draggable={false}
                         onDragStart={(event) => event.preventDefault()}
+                        data-native-file-path={item.path}
+                        data-native-file-shape="square"
                         onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
                         onClick={() => handlePlayMusicWithFeedback(item.path, homeMusicItems, "Inicio")}
                         title={artist ? `${artist} — ${title}` : title}
@@ -318,6 +320,8 @@ export function HomeDashboard({
                       key={item.path}
                       draggable={false}
                       onDragStart={(event) => event.preventDefault()}
+                      data-native-file-path={item.path}
+                      data-native-file-shape="auto"
                       onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
                       onClick={() => handlePlayVideoWithFeedback(item.path, homeVideoItems)}
                       title={item.title}
@@ -360,6 +364,8 @@ export function HomeDashboard({
                       key={item.path}
                       draggable={false}
                       onDragStart={(event) => event.preventDefault()}
+                      data-native-file-path={item.path}
+                      data-native-file-shape="auto"
                       onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
                       onClick={() => {
                         if (onOpenImage) {

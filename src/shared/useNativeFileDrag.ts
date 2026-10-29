@@ -27,6 +27,12 @@ export interface NativeDragOptions {
 let outgoingPaths: string[] = [];
 let outgoingUntil = 0;
 
+/** El host inicia el gesto sin IPC; conservar el rechazo de su propio soltado. */
+export function markHostFileDrag(paths: string[], active: boolean) {
+  if (active) outgoingPaths = paths.map(dragPathKey);
+  outgoingUntil = active ? Number.POSITIVE_INFINITY : Date.now() + 1200;
+}
+
 const dragPathKey = (path: string) => toPlatformPath(path).replace(/\//g, "\\").toLowerCase();
 
 /** Evita que un archivo arrastrado desde Prisma se reimporte al soltarlo dentro de la propia ventana. */
@@ -104,6 +110,7 @@ export function handleNativeDragPointerDown(
 ): void {
   if (e.defaultPrevented) return;
   const element = e.currentTarget;
+  if (element instanceof HTMLElement && element.dataset.nativeFileReady === "true") return;
   const control = e.target instanceof Element
     ? e.target.closest("button, input, select, textarea, a, [contenteditable='true'], [role='slider']")
     : null;

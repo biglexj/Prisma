@@ -348,6 +348,9 @@ export function HistoryView({
               <button
                 className="home-media-card is-video-card"
                 key={item.path}
+                data-native-file-path={item.path}
+                draggable={false}
+                onDragStart={(event) => event.preventDefault()}
                 onClick={() => onPlayVideo(item.path, historyVideoItems)}
                 title={item.title}
               >
@@ -391,6 +394,9 @@ export function HistoryView({
                 <button
                   className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
                   key={item.path}
+                  data-native-file-path={item.path}
+                  draggable={false}
+                  onDragStart={(event) => event.preventDefault()}
                   onClick={() => handlePlayMusicWithFeedback(item.path)}
                   title={artist ? `${artist} — ${title}` : title}
                 >
@@ -433,6 +439,9 @@ export function HistoryView({
               <button
                 className="home-media-card"
                 key={item.path}
+                data-native-file-path={item.path}
+                draggable={false}
+                onDragStart={(event) => event.preventDefault()}
                 onClick={() => (onOpenImage ? onOpenImage(item.path, historyImageItems) : undefined)}
                 title={item.title}
               >

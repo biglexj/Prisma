@@ -65,4 +65,15 @@
 - [x] Dejar WM_POINTER* al procedimiento predeterminado y esperar WM_MOUSEMOVE compatible para iniciar OLE, como la prueba aceptada.
 - [x] Usar el botón y las coordenadas del mensaje y los umbrales del sistema; eliminar la consulta tardía del botón para iniciar desde la superficie.
 - [x] Retirar CoreDragOperation y sus dependencias exclusivas; conservar miniatura PNG, botones y recepción.
-- [ ] Confirmación de Biglex del recorrido integrado desde Synapse hacia otra aplicación/chat; no extender la aceptación del laboratorio.
+- [x] Confirmación de Biglex del recorrido integrado desde Synapse hacia el chat; adjuntó los archivos de la barra y confirmó que quedó consolidado.
+
+## Herramienta global y documentación
+
+- [x] Auditar y corregir cambios posteriores que permitían entrar en OLE sin contacto confirmado, conservando avances útiles.
+- [x] Compartir la fuente nativa en Inicio, música, vídeo, imágenes, documentos, bibliotecas personalizadas, favoritos, historial, listas, cola y árbol de medios.
+- [x] Preparar solo fuentes visibles y conservar controles mediante huecos, acciones de clic/menú/scroll y limpieza al navegar.
+- [x] Habilitar recepción de archivos/carpetas en Inicio y deduplicar canales de entrada.
+- [x] Registrar aceptación de Biglex para la sección Imágenes.
+- [x] Build frontend, 20 pruebas frontend y seis pruebas Rust correctas.
+- [x] Documentar «Compatibilidad con tabletas» en Core y mantener un puente con contratos locales.
+- [ ] Aceptación física del resto de formatos/vistas y de ambos estados de Ink por Biglex; el destino decide qué puede importar.

@@ -455,6 +455,7 @@ export function FavoritesView({
                     className={`home-media-card ${activatingPath === item.path ? "is-activating" : ""}`}
                     draggable={false}
                     onDragStart={(event) => event.preventDefault()}
+                    data-native-file-path={item.path}
                     onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
                     onClick={() => handlePlayMusicWithFeedback(item.path)}
                     onContextMenu={(e) => handleCardContextMenu(e, item, "music")}
@@ -512,6 +513,7 @@ export function FavoritesView({
                   className="home-media-card"
                   draggable={false}
                   onDragStart={(event) => event.preventDefault()}
+                  data-native-file-path={item.path}
                   onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
                   onClick={() => (onOpenImage ? onOpenImage(item.path, favoriteImageItems) : undefined)}
                   onContextMenu={(e) => handleCardContextMenu(e, item, "image")}
@@ -564,6 +566,7 @@ export function FavoritesView({
                   className={`home-media-card is-video-card ${activatingPath === item.path ? "is-activating" : ""}`}
                   draggable={false}
                   onDragStart={(event) => event.preventDefault()}
+                  data-native-file-path={item.path}
                   onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
                   onClick={() => handlePlayVideoWithFeedback(item.path)}
                   onContextMenu={(e) => handleCardContextMenu(e, item, "video")}

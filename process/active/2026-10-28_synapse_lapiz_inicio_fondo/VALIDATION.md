@@ -1,5 +1,21 @@
 # Validación
 
+## Ampliación global y auditoría — 2026-10-29
+
+Biglex confirmó arrastre desde Synapse al chat mediante sus adjuntos y luego la sección Imágenes. Se amplía la misma herramienta a Inicio, fuentes musicales/visuales, documentos y proyectos, visores, favoritos, historial, listas, cola y árbol. La recepción en Inicio abre el primer archivo o registra la carpeta como fuente de medios. No se automatizaron gestos físicos.
+
+Auditados cambios posteriores al checkpoint af17ec3. Se restauró el rechazo de inicio OLE cuando el fallback no confirma contacto y el seguimiento real del contacto; se conservaron el registro declarativo en Inicio y la miniatura por omisión. Corregidos el alcance del hook (raíz de App) y el resultado de native_file_set_surfaces (IDs registrados, no null). Una ruta eliminada/no disponible no bloquea las demás tarjetas.
+
+- `bun run build`: TypeScript y 408 módulos Vite correctos; aviso de tamaño de chunks conocido.
+- Suite de geometría/controles, Synapse, lápiz y capturadora: 19 pruebas correctas.
+- `bun test ./tests/native-file-contact.test.ts`: una prueba adicional correcta, con dos casos que impiden entrar al plugin sin contacto confirmado. Se ejecuta aislada por sus mocks de Tauri.
+- `scripts/test-wallpapers.ps1 -Filter app::commands::synapse_`: seis pruebas Rust correctas, incluyendo origen/ventana local, límites de fuentes, superficie real y PNG.
+- Dev respondió con PID y ruta debug verificados; prisma.exe posterior al último cambio nativo. HMR posterior a los cambios frontend. No se cerró la versión estable que estaba abierta.
+
+Incidencias del harness, diferenciadas del arrastre: tauri-build intentaba sobrescribir WebView2Loader.dll cargado por Dev; se preservó el artefacto con otro nombre para permitir su reconstrucción. Después mt.exe truncó una sección DWARF del ejecutable libtest (el final declarado de la sección excedía el tamaño real), causando error de aplicación no válida. El original corrupto se preservó en temp y Cargo lo regeneró. El script ahora copia el ejecutable, retira símbolos solo de la copia con llvm-strip y añade el manifiesto allí; conserva intacto el artefacto de Cargo. La suite finalmente ejecutó y pasó.
+
+Guía canónica en [Core](../../../../Docs/platforms/windows/tablet-compatibility.md), contratos en [la guía de Prisma](../../../docs/guides/tablet-compatibility.md). Recepción real del resto de formatos/destinos e Ink ON/OFF y próximo arranque del wallpaper pendientes; no cerrar el proceso completo.
+
 ## Evidencia posterior — laboratorio con lápiz y chat
 
 Biglex confirmó que funciona y adjuntó la muestra PNG también en este chat. Los registros de ambos procesos muestran PT_PEN tipo 3, promoción compatible FF51570A, botón izquierdo en el mensaje, inicio OLE desde MouseMove, final Copy y FileDrop legible de 2.396 bytes sin texto. Se acepta esa prueba independiente; no extenderla todavía a Synapse.

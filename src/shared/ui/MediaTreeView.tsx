@@ -357,6 +357,7 @@ export function MediaTreeView<T extends MediaTreeItem>({
         key={node.path}
         draggable={false}
         onDragStart={(event) => event.preventDefault()}
+        data-native-file-path={file.path}
         onPointerDown={(e) => handleNativeDragPointerDown(e, file.path)}
         onClick={() => onPlayItem(file, contextList)}
         onContextMenu={onOpenItemMenu ? (event) => onOpenItemMenu(event, file) : undefined}

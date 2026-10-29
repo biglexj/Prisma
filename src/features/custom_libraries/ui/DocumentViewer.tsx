@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { Icon, type IconName } from "../../../shared/ui/Icon";
+import { handleNativeDragPointerDown } from "../../../shared/useNativeFileDrag";
 import type { CustomLibraryItem } from "../model/types";
 import {
   customLibrariesReadTextFile,
@@ -380,7 +381,10 @@ export function DocumentViewer({
           </div>
           <div className="doc-viewer-file-info">
             <div className="doc-viewer-title-row">
-              <span className="doc-viewer-title" title={item.name}>
+              <span className="doc-viewer-title" title={`${item.name} · Arrastrar archivo`}
+                data-native-file-path={item.path} draggable={false}
+                onDragStart={(event) => event.preventDefault()}
+                onPointerDown={(event) => handleNativeDragPointerDown(event, item.path)} style={{cursor:"grab"}}>
                 {item.name}
               </span>
               <span className="doc-viewer-ext-badge">.{item.extension}</span>

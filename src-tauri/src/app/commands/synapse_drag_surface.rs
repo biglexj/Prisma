@@ -1,5 +1,5 @@
 //! Superficies de entrada propias sobre la vista previa; WebView2 conserva los botones.
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager};
 
 fn preview_png(icon: &str) -> Result<Vec<u8>, String> {
@@ -33,12 +33,120 @@ pub struct Surface {
     width: f64,
     height: f64,
     icon: String,
+    #[serde(default)]
+    holes: Vec<SurfaceHole>,
+}
+
+#[derive(Clone, Deserialize)]
+struct SurfaceHole {
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+}
+
+#[derive(Deserialize)]
+pub struct FileSurface {
+    #[serde(flatten)]
+    surface: Surface,
+    path: String,
+}
+
+fn trusted_main(label: &str, url: &tauri::Url) -> bool {
+    let local = match url.scheme() {
+        "tauri" => url.host_str() == Some("localhost"),
+        "http" | "https" => {
+            url.host_str() == Some("tauri.localhost")
+                || matches!(url.host_str(), Some("localhost" | "127.0.0.1"))
+                    && url.port() == Some(1421)
+        }
+        _ => false,
+    };
+    label == "main" && local && matches!(url.path(), "/" | "/index.html")
+}
+
+fn valid_surfaces(surfaces: &[Surface], limit: usize, max_dimension: f64) -> bool {
+    surfaces.len() <= limit
+        && surfaces.iter().map(|s| s.icon.len()).sum::<usize>() <= 12_000_000
+        && surfaces.iter().all(|s| {
+            [s.x, s.y, s.width, s.height].iter().all(|v| v.is_finite())
+                && s.x >= 0.0
+                && s.y >= 0.0
+                && s.width > 0.0
+                && s.height > 0.0
+                && s.width <= max_dimension
+                && s.height <= max_dimension
+                && s.icon.len() <= 1_000_000
+                && s.holes.len() <= 32
+                && s.holes.iter().all(|h| {
+                    [h.x, h.y, h.width, h.height].iter().all(|v| v.is_finite())
+                        && h.width >= 0.0
+                        && h.height >= 0.0
+                })
+        })
+}
+
+#[derive(Serialize, Clone)]
+struct SourceInput {
+    id: String,
+    kind: &'static str,
+    x: i32,
+    y: i32,
+    ctrl: bool,
+    shift: bool,
+    alt: bool,
+    delta: i32,
+}
+
+#[cfg(windows)]
+unsafe fn emit_input(
+    window: &tauri::WebviewWindow,
+    hwnd: windows::Win32::Foundation::HWND,
+    id: &str,
+    kind: &'static str,
+    lp: windows::Win32::Foundation::LPARAM,
+    delta: i32,
+) {
+    unsafe {
+        use windows::Win32::{
+            Foundation::POINT,
+            Graphics::Gdi::{ClientToScreen, ScreenToClient},
+            UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_MENU, VK_SHIFT},
+        };
+        let mut point = POINT {
+            x: lp.0 as i16 as i32,
+            y: (lp.0 >> 16) as i16 as i32,
+        };
+        if kind != "contextmenu" && kind != "wheel" && kind != "hwheel" {
+            let _ = ClientToScreen(hwnd, &mut point);
+        }
+        if let Ok(root) = window.hwnd() {
+            let _ = ScreenToClient(windows::Win32::Foundation::HWND(root.0), &mut point);
+        }
+        let scale = window.scale_factor().unwrap_or(1.0);
+        let payload = SourceInput {
+            id: id.into(),
+            kind,
+            x: (point.x as f64 / scale).round() as i32,
+            y: (point.y as f64 / scale).round() as i32,
+            ctrl: GetKeyState(VK_CONTROL.0 as i32) < 0,
+            shift: GetKeyState(VK_SHIFT.0 as i32) < 0,
+            alt: GetKeyState(VK_MENU.0 as i32) < 0,
+            delta,
+        };
+        let _ = window.emit_to(window.label(), "prisma:native-file-source-input", payload);
+    }
 }
 
 pub fn set_active(window: &tauri::WebviewWindow, active: bool) {
     #[cfg(windows)]
     native::ACTIVE.store(active, std::sync::atomic::Ordering::Release);
-    let _ = window.emit_to(window.label(), "prisma:synapse-native-active", active);
+    let event = if window.label() == "main" {
+        "prisma:native-file-source-active"
+    } else {
+        "prisma:synapse-native-active"
+    };
+    let _ = window.emit_to(window.label(), event, active);
 }
 
 #[cfg(windows)]
@@ -56,7 +164,8 @@ mod native {
         Win32::{
             Foundation::*,
             Graphics::Gdi::{
-                BLACK_BRUSH, BeginPaint, EndPaint, FillRect, GetStockObject, HBRUSH, PAINTSTRUCT,
+                BLACK_BRUSH, BeginPaint, CombineRgn, CreateRectRgn, DeleteObject, EndPaint,
+                FillRect, GetStockObject, HBRUSH, PAINTSTRUCT, RGN_DIFF, SetWindowRgn,
             },
             System::{
                 LibraryLoader::GetModuleHandleW,
@@ -77,6 +186,7 @@ mod native {
     };
     pub static ACTIVE: AtomicBool = AtomicBool::new(false);
     pub static REVISION: AtomicU64 = AtomicU64::new(0);
+    pub static MAIN_REVISION: AtomicU64 = AtomicU64::new(0);
     const WM_MOUSELEAVE: u32 = 0x02a3;
     thread_local! { static SOURCES: RefCell<HashMap<isize, Source>> = RefCell::new(HashMap::new()); }
     struct Source {
@@ -227,6 +337,10 @@ mod native {
             if message == WM_LBUTTONDBLCLK {
                 SOURCES.with(|sources| {
                     if let Some(source) = sources.borrow().get(&key) {
+                        if source.window.label() == "main" {
+                            emit_input(&source.window, hwnd, &source.id, "dblclick", lp, 0);
+                            return;
+                        }
                         let _ = source.window.emit_to(
                             source.window.label(),
                             "prisma:synapse-native-preview",
@@ -249,7 +363,11 @@ mod native {
                     source.hovered = true;
                     let _ = source.window.emit_to(
                         source.window.label(),
-                        "prisma:synapse-native-hover",
+                        if source.window.label() == "main" {
+                            "prisma:native-file-source-hover"
+                        } else {
+                            "prisma:synapse-native-hover"
+                        },
                         Some(&source.id),
                     );
                     let mut track = TRACKMOUSEEVENT {
@@ -264,7 +382,11 @@ mod native {
                     source.hovered = false;
                     let _ = source.window.emit_to(
                         source.window.label(),
-                        "prisma:synapse-native-hover",
+                        if source.window.label() == "main" {
+                            "prisma:native-file-source-hover"
+                        } else {
+                            "prisma:synapse-native-hover"
+                        },
                         Option::<String>::None,
                     );
                 }
@@ -299,6 +421,12 @@ mod native {
                         true
                     }
                     WM_LBUTTONUP => {
+                        if source.origin.is_some()
+                            && source.window.label() == "main"
+                            && !ACTIVE.load(Ordering::Acquire)
+                        {
+                            emit_input(&source.window, hwnd, &source.id, "click", lp, 0);
+                        }
                         source.origin = None;
                         let _ = ReleaseCapture();
                         true
@@ -307,11 +435,37 @@ mod native {
                         source.origin = None;
                         true
                     }
+                    WM_CONTEXTMENU if source.window.label() == "main" => {
+                        emit_input(&source.window, hwnd, &source.id, "contextmenu", lp, 0);
+                        true
+                    }
+                    WM_MOUSEWHEEL | WM_MOUSEHWHEEL if source.window.label() == "main" => {
+                        emit_input(
+                            &source.window,
+                            hwnd,
+                            &source.id,
+                            if message == WM_MOUSEWHEEL {
+                                "wheel"
+                            } else {
+                                "hwheel"
+                            },
+                            lp,
+                            (wp.0 >> 16) as i16 as i32,
+                        );
+                        true
+                    }
                     _ => false,
                 }
             });
             if let Some((window, path, png)) = start {
                 let _ = ReleaseCapture();
+                if window.label() == "main" {
+                    let _ = window.emit_to(
+                        window.label(),
+                        "prisma:native-file-source-paths",
+                        vec![path.to_string_lossy().into_owned()],
+                    );
+                }
                 super::set_active(&window, true);
                 #[cfg(debug_assertions)]
                 eprintln!("[Synapse nativo] Arrastre OLE desde WM_MOUSEMOVE compatible");
@@ -327,7 +481,11 @@ mod native {
                 if let Err(error) = result {
                     let _ = window.emit_to(
                         window.label(),
-                        "prisma:synapse-native-error",
+                        if window.label() == "main" {
+                            "prisma:native-file-source-error"
+                        } else {
+                            "prisma:synapse-native-error"
+                        },
                         error.to_string(),
                     );
                 }
@@ -339,22 +497,36 @@ mod native {
             }
         }
     }
+    pub fn ready_ids(window: &tauri::WebviewWindow) -> Vec<String> {
+        SOURCES.with(|sources| {
+            sources
+                .borrow()
+                .values()
+                .filter(|source| source.window.label() == window.label())
+                .map(|source| source.id.clone())
+                .collect()
+        })
+    }
     pub fn configure(
         window: &tauri::WebviewWindow,
         prepared: Vec<Prepared>,
         revision: u64,
     ) -> std::result::Result<(), String> {
         unsafe {
-            if REVISION.load(Ordering::Acquire) != revision || ACTIVE.load(Ordering::Acquire) {
+            let latest = if window.label() == "main" {
+                &MAIN_REVISION
+            } else {
+                &REVISION
+            };
+            if latest.load(Ordering::Acquire) != revision || ACTIVE.load(Ordering::Acquire) {
                 return Ok(());
             }
             // La medición al terminar la animación no debe destruir la ventana
             // que ya es propietaria del contacto que el usuario está moviendo.
             if SOURCES.with(|sources| {
-                sources
-                    .borrow()
-                    .values()
-                    .any(|source| source.origin.is_some())
+                sources.borrow().values().any(|source| {
+                    source.window.label() == window.label() && source.origin.is_some()
+                })
             }) {
                 let target = window.clone();
                 tauri::async_runtime::spawn(async move {
@@ -364,7 +536,11 @@ mod native {
                         if let Err(error) = configure(&target, prepared, revision) {
                             let _ = target.emit_to(
                                 target.label(),
-                                "prisma:synapse-native-error",
+                                if target.label() == "main" {
+                                    "prisma:native-file-source-error"
+                                } else {
+                                    "prisma:synapse-native-error"
+                                },
                                 error,
                             );
                         }
@@ -386,7 +562,14 @@ mod native {
             if class == 0 {
                 return Err("No se pudo crear la superficie nativa de Synapse".into());
             }
-            let old = SOURCES.with(|sources| sources.borrow().keys().copied().collect::<Vec<_>>());
+            let old = SOURCES.with(|sources| {
+                sources
+                    .borrow()
+                    .iter()
+                    .filter(|(_, source)| source.window.label() == window.label())
+                    .map(|(id, _)| *id)
+                    .collect::<Vec<_>>()
+            });
             for id in old {
                 let _ = DestroyWindow(HWND(id as *mut _));
             }
@@ -426,6 +609,28 @@ mod native {
                     None,
                 )
                 .map_err(|e| format!("Crear superficie de entrada: {e}"))?;
+                if !s.holes.is_empty() {
+                    let region = CreateRectRgn(0, 0, width, height);
+                    if region.0.is_null() {
+                        let _ = DestroyWindow(hwnd);
+                        return Err("No se pudo delimitar el arrastre".into());
+                    }
+                    for h in &s.holes {
+                        let hole = CreateRectRgn(
+                            (h.x * dpi).floor() as i32,
+                            (h.y * dpi).floor() as i32,
+                            ((h.x + h.width) * dpi).ceil() as i32,
+                            ((h.y + h.height) * dpi).ceil() as i32,
+                        );
+                        CombineRgn(region, region, hole, RGN_DIFF);
+                        let _ = DeleteObject(hole);
+                    }
+                    if SetWindowRgn(hwnd, region, true) == 0 {
+                        let _ = DeleteObject(region);
+                        let _ = DestroyWindow(hwnd);
+                        return Err("No se pudieron conservar los controles de la tarjeta".into());
+                    }
+                }
                 let setup = (|| {
                     SetLayeredWindowAttributes(hwnd, COLORREF(0), 1, LWA_ALPHA)
                         .map_err(|e| format!("Transparencia de entrada: {e}"))?;
@@ -465,7 +670,10 @@ mod native {
             }
             #[cfg(debug_assertions)]
             if count > 0 {
-                eprintln!("[Synapse nativo] Superficies de salida listas: {count}");
+                eprintln!(
+                    "[Arrastre nativo {}] Superficies de salida listas: {count}",
+                    window.label()
+                );
             }
             Ok(())
         }
@@ -479,16 +687,7 @@ pub async fn synapse_set_drag_surfaces(
     surfaces: Vec<Surface>,
 ) -> Result<(), String> {
     super::synapse_browser_drag::local_zone(&window)?;
-    if surfaces.len() > 5
-        || surfaces.iter().any(|s| {
-            ![s.x, s.y, s.width, s.height].iter().all(|v| v.is_finite())
-                || s.x < 0.0
-                || s.y < 0.0
-                || s.width > 300.0
-                || s.height > 300.0
-                || s.icon.len() > 1_000_000
-        })
-    {
+    if !valid_surfaces(&surfaces, 5, 300.0) {
         return Err("Superficie de arrastre no válida".into());
     }
     #[cfg(windows)]
@@ -538,5 +737,136 @@ pub async fn synapse_set_drag_surfaces(
     {
         let _ = (app, surfaces);
         Ok(())
+    }
+}
+
+/// Fuentes de archivos visibles en Inicio, bibliotecas y reproductores.
+#[tauri::command]
+pub async fn native_file_drop_info(
+    window: tauri::WebviewWindow,
+    path: String,
+) -> Result<bool, String> {
+    if !trusted_main(window.label(), &window.url().map_err(|e| e.to_string())?) {
+        return Err("Consulta reservada a Prisma local".into());
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        std::fs::metadata(path)
+            .map(|metadata| metadata.is_dir())
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn native_file_set_surfaces(
+    window: tauri::WebviewWindow,
+    surfaces: Vec<FileSurface>,
+) -> Result<Vec<String>, String> {
+    if !trusted_main(window.label(), &window.url().map_err(|e| e.to_string())?) {
+        return Err("Fuente reservada a Prisma local".into());
+    }
+    let geometry = surfaces
+        .iter()
+        .map(|s| s.surface.clone())
+        .collect::<Vec<_>>();
+    if !valid_surfaces(&geometry, 96, 8192.0)
+        || surfaces
+            .iter()
+            .any(|s| s.path.len() > 32768 || s.path.is_empty())
+    {
+        return Err("Fuentes de arrastre no válidas".into());
+    }
+    drop(geometry);
+    #[cfg(windows)]
+    {
+        let revision = native::MAIN_REVISION.fetch_add(1, std::sync::atomic::Ordering::AcqRel) + 1;
+        let prepared = tauri::async_runtime::spawn_blocking(
+            move || -> Result<Vec<native::Prepared>, String> {
+                let mut prepared = Vec::new();
+                for input in surfaces {
+                    let Ok(path) = std::path::Path::new(&input.path).canonicalize() else {
+                        continue;
+                    };
+                    if !path.is_file() {
+                        continue;
+                    }
+                    let path = super::synapse_browser_drag::shell_drag_path(&path)?.into();
+                    let png = preview_png(&input.surface.icon)?;
+                    prepared.push(native::Prepared {
+                        surface: input.surface,
+                        path,
+                        png,
+                    });
+                }
+                Ok(prepared)
+            },
+        )
+        .await
+        .map_err(|e| e.to_string())??;
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let target = window.clone();
+        window
+            .run_on_main_thread(move || {
+                let result = target.url().map_err(|e| e.to_string()).and_then(|url| {
+                    if !trusted_main(target.label(), &url) {
+                        return Err("Documento de arrastre sustituido".into());
+                    }
+                    native::configure(&target, prepared, revision)
+                        .map(|_| native::ready_ids(&target))
+                });
+                let _ = tx.send(result);
+            })
+            .map_err(|e| e.to_string())?;
+        rx.await.map_err(|e| e.to_string())?
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (window, surfaces);
+        Ok(Vec::new())
+    }
+}
+
+#[cfg(test)]
+mod source_tests {
+    use super::*;
+    #[test]
+    fn main_sources_reject_remote_documents_and_wrong_windows() {
+        assert!(trusted_main(
+            "main",
+            &tauri::Url::parse("http://localhost:1421/").unwrap()
+        ));
+        assert!(trusted_main(
+            "main",
+            &tauri::Url::parse("tauri://localhost/index.html").unwrap()
+        ));
+        for value in [
+            "https://example.com/",
+            "http://localhost:3000/",
+            "http://localhost:1421/zone.html",
+        ] {
+            assert!(!trusted_main("main", &tauri::Url::parse(value).unwrap()));
+        }
+        assert!(!trusted_main(
+            "system_drop_zone",
+            &tauri::Url::parse("http://localhost:1421/").unwrap()
+        ));
+    }
+    #[test]
+    fn source_limits_reject_bad_geometry_and_large_batches() {
+        let input = Surface {
+            id: "card".into(),
+            x: 1.0,
+            y: 1.0,
+            width: 100.0,
+            height: 100.0,
+            icon: String::new(),
+            holes: vec![],
+        };
+        assert!(valid_surfaces(&[input.clone()], 96, 8192.0));
+        assert!(!valid_surfaces(&vec![input.clone(); 97], 96, 8192.0));
+        let mut invalid = input;
+        invalid.width = f64::NAN;
+        assert!(!valid_surfaces(&[invalid], 96, 8192.0));
     }
 }

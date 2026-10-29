@@ -36,6 +36,7 @@ export function MusicCard({
         className={`music-media-card ${isActivating ? "is-activating" : ""}`}
         draggable={false}
         onDragStart={(event) => event.preventDefault()}
+        data-native-file-path={item.path}
         onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
         onClick={onClick}
         onContextMenu={onContextMenu}

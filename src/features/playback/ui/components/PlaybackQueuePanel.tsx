@@ -598,6 +598,7 @@ export function PlaybackQueuePanel({
                     className={`queue-item-row ${isPlaying ? "is-active" : ""}`}
                     draggable={false}
                     onDragStart={(event) => event.preventDefault()}
+                    data-native-file-path={item.path}
                     onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
                     onClick={() => onSelectTrack(index)}
                     role="listitem"

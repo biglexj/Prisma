@@ -57,6 +57,7 @@ import { DspEqualizerView } from "../features/dsp/ui/DspEqualizerView";
 import { DspEqualizerModal } from "../features/dsp/ui/DspEqualizerModal";
 import { DspProvider, useDsp } from "../features/dsp/DspContext";
 import { useGlobalFileDrop } from "./hooks/useGlobalFileDrop";
+import { useNativeFileSources } from "../shared/useNativeFileSources";
 import { Icon, type IconName } from "../shared/ui/Icon";
 import { SeekOsd, useSeekOsd } from "../shared/ui/SeekOsd";
 import { VolumeOsd, useVolumeOsd } from "../shared/ui/VolumeOsd";
@@ -93,6 +94,7 @@ const VIEW_TITLES: Record<AppView, string> = {
 };
 
 function AppContent() {
+  useNativeFileSources();
   const { multiOutput, mobileAudioOutput } = useDsp();
   const [activeView, setActiveView] = useState<AppView>("home");
   const [converterRequest, setConverterRequest] = useState<ConverterOpenRequest | null>(null);
@@ -179,9 +181,7 @@ function AppContent() {
     if (mobileAudioOutput.error) showGlobalFavToast(mobileAudioOutput.error);
   }, [mobileAudioOutput.error, showGlobalFavToast]);
 
-  useGlobalFileDrop({
-    activeView, onAddMusicFolder: library.addFolder, onAddImageFolder: imageLibrary.addFolder, onAddVideoFolder: videoLibrary.addFolder,
-  });
+
 
   // Sincronización del tema dinámico reactivo global con la pista en reproducción activa:
   // ÚNICAMENTE si hay una pista cargada en libmpv y se está reproduciendo activamente (no en pausa, ni detenida, ni en reposo de cola)
@@ -535,6 +535,11 @@ function AppContent() {
       handleOpenImage(filePath);
     }
   }, [handleOpenImage, playback, playMusicItem, playVideoItem]);
+
+  useGlobalFileDrop({
+    onOpenHomeFile: handleOpenFile,
+    activeView, onAddMusicFolder: library.addFolder, onAddImageFolder: imageLibrary.addFolder, onAddVideoFolder: videoLibrary.addFolder,
+  });
 
   /**
    * Gestiona el ciclo de vida de Picture-in-Picture desde App:

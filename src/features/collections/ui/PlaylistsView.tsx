@@ -717,6 +717,9 @@ export function PlaylistsView({ onPlayQueue, onPlayMusic, onPlayVideo }: Playlis
                   <div
                     className={`playlist-table-row ${item.isAvailable === false ? "is-missing" : ""}`}
                     key={`${item.path}-${idx}`}
+                    data-native-file-path={item.isAvailable === false ? undefined : item.path}
+                    draggable={false}
+                    onDragStart={(event) => event.preventDefault()}
                     onClick={() => handlePlayItem(selectedItems, idx, selectedPlaylist.name)}
                     title={
                       item.isAvailable === false

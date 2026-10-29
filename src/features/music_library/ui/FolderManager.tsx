@@ -206,6 +206,7 @@ export function FolderManager({
                 key={item.path}
                 draggable={false}
                 onDragStart={(event) => event.preventDefault()}
+                data-native-file-path={item.path}
                 onPointerDown={(e) => handleNativeDragPointerDown(e, item.path)}
                 onClick={() => onPlay(item.path)}
               >

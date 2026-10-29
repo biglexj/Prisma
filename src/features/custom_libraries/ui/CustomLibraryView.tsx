@@ -2,6 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../../shared/ui/Icon";
+import { handleNativeDragPointerDown } from "../../../shared/useNativeFileDrag";
 import { FolderBreadcrumbHeader } from "../../../shared/ui/FolderBreadcrumbHeader";
 import { MediaTreeView } from "../../../shared/ui/MediaTreeView";
 import { ContextMenu } from "../../../shared/ui/ContextMenu";
@@ -133,6 +134,10 @@ function CustomThumbnailItem({
     <div
       className="custom-card"
       key={item.path}
+      data-native-file-path={item.path}
+      draggable={false}
+      onDragStart={(event) => event.preventDefault()}
+      onPointerDown={(event) => handleNativeDragPointerDown(event, item.path)}
       onClick={onClick}
       onContextMenu={onContextMenu}
       title={item.path}

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -12,6 +12,7 @@ interface UseGlobalFileDropProps {
   onAddMusicFolder: (path: string) => void | Promise<void>;
   onAddImageFolder: (path: string) => void | Promise<void>;
   onAddVideoFolder: (path: string) => void | Promise<void>;
+  onOpenHomeFile?: (path: string) => void;
 }
 
 export function useGlobalFileDrop({
@@ -19,7 +20,11 @@ export function useGlobalFileDrop({
   onAddMusicFolder,
   onAddImageFolder,
   onAddVideoFolder,
+  onOpenHomeFile,
 }: UseGlobalFileDropProps) {
+  const lastDrop = useRef({key:"", at:0});
+  const callbacks = useRef({onAddMusicFolder, onAddImageFolder, onAddVideoFolder, onOpenHomeFile});
+  callbacks.current = {onAddMusicFolder, onAddImageFolder, onAddVideoFolder, onOpenHomeFile};
   // Prevenir rechazo de cursor (icono 🚫 de Windows) de forma global en cualquier vista
   // mediante listeners en fase de captura (capture: true) a nivel de raíz (window y document).
   useEffect(() => {
@@ -93,13 +98,23 @@ export function useGlobalFileDrop({
         return;
       }
       const firstPath = cleanPath(paths[0]);
+      const key = paths.map(path => cleanPath(path).toLowerCase()).join("\n");
+      if (lastDrop.current.key === key && Date.now() - lastDrop.current.at < 700) return;
+      lastDrop.current = {key, at:Date.now()};
 
-      if (activeView === "music") {
-        void onAddMusicFolder(firstPath);
+      if (activeView === "home") {
+        const isDirectory = await invoke<boolean>("native_file_drop_info", {path:firstPath}).catch(() => null);
+        if (isDirectory === null || isCancelled) return;
+        if (isDirectory) {
+          const current = callbacks.current;
+          await Promise.all([current.onAddMusicFolder(firstPath), current.onAddImageFolder(firstPath), current.onAddVideoFolder(firstPath)]);
+        } else callbacks.current.onOpenHomeFile?.(firstPath);
+      } else if (activeView === "music") {
+        void callbacks.current.onAddMusicFolder(firstPath);
       } else if (activeView === "images") {
-        void onAddImageFolder(firstPath);
+        void callbacks.current.onAddImageFolder(firstPath);
       } else if (activeView === "videos") {
-        void onAddVideoFolder(firstPath);
+        void callbacks.current.onAddVideoFolder(firstPath);
       }
     };
 
@@ -138,5 +153,5 @@ export function useGlobalFileDrop({
         } catch {}
       }
     };
-  }, [activeView, onAddMusicFolder, onAddImageFolder, onAddVideoFolder]);
+  }, [activeView]);
 }
