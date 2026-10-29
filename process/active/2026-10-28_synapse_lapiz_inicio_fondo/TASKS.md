@@ -8,7 +8,7 @@
 
 ## Corrección tras la prueba instalada
 
-- [x] Resolver el arrastre con lápiz en el entorno de Biglex: validado tras desactivar Windows Ink en XPPen. Se retiraron tanto la espera de mousemove en el DOM como la conversión nativa de Windows 11: no resolvieron el fallo y la segunda quedó asociada a un bloqueo de la aplicación.
+- [ ] Resolver el arrastre con lápiz con Windows Ink activado y desactivado. La mitigación con Ink desactivado funciona, pero Biglex no la acepta como solución final. Las rutas experimentales que no funcionaron permanecen retiradas.
 - [x] Ignorar entradas y soltados de los propios archivos en la barra.
 - [x] Reutilizar archivos ya materializados en vault-items para impedir cadenas de copias.
 - [x] Mostrar errores de inicio del arrastre en Synapse.
@@ -31,5 +31,6 @@
 - [x] Confirmar con Biglex que también falla el arrastre del lápiz entre carpetas del Explorador.
 - [x] Limpiar el error de salida al recibir un arrastre nuevo y registrar la ruta de entrada.
 - [x] Identificar XPPen Deco 01 V3 y observar Windows Ink activado en el perfil global.
-- [x] Completar prueba con Windows Ink desactivado: Biglex confirmó que funciona en el Explorador y Synapse. Se conserva desactivado en el perfil global observado.
+- [x] Completar prueba con Windows Ink desactivado: Biglex confirmó que funciona en el Explorador y Synapse. Se restauró activado al aclarar el requisito de compatibilidad en ambos modos.
+- [ ] Sustituir la dependencia del botón de mouse en la entrega a OLE por una ruta compatible con Ink que no bloquee la interfaz; verificar entrada y salida con ambos modos.
 - [ ] Validar el tamaño del fondo en el próximo inicio real de Windows; la espera de estabilidad aún no tiene aceptación de arranque.

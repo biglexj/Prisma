@@ -2,7 +2,7 @@
 
 ## Decisión vigente — 2026-10-28
 
-Arrastre con lápiz aceptado funcionalmente por Biglex tras desactivar Windows Ink en XPPen: Explorador, entrada a Synapse y salida hacia otra aplicación. Mantener ese ajuste en el equipo; no reintroducir la conversión nativa retirada. La prueba no valida presión/inclinación de las aplicaciones de dibujo ni otros controladores.
+REWORK: Biglex exige que Synapse funcione con Windows Ink activado y desactivado. La prueba con Ink desactivado confirmó una mitigación para Explorador, entrada y salida de Synapse, pero no constituye aceptación de la solución final. Se restauró Windows Ink activado en XPPen y se verificó visualmente la casilla. No reintroducir la conversión nativa retirada. La prueba no valida presión/inclinación de las aplicaciones de dibujo ni otros controladores.
 
 La aceptación del tamaño del fondo durante el inicio de Windows sigue pendiente. No cerrar el proceso completo ni atribuir una instalación/publicación nueva a esta validación.
 

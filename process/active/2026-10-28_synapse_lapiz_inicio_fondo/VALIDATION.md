@@ -2,11 +2,11 @@
 
 ## Resultado vigente — 2026-10-28
 
-Biglex confirmó que, después de desactivar Windows Ink en XPPen, funcionan el arrastre con lápiz entre carpetas del Explorador y hacia Synapse. En una comprobación adicional confirmó también la salida desde Synapse hacia otra aplicación. Se mantiene Windows Ink desactivado en el perfil global observado de la Deco 01 V3. La conversión nativa que produjo el bloqueo permanece retirada.
+Biglex confirmó que, después de desactivar Windows Ink en XPPen, funcionan el arrastre con lápiz entre carpetas del Explorador y hacia Synapse. En una comprobación adicional confirmó también la salida desde Synapse hacia otra aplicación. Posteriormente aclaró que desactivar Ink no satisface el requisito: debe funcionar con ambos estados. Se restauró Windows Ink activado y se verificó visualmente la casilla en XPPen. La conversión nativa que produjo el bloqueo permanece retirada.
 
-El arrastre real queda validado en este entorno con ese ajuste. No atribuir su resolución únicamente al controlador de contactos extraído de la capturadora: también fallaba en el Explorador y la recuperación ocurrió tras el ajuste de XPPen. No se ha probado presión/inclinación en aplicaciones de dibujo ni persistencia tras reiniciar Windows.
+Solo queda validada la mitigación con Ink desactivado. La compatibilidad con Ink activo no está resuelta. No atribuir una solución completa al controlador de contactos extraído de la capturadora: también fallaba en el Explorador y la recuperación ocurrió tras el ajuste de XPPen. No se ha probado presión/inclinación en aplicaciones de dibujo ni persistencia tras reiniciar Windows.
 
-El proceso sigue activo únicamente por la comprobación del tamaño del fondo durante un nuevo inicio real de Windows y cualquier aceptación visual aún no confirmada explícitamente.
+El proceso sigue activo por el arrastre con Windows Ink activado, la comprobación del tamaño del fondo durante un nuevo inicio real de Windows y cualquier aceptación visual aún no confirmada explícitamente.
 
 Diagnóstico reutilizable: [Windows/XPPen y Windows Ink](../../../../Docs/troubleshooting/platforms/windows-xppen-ink-file-drag.md).
 
