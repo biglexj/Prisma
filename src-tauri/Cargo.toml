@@ -49,10 +49,8 @@ windows-core-webview = { package = "windows-core", version = "=0.61.2" }
 windows = { version = "0.58", features = [
     "implement",
     "ApplicationModel",
-    "ApplicationModel_DataTransfer_DragDrop_Core",
     "Foundation",
     "Foundation_Collections",
-    "Graphics_Imaging",
     "Media",
     "Media_Control",
     "Storage",

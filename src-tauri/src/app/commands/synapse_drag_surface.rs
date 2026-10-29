@@ -2,6 +2,29 @@
 use serde::Deserialize;
 use tauri::{Emitter, Manager};
 
+fn preview_png(icon: &str) -> Result<Vec<u8>, String> {
+    use base64::Engine;
+    let encoded = icon
+        .strip_prefix("data:image/png;base64,")
+        .ok_or("La miniatura debe ser PNG")?;
+    if encoded.len() > 1_000_000 {
+        return Err("Miniatura demasiado grande".into());
+    }
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .map_err(|e| e.to_string())?;
+    let (width, height) =
+        image::ImageReader::with_format(std::io::Cursor::new(&bytes), image::ImageFormat::Png)
+            .into_dimensions()
+            .map_err(|e| e.to_string())?;
+    if width == 0 || height == 0 || width > 512 || height > 512 {
+        return Err("Dimensiones de miniatura no válidas".into());
+    }
+    image::load_from_memory_with_format(&bytes, image::ImageFormat::Png)
+        .map_err(|e| e.to_string())?;
+    Ok(bytes)
+}
+
 #[derive(Clone, Deserialize)]
 pub struct Surface {
     id: String,
@@ -30,8 +53,6 @@ mod native {
         },
     };
     use windows::{
-        Graphics::Imaging::*,
-        Storage::{StorageFile, Streams::DataWriter},
         Win32::{
             Foundation::*,
             Graphics::Gdi::{
@@ -40,12 +61,12 @@ mod native {
             System::{
                 LibraryLoader::GetModuleHandleW,
                 Ole::{IDropTarget, RevokeDragDrop},
+                SystemServices::MK_LBUTTON,
             },
             UI::{
                 Input::{
                     KeyboardAndMouse::{
-                        GetAsyncKeyState, ReleaseCapture, SetCapture, TME_LEAVE, TRACKMOUSEEVENT,
-                        TrackMouseEvent, VK_LBUTTON,
+                        ReleaseCapture, SetCapture, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
                     },
                     Pointer::*,
                 },
@@ -62,29 +83,43 @@ mod native {
         window: tauri::WebviewWindow,
         id: String,
         path: std::path::PathBuf,
-        file: StorageFile,
-        bitmap: SoftwareBitmap,
         png: Vec<u8>,
-        origin: Option<(i32, i32, u32)>,
+        origin: Option<(i32, i32)>,
         hovered: bool,
         _drop_target: IDropTarget,
     }
     pub struct Prepared {
         pub surface: Surface,
         pub path: std::path::PathBuf,
-        pub file: AgileReference<StorageFile>,
-        pub pixels: Vec<u8>,
-        pub preview_width: u32,
-        pub preview_height: u32,
         pub png: Vec<u8>,
-    }
-    enum Start {
-        Pen(tauri::WebviewWindow, StorageFile, SoftwareBitmap, u32),
-        Mouse(tauri::WebviewWindow, std::path::PathBuf, Vec<u8>),
     }
     #[cfg(test)]
     mod tests {
         use super::*;
+        #[test]
+        fn ole_preview_keeps_png_alpha_and_rejects_invalid_images() {
+            use base64::Engine;
+            let image = image::RgbaImage::from_raw(1, 1, vec![200, 100, 50, 128]).unwrap();
+            let mut bytes = std::io::Cursor::new(Vec::new());
+            image.write_to(&mut bytes, image::ImageFormat::Png).unwrap();
+            let original = bytes.into_inner();
+            let icon = format!(
+                "data:image/png;base64,{}",
+                base64::engine::general_purpose::STANDARD.encode(&original)
+            );
+            let png = preview_png(&icon).unwrap();
+            assert_eq!(png, original);
+            assert_eq!(
+                image::load_from_memory(&png)
+                    .unwrap()
+                    .to_rgba8()
+                    .get_pixel(0, 0)
+                    .0,
+                [200, 100, 50, 128]
+            );
+            assert!(preview_png("data:image/png;base64,AAAA").is_err());
+            assert!(preview_png("data:image/jpeg;base64,AAAA").is_err());
+        }
         #[test]
         fn native_source_creates_a_layered_child_with_the_app_manifest() {
             unsafe {
@@ -148,9 +183,26 @@ mod native {
         lp: LPARAM,
     ) -> LRESULT {
         unsafe {
+            // Misma ruta que el laboratorio aceptado: observar el lápiz y dejar
+            // a Windows generar mouse compatible. Nunca iniciar OLE aquí.
+            if matches!(
+                message,
+                WM_POINTERDOWN | WM_POINTERUPDATE | WM_POINTERUP | WM_POINTERCAPTURECHANGED
+            ) {
+                #[cfg(debug_assertions)]
+                if message == WM_POINTERDOWN {
+                    let id = (wp.0 & 0xffff) as u32;
+                    let mut info = POINTER_INFO::default();
+                    if GetPointerInfo(id, &mut info).is_ok() {
+                        eprintln!(
+                            "[Synapse nativo] Puntero observado, sin consumir: id={id}, tipo={:?}",
+                            info.pointerType
+                        );
+                    }
+                }
+                return DefWindowProcW(hwnd, message, wp, lp);
+            }
             let key = hwnd.0 as isize;
-            // El estado de la tarjeta se adjunta después de CreateWindowExW.
-            // Estos mensajes iniciales deben aceptar la creación sin buscarlo.
             if message == WM_NCCREATE {
                 return LRESULT(1);
             }
@@ -190,24 +242,23 @@ mod native {
                 let Some(source) = sources.get_mut(&key) else {
                     return false;
                 };
-                let mut point = POINT::default();
-                let _ = GetCursorPos(&mut point);
-                if message == WM_MOUSEMOVE || message == WM_POINTERUPDATE {
-                    if !source.hovered {
-                        source.hovered = true;
-                        let _ = source.window.emit_to(
-                            source.window.label(),
-                            "prisma:synapse-native-hover",
-                            Some(&source.id),
-                        );
-                        let mut track = TRACKMOUSEEVENT {
-                            cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as u32,
-                            dwFlags: TME_LEAVE,
-                            hwndTrack: hwnd,
-                            dwHoverTime: 0,
-                        };
-                        let _ = TrackMouseEvent(&mut track);
-                    }
+                // Coordenadas del mensaje, no una consulta posterior del cursor.
+                let x = lp.0 as i16 as i32;
+                let y = (lp.0 >> 16) as i16 as i32;
+                if message == WM_MOUSEMOVE && !source.hovered {
+                    source.hovered = true;
+                    let _ = source.window.emit_to(
+                        source.window.label(),
+                        "prisma:synapse-native-hover",
+                        Some(&source.id),
+                    );
+                    let mut track = TRACKMOUSEEVENT {
+                        cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as u32,
+                        dwFlags: TME_LEAVE,
+                        hwndTrack: hwnd,
+                        dwHoverTime: 0,
+                    };
+                    let _ = TrackMouseEvent(&mut track);
                 }
                 if message == WM_MOUSELEAVE || message == WM_POINTERLEAVE {
                     source.hovered = false;
@@ -218,75 +269,27 @@ mod native {
                     );
                 }
                 match message {
-                    WM_POINTERDOWN | WM_POINTERUPDATE => {
-                        let id = (wp.0 & 0xffff) as u32;
-                        let mut info = POINTER_INFO::default();
-                        if let Err(error) = GetPointerInfo(id, &mut info) {
-                            if message == WM_POINTERDOWN {
-                                eprintln!(
-                                    "[Synapse nativo] Contacto no disponible en superficie: {error}"
-                                );
-                            }
-                            return false;
-                        }
-                        if info.pointerType != PT_PEN {
-                            return false;
-                        }
-                        #[cfg(debug_assertions)]
-                        if message == WM_POINTERDOWN {
-                            eprintln!("[Synapse nativo] Contacto de lápiz recibido: puntero={id}");
-                        }
-                        if info.pointerFlags & POINTER_FLAG_INCONTACT == POINTER_FLAGS(0) {
-                            return true;
-                        }
-                        if message == WM_POINTERDOWN {
-                            source.origin =
-                                Some((info.ptPixelLocation.x, info.ptPixelLocation.y, id));
-                        } else if let Some((x, y, origin_id)) = source.origin {
-                            if id == origin_id
-                                && ((info.ptPixelLocation.x - x).abs() >= 6
-                                    || (info.ptPixelLocation.y - y).abs() >= 6)
-                                && !ACTIVE.load(Ordering::Acquire)
-                            {
-                                source.origin = None;
-                                start = Some(Start::Pen(
-                                    source.window.clone(),
-                                    source.file.clone(),
-                                    source.bitmap.clone(),
-                                    id,
-                                ));
-                            }
-                        }
-                        true
-                    }
-                    WM_POINTERUP | WM_POINTERCAPTURECHANGED => {
-                        let id = (wp.0 & 0xffff) as u32;
-                        if source
-                            .origin
-                            .is_some_and(|(_, _, origin_id)| origin_id == id)
-                        {
-                            source.origin = None;
-                        }
-                        true
-                    }
-                    // Windows puede enviar mouse compatible después del contacto
-                    // de lápiz. No debe reemplazar ni cancelar su identificador.
                     WM_LBUTTONDOWN => {
-                        if !source.origin.is_some_and(|(_, _, id)| id != 0) {
-                            source.origin = Some((point.x, point.y, 0));
-                            SetCapture(hwnd);
-                        }
+                        source.origin = Some((x, y));
+                        SetCapture(hwnd);
+                        #[cfg(debug_assertions)]
+                        eprintln!(
+                            "[Synapse nativo] Mouse compatible recibido: extra=0x{:X}",
+                            GetMessageExtraInfo().0
+                        );
                         true
                     }
                     WM_MOUSEMOVE => {
-                        if let Some((x, y, 0)) = source.origin {
-                            if GetAsyncKeyState(VK_LBUTTON.0 as i32) >= 0 {
+                        if let Some((origin_x, origin_y)) = source.origin {
+                            if wp.0 & MK_LBUTTON.0 as usize == 0 {
                                 source.origin = None;
-                            } else if ((point.x - x).abs() >= 6 || (point.y - y).abs() >= 6)
+                            } else if ((x - origin_x).abs()
+                                >= GetSystemMetrics(SM_CXDRAG).max(2) / 2
+                                || (y - origin_y).abs() >= GetSystemMetrics(SM_CYDRAG).max(2) / 2)
                                 && !ACTIVE.load(Ordering::Acquire)
                             {
                                 source.origin = None;
-                                start = Some(Start::Mouse(
+                                start = Some((
                                     source.window.clone(),
                                     source.path.clone(),
                                     source.png.clone(),
@@ -296,60 +299,37 @@ mod native {
                         true
                     }
                     WM_LBUTTONUP => {
-                        if source.origin.is_some_and(|(_, _, id)| id == 0) {
-                            source.origin = None;
-                            let _ = ReleaseCapture();
-                        }
+                        source.origin = None;
+                        let _ = ReleaseCapture();
                         true
                     }
                     WM_CAPTURECHANGED => {
-                        if source.origin.is_some_and(|(_, _, id)| id == 0) {
-                            source.origin = None;
-                        }
+                        source.origin = None;
                         true
                     }
                     _ => false,
                 }
             });
-            if let Some(start) = start {
-                match start {
-                    Start::Pen(window, file, bitmap, id) => {
-                        if let Err(error) =
-                            super::super::synapse_pointer_drag::native::start_prepared(
-                                window.clone(),
-                                file,
-                                bitmap,
-                                id,
-                            )
-                        {
-                            eprintln!("[Synapse nativo] No se pudo iniciar el lápiz: {error}");
-                            let _ = window.emit_to(
-                                window.label(),
-                                "prisma:synapse-native-error",
-                                error.to_string(),
-                            );
-                        }
-                    }
-                    Start::Mouse(window, path, png) => {
-                        let _ = ReleaseCapture();
-                        super::set_active(&window, true);
-                        let target = window.clone();
-                        let result = drag::start_drag(
-                            &window,
-                            drag::DragItem::Files(vec![path]),
-                            drag::Image::Raw(png),
-                            move |_, _| super::set_active(&target, false),
-                            drag::Options::default(),
-                        );
-                        super::set_active(&window, false);
-                        if let Err(error) = result {
-                            let _ = window.emit_to(
-                                window.label(),
-                                "prisma:synapse-native-error",
-                                error.to_string(),
-                            );
-                        }
-                    }
+            if let Some((window, path, png)) = start {
+                let _ = ReleaseCapture();
+                super::set_active(&window, true);
+                #[cfg(debug_assertions)]
+                eprintln!("[Synapse nativo] Arrastre OLE desde WM_MOUSEMOVE compatible");
+                let target = window.clone();
+                let result = drag::start_drag(
+                    &window,
+                    drag::DragItem::Files(vec![path]),
+                    drag::Image::Raw(png),
+                    move |_, _| super::set_active(&target, false),
+                    drag::Options::default(),
+                );
+                super::set_active(&window, false);
+                if let Err(error) = result {
+                    let _ = window.emit_to(
+                        window.label(),
+                        "prisma:synapse-native-error",
+                        error.to_string(),
+                    );
                 }
             }
             if handled {
@@ -370,14 +350,23 @@ mod native {
             }
             // La medición al terminar la animación no debe destruir la ventana
             // que ya es propietaria del contacto que el usuario está moviendo.
-            if SOURCES.with(|sources| sources.borrow().values().any(|source| source.origin.is_some())) {
+            if SOURCES.with(|sources| {
+                sources
+                    .borrow()
+                    .values()
+                    .any(|source| source.origin.is_some())
+            }) {
                 let target = window.clone();
                 tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                     let dispatch = target.clone();
                     let _ = dispatch.run_on_main_thread(move || {
                         if let Err(error) = configure(&target, prepared, revision) {
-                            let _ = target.emit_to(target.label(), "prisma:synapse-native-error", error);
+                            let _ = target.emit_to(
+                                target.label(),
+                                "prisma:synapse-native-error",
+                                error,
+                            );
                         }
                     });
                 });
@@ -422,25 +411,6 @@ mod native {
                 {
                     continue;
                 }
-                let writer =
-                    DataWriter::new().map_err(|e| format!("Preparar imagen de entrada: {e}"))?;
-                writer
-                    .WriteBytes(&item.pixels)
-                    .map_err(|e| format!("Escribir miniatura: {e}"))?;
-                let bitmap = SoftwareBitmap::CreateCopyWithAlphaFromBuffer(
-                    &writer
-                        .DetachBuffer()
-                        .map_err(|e| format!("Buffer de miniatura: {e}"))?,
-                    BitmapPixelFormat::Bgra8,
-                    item.preview_width as i32,
-                    item.preview_height as i32,
-                    BitmapAlphaMode::Premultiplied,
-                )
-                .map_err(|e| format!("Bitmap de miniatura: {e}"))?;
-                let file = item
-                    .file
-                    .resolve()
-                    .map_err(|e| format!("Recuperar archivo de entrada: {e}"))?;
                 let hwnd = CreateWindowExW(
                     WS_EX_LAYERED,
                     w!("PrismaSynapseDragSource"),
@@ -475,8 +445,6 @@ mod native {
                             window: window.clone(),
                             id: s.id.clone(),
                             path: item.path,
-                            file,
-                            bitmap,
                             png: item.png,
                             origin: None,
                             hovered: false,
@@ -525,14 +493,10 @@ pub async fn synapse_set_drag_surfaces(
     }
     #[cfg(windows)]
     {
-        use base64::Engine;
-        use windows::{Storage::StorageFile, core::*};
         let revision = native::REVISION.fetch_add(1, std::sync::atomic::Ordering::AcqRel) + 1;
         let items = app.state::<super::vault::VaultState>().list();
         let prepared = tauri::async_runtime::spawn_blocking(
             move || -> std::result::Result<Vec<native::Prepared>, String> {
-                let _com = crate::infrastructure::windows_com::ComApartment::multithreaded()
-                    .map_err(|e| format!("Inicializar archivos nativos: {e}"))?;
                 let mut output = Vec::new();
                 for surface in surfaces {
                     let item = items
@@ -547,25 +511,10 @@ pub async fn synapse_set_drag_surfaces(
                     .canonicalize()
                     .map_err(|e| e.to_string())?;
                     let export = super::synapse_browser_drag::shell_drag_path(&path)?;
-                    let file = StorageFile::GetFileFromPathAsync(&HSTRING::from(&export))
-                        .map_err(|e| format!("Solicitar archivo nativo: {e}"))?
-                        .get()
-                        .map_err(|e| format!("Abrir archivo nativo: {e}"))?;
-                    let file = AgileReference::new(&file)
-                        .map_err(|e| format!("Preparar referencia de archivo: {e}"))?;
-                    let (pixels, preview_width, preview_height) =
-                        super::synapse_pointer_drag::native::preview(&surface.icon)
-                            .map_err(|e| e.to_string())?;
-                    let png = base64::engine::general_purpose::STANDARD
-                        .decode(surface.icon.trim_start_matches("data:image/png;base64,"))
-                        .map_err(|e| e.to_string())?;
+                    let png = preview_png(&surface.icon)?;
                     output.push(native::Prepared {
                         surface,
                         path: export.into(),
-                        file,
-                        pixels,
-                        preview_width,
-                        preview_height,
                         png,
                     });
                 }

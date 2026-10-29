@@ -4,7 +4,13 @@
 
 Biglex confirma que arrastrar hacia Synapse ya funciona. También confirmó el recorrido con mouse/modo ratón de la tableta. La salida con lápiz desde la barra hacia otras aplicaciones sigue pendiente de aceptación. Las aceptaciones más generales que figuran debajo son históricas y fueron corregidas por sus pruebas posteriores.
 
-Biglex realizará los gestos y comunicará los resultados; el agente se encarga del código, registros y comprobaciones técnicas, sin automatizar estas pruebas físicas ni repetir formularios de prueba. La nueva salida usa superficies propias del host y CoreDragOperation; corregida la declaración de compatibilidad Windows necesaria para crearlas. Cuatro pruebas Rust y 17 frontend correctas no equivalen a aceptación del arrastre real.
+Biglex realizará los gestos y comunicará los resultados; el agente se encarga del código, registros y comprobaciones técnicas, sin automatizar estas pruebas físicas ni repetir formularios de prueba. Corregida la declaración de compatibilidad Windows necesaria para las superficies propias. La ruta CoreDragOperation se sustituyó por OLE iniciado desde mensajes de mouse compatibles generados por Windows, tras la prueba independiente descrita a continuación. Las pruebas automáticas no equivalen a aceptación del arrastre real en Synapse.
+
+## Prueba independiente aceptada y traslado a Synapse
+
+Biglex confirmó que el laboratorio arrastra correctamente y que su imagen también llega adjunta al chat. El registro identifica PT_PEN (tipo 3), mouse compatible con extra FF51570A, drag.end=Copy y recepción FileDrop de PNG legible de 2.396 bytes, sin texto. Esto acepta el laboratorio, no automáticamente la integración en Synapse ni la matriz Ink ON/OFF.
+
+Se traslada el comportamiento confirmado: DefWindowProc recibe los mensajes de lápiz sin consumirlos; solo WM_LBUTTONDOWN/WM_MOUSEMOVE compatibles preparan e inician OLE en el mismo hilo y mensaje. No se consulta tardíamente el botón global para decidir el inicio, no hay IPC para iniciarlo ni conversión/inyección manual. Se retiran CoreDragOperation, sus objetos WinRT y su espera/cancelación experimental. Mantener entrada, botones, miniatura y prevención de reimportación. Integración en Dev pendiente de prueba física de Biglex.
 
 ## REWORK vigente — recepción en chat/navegador
 

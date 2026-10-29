@@ -1,5 +1,13 @@
 # Validación
 
+## Evidencia posterior — laboratorio con lápiz y chat
+
+Biglex confirmó que funciona y adjuntó la muestra PNG también en este chat. Los registros de ambos procesos muestran PT_PEN tipo 3, promoción compatible FF51570A, botón izquierdo en el mensaje, inicio OLE desde MouseMove, final Copy y FileDrop legible de 2.396 bytes sin texto. Se acepta esa prueba independiente; no extenderla todavía a Synapse.
+
+La integración usa ahora el mismo recorrido de mensajes, dejando el lápiz a DefWindowProc e iniciando OLE exclusivamente desde mouse compatible. Se retira CoreDragOperation. Validación física integrada pendiente de Biglex.
+
+El harness Rust con la configuración de Dev completó cuatro pruebas sin fallos después del traslado: origen restringido, ruta interoperable, superficie layered y PNG/alfa intactos. No hubo cambios frontend en esta revisión; se conserva su build y las 17 pruebas ya registradas. No se repitieron gestos mediante automatización.
+
 ## Estado vigente — 2026-10-29, superficies nativas
 
 Prueba aislada posterior solicitada por Biglex: laboratorio WinForms con Origen y Destino en procesos independientes, muestra PNG precargada, carga/pegado y registros de gesto/formato/lectura. Compiló y superó self-test de FileDrop y lectura de muestra; ambas ventanas abiertas y respondiendo. El agente no arrastró: la prueba física y su resultado siguen a cargo de Biglex. Véase RESEARCH.md para ubicación, relanzamiento y fuentes de Krita/Qt. Sin cambios adicionales al código productivo durante este diagnóstico.

@@ -50,10 +50,19 @@
 ## Salida del host — 2026-10-29
 
 - [x] Registrar la confirmación actual de Biglex: la entrada hacia Synapse funciona; el recorrido con mouse/modo ratón también fue confirmado.
-- [x] Sustituir la salida DOM/CDP por fuente nativa: drag para mouse y CoreDragOperation con StorageFile para lápiz.
+- [x] Sustituir la salida DOM/CDP por fuente nativa. El intento CoreDragOperation fue retirado tras comparar con el laboratorio aceptado.
 - [x] Recibir el contacto en superficies propias sin depender del identificador DOM ni convertir el lápiz en mouse.
 - [x] Reproducir y corregir la ausencia de compatibilidad Windows en el manifiesto para crear superficies layered hijas.
 - [x] Preservar los botones web y la entrada sobre las nuevas superficies; rechazar reimportación de archivos propios.
 - [x] Evitar que mouse compatible o un reajuste durante la animación eliminen el contacto del lápiz.
 - [x] Build frontend, 17 pruebas frontend y cuatro pruebas Rust correctas.
 - [ ] Aceptación de salida a otras aplicaciones con lápiz e Ink ON/OFF: Biglex realizará las pruebas físicas; no automatizarlas.
+
+## Traslado del laboratorio aceptado
+
+- [x] Confirmar en registros un lápiz real PT_PEN, promoción de mouse por Windows y archivo legible recibido en el segundo proceso.
+- [x] Registrar la confirmación de Biglex: también adjunta la misma imagen en el chat desde el laboratorio.
+- [x] Dejar WM_POINTER* al procedimiento predeterminado y esperar WM_MOUSEMOVE compatible para iniciar OLE, como la prueba aceptada.
+- [x] Usar el botón y las coordenadas del mensaje y los umbrales del sistema; eliminar la consulta tardía del botón para iniciar desde la superficie.
+- [x] Retirar CoreDragOperation y sus dependencias exclusivas; conservar miniatura PNG, botones y recepción.
+- [ ] Confirmación de Biglex del recorrido integrado desde Synapse hacia otra aplicación/chat; no extender la aceptación del laboratorio.

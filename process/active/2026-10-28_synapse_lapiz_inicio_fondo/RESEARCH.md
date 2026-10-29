@@ -4,6 +4,14 @@
 
 Entrada y salida de archivos reales de Synapse con mouse y lápiz, con Windows Ink activado y desactivado. Desactivar Ink solo fue una prueba diagnóstica. La miniatura saliente debe conservar la imagen en una tarjeta cuadrada.
 
+## Ruta vigente tras la prueba independiente
+
+Biglex confirmó éxito del laboratorio y entrega de su misma imagen al chat. Registros del 2026-10-29 10:14:03–04 -05:00: pointer.message WM_POINTERDOWN, id=345, type=3 (PT_PEN), leftButton=false; después mouse.down Left, extra=FF51570A, leftButton=true; mouse.firstMove held=true; drag.start desde WM_MOUSEMOVE; destino recibe FileDrop/FileNameW/FileName, PNG legible de 2.396 bytes, cabecera válida y texto null; origen termina Copy. Es evidencia del dispositivo real, no de una simulación. El adjunto y la confirmación de Biglex validan además su entrega al chat desde el laboratorio.
+
+La diferencia concreta frente a la integración anterior: el laboratorio deja WM_POINTER* al procedimiento predeterminado y espera mouse compatible; Synapse consumía los mensajes de lápiz y trataba de iniciar CoreDragOperation con ellos. Se sustituye esa integración por el recorrido comprobado. [Microsoft documenta iniciar DoDragDrop desde los mensajes de mouse sintetizados, no desde el manejador de lápiz](https://learn.microsoft.com/en-us/windows/win32/api/ole2/nf-ole2-dodragdrop). La fuente nativa conserva el archivo y evita la marca de origen renderer que motivó retirar la salida DOM.
+
+Synapse observa el contacto solo para diagnóstico y lo pasa a DefWindowProc. WM_MOUSEMOVE usa el estado del botón y las coordenadas del propio mensaje y los umbrales de sistema; llama al arrastre nativo en ese hilo, sin IPC ni consulta tardía GetAsyncKeyState. Se retiran el comando interno CoreDragOperation, StorageFile/AgileReference/SoftwareBitmap y las features exclusivas de ese intento. La miniatura se valida como PNG limitado y conserva sus bytes/alfa originales. La prueba física integrada y la matriz Ink ON/OFF siguen pendientes. Esta sección sustituye las rutas experimentales descritas en el historial inferior.
+
 ## Fuentes primarias consultadas
 
 - [Microsoft: DoDragDrop](https://learn.microsoft.com/en-us/windows/win32/api/ole2/nf-ole2-dodragdrop): la llamada desde una entrada pen/touch requiere el recorrido de mensajes de mouse sintetizados. La conversión manual ya ensayada en Prisma bloqueó la interfaz y permanece retirada.
