@@ -15,7 +15,7 @@
 - [x] Usar la miniatura de la galería para imágenes de Synapse y exportar una vista previa cuadrada.
 - [x] Validar regresión de importación nativa y nueva compilación frontend.
 - [x] Retirar conversión y trazas experimentales de vendor/drag, cerrar únicamente la instancia Dev bloqueada y deshabilitar temporalmente la salida con lápiz en Synapse con un aviso visible.
-- [x] Confirmar arrastre con lápiz a una aplicación externa en Dev: Biglex confirmó que funciona.
+- [ ] Confirmar arrastre con lápiz a una aplicación externa en Dev: la aceptación anterior fue corregida por pruebas posteriores; sigue en REWORK.
 
 ## Reutilizar el contacto de la capturadora
 
@@ -44,5 +44,16 @@
 - [x] Evitar la carrera about:blank durante el registro del receptor entrante; comprobar el origen por mensaje.
 - [x] Recuperar Dev y excluir los temporales del watcher tras el fallo EBUSY del compilador de diagnóstico.
 - [x] Compilación frontend, 13 pruebas frontend y dos pruebas Rust correctas.
-- [x] Aceptar recepción final de imagen en el chat con lápiz e Ink activado: Biglex confirmó que aparece adjunta.
+- [ ] Aceptar recepción final de imagen en el chat con lápiz e Ink activado: aceptación anterior retirada; sigue pendiente.
 - [ ] Comprobar entrada hacia Synapse, otros archivos y regresión completa Ink ON/OFF y mouse. No inferirlo de dropEffect=copy.
+
+## Salida del host — 2026-10-29
+
+- [x] Registrar la confirmación actual de Biglex: la entrada hacia Synapse funciona; el recorrido con mouse/modo ratón también fue confirmado.
+- [x] Sustituir la salida DOM/CDP por fuente nativa: drag para mouse y CoreDragOperation con StorageFile para lápiz.
+- [x] Recibir el contacto en superficies propias sin depender del identificador DOM ni convertir el lápiz en mouse.
+- [x] Reproducir y corregir la ausencia de compatibilidad Windows en el manifiesto para crear superficies layered hijas.
+- [x] Preservar los botones web y la entrada sobre las nuevas superficies; rechazar reimportación de archivos propios.
+- [x] Evitar que mouse compatible o un reajuste durante la animación eliminen el contacto del lápiz.
+- [x] Build frontend, 17 pruebas frontend y cuatro pruebas Rust correctas.
+- [ ] Aceptación de salida a otras aplicaciones con lápiz e Ink ON/OFF: Biglex realizará las pruebas físicas; no automatizarlas.

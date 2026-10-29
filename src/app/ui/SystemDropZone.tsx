@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../shared/ui/Icon";
-import { useBrowserFileDrag, sendBrowserFileDrop } from "./synapse-notch/useBrowserFileDrag";
+import { sendBrowserFileDrop } from "./synapse-notch/useBrowserFileDrag";
+import { useNativeDragSurfaces } from "./synapse-notch/useNativeDragSurfaces";
+import { listen } from "@tauri-apps/api/event";
+import { handleNativeDragPointerDown } from "../../shared/useNativeFileDrag";
 import { quickLookClient } from "../../features/quick_look/tauri/client";
 import { loadDropZonePreferences } from "../useSystemSettings";
 import { resolveCaptureFolder } from "../../shared/captureFolders";
@@ -30,7 +33,7 @@ export function SystemDropZone() {
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(copiedTimer.current), []);
   const { setError, setMessage, setItems } = vault;
-  const browserDrag = useBrowserFileDrag(vault.items, vault.expanded, setError, vault.setOutgoing);
+  const browserDrag = useNativeDragSurfaces(vault.items, vault.expanded && vault.revealed && !vault.dragging && !vault.pendingPaths.length, vault.panelRef, setError, vault.setOutgoing);
   const hoveredSlot = useRef<number | null>(null);
   const getPasteSlot = useCallback(() => (hoveredSlot.current !== null ? hoveredSlot.current : undefined), []);
   useClipboardPaste(vault.importContent, setError, getPasteSlot, vault.open);
@@ -53,6 +56,15 @@ export function SystemDropZone() {
       vault.hide();
     } catch (err) { setError(String(err)); }
   };
+  const previewRef = useRef(preview);
+  previewRef.current = preview;
+  useEffect(() => {
+    const handler = listen<string>("prisma:synapse-native-preview", ({payload}) => {
+      const item = vault.items.find(item => item.id === payload);
+      if (item) void previewRef.current(item);
+    });
+    return () => { void handler.then(unlisten => unlisten()); };
+  }, [vault.items]);
   const save = useCallback(async (item: VaultItem) => {
     if (savingRef.current) return;
     if (item.locationPath) {
@@ -92,7 +104,7 @@ export function SystemDropZone() {
     onKeyDown={(event) => { if (event.key === "Escape" && !vault.pendingPaths.length && !vault.busy) vault.hide(); }}
     onDragOver={(event) => {
       event.preventDefault();
-      if (browserDrag.isOwn(event.dataTransfer)) { event.dataTransfer.dropEffect = "none"; return; }
+      if (browserDrag.isOwn()) { event.dataTransfer.dropEffect = "none"; return; }
       event.dataTransfer.dropEffect = "copy";
       vault.setDrag(true);
       const bounds = event.currentTarget.getBoundingClientRect();
@@ -101,7 +113,7 @@ export function SystemDropZone() {
     onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) vault.setDrag(false); }}
     onDrop={(event) => {
       event.preventDefault(); vault.setDrag(false);
-      if (browserDrag.isOwn(event.dataTransfer)) return;
+      if (browserDrag.isOwn()) return;
       if (event.dataTransfer.files.length) {
         const bounds = event.currentTarget.getBoundingClientRect();
         const action = actionAt(event.clientX - bounds.left, event.clientY - bounds.top, vault.width, 1, true);
@@ -130,14 +142,16 @@ export function SystemDropZone() {
           if (!item) return <div key={`empty-${index}`} className="vault-card vault-empty" aria-label={`Espacio ${index + 1} vacío`}
             onPointerEnter={() => { hoveredSlot.current = index; setHoverHint("Ctrl+V para pegar en esta casilla"); }}
             onPointerLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}><Icon name="plus" width={24} height={24} /><span>Ctrl+V</span></div>;
-          return <div key={item.id} className={`vault-card ${item.pinned ? "is-pinned" : ""}`}
+          return <div key={item.id} data-vault-id={item.id} className={`vault-card ${item.pinned ? "is-pinned" : ""} ${browserDrag.hoveredId === item.id ? "is-native-hover" : ""}`}
             onDoubleClick={(event) => {
               if (event.defaultPrevented || event.button !== 0 || (event.target instanceof Element && event.target.closest("button"))) return;
               void preview(item);
             }}
-            draggable={Boolean(item.path) && browserDrag.ready(item.id)}
-            onDragStart={(event) => browserDrag.start(event, item)}
-            onDragEnd={browserDrag.end}
+            draggable={false}
+            onPointerDown={(event) => {
+              if (item.path && event.pointerType !== "pen") handleNativeDragPointerDown(event, item.path, {mode: "copy", previewShape: item.kind === "image" ? "square" : "auto", onError: setError, onActiveChange: vault.setOutgoing});
+            }}
+            onDragStart={(event) => event.preventDefault()}
             onPointerEnter={() => { hoveredSlot.current = index; setHoverHint(item.text || item.name); }}
             onPointerLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}
             onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHoverHint(""); }}
@@ -163,7 +177,7 @@ export function SystemDropZone() {
         })}
       </div>}
       <div className={`vault-status ${vault.error ? "vault-error" : ""}`} role={vault.error ? "alert" : "status"}>
-        {vault.error || (vault.busy || savingId !== null ? "Guardando…" : vault.dragging ? `Suelta para ${targetLabel.toLowerCase()}` : hoverHint || vault.message) || "Arrastra archivos, imágenes o texto · Ctrl+V para pegar"}
+        {vault.error || (vault.busy || savingId !== null ? "Guardando…" : vault.dragging ? `Suelta para ${targetLabel.toLowerCase()}` : hoverHint || vault.items.find(item => item.id === browserDrag.hoveredId)?.name || vault.message) || "Arrastra archivos, imágenes o texto · Ctrl+V para pegar"}
       </div>
     </div>}
   </div>;

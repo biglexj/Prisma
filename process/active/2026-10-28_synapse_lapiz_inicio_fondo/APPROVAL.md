@@ -1,5 +1,17 @@
 # Estado
 
+## Estado vigente — entrada aceptada, salida con lápiz en REWORK
+
+Biglex confirma que arrastrar hacia Synapse ya funciona. También confirmó el recorrido con mouse/modo ratón de la tableta. La salida con lápiz desde la barra hacia otras aplicaciones sigue pendiente de aceptación. Las aceptaciones más generales que figuran debajo son históricas y fueron corregidas por sus pruebas posteriores.
+
+Biglex realizará los gestos y comunicará los resultados; el agente se encarga del código, registros y comprobaciones técnicas, sin automatizar estas pruebas físicas ni repetir formularios de prueba. La nueva salida usa superficies propias del host y CoreDragOperation; corregida la declaración de compatibilidad Windows necesaria para crearlas. Cuatro pruebas Rust y 17 frontend correctas no equivalen a aceptación del arrastre real.
+
+## REWORK vigente — recepción en chat/navegador
+
+Biglex aclaró después que la misma imagen sí se copia de Synapse al Explorador, pero no se adjunta directamente en el chat. Desde el Explorador al chat sí funciona. Su última comprobación indica fallo tanto con lápiz como con mouse. Esa evidencia sustituye la aceptación general del chat registrada anteriormente; la entrega al receptor nativo y al Explorador sigue confirmada.
+
+Se retira la salida DOM como solución universal. En validación: mouse mediante el arrastre nativo existente; lápiz Ink mediante CoreDragOperation y StorageFile del host. Compilar, crear las API o leer el archivo no constituyen aceptación del nuevo gesto.
+
 ## Aceptación parcial — 2026-10-29
 
 Biglex confirmó que al soltar una imagen desde Synapse en el chat con el lápiz ahora aparece como adjunto. Windows Ink permanece activado. Se acepta esa salida y la recepción real de imagen, tras corregir la exportación de rutas. El receptor local ya había registrado un archivo accesible sin fallback a texto.

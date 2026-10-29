@@ -114,7 +114,7 @@ use app::commands::drop_zone::{
 };
 use app::commands::vault::VaultState;
 use app::commands::vault_import::vault_import;
-use app::commands::synapse_browser_drag::synapse_prepare_browser_drag;
+use app::commands::synapse_drag_surface::synapse_set_drag_surfaces;
 use app::state::{
     FavoritesState, InitialFileState, InitialSynapseSendState, MusicLibraryState,
     PlaybackProbeState, VisualLibraryState,
@@ -1122,7 +1122,7 @@ pub fn run() {
             vault_log,
             vault_add,
             vault_import,
-            synapse_prepare_browser_drag,
+            synapse_set_drag_surfaces,
             app::commands::vault_import::vault_save_item,
             app::commands::vault_import::vault_read_text,
             vault_remove,

@@ -4,7 +4,11 @@ fn main() {
     configure_libmpv();
     configure_libunwind();
     configure_ffmpeg();
-    tauri_build::build();
+    println!("cargo:rerun-if-changed=windows-app.manifest");
+    let windows = tauri_build::WindowsAttributes::new()
+        .app_manifest(include_str!("windows-app.manifest"));
+    tauri_build::try_build(tauri_build::Attributes::new().windows_attributes(windows))
+        .expect("No se pudieron generar los recursos de Prisma");
 }
 
 fn configure_libunwind() {

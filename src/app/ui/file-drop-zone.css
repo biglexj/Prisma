@@ -43,8 +43,8 @@ html.is-system-drop-zone #root {
 .vault-text-preview > span { font-size: 10px; line-height: 1.35; white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 /* El contorno queda encima de la miniatura; el hover no se recorta en la tarjeta. */
 .vault-card::after { content: ""; position: absolute; inset: -1px; z-index: 2; border: 1px solid var(--outline-variant); border-radius: inherit; pointer-events: none; }
-.vault-card:not(.vault-empty):is(:hover, :focus-within) { background: var(--surface-container-highest); }
-.vault-card:not(.vault-empty):is(:hover, :focus-within)::after, .vault-card.is-pinned::after { border-color: var(--primary); }
+.vault-card:not(.vault-empty):is(:hover, :focus-within, .is-native-hover) { background: var(--surface-container-highest); }
+.vault-card:not(.vault-empty):is(:hover, :focus-within, .is-native-hover)::after, .vault-card.is-pinned::after { border-color: var(--primary); }
 .vault-empty::after { display: none; }
 .vault-card.is-pinned { border-color: var(--primary); }
 .vault-card-preview { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; flex: 0 0 100%; border-radius: 13px; overflow: hidden; background: var(--surface); color: var(--on-surface-variant); }
@@ -52,7 +52,7 @@ html.is-system-drop-zone #root {
 .vault-card-pin { position: absolute; top: 4px; right: 4px; display: grid; place-items: center; width: 21px; height: 21px; border-radius: 50%; background: var(--primary); color: var(--on-primary); }
 .vault-card-name { position: absolute; bottom: 0; box-sizing: border-box; width: 100%; padding: 5px 4px; border-radius: 0 0 13px 13px; background: color-mix(in srgb, var(--surface-container) 94%, transparent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; color: var(--on-surface-variant); font-size: 11px; line-height: 14px; }
 .vault-card-actions { position: absolute; inset: auto 3px 3px; z-index: 1; display: flex; justify-content: center; gap: 0; padding: 3px 0; border-radius: 10px; background: var(--surface-container-high); opacity: 0; pointer-events: none; transition: opacity 120ms; }
-.vault-card:hover .vault-card-actions, .vault-card:focus-within .vault-card-actions { opacity: 1; pointer-events: auto; }
+.vault-card:hover .vault-card-actions, .vault-card:focus-within .vault-card-actions, .vault-card.is-native-hover .vault-card-actions { opacity: 1; pointer-events: auto; }
 .vault-card-actions button, .vault-phone-heading button { display: grid; place-items: center; flex: 0 0 24px; padding: 0; width: 24px; height: 26px; border: 0; border-radius: 7px; background: transparent; color: var(--on-surface-variant); cursor: pointer; }
 .vault-card-actions button:hover, .vault-card-actions button[aria-pressed=true] { background: var(--primary-container); color: var(--on-primary-container); }
 .vault-empty { justify-content: center; border-style: dashed; background: transparent; color: var(--outline); cursor: default; }

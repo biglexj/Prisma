@@ -1,5 +1,16 @@
 # Validación
 
+## Estado vigente — 2026-10-29, superficies nativas
+
+Biglex confirma entrada hacia Synapse y el recorrido con mouse/modo ratón. Salida con lápiz a otras aplicaciones aún en REWORK. Las aceptaciones generales del chat registradas en el historial inferior fueron corregidas por pruebas posteriores. Los gestos físicos quedan exclusivamente a cargo de Biglex.
+
+- `bun run build`: TypeScript y Vite correctos; aviso de tamaño de chunks conocido.
+- Suite Synapse, puente entrante, lápiz y capturadora: 17 pruebas, 140 comprobaciones, sin fallos.
+- `TAURI_CONFIG` de Dev y `scripts/test-wallpapers.ps1 -Filter app::commands::synapse_`: cuatro pruebas Rust correctas, incluida creación real de ventana hija layered y conservación de alfa de miniatura.
+- Reproducción aislada del manifiesto: hijo normal OK y layered falla antes; ambos OK tras incorporar compatibilidad Windows 10/11.
+- Registro real de Dev: cinco superficies de salida listas y contacto de lápiz recibido en ventana propia. Esto confirma preparación/contacto, no recepción en la aplicación destino.
+- Sin pruebas físicas automatizadas, instalación ni publicación. El arranque real del wallpaper permanece pendiente.
+
 ## Resultado vigente — 2026-10-28
 
 Biglex confirmó que, después de desactivar Windows Ink en XPPen, funcionan el arrastre con lápiz entre carpetas del Explorador y hacia Synapse. En una comprobación adicional confirmó también la salida desde Synapse hacia otra aplicación. Posteriormente aclaró que desactivar Ink no satisface el requisito: debe funcionar con ambos estados. Se restauró Windows Ink activado y se verificó visualmente la casilla en XPPen. La conversión nativa que produjo el bloqueo permanece retirada.

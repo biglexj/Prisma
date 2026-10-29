@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { VAULT_CHANGED_EVENT, VAULT_OPEN_EVENT, isVaultSelfDrop, type DropAction, type ImportedItem, type ImportOptions, type VaultItem } from "./model";
+import { VAULT_CHANGED_EVENT, VAULT_OPEN_EVENT, isVaultSelfDrop, actionAt, type DropAction, type ImportedItem, type ImportOptions, type VaultItem, type VaultDrag } from "./model";
 import { isOwnNativeFileDrop } from "../../../shared/useNativeFileDrag";
 
 /** Alto de la franja que siempre se ve (la línea de color). */
@@ -184,14 +184,28 @@ export function useNotch() {
   }, [show, setDrag, isSelfDrop]);
 
   useEffect(() => {
+    // Las superficies del host reciben OLE; el resto conserva el puente DOM.
+    const nativeOver = ({payload}: {payload: VaultDrag}) => {
+      if (outgoingRef.current || isSelfDrop(payload.paths)) return;
+      setDrag(true);
+      setAction(actionAt(payload.position.x, payload.position.y, width, window.devicePixelRatio, true));
+    };
     const handlers = [
+      listen<VaultDrag>("prisma:vault-drag-enter", nativeOver),
+      listen<VaultDrag>("prisma:vault-drag-over", nativeOver),
+      listen("prisma:vault-drag-leave", () => setDrag(false)),
+      listen<VaultDrag>("prisma:vault-drag-drop", ({payload}) => {
+        if (outgoingRef.current || isSelfDrop(payload.paths)) return;
+        setDrag(false);
+        void importContent(payload.paths, payload.text ?? undefined, actionAt(payload.position.x, payload.position.y, width, window.devicePixelRatio, true));
+      }),
       listen<{paths: string[]; text?: string; action: DropAction}>("prisma:synapse-browser-drop", ({payload}) => {
         setDrag(false);
         void importContent(payload.paths, payload.text, payload.action);
       }),
     ];
     return () => { handlers.forEach((handler) => void handler.then((fn) => fn())); };
-  }, [setDrag, importContent]);
+  }, [setDrag, importContent, isSelfDrop, width]);
 
   useEffect(() => {
     const apply = () => {

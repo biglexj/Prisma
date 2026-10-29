@@ -43,13 +43,16 @@ tauri-plugin-drag = "2.1.1"
 tauri-plugin-global-shortcut = "2"
 
 [target.'cfg(windows)'.dependencies]
+drag = "=2.1.1"
 webview2-com = "=0.38.2"
 windows-core-webview = { package = "windows-core", version = "=0.61.2" }
 windows = { version = "0.58", features = [
     "implement",
     "ApplicationModel",
+    "ApplicationModel_DataTransfer_DragDrop_Core",
     "Foundation",
     "Foundation_Collections",
+    "Graphics_Imaging",
     "Media",
     "Media_Control",
     "Storage",
@@ -76,6 +79,7 @@ windows = { version = "0.58", features = [
     "Win32_System_WinRT",
     "Win32_UI_Accessibility",
     "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Input_Pointer",
     "Win32_UI_Shell",
     "Win32_UI_Shell_PropertiesSystem",
     "Win32_UI_WindowsAndMessaging",

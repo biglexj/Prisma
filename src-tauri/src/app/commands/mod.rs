@@ -13,6 +13,8 @@ pub mod quick_look;
 pub mod renamer;
 pub mod synapse;
 pub mod synapse_browser_drag;
+pub mod synapse_pointer_drag;
+pub mod synapse_drag_surface;
 pub mod tags;
 pub mod vault;
 pub mod vault_import;

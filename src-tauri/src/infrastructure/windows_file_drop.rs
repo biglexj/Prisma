@@ -73,6 +73,14 @@ mod imp {
         })
     }
 
+    /// Solo una superficie nueva del host; no sustituye el receptor de WebView2.
+    pub fn register_surface(window: &WebviewWindow, hwnd: HWND) -> Result<IDropTarget, String> {
+        let parent = HWND(window.hwnd().map_err(|e| e.to_string())?.0);
+        let target: IDropTarget = NativeFileDropTarget::new(hwnd, parent, window.app_handle().clone(), window.label().to_string()).into();
+        unsafe { RegisterDragDrop(hwnd, &target) }.map_err(|e| e.to_string())?;
+        Ok(target)
+    }
+
     struct NativeFileDropController {
         parent: HWND,
         app: AppHandle,
@@ -386,7 +394,7 @@ mod imp {
 }
 
 #[cfg(windows)]
-pub use imp::register_or_refresh;
+pub use imp::{register_or_refresh, register_surface};
 
 #[cfg(not(windows))]
 pub fn register_or_refresh(_window: &tauri::WebviewWindow) -> Result<usize, String> {

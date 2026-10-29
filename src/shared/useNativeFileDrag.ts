@@ -21,6 +21,7 @@ export interface NativeDragOptions {
   previewShape?: PreviewShape;
   pointerType?: string;
   onError?: (message: string) => void;
+  onActiveChange?: (active: boolean) => void;
 }
 
 let outgoingPaths: string[] = [];
@@ -80,6 +81,7 @@ export async function startNativeFileDrag(
   try {
     outgoingPaths = validPaths.map(dragPathKey);
     outgoingUntil = Number.POSITIVE_INFINITY;
+    options?.onActiveChange?.(true);
     await startDrag({
       item: validPaths,
       icon: dragIcon,
@@ -89,6 +91,7 @@ export async function startNativeFileDrag(
     console.warn("[NativeFileDrag] Error iniciando arrastre nativo hacia el SO:", error);
     options?.onError?.(`No se pudo iniciar el arrastre: ${String(error)}`);
   } finally {
+    options?.onActiveChange?.(false);
     // El evento de soltado puede llegar justo después de que termine DoDragDrop.
     outgoingUntil = Date.now() + 1200;
   }
