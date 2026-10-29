@@ -2,6 +2,8 @@
 
 ## Estado vigente — 2026-10-29, superficies nativas
 
+Prueba aislada posterior solicitada por Biglex: laboratorio WinForms con Origen y Destino en procesos independientes, muestra PNG precargada, carga/pegado y registros de gesto/formato/lectura. Compiló y superó self-test de FileDrop y lectura de muestra; ambas ventanas abiertas y respondiendo. El agente no arrastró: la prueba física y su resultado siguen a cargo de Biglex. Véase RESEARCH.md para ubicación, relanzamiento y fuentes de Krita/Qt. Sin cambios adicionales al código productivo durante este diagnóstico.
+
 Biglex confirma entrada hacia Synapse y el recorrido con mouse/modo ratón. Salida con lápiz a otras aplicaciones aún en REWORK. Las aceptaciones generales del chat registradas en el historial inferior fueron corregidas por pruebas posteriores. Los gestos físicos quedan exclusivamente a cargo de Biglex.
 
 - `bun run build`: TypeScript y Vite correctos; aviso de tamaño de chunks conocido.
