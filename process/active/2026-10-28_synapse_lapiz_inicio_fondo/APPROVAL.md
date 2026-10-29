@@ -1,5 +1,13 @@
 # Estado
 
+## Decisión vigente — 2026-10-28
+
+Arrastre con lápiz aceptado funcionalmente por Biglex tras desactivar Windows Ink en XPPen: Explorador, entrada a Synapse y salida hacia otra aplicación. Mantener ese ajuste en el equipo; no reintroducir la conversión nativa retirada. La prueba no valida presión/inclinación de las aplicaciones de dibujo ni otros controladores.
+
+La aceptación del tamaño del fondo durante el inicio de Windows sigue pendiente. No cerrar el proceso completo ni atribuir una instalación/publicación nueva a esta validación.
+
+## Historial de decisiones
+
 Alcance autorizado en la conversación: problemas de reconocimiento del lápiz en Synapse y espera de preparación del escritorio para el fondo, tras confirmar Biglex que detenerlo y reiniciarlo recupera el tamaño.
 
 Validación técnica correcta: build frontend y pruebas de arrastre, Synapse y espera de escritorio. Aceptación funcional con la tableta y durante el inicio de Windows pendiente; no atribuida a Biglex. No se ha publicado ni instalado una versión.

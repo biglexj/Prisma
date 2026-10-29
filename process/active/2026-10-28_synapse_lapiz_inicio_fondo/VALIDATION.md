@@ -1,5 +1,17 @@
 # Validación
 
+## Resultado vigente — 2026-10-28
+
+Biglex confirmó que, después de desactivar Windows Ink en XPPen, funcionan el arrastre con lápiz entre carpetas del Explorador y hacia Synapse. En una comprobación adicional confirmó también la salida desde Synapse hacia otra aplicación. Se mantiene Windows Ink desactivado en el perfil global observado de la Deco 01 V3. La conversión nativa que produjo el bloqueo permanece retirada.
+
+El arrastre real queda validado en este entorno con ese ajuste. No atribuir su resolución únicamente al controlador de contactos extraído de la capturadora: también fallaba en el Explorador y la recuperación ocurrió tras el ajuste de XPPen. No se ha probado presión/inclinación en aplicaciones de dibujo ni persistencia tras reiniciar Windows.
+
+El proceso sigue activo únicamente por la comprobación del tamaño del fondo durante un nuevo inicio real de Windows y cualquier aceptación visual aún no confirmada explícitamente.
+
+Diagnóstico reutilizable: [Windows/XPPen y Windows Ink](../../../../Docs/troubleshooting/platforms/windows-xppen-ink-file-drag.md).
+
+## Historial técnico y de pruebas
+
 - [x] Pruebas Bun de arrastre mouse/lápiz y destinos de Synapse: 14 correctas, 0 fallos (incluye cuatro pruebas duplicadas por coincidencia con una copia en temp).
 - [x] `bun run build`: TypeScript y Vite correctos; aviso de tamaño de chunks.
 - [x] `cargo test --manifest-path src-tauri/Cargo.toml features::wallpapers::startup::tests --lib`: compilación nativa correcta, tres pruebas correctas (estabilidad, pérdida del shell y cancelación al cerrar).
