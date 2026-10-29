@@ -99,6 +99,20 @@ pub fn vault_log(message: String) {
     println!("[Barra Synapse] {message}");
 }
 
+/// Comprobar la entrada existente; nunca convertir ni inyectar eventos del lápiz.
+#[tauri::command]
+pub fn native_drag_mouse_contact_active() -> bool {
+    #[cfg(windows)]
+    unsafe {
+        use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON};
+        let active = GetAsyncKeyState(VK_LBUTTON.0 as i32) < 0;
+        println!("[Barra Synapse] Contacto de mouse disponible para arrastre con lápiz: {active}");
+        active
+    }
+    #[cfg(not(windows))]
+    { true }
+}
+
 /// Atajo global que abre la bóveda con lo que haya guardado.
 pub const VAULT_SHORTCUT: &str = "Ctrl+Shift+U";
 

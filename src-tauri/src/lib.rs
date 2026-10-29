@@ -108,7 +108,7 @@ use app::commands::screen_capture::{
     screen_recorder_pause, screen_recorder_start, screen_recorder_status, screen_recorder_stop, screen_recorder_trim,
 };
 use app::commands::drop_zone::{
-    drop_zone_copy_file, drop_zone_default_folder, drop_zone_is_active, drop_zone_pointer_inside,
+    drop_zone_copy_file, drop_zone_default_folder, drop_zone_is_active, drop_zone_pointer_inside, native_drag_mouse_contact_active,
     system_drop_zone_set_active, system_drop_zone_set_size, system_drop_zone_set_visible,
     vault_add, vault_list, vault_log, vault_remove, vault_toggle_pin,
 };
@@ -1127,6 +1127,7 @@ pub fn run() {
             drop_zone_copy_file,
             drop_zone_is_active,
             drop_zone_pointer_inside,
+            native_drag_mouse_contact_active,
             vault_list,
             vault_log,
             vault_add,

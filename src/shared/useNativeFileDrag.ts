@@ -1,5 +1,6 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { startDrag } from "@crabnebula/tauri-plugin-drag";
+import { invoke } from "@tauri-apps/api/core";
 import { toPlatformPath } from "./mediaTree";
 import { createNativeDragPreview, type PreviewShape } from "./nativeDragPreview";
 import { armNativeDragGesture } from "./nativeDragGesture";
@@ -18,7 +19,7 @@ export interface NativeDragOptions {
   mode?: "copy" | "move";
   previewElement?: Element | null;
   previewShape?: PreviewShape;
-  penDragEnabled?: boolean;
+  pointerType?: string;
   onError?: (message: string) => void;
 }
 
@@ -53,6 +54,18 @@ export async function startNativeFileDrag(
 
   if (validPaths.length === 0) {
     return;
+  }
+
+  if (options?.pointerType === "pen") {
+    try {
+      if (!await invoke<boolean>("native_drag_mouse_contact_active")) {
+        options.onError?.("Windows no ha entregado el contacto del lápiz al arrastre de archivos.");
+        return;
+      }
+    } catch (error) {
+      options.onError?.(`No se pudo comprobar el contacto del lápiz: ${String(error)}`);
+      return;
+    }
   }
 
   // El plugin acepta PNG base64 o la ruta de un icono. El lienzo siempre produce un PNG pequeño.
@@ -92,12 +105,9 @@ export function handleNativeDragPointerDown(
     ? e.target.closest("button, input, select, textarea, a, [contenteditable='true'], [role='slider']")
     : null;
   if (control && control !== element && element.contains(control)) return;
-  if (e.pointerType === "pen" && options?.penDragEnabled === false) {
-    options.onError?.("El arrastre con lápiz sigue en revisión. Usa el mouse por ahora.");
-    return;
-  }
   if (armNativeDragGesture(e, element, () => startNativeFileDrag(files, {
     ...options,
+    pointerType: e.pointerType,
     previewElement: options?.previewElement ?? element,
   }))) e.stopPropagation();
 }

@@ -16,3 +16,12 @@
 - [x] Validar regresión de importación nativa y nueva compilación frontend.
 - [x] Retirar conversión y trazas experimentales de vendor/drag, cerrar únicamente la instancia Dev bloqueada y deshabilitar temporalmente la salida con lápiz en Synapse con un aviso visible.
 - [ ] Confirmar arrastre con lápiz a una aplicación externa en Dev.
+
+## Reutilizar el contacto de la capturadora
+
+- [x] Extraer PointerContact compartido y conservar CapturePointer como alias para la capturadora.
+- [x] Usar el contacto en Synapse, recuperar identificadores nuevos y cancelar al perder captura/foco.
+- [x] No depender del bit de mouse en los movimientos del lápiz ni cancelar sus eventos compatibles.
+- [x] Sustituir el bloqueo fijo del lápiz por una comprobación nativa de solo lectura antes de OLE; no convertir ni inyectar eventos.
+- [x] Probar recuperación de contactos y regresión de mouse/capturadora: 20 pruebas correctas y build frontend correcto.
+- [ ] Comprobar el resultado real con tableta en Dev.

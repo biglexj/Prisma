@@ -1,8 +1,10 @@
+import { PointerContact } from "./pointerContact";
+
 const DRAG_DISTANCE = 6;
 let cancelPendingGesture: (() => void) | undefined;
 let nativeDragActive = false;
 
-type PointerOrigin = Pick<PointerEvent, "button" | "pointerType" | "pointerId" | "clientX" | "clientY">;
+type PointerOrigin = Pick<PointerEvent, "button" | "pointerType" | "pointerId" | "clientX" | "clientY"> & Partial<Pick<PointerEvent, "isPrimary">>;
 
 /** Starts OLE from mouse or pen movement, without WebView2's HTML dragstart. */
 export function armNativeDragGesture(
@@ -15,28 +17,29 @@ export function armNativeDragGesture(
   cancelPendingGesture?.();
   const { pointerId, clientX, clientY } = origin;
 
-  // Keep pen movement on the card until OLE takes over, even when the tip
-  // crosses a child or the edge of the card before reaching the threshold.
+  const penContact = new PointerContact();
   if (origin.pointerType === "pen") {
-    try { element.setPointerCapture(pointerId); } catch { /* Pointer already ended. */ }
+    penContact.begin({ ...origin, isPrimary: origin.isPrimary ?? true, currentTarget: element });
   }
 
   const cleanup = () => {
     view.removeEventListener("pointermove", move, true);
     view.removeEventListener("pointerup", end, true);
     view.removeEventListener("pointercancel", end, true);
+    view.removeEventListener("lostpointercapture", lostCapture, true);
     view.removeEventListener("blur", cleanup);
     view.removeEventListener("keydown", key, true);
     view.removeEventListener("dragstart", preventBrowserDrag, true);
-    if (origin.pointerType === "pen") {
-      try {
-        if (element.hasPointerCapture(pointerId)) element.releasePointerCapture(pointerId);
-      } catch { /* The WebView may already have released the pointer. */ }
-    }
+    penContact.release();
     if (cancelPendingGesture === cleanup) cancelPendingGesture = undefined;
   };
   const end = (event: PointerEvent) => {
     if (event.pointerId === pointerId) cleanup();
+  };
+  const lostCapture = (event: PointerEvent) => {
+    if (event.pointerId !== pointerId) return;
+    try { if (element.hasPointerCapture(pointerId)) return; } catch {}
+    cleanup();
   };
   const key = (event: KeyboardEvent) => {
     if (event.key === "Escape") cleanup();
@@ -44,12 +47,14 @@ export function armNativeDragGesture(
   const preventBrowserDrag = (event: DragEvent) => event.preventDefault();
   const move = (event: PointerEvent) => {
     if (event.pointerId !== pointerId) return;
-    if (!(event.buttons & 1) || !element.isConnected) {
+    const pen = origin.pointerType === "pen";
+    // Como en la capturadora, seguir el contacto del lápiz en lugar del bit de mouse.
+    if ((pen ? !penContact.matches(event.pointerId) : !(event.buttons & 1)) || !element.isConnected) {
       cleanup();
       return;
     }
     if (Math.hypot(event.clientX - clientX, event.clientY - clientY) < DRAG_DISTANCE) return;
-    event.preventDefault();
+    if (!pen) event.preventDefault();
     cleanup();
 
     // A drag must not also open/play the card when the mouse is released.
@@ -75,6 +80,7 @@ export function armNativeDragGesture(
   view.addEventListener("pointermove", move, { capture: true, passive: false });
   view.addEventListener("pointerup", end, true);
   view.addEventListener("pointercancel", end, true);
+  view.addEventListener("lostpointercapture", lostCapture, true);
   view.addEventListener("blur", cleanup);
   view.addEventListener("keydown", key, true);
   view.addEventListener("dragstart", preventBrowserDrag, true);

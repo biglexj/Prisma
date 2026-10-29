@@ -119,7 +119,7 @@ export function SystemDropZone() {
               if (event.defaultPrevented || event.button !== 0 || (event.target instanceof Element && event.target.closest("button"))) return;
               void preview(item);
             }}
-            onPointerDown={(event) => { if (item.path) handleNativeDragPointerDown(event, item.path, { mode: "copy", penDragEnabled: false, previewShape: item.kind === "image" ? "square" : "auto", onError: setError }); }}
+            onPointerDown={(event) => { if (item.path) handleNativeDragPointerDown(event, item.path, { mode: "copy", previewShape: item.kind === "image" ? "square" : "auto", onError: setError }); }}
             onPointerEnter={() => { hoveredSlot.current = index; setHoverHint(item.text || item.name); }}
             onPointerLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}
             onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHoverHint(""); }}

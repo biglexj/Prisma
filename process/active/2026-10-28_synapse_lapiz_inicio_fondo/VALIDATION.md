@@ -35,3 +35,13 @@ Se cerró mediante PID y ruta exacta solamente `src-tauri/target/debug/prisma.ex
 - [x] Compilación frontend de la contención: TypeScript y Vite correctos.
 - [x] Dev reiniciada con `bun run tauri:dev`: recompiló drag, tauri-plugin-drag y Prisma; inició servidor, atajos y compositor sin la conversión experimental. No equivale a aceptación funcional del lápiz.
 - [ ] Soporte funcional de arrastre con lápiz: pendiente, actualmente deshabilitado en Synapse.
+
+## Reintento autorizado con el controlador de la capturadora
+
+Biglex pidió reutilizar el código que resolvió contactos perdidos en la capturadora. Se extrajo sin cambiar su lógica a `shared/pointerContact.ts`; la capturadora mantiene su export CapturePointer mediante alias. Synapse comparte ahora esa clase y deja de tratar `buttons=0` de un movimiento de lápiz como liberación automática. Se mantienen pointerup, pointercancel, pérdida de captura y blur como finales del gesto.
+
+Se retiró el bloqueo fijo del lápiz en Synapse y se añadió `native_drag_mouse_contact_active`: consulta el bit alto de GetAsyncKeyState(VK_LBUTTON) antes de solicitar el arrastre del plugin. Si Windows no confirma pulsación, se muestra un aviso y no se entra en OLE. No vuelve la conversión nativa retirada ni se inyecta entrada.
+
+- [x] 20 pruebas correctas: seis de la capturadora, cinco del lápiz, cuatro del mouse y cinco de Synapse.
+- [x] `bun run build`: TypeScript y Vite correctos; solo aviso de tamaño de chunks.
+- [ ] Aceptación real con tableta: todavía no demostrada. La comprobación de entrada evita un inicio sin pulsación confirmada, pero no equivale a una garantía general contra bloqueos de OLE.
