@@ -25,3 +25,10 @@
 - [x] Sustituir el bloqueo fijo del lápiz por una comprobación nativa de solo lectura antes de OLE; no convertir ni inyectar eventos.
 - [x] Probar recuperación de contactos y regresión de mouse/capturadora: 20 pruebas correctas y build frontend correcto.
 - [ ] Comprobar el resultado real con tableta en Dev.
+
+## Diagnóstico fuera de Prisma
+
+- [x] Confirmar con Biglex que también falla el arrastre del lápiz entre carpetas del Explorador.
+- [x] Limpiar el error de salida al recibir un arrastre nuevo y registrar la ruta de entrada.
+- [x] Identificar XPPen Deco 01 V3 y observar Windows Ink activado en el perfil global.
+- [ ] Completar prueba temporal con Windows Ink desactivado y restaurarlo si no ayuda.

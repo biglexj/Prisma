@@ -9,6 +9,10 @@ const STRIP_HEIGHT = 3;
 /** Alto mínimo de la barra mientras se arrastra: zona cómoda para soltar. */
 const DRAG_MIN_HEIGHT = 132;
 
+const traceDrop = (message: string) => {
+  if (import.meta.env.DEV) void invoke("vault_log", { message: `[entrada UI] ${message}` }).catch(() => {});
+};
+
 export function useNotch() {
   const [items, setItems] = useState<VaultItem[]>([]);
   const [open, setOpen] = useState(false);
@@ -138,6 +142,12 @@ export function useNotch() {
   }, [show, hide]);
 
   const setDrag = useCallback((active: boolean) => {
+    // Un arrastre nuevo tiene su propio estado: no conservar el error de una
+    // salida anterior sobre las instrucciones del destino de entrada.
+    if (active && !draggingRef.current) {
+      setError("");
+      setMessage("");
+    }
     draggingRef.current = active;
     setDragging(active);
     void invoke("system_drop_zone_set_active", { active }).catch(() => undefined);
@@ -146,8 +156,9 @@ export function useNotch() {
   }, [show]);
 
   const importContent = useCallback(async (paths: string[], text: string | undefined, selected: DropAction, options?: ImportOptions) => {
-    if (isSelfDrop(paths)) { setDrag(false); return; }
-    if (busyRef.current) return;
+    if (isSelfDrop(paths)) { traceDrop("Importación ignorada: archivo propio"); setDrag(false); return; }
+    if (busyRef.current) { traceDrop("Importación ignorada: hay otra en curso"); return; }
+    traceDrop(`Importando ${paths.length} archivos, texto=${Boolean(text)}, destino=${selected}`);
     busyRef.current = true;
     setBusy(true);
     setError("");
@@ -161,7 +172,7 @@ export function useNotch() {
         imported.push(result.path);
       }
       setMessage(selected === "pin" ? "Fijado" : "Prisma Synapse");
-    } catch (err) { setError(String(err)); setMessage(""); }
+    } catch (err) { traceDrop("Importación fallida; detalle visible en la barra"); setError(String(err)); setMessage(""); }
     finally {
       if (selected === "phone" && imported.length) setPendingPaths(imported);
       busyRef.current = false;
@@ -186,7 +197,8 @@ export function useNotch() {
       }),
       listen("prisma:vault-drag-leave", () => setDrag(false)),
       listen<VaultDrag>("prisma:vault-drag-drop", ({ payload }) => {
-        if (isSelfDrop(payload.paths)) { setDrag(false); return; }
+        traceDrop(`Drop recibido: ${payload.paths.length} archivos, texto=${Boolean(payload.text)}`);
+        if (isSelfDrop(payload.paths)) { traceDrop("Drop ignorado: archivo propio"); setDrag(false); return; }
         const selected = actionAt(payload.position.x, payload.position.y, width, window.devicePixelRatio, true);
         setDrag(false);
         void importContent(payload.paths, payload.text ?? undefined, selected);

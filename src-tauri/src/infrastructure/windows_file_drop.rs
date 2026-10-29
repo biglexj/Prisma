@@ -248,10 +248,16 @@ mod imp {
         }
 
         fn emit(&self, event: &str, paths: Vec<String>, position: DragPosition, text: Option<String>, key_state: MODIFIERKEYS_FLAGS) {
+            #[cfg(debug_assertions)]
+            if self.label == "system_drop_zone" && !event.ends_with("drag-over") {
+                println!("[Synapse entrada] {event}: archivos={}, texto={}, botones={}", paths.len(), text.is_some(), key_state.0);
+            }
             let payload = DragPayload { paths, position, text, shift_key: key_state.0 & MK_SHIFT.0 != 0 };
             if self.label == "system_drop_zone" {
                 let event = event.replace("prisma://native-", "prisma:vault-");
-                let _ = self.app.emit_to(self.label.as_str(), &event, payload);
+                if let Err(error) = self.app.emit_to(self.label.as_str(), &event, payload) {
+                    eprintln!("[Synapse entrada] No se pudo entregar {event}: {error}");
+                }
             } else {
                 let _ = self.app.emit(event, payload);
             }
@@ -352,6 +358,10 @@ mod imp {
             let paths = NativeFileDropTarget::extract_paths(data_object).unwrap_or_default();
             let text = if paths.is_empty() { self.text_data(data_object) } else { None };
             let is_valid = !paths.is_empty() || text.is_some();
+            #[cfg(debug_assertions)]
+            if self.label == "system_drop_zone" {
+                println!("[Synapse entrada] Drop nativo recibido: válido={is_valid}, archivos={}, texto={}", paths.len(), text.is_some());
+            }
             unsafe {
                 *effect = if is_valid {
                     DROPEFFECT_COPY

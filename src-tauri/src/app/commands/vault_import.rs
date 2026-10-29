@@ -106,6 +106,8 @@ fn clipboard_link(value: &str) -> Option<String> {
 
 #[tauri::command]
 pub async fn vault_import(app: tauri::AppHandle, path: Option<String>, text: Option<String>, pinned: bool, clipboard: Option<bool>, target_slot: Option<usize>) -> Result<ImportedItem, String> {
+    #[cfg(debug_assertions)]
+    println!("[Synapse entrada] vault_import recibido: archivo={}, texto={}", path.is_some(), text.is_some());
     let folder = app.path().app_data_dir().map_err(|e| e.to_string())?.join("vault-items");
     tauri::async_runtime::spawn_blocking(move || {
         let location_path = path.as_ref().filter(|path| !path.trim().is_empty() && !is_cached_path(&folder, Path::new(path))).cloned();
@@ -116,6 +118,8 @@ pub async fn vault_import(app: tauri::AppHandle, path: Option<String>, text: Opt
         let path = materialize_paste(&folder, path, text, clipboard.unwrap_or(false))?.to_string_lossy().into_owned();
         let items = app.state::<VaultState>().add_at_slot(Some(path.clone()), url, pinned, location_path, target_slot, content)?;
         let _ = app.emit(VAULT_CHANGED, &items);
+        #[cfg(debug_assertions)]
+        println!("[Synapse entrada] vault_import completado: {} tarjetas", items.len());
         Ok(ImportedItem { items, path })
     }).await.map_err(|e| e.to_string())?
 }

@@ -45,3 +45,11 @@ Se retiró el bloqueo fijo del lápiz en Synapse y se añadió `native_drag_mous
 - [x] 20 pruebas correctas: seis de la capturadora, cinco del lápiz, cuatro del mouse y cinco de Synapse.
 - [x] `bun run build`: TypeScript y Vite correctos; solo aviso de tamaño de chunks.
 - [ ] Aceptación real con tableta: todavía no demostrada. La comprobación de entrada evita un inicio sin pulsación confirmada, pero no equivale a una garantía general contra bloqueos de OLE.
+
+## Entrada a Synapse y alcance del fallo
+
+Biglex confirmó que al soltar sobre Temporal tampoco se importaba el archivo y que el arrastre con lápiz también falla entre carpetas del Explorador, fuera de Prisma. El mouse funciona. Esto demuestra que no es exclusivo de Synapse; no demuestra aún qué ajuste o componente externo lo causa.
+
+La Dev respondió a la consulta del sistema. El registro de cuatro intentos salientes devolvió `Contacto de mouse disponible para arrastre con lápiz: false`; esos intentos no llegaron a solicitar OLE. Se corrigió la persistencia del aviso anterior: un arrastre entrante nuevo limpia error/mensaje. Se añadieron trazas solo de diagnóstico para enter/leave/drop nativos, recepción UI e importación (cantidades y estados, sin contenido ni nombres de archivos). Build frontend correcto.
+
+Se detectó XPPenTablet 4.0.18.260720 y se abrió su panel: dispositivo Deco 01 V3, perfil global seleccionado, Windows Ink activado y modo de ratón desactivado. Para una prueba temporal se desmarcó únicamente Windows Ink desde la UI. Pendiente comparar Explorador y Synapse; si no mejora, restaurar la casilla original. No considerar este cambio del controlador una solución aceptada hasta tener el resultado real.
