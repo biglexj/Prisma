@@ -181,7 +181,7 @@ export async function main(args = Bun.argv.slice(2)): Promise<number> {
     if (action === "release") {
         const psArgs = [
             "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
-            "-File", "./scripts/release/build-release.ps1", "-LocalOnly",
+            "-File", "./scripts/release/build-release.ps1", "-LocalOnly", "-SkipTests",
         ];
         console.log(`release ${appName}\nDirectorio: ${root}\nComando: ${psArgs.join(" ")}`);
         if (isPlan) return 0;

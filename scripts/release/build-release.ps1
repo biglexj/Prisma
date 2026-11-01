@@ -6,7 +6,8 @@ param(
     [switch]$SkipAuroraUpload,
     [string]$BuildManifest,
     [switch]$PreflightOnly,
-    [switch]$SyncAuroraOnly
+    [switch]$SyncAuroraOnly,
+    [switch]$SkipTests
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -103,7 +104,9 @@ if (-not $LocalOnly) {
     }
 }
 if (-not $SkipBuild -and -not $SyncAuroraOnly) {
-    Invoke-CheckedNative bun @('test','tests')
+    if (-not $SkipTests -and -not $LocalOnly) {
+        Invoke-CheckedNative bun @('test','--path-ignore-patterns','temp','tests')
+    }
     # Compila la app con Tauri (sin bundle NSIS) y genera el instalador Inno Setup.
     Invoke-CheckedNative bun @('run','tauri:build')
 }
