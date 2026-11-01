@@ -379,7 +379,7 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
                         />
                       </div>
 
-                      <div className="tag-editor-field is-full">
+                      <div className="tag-editor-field">
                         <label>Género</label>
                         <input
                           placeholder={isBatch ? "(Mantener existentes)" : "Ej. Rock, Pop, Clásica"}
@@ -395,40 +395,44 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
                       {!isBatch ? (
                         <div className="tag-editor-track-disc-grid">
                           <div className="tag-editor-field">
-                            <label>Pista Nº</label>
-                            <input
-                              placeholder="1"
-                              type="number"
-                              value={trackNumber}
-                              onChange={(e) => setTrackNumber(e.target.value ? parseInt(e.target.value, 10) : "")}
-                            />
+                            <label>Pista (Nº / Total)</label>
+                            <div className="tag-editor-pair-inputs">
+                              <input
+                                placeholder="1"
+                                type="number"
+                                value={trackNumber}
+                                onChange={(e) => setTrackNumber(e.target.value ? parseInt(e.target.value, 10) : "")}
+                                aria-label="Número de pista"
+                              />
+                              <span className="tag-editor-pair-sep">/</span>
+                              <input
+                                placeholder="12"
+                                type="number"
+                                value={trackTotal}
+                                onChange={(e) => setTrackTotal(e.target.value ? parseInt(e.target.value, 10) : "")}
+                                aria-label="Total de pistas"
+                              />
+                            </div>
                           </div>
                           <div className="tag-editor-field">
-                            <label>Total Pistas</label>
-                            <input
-                              placeholder="12"
-                              type="number"
-                              value={trackTotal}
-                              onChange={(e) => setTrackTotal(e.target.value ? parseInt(e.target.value, 10) : "")}
-                            />
-                          </div>
-                          <div className="tag-editor-field">
-                            <label>Disco Nº</label>
-                            <input
-                              placeholder="1"
-                              type="number"
-                              value={discNumber}
-                              onChange={(e) => setDiscNumber(e.target.value ? parseInt(e.target.value, 10) : "")}
-                            />
-                          </div>
-                          <div className="tag-editor-field">
-                            <label>Total Discos</label>
-                            <input
-                              placeholder="1"
-                              type="number"
-                              value={discTotal}
-                              onChange={(e) => setDiscTotal(e.target.value ? parseInt(e.target.value, 10) : "")}
-                            />
+                            <label>Disco (Nº / Total)</label>
+                            <div className="tag-editor-pair-inputs">
+                              <input
+                                placeholder="1"
+                                type="number"
+                                value={discNumber}
+                                onChange={(e) => setDiscNumber(e.target.value ? parseInt(e.target.value, 10) : "")}
+                                aria-label="Número de disco"
+                              />
+                              <span className="tag-editor-pair-sep">/</span>
+                              <input
+                                placeholder="1"
+                                type="number"
+                                value={discTotal}
+                                onChange={(e) => setDiscTotal(e.target.value ? parseInt(e.target.value, 10) : "")}
+                                aria-label="Total de discos"
+                              />
+                            </div>
                           </div>
                         </div>
                       ) : null}
