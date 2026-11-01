@@ -111,13 +111,17 @@ export function SystemDropZone() {
       vault.setAction(actionAt(event.clientX - bounds.left, event.clientY - bounds.top, vault.width, 1, true));
     }}
     onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) vault.setDrag(false); }}
-    onDrop={(event) => {
+    onDrop={async (event) => {
       event.preventDefault(); vault.setDrag(false);
       if (browserDrag.isOwn()) return;
       if (event.dataTransfer.files.length) {
         const bounds = event.currentTarget.getBoundingClientRect();
         const action = actionAt(event.clientX - bounds.left, event.clientY - bounds.top, vault.width, 1, true);
-        try { sendBrowserFileDrop(Array.from(event.dataTransfer.files), action, textFromTransfer(event.dataTransfer)); }
+        try {
+          // Capturar File y texto durante drop, antes de cualquier await.
+          const images = await sendBrowserFileDrop(Array.from(event.dataTransfer.files), action, textFromTransfer(event.dataTransfer));
+          if (images) await vault.importContent([], undefined, action, {imageDataUrls: images});
+        }
         catch (error) { setError(String(error)); }
         return;
       }

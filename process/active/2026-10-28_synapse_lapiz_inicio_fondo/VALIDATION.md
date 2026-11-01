@@ -1,5 +1,16 @@
 # Validación
 
+## Recepción de imágenes desde el navegador — 2026-11-01
+
+La captura de Biglex muestra un TypeError en `postMessageWithAdditionalObjects` al soltar una imagen del navegador; pegarla sí funciona. La implementación enviaba todos los File por un puente que requiere respaldo de disco. Se conserva ese camino y se añade una alternativa para lotes de imágenes en memoria: leer bytes, conservar MIME y materializar mediante el importador existente, sin convertir el título o la URL de la página en sustituto de la imagen. Los destinos de fijado/temporal/teléfono se conservan, incluido el lote completo para teléfono. No se cambió código nativo, gestos ni configuración de Windows Ink.
+
+- `bun test ./tests/synapse-browser-drag.test.ts ./tests/synapse-notch.test.ts ./tests/native-drag-pen.test.ts`: 17 pruebas correctas, 50 comprobaciones. Siete pruebas del puente cubren entrega sin lectura del archivo local, fidelidad binaria del fallback, orden/formato, fallo de lectura sin resultado parcial, imágenes vacías y límite previo a lectura, rechazo de lote mixto incompatible y límites de cantidad.
+- `bun run build`: TypeScript y Vite correctos, 411 módulos. Persiste el aviso conocido de chunks grandes.
+- Biglex confirmó «Ahora sí, acepta normal» al arrastrar desde el navegador a Synapse. No indicó una versión concreta de ejecutable; no se atribuye la confirmación a un instalador recién generado.
+- No se automatizaron gestos ni se instaló/publicó una versión. La generación de un instalador se anunció, pero no llegó a iniciarse antes de la confirmación del usuario.
+
+Diagnóstico compartido: [WebView2 y File en memoria](../../../../Docs/troubleshooting/platforms/windows-webview2-memory-file-drop.md).
+
 ## Compilación release y espacio en disco — 2026-10-29
 
 La compilación local falló al construir el archivo de librería release con `Espacio en disco insuficiente (os error 112)`. D: tenía aproximadamente 0,14 GiB libres. La inspección encontró 47,76 GiB de artefactos debug, incluidos 27,82 GiB de caché incremental.

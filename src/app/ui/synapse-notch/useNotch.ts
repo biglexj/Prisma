@@ -168,8 +168,10 @@ export function useNotch() {
     show();
     const imported: string[] = [];
     try {
-      for (const path of paths.length ? paths : [null]) {
-        const result = await invoke<ImportedItem>("vault_import", { path, text: path ? null : text, pinned: selected === "pin", clipboard: options?.clipboard ?? false, targetSlot: options?.targetSlot });
+      const sources = paths.length ? paths.map(path => ({path, text: null}))
+        : (options?.imageDataUrls?.length ? options.imageDataUrls : [text]).map(text => ({path: null, text}));
+      for (const source of sources) {
+        const result = await invoke<ImportedItem>("vault_import", { ...source, pinned: selected === "pin", clipboard: options?.clipboard ?? false, targetSlot: options?.targetSlot });
         setItems(result.items);
         imported.push(result.path);
       }

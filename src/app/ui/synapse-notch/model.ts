@@ -21,7 +21,7 @@ export interface VaultItem {
 export type DropAction = "pin" | "temporary" | "phone";
 export interface VaultDrag { paths: string[]; text?: string | null; position: { x: number; y: number } }
 export interface ImportedItem { items: VaultItem[]; path: string }
-export interface ImportOptions { clipboard?: boolean; targetSlot?: number }
+export interface ImportOptions { clipboard?: boolean; targetSlot?: number; imageDataUrls?: string[] }
 
 /** Una tarjeta que vuelve a su propia barra no es una importación nueva. */
 export function isVaultSelfDrop(paths: string[], items: VaultItem[]): boolean {

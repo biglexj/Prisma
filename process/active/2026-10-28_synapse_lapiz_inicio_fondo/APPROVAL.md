@@ -53,3 +53,6 @@ REWORK confirmado también para la conversión nativa: el lápiz sigue sin arras
 RETIRADO: Biglex confirmó después que ni arrastraba ni se recuperaba con Esc y que la aplicación quedó blanca/sin responder. Se cerró exclusivamente la Dev bloqueada y se restauró vendor/drag al estado anterior a estos experimentos. El arrastre saliente de Synapse con lápiz queda deshabilitado temporalmente con aviso; mouse, miniatura y protección de duplicados se conservan. No es una resolución funcional del lápiz.
 
 Nuevo intento autorizado por Biglex: reutilizar el controlador de contactos de la capturadora. Implementado de forma compartida, con consulta de entrada existente antes de OLE y sin la conversión nativa retirada. El lápiz vuelve a poder iniciar el recorrido si Windows confirma una pulsación. Pendiente de aceptación funcional con su tableta; no declarar resuelto a partir de las 20 pruebas o la compilación.
+# Aceptación de entrada desde navegador — 2026-11-01
+
+Biglex confirmó «Ahora sí, acepta normal» después de reportar el error del puente WebView2 al soltar imágenes del navegador. Se registra aceptación de ese recorrido. El ajuste frontend y sus pruebas están completos; no se generó otro instalador ni se amplía la aceptación a toda la matriz de dispositivos/formatos o al arranque del wallpaper.

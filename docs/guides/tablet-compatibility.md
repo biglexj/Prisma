@@ -21,6 +21,14 @@ Inicio también recibe archivos externos mediante el enrutador global: abre el p
 
 ## Estado de validación
 
+### Entrada de imágenes del navegador — 2026-11-01
+
+El receptor DOM conserva `postMessageWithAdditionalObjects` para archivos locales. Si el puente rechaza un lote de imágenes en memoria, `sendBrowserFileDrop` prepara sus bytes como data URL y `useNotch.importContent` los materializa con `vault_import`, manteniendo Fijar/Temporal/Enviar al teléfono y agrupando los archivos para el envío. Máximo 100 imágenes y 64 MiB de payload conjunto; no se reemplazan imágenes ilegibles por títulos o enlaces. Un lote mixto rechazado por WebView2 conserva el error, sin importación parcial silenciosa.
+
+Biglex confirmó que ahora se acepta el arrastre desde el navegador. La explicación compartida y los límites están en [Core: File en memoria y WebView2](../../../Docs/troubleshooting/platforms/windows-webview2-memory-file-drop.md).
+
+### Salida nativa y tabletas
+
 Biglex confirmó el laboratorio independiente, la entrega al chat desde Synapse y posteriormente la sección Imágenes. La ampliación restante requiere sus pruebas físicas por tipo, dispositivo y destino. No se deduce compatibilidad de un editor concreto a partir de la extensión: el receptor decide qué importa.
 
 Build frontend correcto; 20 pruebas frontend y seis Rust correctas en esta revisión. El tamaño de las miniaturas existentes se mantiene. No se cambia Windows Ink ni el modo del controlador.

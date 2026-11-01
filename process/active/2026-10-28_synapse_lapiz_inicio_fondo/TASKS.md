@@ -1,5 +1,11 @@
 # Tareas
 
+## Entrada de imágenes web — 2026-11-01
+
+- [x] Conservar la entrada de archivos locales y materializar las imágenes en memoria cuando WebView2 rechace el puente File.
+- [x] Limitar lecturas, preservar contenido y destinos del lote y comprobar la regresión con pruebas y build.
+- [x] Registrar la confirmación de Biglex de que el arrastre del navegador a Synapse ya se acepta normalmente y documentar la restricción en Core.
+
 - [x] Conservar y liberar correctamente la captura del lápiz antes del arrastre OLE.
 - [x] Desactivar pan en tarjetas Synapse y usar eventos de puntero para señalar casillas.
 - [x] Esperar estabilidad del shell y geometría antes de restaurar el fondo automáticamente; permitir cancelación al cerrar y limitar la espera.
