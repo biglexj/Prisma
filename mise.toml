@@ -1,0 +1,22 @@
+# Configuración de tareas de Prisma mediante Mise
+# Reutiliza el estándar común: dev, build, release, publish
+
+[tasks.dev]
+raw_args = true
+description = "Ejecutar Prisma en desarrollo (Tauri v2 + Vite)"
+file = "scripts/mise-task.ts"
+
+[tasks.build]
+raw_args = true
+description = "Compilar frontend y binario de escritorio sin generar instalador"
+file = "scripts/mise-task.ts"
+
+[tasks.release]
+raw_args = true
+description = "Generar instalador oficial Inno Setup y artefactos locales sin publicar"
+file = "scripts/mise-task.ts"
+
+[tasks.publish]
+raw_args = true
+description = "Publicar release en GitHub y sincronizar ficha en Aurora (--plan y --check sin escritura)"
+file = "scripts/mise-task.ts"

@@ -126,9 +126,25 @@ powershell -ExecutionPolicy Bypass -File scripts/setup-libmpv.ps1
 bun run tauri dev
 ```
 
-### Compilación y Empaquetado
+### Operación con Mise (Estándar Ecosistema)
+
+Prisma implementa la interfaz universal de tareas mediante Mise:
+
+| Tarea | Propósito |
+|---|---|
+| `mise dev` | Ejecutar en modo desarrollo (`tauri:dev`). |
+| `mise build` | Compilar frontend y binario de escritorio sin generar instaladores. |
+| `mise release` | Generar instalador oficial Inno Setup en `release/` sin publicar. |
+| `mise publish` | Publicar en GitHub Releases y sincronizar ficha en Aurora (`--plan` y `--check` sin escritura). |
+
+Opciones de inspección y comprobación:
+- `--plan`: Muestra el comando y las operaciones planificadas sin ejecutar procesos ni modificar el sistema (`mise dev --plan`, `mise release --plan`, `mise publish --plan`).
+- `--check`: (para `publish`) Verifica el estado del repositorio, rama preview, tags, notas y la presencia e integridad de los artefactos en `release/` sin publicar nada (`mise publish --check`).
+- Canal explícito `github`: `mise publish github` (omite la sincronización con la web de Aurora).
+
+### Compilación y Empaquetado Directo
 ```powershell
-# Compilación para producción (Instalador NSIS)
+# Compilación para producción local (Instalador Inno Setup)
 powershell -ExecutionPolicy Bypass -File ./scripts/release/build-release.ps1 -LocalOnly
 ```
 
