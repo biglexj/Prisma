@@ -180,6 +180,9 @@ pub fn run() {
 
     // Detección de argumento --synapse-send para envío directo a través de la red LAN
     let all_args: Vec<String> = std::env::args().collect();
+    if let Some(callback) = infrastructure::auth::deeplink::extract_callback(&all_args) {
+        infrastructure::auth::deeplink::stash(callback);
+    }
     let initial_synapse_send_file = all_args
         .windows(2)
         .find_map(|w| {
@@ -196,7 +199,9 @@ pub fn run() {
         });
     
     let initial_file = if let Some(ref arg) = raw_initial_arg {
-        if arg.starts_with("prisma://") || arg.starts_with("aurora-synapse://") {
+        if infrastructure::auth::deeplink::is_callback_url(arg) {
+            None
+        } else if arg.starts_with("prisma://") || arg.starts_with("aurora-synapse://") {
             features::synapse::parse_prisma_uri(arg).map(|p| p.path)
         } else if std::path::Path::new(arg).is_file() {
             Some(arg.clone())
@@ -255,6 +260,25 @@ pub fn run() {
     if !is_dev_mode && !handoff_diagnostics {
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             let incoming_args: Vec<String> = args;
+
+            if let Some(callback) = infrastructure::auth::deeplink::extract_callback(&incoming_args) {
+                if let Some(code) = infrastructure::auth::deeplink::query_param(&callback, "code") {
+                    let app_handle = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Some(session) = app_handle.try_state::<infrastructure::auth::session::SessionManager>() {
+                            let _ = session.complete_login(&app_handle, &code).await;
+                        }
+                    });
+                } else {
+                    infrastructure::auth::deeplink::stash(callback);
+                }
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.unminimize();
+                    let _ = w.show();
+                    let _ = w.set_focus();
+                }
+                return;
+            }
 
             // Manejo de envío directo por menú contextual (--synapse-send)
             let synapse_send = incoming_args
@@ -519,6 +543,21 @@ pub fn run() {
             if let Some(zone) = app.get_webview_window("system_drop_zone") {
                 if let Err(error) = app::commands::synapse_browser_drag::install(&zone) {
                     eprintln!("[Synapse] No se pudo inicializar el arrastre WebView2: {error}");
+                }
+            }
+
+            // Sesión de usuario e infraestructura de autenticación
+            let _ = infrastructure::auth::deeplink::ensure_protocol_registered();
+            let session_manager = infrastructure::auth::session::SessionManager::restore(app.handle());
+            app.manage(session_manager);
+            if let Some(callback) = infrastructure::auth::deeplink::take() {
+                if let Some(code) = infrastructure::auth::deeplink::query_param(&callback, "code") {
+                    let app_handle = app.handle().clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Some(session) = app_handle.try_state::<infrastructure::auth::session::SessionManager>() {
+                            let _ = session.complete_login(&app_handle, &code).await;
+                        }
+                    });
                 }
             }
 
@@ -1132,6 +1171,13 @@ pub fn run() {
             app::commands::vault_import::vault_read_text,
             vault_remove,
             vault_toggle_pin,
+            app::commands::auth::auth_session_status,
+            app::commands::auth::auth_session_login,
+            app::commands::auth::auth_session_complete,
+            app::commands::auth::auth_session_refresh,
+            app::commands::auth::auth_session_logout,
+            app::commands::auth::auth_session_access_token,
+            app::commands::auth::auth_consume_pending_callback,
         ]);
 
         let mut context = tauri::generate_context!();

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Icon } from "../../shared/ui/Icon";
 import { OFFICIAL_AURORA_ORIGIN, isOfficialAuroraServer, normalizeAuroraServerUrl } from "../../shared/auroraServer";
+import { AuthSessionCard } from "../../features/auth/ui/AuthSessionCard";
 
 interface AuroraSettingsPanelProps {
   auroraOnlineServicesEnabled: boolean;
@@ -80,7 +81,9 @@ export function AuroraSettingsPanel({
       </div>
 
       {auroraOnlineServicesEnabled && (
-        <div className="aurora-columns-layout">
+        <>
+          <AuthSessionCard />
+          <div className="aurora-columns-layout">
           {/* ── Columna Izquierda: Servidor de Aurora Cloud ── */}
           <div className="aurora-col">
             <div className="settings-card aurora-server-card">
@@ -242,6 +245,7 @@ export function AuroraSettingsPanel({
             </div>
           </div>
         </div>
+        </>
       )}
     </div>
   );

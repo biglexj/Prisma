@@ -68,10 +68,14 @@ export function searchPublicLyrics(title: string, artist: string, offset: number
   return request<{ items: PublicLyric[]; nextOffset: number | null }>(`${LYRICS_API}/search?${query}`, { signal });
 }
 
-export function submitContribution(body: ContributionBody, key: string, signal: AbortSignal) {
+export function submitContribution(body: ContributionBody, key: string, signal: AbortSignal, authToken?: string | null) {
+  const headers: Record<string, string> = { "Content-Type": "application/json", "Idempotency-Key": key };
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
   return request<ContributionReceipt>(`${LYRICS_API}/contributions`, {
     method: "POST", signal,
-    headers: { "Content-Type": "application/json", "Idempotency-Key": key },
+    headers,
     body: JSON.stringify(body),
   });
 }

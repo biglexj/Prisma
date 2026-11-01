@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { OFFICIAL_AURORA_ORIGIN, normalizeAuroraServerUrl } from "../../../shared/auroraServer";
 import type { AuroraWallpaper, AuroraWallpapersResponse, WallpaperFilterOptions } from "../model/types";
+import { prismaAuth } from "../../auth";
 
 const WALLPAPERS_PATH = "/api/v1/wallpapers";
 const FAVORITE_PATH = "/api/v1/wallpapers/favorite";
@@ -33,7 +34,11 @@ function getAuroraServerUrl(): string {
   return OFFICIAL_AURORA_ORIGIN;
 }
 
-function getAuroraAccessToken(): string | null {
+async function getAuroraAccessToken(): Promise<string | null> {
+  try {
+    const token = await prismaAuth.getAccessToken();
+    if (token) return token;
+  } catch {}
   const token = localStorage.getItem("aurora_access_token")?.trim();
   return token && token !== "null" && token !== "undefined" ? token : null;
 }
@@ -143,7 +148,7 @@ async function requestWallpapersCatalogWithAuthFallback(
   queryString: string,
   signal: AbortSignal | undefined,
 ): Promise<AuroraWallpapersResponse> {
-  const token = getAuroraAccessToken();
+  const token = await getAuroraAccessToken();
   if (!token) return requestWallpapersCatalog(serverUrl, queryString, signal, null);
 
   try {
@@ -193,7 +198,7 @@ export async function fetchAuroraWallpapers(
 }
 
 export async function toggleAuroraFavorite(wallpaperId: string, currentFavorite: boolean): Promise<boolean> {
-  const token = getAuroraAccessToken();
+  const token = await getAuroraAccessToken();
   if (!token) {
     throw new Error("Inicia sesión en Aurora para sincronizar favoritos");
   }

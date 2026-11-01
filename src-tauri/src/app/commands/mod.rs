@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod converter;
 pub mod audio_relay;
 pub mod custom_libraries;
@@ -21,6 +22,3 @@ pub mod video_takes;
 pub mod visual_library;
 pub mod wallpapers;
 pub mod screen_capture;
-
-
-

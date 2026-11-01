@@ -1,4 +1,5 @@
 pub mod artwork;
+pub mod auth;
 pub mod autostart;
 pub mod codecs;
 pub mod converter;
