@@ -16,13 +16,25 @@
 }
 .lyrics-online-panel summary { cursor: pointer; padding: .4rem 0; font-weight: 600; }
 .lyrics-online-panel p { margin: .5rem 0; color: var(--on-surface-variant); }
-.lyrics-online-fields { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; position: relative; z-index: 70; }
-.lyrics-online-panel label { display: flex; flex-direction: column; gap: .3rem; flex: 1 1 150px; }
+.lyrics-online-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: .75rem;
+  position: relative;
+  z-index: 70;
+}
+.lyrics-online-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  flex: 1 1 150px;
+}
 .lyrics-online-field-group {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: .3rem;
+  gap: .35rem;
   flex: 1 1 200px;
   min-width: 180px;
   z-index: 75;
@@ -34,21 +46,37 @@
   font-size: .85rem;
   color: var(--on-surface-variant);
   font-weight: 500;
+  line-height: 1.2;
 }
 .lyrics-online-provider-select .prisma-custom-select-trigger {
-  min-height: 40px;
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
   border-radius: 10px;
   background: var(--surface-container-highest);
   border: 1px solid var(--outline-variant);
   color: var(--on-surface);
-  font-size: .86rem;
+  font-size: .85rem;
   font-weight: 500;
-  padding: .5rem .85rem;
+  padding: 0 .75rem;
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
 }
 .lyrics-online-provider-select .prisma-custom-select-trigger:hover:not(:disabled) {
   border-color: var(--primary);
   background: var(--surface-container-high);
+}
+.lyrics-online-fields .lyrics-sync-btn {
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
+  padding: 0 1rem;
+  border-radius: 10px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .lyrics-online-provider-select .prisma-custom-select-menu {
   background: var(--surface-container-high, #302a36);
@@ -73,8 +101,18 @@
   font-weight: 600;
 }
 .lyrics-online-panel input:not([type=checkbox]) {
-  background: var(--surface-container-highest); color: var(--on-surface); border: 1px solid var(--outline-variant);
-  border-radius: 10px; padding: .6rem; min-width: 0; width: 100%; box-sizing: border-box;
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
+  background: var(--surface-container-highest);
+  color: var(--on-surface);
+  border: 1px solid var(--outline-variant);
+  border-radius: 10px;
+  padding: 0 .75rem;
+  min-width: 0;
+  width: 100%;
+  font-size: .85rem;
+  box-sizing: border-box;
 }
 .lyrics-online-panel select {
   color-scheme: light;

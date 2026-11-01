@@ -87,8 +87,14 @@ function ConnectedLyricsPanel({ title, artist, album, duration, text, onApply }:
   return <details className="lyrics-online-panel" open={open} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>Buscar o aportar letras online</summary>
     <div className="lyrics-online-fields">
-      <label>Título<input value={queryTitle} onChange={e => { clearResults(); setQueryTitle(e.target.value); }} /></label>
-      <label>Artista<input value={queryArtist} onChange={e => { clearResults(); setQueryArtist(e.target.value); }} /></label>
+      <label>
+        <span className="lyrics-online-label-text">Título</span>
+        <input value={queryTitle} onChange={e => { clearResults(); setQueryTitle(e.target.value); }} />
+      </label>
+      <label>
+        <span className="lyrics-online-label-text">Artista</span>
+        <input value={queryArtist} onChange={e => { clearResults(); setQueryArtist(e.target.value); }} />
+      </label>
       <div className="lyrics-online-field-group">
         <span className="lyrics-online-label-text">Fuente</span>
         <CustomSelect
