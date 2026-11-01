@@ -14,13 +14,13 @@
 - [ ] T05 — Conectar `TrackLyricsService` y el modal de aportes de letras para inyectar la cabecera `Authorization: Bearer <token>` cuando la sesión esté activa.
 - [ ] T06 — Añadir vista/panel de «Mis aportes de letras» que consulte los envíos realizados por el usuario y su estado de revisión en Biglex J.
 
-### Fase 3: Música Pública y Streams Personales (Opcional)
-- [ ] T07 — Implementar cliente de consulta de música y streams propios en Aurora/Biglex J con autenticación de usuario.
+### Fase 3: Música Pública del Usuario (Opcional)
+- [ ] T07 — Implementar cliente de consulta y reproducción de canciones públicas que pertenecen al usuario en Aurora/Biglex J con autenticación de usuario.
 - [ ] T08 — Añadir interruptor explícito de activación/desactivación en Ajustes y en la vista Música para controlar el consumo de red y no sobrecargar el servidor.
 
-### Fase 4: Fondos Vivos Comunitarios
-- [ ] T09 — Integrar sincronización de favoritos de Wallpapers con el backend de Aurora.
-- [ ] T10 — Crear diálogo/modal de subida de fondos comunitarios hacia el catálogo público de Aurora (respetando que la música permanece restringida a la web).
+### Fase 4: Aurora Wallpapers (Catálogo y Subida Comunitaria)
+- [ ] T09 — Integrar sincronización de favoritos en el catálogo de Aurora Wallpapers (`/api/v1/wallpapers` o `/api/v2/catalog`).
+- [ ] T10 — Crear diálogo/modal de subida de wallpapers comunitarios hacia el catálogo público de Aurora (respetando que la música permanece restringida a la web).
 
 ### Fase 5: Validación y Cierre
 - [ ] T11 — Ejecutar pruebas automatizadas de estados de sesión, tokens expirados y revocación.
