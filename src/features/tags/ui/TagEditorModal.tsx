@@ -4,6 +4,7 @@ import { Icon } from "../../../shared/ui/Icon";
 import type { AudioTagData, UpdateAudioTagsRequest } from "../model/types";
 import { tagsClient } from "../tauri/client";
 import { MetadataLookupPanel } from "./MetadataLookupPanel";
+import { LyricsEditorModal } from "../../playback/ui/components/LyricsEditorModal";
 import { buildBatchTagRequests } from "../model/metadataDraft";
 import { invalidateMusicArtwork } from "../../music_library/useMusicArtwork";
 import type { MusicLibraryItem } from "../../music_library/model/types";
@@ -26,6 +27,7 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSyncEditorOpen, setIsSyncEditorOpen] = useState(false);
 
   // Form states
   const [title, setTitle] = useState("");
@@ -53,6 +55,7 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
     setError(null);
     setArtworkChanged(false);
     setLookupBusy(false);
+    setIsSyncEditorOpen(false);
     setMetadataDrafts({});
     setLookupNotice("");
     setActiveTab("general");
@@ -451,13 +454,37 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
                 <div className="tag-editor-lyrics-panel">
                   <div className="tag-editor-lyrics-header">
                     <label>Letras incrustadas (LRC o texto plano)</label>
-                    <span className="tag-editor-lyrics-hint">Edición y visualización amplia</span>
+                    <button
+                      type="button"
+                      className="tag-editor-btn is-secondary"
+                      onClick={() => setIsSyncEditorOpen(true)}
+                      title="Abrir sincronizador de letras interactivo"
+                    >
+                      <Icon name="music" />
+                      <span>Sincronizar letra</span>
+                    </button>
                   </div>
                   <textarea
                     placeholder="[00:12.34] Letras sincronizadas o sin sincronizar..."
                     value={lyrics}
                     onChange={(e) => setLyrics(e.target.value)}
                   />
+
+                  {isSyncEditorOpen ? (
+                    <LyricsEditorModal
+                      path={singlePath}
+                      title={title || singlePath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, "") || ""}
+                      artist={artist}
+                      album={album}
+                      initialLyrics={lyrics}
+                      isOpen={isSyncEditorOpen}
+                      onClose={() => setIsSyncEditorOpen(false)}
+                      onSaved={(finalLrc) => {
+                        setLyrics(finalLrc);
+                        setIsSyncEditorOpen(false);
+                      }}
+                    />
+                  ) : null}
                 </div>
               ) : null}
             </>

@@ -370,6 +370,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .tag-editor-lyrics-header label {
@@ -380,10 +381,10 @@
   letter-spacing: 0.04em;
 }
 
-.tag-editor-lyrics-hint {
-  font-size: 0.75rem;
-  color: var(--on-surface-variant);
-  opacity: 0.8;
+.tag-editor-lyrics-header .tag-editor-btn {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  border-radius: 10px;
 }
 
 .tag-editor-lyrics-panel textarea {
