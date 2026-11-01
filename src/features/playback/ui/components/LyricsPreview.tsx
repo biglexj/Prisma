@@ -69,10 +69,9 @@ export function LyricsPreview({
       <header className="lyrics-header-badge">
         <div className="lyrics-header-text">
           <span className="lyrics-kicker">
-            {hasLyrics ? (lyrics.isSynced ? "LETRAS SINCRONIZADAS (.LRC)" : "LETRAS DE CANCIÓN") : "LETRAS"}
+            {hasLyrics ? (lyrics.isSynced ? "LETRAS SINCRONIZADAS" : "LETRAS DE CANCIÓN") : "LETRAS"}
           </span>
           <h2>{title}</h2>
-          {lyrics?.source && <small>Fuente: {lyrics.source}</small>}
         </div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           {onOpenFullscreen ? (
@@ -126,6 +125,7 @@ export function LyricsPreview({
 
       <TrackLyricsService enabled={trackLyrics.onlineEnabled} enable={trackLyrics.enableOnline}
           candidates={trackLyrics.candidates} message={trackLyrics.onlineMessage} loading={loading}
+          title={title} artist={artist} isSynced={lyrics?.isSynced} source={lyrics?.source}
           hasLocal={trackLyrics.hasLocalLyrics} onSelect={trackLyrics.selectOnlineLyrics} onRetry={refetch} />
       {loading ? (
         <div className="lyrics-empty-state">

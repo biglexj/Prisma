@@ -461,7 +461,7 @@ export function LyricsEditorModal({
                 border: "1px solid var(--outline-variant)",
                 borderRadius: "14px",
                 padding: "0.85rem",
-                color: "#fff",
+                color: "var(--on-surface)",
                 fontSize: "0.9rem",
                 lineHeight: "1.5",
               }}
@@ -614,7 +614,7 @@ export function LyricsEditorModal({
                 width: "100%",
                 background: "transparent",
                 border: "none",
-                color: "#e6e1e5",
+                color: "var(--on-surface)",
                 fontFamily: "monospace",
                 fontSize: "0.92rem",
                 lineHeight: "1.6",

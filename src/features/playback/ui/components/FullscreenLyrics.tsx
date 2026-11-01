@@ -195,7 +195,6 @@ export function FullscreenLyrics({
           </div>
           <h1 className="fullscreen-lyrics-title">{title}</h1>
           {artist ? <p className="fullscreen-lyrics-artist">{artist}{album ? ` — ${album}` : ""}</p> : null}
-          {lyrics?.source && <small>Fuente: {lyrics.source}</small>}
         </div>
 
         <div className="fullscreen-lyrics-actions">
@@ -241,6 +240,7 @@ export function FullscreenLyrics({
 
       <TrackLyricsService enabled={trackLyrics.onlineEnabled} enable={trackLyrics.enableOnline}
           candidates={trackLyrics.candidates} message={trackLyrics.onlineMessage} loading={loading}
+          title={title} artist={artist} isSynced={lyrics?.isSynced} source={lyrics?.source}
           hasLocal={trackLyrics.hasLocalLyrics} onSelect={trackLyrics.selectOnlineLyrics} onRetry={refetch} />
       {/* Escenario central de letras */}
       <main className="fullscreen-lyrics-stage" ref={scrollContainerRef}>
