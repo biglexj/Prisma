@@ -3,15 +3,13 @@
 - Estado: `DRAFT`
 - Fecha: `2026-11-01`
 - Proyecto: `Prisma`
-- Documento Core de referencia: `Docs/features/authentication/authentication-baseline.md`
+- Documento Core de referencia: `Docs/features/authentication/authentication-baseline.md` y `Docs/features/media/connected-media-services.md`
 
 ## Objetivo
 
 Establecer un estándar unificado y reusable de autenticación cliente (OAuth 2.0 PKCE con esquema URI `prisma://auth/callback` y respaldo por Device Code) y conectar exclusivamente dos servicios clave con la identidad de Biglex J:
 1. **Letras**: Aportes anónimos sin login; aportes con autoría de usuario y seguimiento con sesión activa.
 2. **Aurora Wallpapers**: Exploración y descarga pública sin login; desbloqueo de versiones VIP, acceso a contenido +18 (según reglas y permisos de la cuenta) y subida comunitaria con sesión activa.
-
-La música se gestiona y escucha directamente en la web de Aurora.
 
 ## Modelo de Experiencia (Anónimo vs. Autenticado)
 
@@ -20,7 +18,6 @@ La música se gestiona y escucha directamente en la web de Aurora.
 | **Aportes de Letras** | Aporte anónimo libre (como opera actualmente) | Aportes asociados a tu perfil (`user_id` / nombre) y panel de seguimiento de estado |
 | **Aurora Wallpapers (Catálogo)** | Exploración y descarga de wallpapers públicos estándar | Desbloqueo de versiones **VIP** y contenido **+18** (sujeto a cumplimiento de reglas/permisos de la cuenta) |
 | **Aurora Wallpapers (Comunidad)** | Solo lectura y descarga | Subida de wallpapers comunitarios al catálogo con autoría |
-| **Música** | 100% local en Prisma (reproducción local-first) | 100% local en Prisma (la música remota vive en la web de Aurora) |
 
 ## Alcance
 
@@ -31,7 +28,6 @@ La música se gestiona y escucha directamente en la web de Aurora.
   - Servicio 2: Aurora Wallpapers con soporte para cabecera de autenticación (`Authorization: Bearer <token>`) en `/api/v1/wallpapers` o `/api/v2/catalog`, visualización de contenido VIP y filtros/desbloqueo +18 (validando `isAuthorized !== false`), y modal para subida comunitaria.
   - Estados de sesión canónicos: `signedOut`, `authenticating`, `active`, `renewing`, `expired`, `networkError`.
 - No incluye:
-  - Servicios de música online o streaming (preservado 100% en la web de Aurora).
   - Sistema de créditos o compras integradas (los roles VIP se administran desde Aurora/Ecosistema).
   - Almacenamiento de tokens en texto plano o `localStorage`.
 
@@ -58,7 +54,6 @@ La música se gestiona y escucha directamente en la web de Aurora.
 - [ ] Aporte anónimo funcional sin sesión; aporte con autoría verificado con sesión activa.
 - [ ] Desbloqueo de wallpapers VIP y +18 comprobado para cuentas con permisos válidos.
 - [ ] Subida comunitaria de wallpapers funcional.
-- [ ] Prisma libre de referencias o peticiones a streaming musical online (música preservada en la web de Aurora).
 
 ## Autorización
 
