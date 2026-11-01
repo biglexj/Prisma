@@ -1,8 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { MusicFolderSource, MusicLibraryItem } from "../model/types";
 import type { DuplicateGroup, DuplicateScanOptions } from "../../visual_library/model/types";
+import type { MetadataCandidate } from "../metadata/metadataSearch";
 
 export const musicLibraryClient = {
+  searchMetadata: (query: string, deezer = false) =>
+    invoke<MetadataCandidate[]>("music_library_search_metadata", { query, deezer }),
+  downloadCover: (url: string) => invoke<string>("music_library_download_cover", { url }),
   listFolders: () =>
     invoke<MusicFolderSource[]>("music_library_list_folders"),
   listExcludedFolders: () =>

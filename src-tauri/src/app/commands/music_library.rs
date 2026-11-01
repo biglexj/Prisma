@@ -2,6 +2,18 @@ use std::{collections::HashSet, fs, path::Path};
 
 use tauri::State;
 
+#[tauri::command]
+pub async fn music_library_search_metadata(query: String, deezer: bool) -> Result<Vec<crate::features::music_library::metadata::MetadataCandidate>, String> {
+    tauri::async_runtime::spawn_blocking(move || crate::features::music_library::metadata::search(&query, deezer))
+        .await.map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub async fn music_library_download_cover(url: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || crate::features::music_library::metadata::download_cover(&url))
+        .await.map_err(|e| e.to_string())?
+}
+
 use crate::{
     app::state::MusicLibraryState,
     features::{

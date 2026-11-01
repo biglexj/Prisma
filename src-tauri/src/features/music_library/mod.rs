@@ -1,4 +1,5 @@
 pub mod duplicates;
+pub mod metadata;
 mod model;
 mod scanner;
 

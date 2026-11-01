@@ -11,6 +11,7 @@ use app::commands::favorites::{
     favorites_get_all, favorites_is_favorite, favorites_toggle,
 };
 use app::commands::music_library::{
+    music_library_search_metadata, music_library_download_cover,
     music_library_add_excluded_folder, music_library_add_folder, music_library_artwork,
     music_library_list_excluded_folders, music_library_list_folders, music_library_list_items,
     music_library_lyrics, music_library_remove_excluded_folder, music_library_remove_folder,
@@ -884,6 +885,8 @@ pub fn run() {
             music_library_remove_excluded_folder,
             music_library_list_items,
             music_library_artwork,
+            music_library_search_metadata,
+            music_library_download_cover,
             music_library_lyrics,
             music_library_scan_duplicates,
             music_library_scan_folder_tracks,

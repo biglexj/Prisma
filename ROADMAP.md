@@ -8,6 +8,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [ ] **Carátulas y metadatos musicales**: búsqueda en Apple Music y Deezer por pista/carpeta, revisión de coincidencias y guardado selectivo de carátula, artista, título y álbum. Implementación local en preview; pendiente aceptación en Prisma nativo. [Proceso](process/active/2026-11-01_carátulas_y_metadatos/PLAN.md).
+
 - [ ] **Cesión de fondos Stable / Dev — 2.0.1**: coordinación exclusiva del escritorio, suspensión de Stable mientras Dev está abierto y recuperación al salir de Dev. Implementados y probados ambos órdenes de arranque con dos procesos nativos y composición 3D; instalador Inno 2.0.1 generado y notas de lanzamiento preparadas. [Proceso](process/active/2026-10-26_cesion_fondos_stable_dev/PLAN.md).
 
 - [ ] **Fondos vivos — vídeos y capas Aurora**: catálogo de 25 efectos, galería, controles por efecto, ambiente independiente como capa 2, dinámicos, escenarios, partículas 3D/2D y parallax opcional. Coexistencia con imagen/vídeo y pausas comprobadas en WebView2; capturas PNG 1080p reutilizables. Pendientes ecualizador real, políticas automáticas, recuperación de Explorer, aceptación física final y rendimiento. [Proceso](process/active/2026-10-25_motor_wallpapers_nativo/PLAN.md).

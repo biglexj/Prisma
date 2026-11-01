@@ -13,6 +13,14 @@ interface CacheEntry {
 const artworkCache = new Map<string, CacheEntry>();
 const pendingArtwork = new Map<string, Promise<string | null>>();
 
+export async function invalidateMusicArtwork(path: string): Promise<void> {
+  await pendingArtwork.get(path);
+  const cached = artworkCache.get(path);
+  if (cached) totalEstimatedBytes -= cached.bytes;
+  artworkCache.delete(path);
+  window.dispatchEvent(new CustomEvent("prisma-music-artwork-updated", { detail: path }));
+}
+
 export function isMusicArtworkCached(path: string | null): boolean {
   return path ? artworkCache.has(path) : false;
 }
@@ -44,6 +52,14 @@ function estimateBytes(dataUrl: string | null): number {
  * Hook de carátula de música optimizado con cola de peticiones y caché LRU estricto.
  */
 export function useMusicArtwork(path: string | null, enabled = true) {
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    const update = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === path) setRevision(value => value + 1);
+    };
+    window.addEventListener("prisma-music-artwork-updated", update);
+    return () => window.removeEventListener("prisma-music-artwork-updated", update);
+  }, [path]);
   const [artwork, setArtwork] = useState<string | null>(() => {
     if (!path) return null;
     const entry = artworkCache.get(path);
@@ -82,7 +98,7 @@ export function useMusicArtwork(path: string | null, enabled = true) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, path]);
+  }, [enabled, path, revision]);
 
   return artwork;
 }

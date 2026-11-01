@@ -10,6 +10,7 @@ interface FolderBreadcrumbHeaderProps {
   onPlayFolder?: (path: string) => void;
   onAddFolderToQueue?: (path: string) => void;
   onDownloadLyrics?: (path: string) => void;
+  onSearchMetadata?: (path: string) => void;
   itemCount?: number;
   className?: string;
 }
@@ -27,6 +28,7 @@ export function FolderBreadcrumbHeader({
   onPlayFolder,
   onAddFolderToQueue,
   onDownloadLyrics,
+  onSearchMetadata,
   itemCount,
   className = "",
 }: FolderBreadcrumbHeaderProps) {
@@ -168,6 +170,12 @@ export function FolderBreadcrumbHeader({
           >
             <Icon name="music" />
             <span>Letras .lrc</span>
+          </button>
+        ) : null}
+        {currentPath && onSearchMetadata && itemCount && itemCount > 0 ? (
+          <button className="breadcrumb-action-btn" onClick={() => onSearchMetadata(currentPath)} title="Buscar carátulas, artistas, títulos y álbumes">
+            <Icon name="disc" />
+            <span>Carátulas y metadatos</span>
           </button>
         ) : null}
       </div>

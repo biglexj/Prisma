@@ -2,6 +2,10 @@
 
 Registro de cambios y versiones de Prisma.
 
+## En desarrollo
+
+La biblioteca musical incorpora búsqueda de carátulas, artistas, títulos y álbumes en Apple Music y Deezer. Puedes revisar las coincidencias por canción o carpeta, elegir los campos que deseas guardar y completar únicamente los datos que faltan o reemplazar los existentes.
+
 ## [2.0.1] - 2026-10-26
 
 Fondos Vivos incorpora la cesión automática del escritorio entre las ediciones Stable y Dev. Al abrir Dev, la edición Stable suspende su fondo y deshabilita temporalmente sus controles; al salir de Dev, recupera automáticamente el medio y la composición que estaban activos. Ambas ediciones deben estar actualizadas para utilizar esta coordinación.
