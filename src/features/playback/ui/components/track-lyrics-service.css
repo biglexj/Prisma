@@ -1,7 +1,45 @@
-.track-lyrics-service { flex-shrink: 0; font-size: .8rem; padding: .45rem 0; color: var(--on-surface-variant); max-height: 30%; overflow: auto; }
-.track-lyrics-service p { margin: .3rem 0; }
-.track-lyrics-service summary { cursor: pointer; padding: .35rem 0; }
-.track-lyrics-service button { border: 1px solid var(--outline-variant); border-radius: 16px; padding: .5rem .7rem; color: var(--on-secondary-container); background: var(--secondary-container); cursor: pointer; font: inherit; }
+.track-lyrics-service { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; flex-shrink: 0; font-size: .75rem; padding: .35rem 0 .65rem; color: var(--on-surface-variant); }
+.track-lyrics-service:empty { display: none; }
+.track-lyrics-source { padding: .25rem .55rem; border-radius: 999px; background: var(--surface-container-highest); font-size: .7rem; font-weight: 600; }
+.track-lyrics-modes { display: inline-flex; padding: 2px; gap: 2px; border: 1px solid var(--outline-variant); border-radius: 999px; }
+.track-lyrics-service button { border: 0; border-radius: 999px; padding: .35rem .65rem; color: inherit; background: transparent; cursor: pointer; font: inherit; }
+.track-lyrics-service select {
+  -webkit-appearance: none;
+  appearance: none;
+  max-width: 100%;
+  border: 1px solid var(--outline-variant);
+  background-color: var(--surface-container);
+  color: var(--on-surface);
+  border-radius: 999px;
+  padding: .35rem 1.8rem .35rem .75rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b616d' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 8px) center;
+  background-size: 14px 14px;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color .18s ease, background-color .18s ease;
+}
+.track-lyrics-service select:hover {
+  border-color: var(--primary);
+  background-color: var(--surface-container-high);
+}
+.track-lyrics-service select:focus,
+.track-lyrics-service select:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+}
+.track-lyrics-service select option {
+  background-color: var(--surface-container-high, #e9e2e9);
+  color: var(--on-surface, #29242b);
+  padding: 6px 10px;
+}
+.dark .track-lyrics-service select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23c4b9c9' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+.dark .track-lyrics-service select option {
+  background-color: var(--surface-container-high, #302a36);
+  color: var(--on-surface, #eee7f0);
+}
+.track-lyrics-service button[aria-pressed=true] { color: var(--on-secondary-container); background: var(--secondary-container); }
 .track-lyrics-service button:hover { background: var(--primary-container); color: var(--on-primary-container); }
-.track-lyrics-candidate { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0; }
-.track-lyrics-candidate strong { flex-basis: 100%; }
