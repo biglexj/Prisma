@@ -62,7 +62,7 @@ export function AuroraSettingsPanel({
               <div>
                 <h3>Servicios Online del Ecosistema Aurora</h3>
                 <p>
-                  Habilita la integración en la nube con Aurora para explorar el catálogo de Wallpapers en alta fidelidad, sincronización de favoritos y biblioteca musical.
+                  Habilita la integración en la nube con Aurora para explorar el catálogo de Aurora Wallpapers, sincronización de favoritos y el servicio federado de letras.
                 </p>
               </div>
             </div>
@@ -238,62 +238,6 @@ export function AuroraSettingsPanel({
                   />
                   <span className="toggle-slider" />
                 </label>
-              </div>
-            </div>
-
-            {/* Suite Musical de Aurora Cloud (Música, Instrumentales, Karaokes) */}
-            <div className="settings-card aurora-music-suite-card">
-              <div className="settings-card-header-row">
-                <div className="aurora-music-suite-title-row">
-                  <Icon name="music" />
-                  <div>
-                    <h3>Servicios Musicales de Aurora Cloud</h3>
-                    <p>
-                      Ecosistema de streaming en la nube con acceso a pistas completas, versiones instrumentales y karaokes sincronizados.
-                    </p>
-                  </div>
-                </div>
-                <span className="aurora-upcoming-badge">
-                  Próximamente
-                </span>
-              </div>
-
-              <div className="aurora-music-services-list">
-                {/* 1. Explorar Música */}
-                <div className="aurora-music-service-item">
-                  <div className="aurora-music-service-icon is-music">
-                    <Icon name="disc" />
-                  </div>
-                  <div className="aurora-music-service-info">
-                    <strong>Explorar Música</strong>
-                    <p>Streaming en alta fidelidad de discografía oficial, álbumes y lanzamientos exclusivos.</p>
-                  </div>
-                  <span className="aurora-service-tag">Audio HD</span>
-                </div>
-
-                {/* 2. Pistas Instrumentales */}
-                <div className="aurora-music-service-item">
-                  <div className="aurora-music-service-icon is-instrumental">
-                    <Icon name="sliders" />
-                  </div>
-                  <div className="aurora-music-service-info">
-                    <strong>Instrumentales (Off-Vocal)</strong>
-                    <p>Versiones instrumentales limpias y pistas de acompañamiento para práctica y creación.</p>
-                  </div>
-                  <span className="aurora-service-tag">Off-Vocal</span>
-                </div>
-
-                {/* 3. Karaokes */}
-                <div className="aurora-music-service-item">
-                  <div className="aurora-music-service-icon is-karaoke">
-                    <Icon name="mic" />
-                  </div>
-                  <div className="aurora-music-service-info">
-                    <strong>Karaokes & Letras Dinámicas</strong>
-                    <p>Pistas preparadas para cantar con letras sincronizadas en tiempo real estrofa por estrofa.</p>
-                  </div>
-                  <span className="aurora-service-tag">LRC / Sing</span>
-                </div>
               </div>
             </div>
           </div>
