@@ -85,3 +85,10 @@
 - [x] Build frontend, 20 pruebas frontend y seis pruebas Rust correctas.
 - [x] Documentar «Compatibilidad con tabletas» en Core y mantener un puente con contratos locales.
 - [ ] Aceptación física del resto de formatos/vistas y de ambos estados de Ink por Biglex; el destino decide qué puede importar.
+
+## Cierre al reproducir — 2026-11-01
+
+- [x] Identificar el panic `RefCell already borrowed` en el procedimiento nativo de entrada y el EBUSY independiente del vigilante de Vite.
+- [x] Separar la mutación de SOURCES de captura, eventos, rastreo del mouse y liberación COM para permitir mensajes reentrantes.
+- [x] Excluir artefactos `release/` y añadir una regresión con bloqueo exclusivo de un temporal del instalador.
+- [x] Verificar build, pruebas de Synapse y reproducción real de dos canciones en Prisma Dev sin cierre.

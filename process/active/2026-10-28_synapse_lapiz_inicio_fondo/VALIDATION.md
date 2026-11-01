@@ -142,3 +142,17 @@ También se corrigió el registro entrante durante la navegación inicial about:
 - Sin instalación, publicación ni aceptación del siguiente inicio de Windows.
 
 Aceptación manual posterior: Biglex respondió «Sí, aparece la imagen adjunta» a la prueba de soltar desde Synapse al chat con el lápiz. Se acepta esa salida con Windows Ink activado. Se cerró solo el receptor temporal tras guardar el registro; Dev continúa abierta. Entrada hacia Synapse, otros tipos y la matriz completa de regresión siguen pendientes.
+
+## Panic al reproducir y temporal de instalador — 2026-11-01
+
+La captura de Biglex muestra un panic en `synapse_drag_surface.rs:354`, `RefCell already borrowed`, seguido de aborto del proceso nativo. `WM_LBUTTONUP` llamaba a `ReleaseCapture` manteniendo el préstamo mutable del mapa de fuentes; Windows vuelve a entrar por `WM_CAPTURECHANGED`. Se separan las operaciones externas del préstamo, incluidos captura inicial, hover, eventos y limpieza COM. [Diagnóstico compartido](../../../../Docs/troubleshooting/platforms/windows-refcell-wndproc-reentrancy.md).
+
+El registro también muestra Node/Vite `EBUSY` al vigilar `release/.installer-*.tmp`. Se excluye `release/`; la regresión usa un archivo real abierto con FileShare.None, solicita su vigilancia y comprueba que Vite sigue sirviendo el frontend sin errores.
+
+- `cargo test --manifest-path src-tauri/Cargo.toml --lib app::commands::synapse_drag_surface -- --test-threads=1`: 4 correctas.
+- `bun test tests/synapse-notch.test.ts tests/synapse-browser-drag.test.ts tests/native-drag-pen.test.ts`: 21 correctas; el filtro incluyó también cuatro pruebas de una copia histórica en temp.
+- `bun test ./tests/vite-locked-release.test.ts`: 1 correcta con Node y archivo bloqueado por PowerShell.
+- `bun run build`: TypeScript/Vite correctos; advertencia de tamaño de chunks.
+- Prueba nativa mediante entrada real de mouse: se pulsan dos tarjetas de música de Inicio; se cargan World is Mine y Beyond Repair sin cerrar Dev. Navegación a Escuchar correcta; Beyond Repair alcanza 1:20 con botón Pausar visible. Misma instancia nativa después de las acciones.
+- La cola continúa automáticamente a Forever Young sin terminar el proceso.
+- No equivale a aceptación física adicional de la tableta ni a una nueva instalación/publicación.

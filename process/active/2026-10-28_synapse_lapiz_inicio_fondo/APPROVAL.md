@@ -56,3 +56,7 @@ Nuevo intento autorizado por Biglex: reutilizar el controlador de contactos de l
 # Aceptación de entrada desde navegador — 2026-11-01
 
 Biglex confirmó «Ahora sí, acepta normal» después de reportar el error del puente WebView2 al soltar imágenes del navegador. Se registra aceptación de ese recorrido. El ajuste frontend y sus pruebas están completos; no se generó otro instalador ni se amplía la aceptación a toda la matriz de dispositivos/formatos o al arranque del wallpaper.
+
+## Corrección del cierre al reproducir — 2026-11-01
+
+Reporte y corrección autorizados por Biglex. El panic por reentrancia y el fallo EBUSY del vigilante quedan corregidos localmente y comprobados con pruebas automatizadas y reproducción en la aplicación Dev. No se atribuye aceptación humana ni una nueva validación de Ink ON/OFF. Se conservan los pendientes anteriores del proceso.

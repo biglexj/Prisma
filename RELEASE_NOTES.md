@@ -4,6 +4,8 @@ Registro de cambios y versiones de Prisma.
 
 ## En desarrollo
 
+Se corrige un cierre al pulsar tarjetas musicales causado por la captura de entrada del arrastre nativo. El modo de desarrollo también evita vigilar archivos temporales bloqueados del instalador.
+
 La biblioteca musical incorpora búsqueda de carátulas, artistas, títulos y álbumes en Apple Music y Deezer. Puedes revisar las coincidencias por canción o carpeta, elegir los campos que deseas guardar y completar únicamente los datos que faltan o reemplazar los existentes.
 
 ## [2.0.1] - 2026-10-26

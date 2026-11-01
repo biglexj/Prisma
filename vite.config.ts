@@ -24,7 +24,8 @@ export default defineConfig({
     port: 1421,
     strictPort: true,
     watch: {
-      ignored: ["**/src-tauri/**", "**/temp/**", "**/test/**", "**/scratch/**"],
+      // Artefactos y temporales de Inno pueden estar bloqueados durante el empaquetado.
+      ignored: ["**/src-tauri/**", "**/release/**", "**/temp/**", "**/test/**", "**/scratch/**"],
     },
   },
   resolve: {

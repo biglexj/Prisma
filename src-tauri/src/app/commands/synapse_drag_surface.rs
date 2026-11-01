@@ -329,27 +329,39 @@ mod native {
                 return LRESULT(1);
             }
             if message == WM_NCDESTROY {
+                // Soltar el préstamo antes de liberar objetos COM: Windows puede
+                // volver a entrar en este procedimiento durante la limpieza.
+                let removed = SOURCES.with(|sources| sources.borrow_mut().remove(&key));
                 let _ = RevokeDragDrop(hwnd);
-                SOURCES.with(|sources| sources.borrow_mut().remove(&key));
+                drop(removed);
                 return DefWindowProcW(hwnd, message, wp, lp);
             }
             if message == WM_LBUTTONDBLCLK {
-                SOURCES.with(|sources| {
-                    if let Some(source) = sources.borrow().get(&key) {
-                        if source.window.label() == "main" {
-                            emit_input(&source.window, hwnd, &source.id, "dblclick", lp, 0);
-                            return;
-                        }
-                        let _ = source.window.emit_to(
-                            source.window.label(),
-                            "prisma:synapse-native-preview",
-                            &source.id,
-                        );
-                    }
+                let target = SOURCES.with(|sources| {
+                    sources
+                        .borrow()
+                        .get(&key)
+                        .map(|source| (source.window.clone(), source.id.clone()))
                 });
+                if let Some((window, id)) = target {
+                    if window.label() == "main" {
+                        emit_input(&window, hwnd, &id, "dblclick", lp, 0);
+                    } else {
+                        let _ =
+                            window.emit_to(window.label(), "prisma:synapse-native-preview", &id);
+                    }
+                }
                 return LRESULT(0);
             }
             let mut start = None;
+            let mut capture = None;
+            let mut hover = None;
+            let mut input = None;
+            let drag_x = GetSystemMetrics(SM_CXDRAG).max(2) / 2;
+            let drag_y = GetSystemMetrics(SM_CYDRAG).max(2) / 2;
+            // Este bloque solo consulta/modifica estado. SetCapture y
+            // ReleaseCapture envían WM_CAPTURECHANGED de forma síncrona;
+            // emitir eventos también puede despachar mensajes de Windows.
             let handled = SOURCES.with(|sources| {
                 let mut sources = sources.borrow_mut();
                 let Some(source) = sources.get_mut(&key) else {
@@ -360,53 +372,24 @@ mod native {
                 let y = (lp.0 >> 16) as i16 as i32;
                 if message == WM_MOUSEMOVE && !source.hovered {
                     source.hovered = true;
-                    let _ = source.window.emit_to(
-                        source.window.label(),
-                        if source.window.label() == "main" {
-                            "prisma:native-file-source-hover"
-                        } else {
-                            "prisma:synapse-native-hover"
-                        },
-                        Some(&source.id),
-                    );
-                    let mut track = TRACKMOUSEEVENT {
-                        cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as u32,
-                        dwFlags: TME_LEAVE,
-                        hwndTrack: hwnd,
-                        dwHoverTime: 0,
-                    };
-                    let _ = TrackMouseEvent(&mut track);
+                    hover = Some((source.window.clone(), Some(source.id.clone())));
                 }
                 if message == WM_MOUSELEAVE || message == WM_POINTERLEAVE {
                     source.hovered = false;
-                    let _ = source.window.emit_to(
-                        source.window.label(),
-                        if source.window.label() == "main" {
-                            "prisma:native-file-source-hover"
-                        } else {
-                            "prisma:synapse-native-hover"
-                        },
-                        Option::<String>::None,
-                    );
+                    hover = Some((source.window.clone(), None));
                 }
                 match message {
                     WM_LBUTTONDOWN => {
                         source.origin = Some((x, y));
-                        SetCapture(hwnd);
-                        #[cfg(debug_assertions)]
-                        eprintln!(
-                            "[Synapse nativo] Mouse compatible recibido: extra=0x{:X}",
-                            GetMessageExtraInfo().0
-                        );
+                        capture = Some(true);
                         true
                     }
                     WM_MOUSEMOVE => {
                         if let Some((origin_x, origin_y)) = source.origin {
                             if wp.0 & MK_LBUTTON.0 as usize == 0 {
                                 source.origin = None;
-                            } else if ((x - origin_x).abs()
-                                >= GetSystemMetrics(SM_CXDRAG).max(2) / 2
-                                || (y - origin_y).abs() >= GetSystemMetrics(SM_CYDRAG).max(2) / 2)
+                            } else if ((x - origin_x).abs() >= drag_x
+                                || (y - origin_y).abs() >= drag_y)
                                 && !ACTIVE.load(Ordering::Acquire)
                             {
                                 source.origin = None;
@@ -424,10 +407,10 @@ mod native {
                             && source.window.label() == "main"
                             && !ACTIVE.load(Ordering::Acquire)
                         {
-                            emit_input(&source.window, hwnd, &source.id, "click", lp, 0);
+                            input = Some((source.window.clone(), source.id.clone(), "click", 0));
                         }
                         source.origin = None;
-                        let _ = ReleaseCapture();
+                        capture = Some(false);
                         true
                     }
                     WM_CAPTURECHANGED => {
@@ -435,27 +418,57 @@ mod native {
                         true
                     }
                     WM_CONTEXTMENU if source.window.label() == "main" => {
-                        emit_input(&source.window, hwnd, &source.id, "contextmenu", lp, 0);
+                        input = Some((source.window.clone(), source.id.clone(), "contextmenu", 0));
                         true
                     }
                     WM_MOUSEWHEEL | WM_MOUSEHWHEEL if source.window.label() == "main" => {
-                        emit_input(
-                            &source.window,
-                            hwnd,
-                            &source.id,
+                        input = Some((
+                            source.window.clone(),
+                            source.id.clone(),
                             if message == WM_MOUSEWHEEL {
                                 "wheel"
                             } else {
                                 "hwheel"
                             },
-                            lp,
                             (wp.0 >> 16) as i16 as i32,
-                        );
+                        ));
                         true
                     }
                     _ => false,
                 }
             });
+            if let Some(take) = capture {
+                if take {
+                    SetCapture(hwnd);
+                    #[cfg(debug_assertions)]
+                    eprintln!(
+                        "[Synapse nativo] Mouse compatible recibido: extra=0x{:X}",
+                        GetMessageExtraInfo().0
+                    );
+                } else {
+                    let _ = ReleaseCapture();
+                }
+            }
+            if let Some((window, id)) = hover {
+                let event = if window.label() == "main" {
+                    "prisma:native-file-source-hover"
+                } else {
+                    "prisma:synapse-native-hover"
+                };
+                if id.is_some() {
+                    let mut track = TRACKMOUSEEVENT {
+                        cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as u32,
+                        dwFlags: TME_LEAVE,
+                        hwndTrack: hwnd,
+                        dwHoverTime: 0,
+                    };
+                    let _ = TrackMouseEvent(&mut track);
+                }
+                let _ = window.emit_to(window.label(), event, id);
+            }
+            if let Some((window, id, kind, delta)) = input {
+                emit_input(&window, hwnd, &id, kind, lp, delta);
+            }
             if let Some((window, path, png)) = start {
                 let _ = ReleaseCapture();
                 if window.label() == "main" {
