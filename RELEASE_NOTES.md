@@ -2,19 +2,15 @@
 
 Registro de cambios y versiones de Prisma.
 
-## En desarrollo
+## [2.0.1] - 2026-11-01
 
-Se corrige un cierre al pulsar tarjetas musicales causado por la captura de entrada del arrastre nativo. El modo de desarrollo también evita vigilar archivos temporales bloqueados del instalador.
+El editor de etiquetas de audio estrena una distribución ergonómica 60/40 que amplía la carátula al 40% del ancho con visualización 1:1, integra los detalles técnicos en la pestaña General y organiza los metadatos en una columna limpia con disposición a dos columnas para género y año de lanzamiento. La pestaña de letras añade un acceso directo a la sincronización interactiva, mientras que la búsqueda en línea permite consultar y seleccionar carátulas, títulos y álbumes en Apple Music y Deezer antes de aplicar los cambios en el archivo.
 
-El editor de etiquetas incorpora búsqueda de carátulas, artistas, títulos y álbumes en Apple Music y Deezer. Puedes revisar las coincidencias por canción o carpeta, elegir los campos que deseas preparar y completar los datos que faltan o reemplazar los existentes. Las propuestas se previsualizan en el editor y solo se escriben al pulsar Guardar cambios.
+La reproducción y el editor de letras se conectan al servicio público de biglexj.com para buscar coincidencias oficiales, alternar entre texto simple y versiones con tiempos sincronizados, y conservar LRCLIB como fuente alternativa. Los controles de selección desplegable adoptan el lenguaje Material 3 Expressive con chevrones SVG tonales, radios redondeados y menús consistentes con la paleta activa.
 
-## [2.0.1] - 2026-10-26
+Fondos Vivos incorpora la cesión automática del escritorio entre las ediciones del sistema para suspender y reactivar composiciones dinámicas sin conflictos, junto con un interruptor unificado para alternar carpetas en rotación. Quick Look expande la información de carpetas con el conteo de archivos, tamaño total acumulado y desglose de imágenes, vídeos y documentos.
 
-Fondos Vivos incorpora la cesión automática del escritorio entre las ediciones Stable y Dev. Al abrir Dev, la edición Stable suspende su fondo y deshabilita temporalmente sus controles; al salir de Dev, recupera automáticamente el medio y la composición que estaban activos. Ambas ediciones deben estar actualizadas para utilizar esta coordinación.
-
-Quick Look añade el total de archivos y subcarpetas, tamaño, fecha de creación y desglose de imágenes, vídeos y documentos. Al abrir fondos se navega directamente a la sección de Vídeos, y los controles conservan su alineación mediante un interruptor de sonido de ancho fijo junto al nuevo orden de Mezcla y Encuadre.
-
-Las carpetas de Fondos Vivos utilizan un único interruptor para activarlas o desactivarlas en la rotación. El ocultado individual se conserva para imágenes y vídeos; las carpetas ocultadas con anterioridad pasan a estar desactivadas y pueden recuperarse directamente desde su interruptor.
+La bandeja flotante Synapse optimiza la recepción de imágenes arrastradas desde navegadores sin respaldo local y asegura compatibilidad con lápiz óptico bajo Windows Ink. Se corrige la captura de entrada en tarjetas musicales para garantizar clics y arrastres fluidos, y el entorno de desarrollo evita vigilar archivos temporales bloqueados.
 
 ## [2.0.0] - 2026-10-26
 

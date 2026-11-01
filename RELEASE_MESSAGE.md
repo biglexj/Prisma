@@ -1,11 +1,12 @@
 # ⚡ Prisma 2.0.1
 
-Esta actualización de mantenimiento para Prisma 2.0 perfecciona la coordinación de Fondos Vivos entre las ediciones del sistema, amplía los metadatos de carpetas en Quick Look y simplifica la gestión de fuentes multimedia.
+Esta actualización incorpora el nuevo diseño del editor de etiquetas de audio en proporción 60/40 con búsqueda de metadatos en línea, el servicio público de letras federado de Biglex J, selectores Material 3 Expressive y mejoras en Fondos Vivos y Synapse.
 
-- 🔄 **Cesión automática de escritorio**: Fondos Vivos coordina el control de pantalla entre las versiones Stable y Dev. Al abrir la edición de desarrollo, la versión estable suspende su fondo y controles de manera transparente, recuperando su estado y composición originales al cerrarse Dev.
-- 📂 **Metadatos extendidos en Quick Look**: la vista rápida ahora informa el total de archivos y subcarpetas contenidas, tamaño total acumulado, fecha de creación y desglose clasificado entre imágenes, vídeos y documentos.
-- 🎛️ **Interruptor unificado para carpetas**: la activación de carpetas en Fondos Vivos se gestiona con un único conmutador por fuente, preservando el ocultado individual para elementos multimedia y migrando limpiamente configuraciones previas.
-- 📐 **Estabilidad visual y controles**: navegación directa a Vídeos al abrir fondos, interruptor de sonido con ancho fijo para evitar saltos en la interfaz y disposición optimizada de controles de mezcla y encuadre.
+- 🏷️ **Editor de etiquetas renovado**: distribución 60/40 con carátula ampliada a formato 1:1, edición unificada de metadatos, género y año a dos columnas, acceso directo a la sincronización de letras y consulta en línea desde Apple Music y Deezer.
+- 🎵 **Servicio de letras en línea**: búsqueda y selección de letras sincronizadas desde Biglex J (biglexj.com) y LRCLIB, con alternancia fluida entre texto plano y tiempos sincronizados.
+- 🎨 **Selectores Material 3 Expressive**: menús desplegables con chevrones tonales, bordes redondeados y estilo integrado con el tema de la aplicación.
+- 🔄 **Coordinación de Fondos Vivos**: cesión automática de pantalla entre ediciones y conmutador unificado de carpetas para rotación de fondos.
+- ⚡ **Synapse y fluidez nativa**: soporte para arrastre de imágenes web sin archivo local, interacción optimizada con lápiz óptico y resolución de capturas accidentales en tarjetas de música.
 
 ## Actualización desde el instalador anterior
 

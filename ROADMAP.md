@@ -8,12 +8,6 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [ ] **Servicio de letras de Biglex J**: integrado en el editor con candidatos, selección explícita de grabación, alternativa LRCLIB y aportes anónimos con seguimiento. Pruebas del contrato y revisión en navegador aprobadas; pendiente aceptación del guardado y reproducción en Prisma nativo. [Proceso](process/active/2026-11-01_servicio-letras/PLAN.md).
-
-- [ ] **Carátulas y metadatos musicales**: búsqueda en Apple Music y Deezer por pista/carpeta, revisión de coincidencias y guardado selectivo de carátula, artista, título y álbum. Implementación local en preview; pendiente aceptación en Prisma nativo. [Proceso](process/active/2026-11-01_carátulas_y_metadatos/PLAN.md).
-
-- [ ] **Cesión de fondos Stable / Dev — 2.0.1**: coordinación exclusiva del escritorio, suspensión de Stable mientras Dev está abierto y recuperación al salir de Dev. Implementados y probados ambos órdenes de arranque con dos procesos nativos y composición 3D; instalador Inno 2.0.1 generado y notas de lanzamiento preparadas. [Proceso](process/active/2026-10-26_cesion_fondos_stable_dev/PLAN.md).
-
 - [ ] **Fondos vivos — vídeos y capas Aurora**: catálogo de 25 efectos, galería, controles por efecto, ambiente independiente como capa 2, dinámicos, escenarios, partículas 3D/2D y parallax opcional. Coexistencia con imagen/vídeo y pausas comprobadas en WebView2; capturas PNG 1080p reutilizables. Pendientes ecualizador real, políticas automáticas, recuperación de Explorer, aceptación física final y rendimiento. [Proceso](process/active/2026-10-25_motor_wallpapers_nativo/PLAN.md).
 
 - [ ] **Capturadora compacta y movimiento Synapse**: selector por iconos de imagen/vídeo, recortes en una pill desplegable y cuentagotas; cierre de captura antes de limpiar el lienzo y transiciones nativas desactivadas. Synapse incorpora apertura continua, entrada escalonada y señal al guardar. Control de grabación movible centrado abajo, con iconos; carpetas predeterminadas Prisma en Imágenes/Vídeos y tres rutas independientes. Build y pruebas correctos; grabación real 1080p con audio y controles verificada en Windows tras corregir tamaño de ventana y bloqueo por silencio. Pendientes el zoom intermitente, arrastre y exclusión visual de la barra. [Proceso](process/active/2026-10-25_capturadora_y_movimiento_synapse/PLAN.md).
@@ -61,6 +55,24 @@ Ideas de evolución registradas el 1 de octubre de 2026 para el uso personal de 
 ---
 
 ## 🟢 Completado
+
+- [x] **v2.0.1 — 2026-11-01**
+  - **Rediseño del Editor de Etiquetas de Audio**:
+    - Distribución 60/40 ergonómica con carátula al 40% (1:1 hasta 350px) y edición en columna única.
+    - Integración de detalles técnicos en pestaña General y fila de género y año a dos columnas.
+    - Agrupación compacta de pista y disco sin desbordamiento horizontal.
+    - Pestaña Letras con botón directo para sincronización interactiva en tiempo real.
+    - Consulta y previsualización de carátulas y metadatos en línea desde Apple Music y Deezer.
+  - **Servicio Federado de Letras de Biglex J**:
+    - Búsqueda federada de canciones y selección explícita de versiones sincronizadas.
+    - Modo texto simple y tiempos sincronizados con insignia oficial de biglexj.com.
+    - Fallback resiliente a LRCLIB y aportes anónimos.
+  - **Selectores Material 3 Expressive**:
+    - Rediseño de selectores y menús desplegables con chevrones SVG tonales y radios redondeados.
+  - **Fondos Vivos, Synapse y Estabilidad**:
+    - Cesión automática de pantalla entre ediciones Stable y Dev.
+    - Desglose de metadatos de carpetas en Quick Look.
+    - Compatibilidad con lápiz óptico en Windows Ink y arrastre de imágenes web sin archivo local.
 
 - [x] **v2.0.0 — 2026-10-26**
   - **Conmutador Imagen | Vídeo en el Capturador de Pantalla**:
