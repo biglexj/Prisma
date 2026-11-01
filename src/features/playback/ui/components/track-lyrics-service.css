@@ -1,0 +1,7 @@
+.track-lyrics-service { flex-shrink: 0; font-size: .8rem; padding: .45rem 0; color: var(--on-surface-variant); max-height: 30%; overflow: auto; }
+.track-lyrics-service p { margin: .3rem 0; }
+.track-lyrics-service summary { cursor: pointer; padding: .35rem 0; }
+.track-lyrics-service button { border: 1px solid var(--outline-variant); border-radius: 16px; padding: .5rem .7rem; color: var(--on-secondary-container); background: var(--secondary-container); cursor: pointer; font: inherit; }
+.track-lyrics-service button:hover { background: var(--primary-container); color: var(--on-primary-container); }
+.track-lyrics-candidate { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0; }
+.track-lyrics-candidate strong { flex-basis: 100%; }

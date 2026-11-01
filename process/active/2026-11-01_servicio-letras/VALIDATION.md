@@ -9,3 +9,12 @@
 - [ ] Recepción y aprobación de un aporte real: se verificó con respuestas HTTP simuladas, sin enviar contenido de prueba a producción.
 
 Se conservan cambios concurrentes ajenos al alcance en arrastre nativo, Vite y sus pruebas. Sin publicación ni despliegue.
+
+## Corrección de integración en la vista de reproducción
+
+- Se comprobó que la vista solo consultaba archivos locales, mientras la búsqueda remota estaba dentro del editor. Prisma Dev tenía los servicios conectados desactivados; el editor mostraba por ello el aviso de activación.
+- La canción de la captura, «Y Que Pasó» / «La bella luz», existe públicamente como «Y Que Pasó» / «Orquesta La Bella Luz» y contiene texto y una grabación. Consulta real, sin modificar catálogo.
+- La vista y pantalla completa ahora consultan Biglex J en ausencia de letra local y con los servicios activos, muestran texto de coincidencia única y ofrecen selección de grabación. No se adopta sincronización automáticamente.
+- El editor abre la búsqueda desplegada; los estados desactivados ofrecen activación visible sin modificar la preferencia automáticamente.
+- `bun test tests/public-lyrics.test.ts tests/track-lyrics-match.test.ts`: 11 pruebas, 43 aserciones, aprobadas. `bun run build`: aprobado.
+- Navegador, componente real LyricsPreview con metadatos de la captura: muestra «Fuente: Biglex J» y texto sin abrir el editor. Al elegir Original cambia a letras sincronizadas; Editar letra recibe el contenido con tiempos. No se guardaron archivos ni se cambió la preferencia de la instancia nativa del usuario. Evidencia: `prisma-letras-consulta.png` en los artefactos de la sesión.

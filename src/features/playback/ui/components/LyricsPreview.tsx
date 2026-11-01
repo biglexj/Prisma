@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatTime } from "../formatters";
 import { Icon } from "../../../../shared/ui/Icon";
 import { useTrackLyrics } from "../../useTrackLyrics";
+import { TrackLyricsService } from "./TrackLyricsService";
 import { LyricsEditorModal } from "./LyricsEditorModal";
 import "./lyrics-preview.css";
 
@@ -36,7 +37,8 @@ export function LyricsPreview({
   const activeLineRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const { lyrics, loading, updateLyrics, refetch } = useTrackLyrics(path);
+  const trackLyrics = useTrackLyrics(path, title, artist);
+  const { lyrics, loading, updateLyrics, refetch } = trackLyrics;
 
   const activeIndex = useMemo(() => {
     if (!lyrics || !lyrics.isSynced || lyrics.lines.length === 0) return 0;
@@ -92,7 +94,7 @@ export function LyricsPreview({
               type="button"
             >
               <Icon name="edit" />
-              <span>Editar letras</span>
+              <span>Editar letra</span>
             </button>
           ) : null}
         </div>
@@ -122,6 +124,9 @@ export function LyricsPreview({
         />
       ) : null}
 
+      <TrackLyricsService enabled={trackLyrics.onlineEnabled} enable={trackLyrics.enableOnline}
+          candidates={trackLyrics.candidates} message={trackLyrics.onlineMessage} loading={loading}
+          hasLocal={trackLyrics.hasLocalLyrics} onSelect={trackLyrics.selectOnlineLyrics} onRetry={refetch} />
       {loading ? (
         <div className="lyrics-empty-state">
           <Icon name="music" />
@@ -156,9 +161,9 @@ export function LyricsPreview({
       ) : (
         <div className="lyrics-empty-state">
           <Icon name="music" />
-          <p>No se encontraron letras para esta canción</p>
+          <p>No hay letra local para esta canción</p>
           <span>
-            Para ver letras sincronizadas en vivo, coloca un archivo <strong>.lrc</strong> con el mismo nombre en la carpeta de la pista.
+            Puedes consultar Biglex J, usar Editar letra o colocar un archivo <strong>.lrc</strong> junto a la pista.
           </span>
         </div>
       )}

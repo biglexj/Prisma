@@ -16,8 +16,9 @@ export function LyricsOnlinePanel({ title, artist = "", album, duration, text, o
   title: string; artist?: string; album?: string; duration: number; text: string;
   onApply: (text: string, source: string) => void;
 }) {
-  const { auroraOnlineServicesEnabled: enabled } = useSystemSettings();
-  if (!enabled) return <div className="lyrics-online-panel"><p>Para buscar y aportar letras, activa los servicios conectados en Preferencias. La edición local sigue disponible.</p></div>;
+  const { auroraOnlineServicesEnabled: enabled, setAuroraOnlineServicesEnabled } = useSystemSettings();
+  if (!enabled) return <div className="lyrics-online-panel"><p>La consulta a Biglex J está desactivada. Al activar los servicios conectados podrás buscar y aportar letras.</p>
+    <button type="button" className="lyrics-sync-btn" onClick={() => setAuroraOnlineServicesEnabled(true)}>Activar servicios conectados</button></div>;
   return <ConnectedLyricsPanel title={title} artist={artist} album={album} duration={duration} text={text} onApply={onApply} />;
 }
 
@@ -32,7 +33,7 @@ function ConnectedLyricsPanel({ title, artist, album, duration, text, onApply }:
   const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [selection, setSelection] = useState<{ text: string; source: string } | null>(null);
   const [lifetime, setLifetime] = useState<AbortController | null>(null);
   const searchController = useRef<AbortController | null>(null);

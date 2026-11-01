@@ -4,6 +4,10 @@ Prisma consume el [contrato multiapp de Core](../../../Docs/features/media/lyric
 
 ## Uso
 
+La vista **Letras** y su pantalla completa buscan primero archivos locales o etiquetas. Si no hay contenido local y los servicios conectados están activos, consultan automáticamente Biglex J por título y artista. Una coincidencia única de título y artista muestra texto sin tiempos; se toleran tildes, mayúsculas y el prefijo de agrupación «Orquesta»/«Grupo». No se eliminan indicadores de versión del título. Los resultados ambiguos requieren elección. **Versiones disponibles en Biglex J** permite seleccionar explícitamente una sincronización, sin escribir el archivo. La selección se conserva en memoria durante la sesión; para guardarla offline se utiliza **Editar letra** y el guardado local existente.
+
+Si los servicios conectados están apagados, ambas vistas y el editor lo indican y ofrecen un botón para activarlos. El editor muestra su búsqueda desplegada al abrirse.
+
 1. Activar los servicios conectados en Preferencias.
 2. Abrir **Editar letras** desde la vista de letras o su pantalla completa.
 3. Expandir **Buscar o aportar letras online** y revisar título y artista.
@@ -22,6 +26,6 @@ Antes del POST se guarda el cuerpo y una clave aleatoria en `prisma.lyrics.contr
 
 ## Comportamiento de red
 
-Consultas por acción explícita, páginas de 20 candidatos, cancelación al cerrar, cambiar consulta o desactivar servicios, espera tras 429 y tiempo máximo de 15 segundos. No hay reintentos automáticos de POST. Errores HTTP sin JSON se muestran sin volcar cuerpos o comprobantes. Una caída remota no bloquea la edición ni lectura local.
+Consulta automática únicamente para la pista mostrada sin letra local y con servicios conectados activos; búsquedas adicionales y aportes por acción explícita. Páginas de 20 candidatos, cancelación al cerrar, cambiar consulta o desactivar servicios, espera tras 429 y tiempo máximo de 15 segundos. No hay reintentos automáticos de POST. Errores HTTP sin JSON se muestran sin volcar cuerpos o comprobantes. Una caída remota no bloquea la edición ni lectura local.
 
 La implementación y sus límites de validación se registran en el [proceso](../../process/active/2026-11-01_servicio-letras/VALIDATION.md). No se ha probado el guardado nativo ni enviado aportes reales como parte de las pruebas automatizadas.

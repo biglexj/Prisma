@@ -3,6 +3,7 @@ import { formatTime } from "../formatters";
 import { Icon } from "../../../../shared/ui/Icon";
 import { dispatchGlobalVolumeOsd } from "../../../../shared/ui/VolumeOsd";
 import { useTrackLyrics } from "../../useTrackLyrics";
+import { TrackLyricsService } from "./TrackLyricsService";
 import { LyricsEditorModal } from "./LyricsEditorModal";
 import { MediaProgressBar } from "../../../../shared/ui/MediaProgressBar";
 import { useFavorites } from "../../../../shared/useFavorites";
@@ -75,7 +76,8 @@ export function FullscreenLyrics({
     favToastTimerRef.current = window.setTimeout(() => setFavToastText(null), 1800);
   };
 
-  const { lyrics, loading, updateLyrics, refetch } = useTrackLyrics(path);
+  const trackLyrics = useTrackLyrics(path, title, artist);
+  const { lyrics, loading, updateLyrics, refetch } = trackLyrics;
 
   const activeIndex = useMemo(() => {
     if (!lyrics || !lyrics.isSynced || lyrics.lines.length === 0) return 0;
@@ -219,7 +221,7 @@ export function FullscreenLyrics({
                 type="button"
               >
                 <Icon name="edit" />
-                <span>Editar letras</span>
+                <span>Editar letra</span>
               </button>
             </>
           ) : null}
@@ -237,6 +239,9 @@ export function FullscreenLyrics({
         </div>
       </header>
 
+      <TrackLyricsService enabled={trackLyrics.onlineEnabled} enable={trackLyrics.enableOnline}
+          candidates={trackLyrics.candidates} message={trackLyrics.onlineMessage} loading={loading}
+          hasLocal={trackLyrics.hasLocalLyrics} onSelect={trackLyrics.selectOnlineLyrics} onRetry={refetch} />
       {/* Escenario central de letras */}
       <main className="fullscreen-lyrics-stage" ref={scrollContainerRef}>
         {loading ? (
@@ -269,9 +274,9 @@ export function FullscreenLyrics({
         ) : (
           <div className="fullscreen-lyrics-empty">
             <Icon name="music" />
-            <h2>No se encontraron letras para esta canción</h2>
+            <h2>No hay letra local para esta canción</h2>
             <p>
-              Coloca un archivo <strong>.lrc</strong> con el mismo nombre en la carpeta de la pista o usa el botón &quot;Editar letras&quot; para buscarlas online.
+              Coloca un archivo <strong>.lrc</strong> con el mismo nombre en la carpeta de la pista o usa el botón &quot;Editar letra&quot; para buscarlas online.
             </p>
             {path ? (
               <button
