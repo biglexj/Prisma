@@ -193,6 +193,7 @@ export function FullscreenLyrics({
           </div>
           <h1 className="fullscreen-lyrics-title">{title}</h1>
           {artist ? <p className="fullscreen-lyrics-artist">{artist}{album ? ` — ${album}` : ""}</p> : null}
+          {lyrics?.source && <small>Fuente: {lyrics.source}</small>}
         </div>
 
         <div className="fullscreen-lyrics-actions">

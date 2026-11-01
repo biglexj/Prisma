@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { invoke } from "@tauri-apps/api/core";
 import { Icon } from "../../../../shared/ui/Icon";
-import { fetchLyricsFromLrclib } from "../../services/lrclibClient";
+import { LyricsOnlinePanel } from "./LyricsOnlinePanel";
 import { tagsClient } from "../../../tags/tauri/client";
 import { formatTime } from "../formatters";
 import "./lyrics-editor-modal.css";
@@ -95,7 +95,7 @@ function parseLrcToRows(rawText: string): LyricRow[] {
   for (const rawLine of lines) {
     const trimmed = rawLine.trim();
     if (!trimmed) continue;
-    if (/^\[(ti|ar|al|by|offset):/i.test(trimmed)) continue;
+    if (/^\[(ti|ar|al|by|offset|source):/i.test(trimmed)) continue;
 
     timeRegex.lastIndex = 0;
     const match = timeRegex.exec(trimmed);
@@ -108,7 +108,7 @@ function parseLrcToRows(rawText: string): LyricRow[] {
       rows.push({
         id: `row_${counter++}_${Date.now()}`,
         timeSeconds: totalSec,
-        text: cleanText || "···",
+        text: cleanText,
       });
     } else {
       rows.push({
@@ -154,7 +154,7 @@ export function LyricsEditorModal({
   const [activeRowIndex, setActiveRowIndex] = useState<number>(0);
   const [editorMode, setEditorMode] = useState<"interactive" | "raw">("interactive");
   const [rawText, setRawText] = useState(initialLyrics);
-  const [searching, setSearching] = useState(false);
+  const [source, setSource] = useState(() => /^\[source:(.*)\]$/mi.exec(initialLyrics)?.[1] ?? "");
   const [saving, setSaving] = useState(false);
   const [saveToLrc, setSaveToLrc] = useState(true);
   const [saveToSrt, setSaveToSrt] = useState(true);
@@ -170,10 +170,11 @@ export function LyricsEditorModal({
       const parsed = parseLrcToRows(initialLyrics);
       setRows(parsed);
       setRawText(initialLyrics);
+      setSource(/^\[source:(.*)\]$/mi.exec(initialLyrics)?.[1] ?? "");
       setActiveRowIndex(0);
       setStatusMessage(null);
     }
-  }, [isOpen, initialLyrics]);
+  }, [isOpen, initialLyrics, path]);
 
   // Auto-scroll a la fila objetivo activa
   useEffect(() => {
@@ -194,7 +195,8 @@ export function LyricsEditorModal({
         target &&
         (target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
-          target.isContentEditable);
+          target.isContentEditable ||
+          Boolean(target.closest("button, select, summary, a")));
 
       if ((e.code === "Space" || e.key === " ") && !isInput) {
         e.preventDefault();
@@ -274,37 +276,6 @@ export function LyricsEditorModal({
     );
   };
 
-  const handleSearchOnline = async () => {
-    setSearching(true);
-    setStatusMessage(null);
-    try {
-      const res = await fetchLyricsFromLrclib({
-        trackName: title,
-        artistName: artist,
-        albumName: album,
-        durationSeconds,
-      });
-
-      if (res && (res.syncedLyrics || res.plainLyrics)) {
-        const found = res.syncedLyrics || res.plainLyrics || "";
-        const parsed = parseLrcToRows(found);
-        setRows(parsed);
-        setRawText(found);
-        setStatusMessage(
-          res.syncedLyrics
-            ? "✅ Letras sincronizadas aplicadas desde LRCLIB"
-            : "ℹ️ Letras en texto plano aplicadas desde LRCLIB"
-        );
-      } else {
-        setStatusMessage("❌ No se encontraron letras en LRCLIB.");
-      }
-    } catch {
-      setStatusMessage("❌ Error al buscar letras en internet.");
-    } finally {
-      setSearching(false);
-    }
-  };
-
   const handleSearchOnWeb = () => {
     const cleanArtist = (artist || "").trim();
     const cleanTitle = (title || "").trim();
@@ -320,6 +291,8 @@ export function LyricsEditorModal({
     if (importedRawText.trim()) {
       const parsed = parseLrcToRows(importedRawText);
       setRows(parsed);
+      setRawText(importedRawText);
+      setSource("");
       setIsImportingText(false);
       setImportedRawText("");
       setStatusMessage("✅ Texto importado correctamente. Listo para sincronizar.");
@@ -329,8 +302,10 @@ export function LyricsEditorModal({
   const handleSave = async () => {
     setSaving(true);
     setStatusMessage(null);
-    const finalLrc = editorMode === "raw" ? rawText : rowsToLrcString(rows);
-    const finalSrt = saveToSrt ? rowsToSrtString(rows, durationSeconds) : null;
+    const draft = editorMode === "raw" ? rawText : rowsToLrcString(rows);
+    const finalLrc = source && !/^\[source:/mi.test(draft)
+      ? `[source:${source.replace(/[\r\n\[\]]/g, " ")}]\n${draft}` : draft;
+    const finalSrt = saveToSrt ? rowsToSrtString(editorMode === "raw" ? parseLrcToRows(rawText) : rows, durationSeconds) : null;
 
     try {
       await tagsClient.saveLyrics(path, finalLrc, finalSrt, saveToLrc, saveToSrt, embedInTag);
@@ -366,20 +341,21 @@ export function LyricsEditorModal({
           </button>
         </header>
 
+        <LyricsOnlinePanel
+          key={path}
+          title={title} artist={artist} album={album} duration={durationSeconds}
+          text={editorMode === "raw" ? rawText : rowsToLrcString(rows)}
+          onApply={(found, source) => {
+            setSource(source);
+            setRows(parseLrcToRows(found));
+            setRawText(found);
+            setActiveRowIndex(0);
+            setStatusMessage(`Letra cargada desde ${source}. Revisa la versión antes de guardar.`);
+          }}
+        />
         {/* Barra de herramientas */}
         <div className="lyrics-sync-toolbar">
           <div className="lyrics-sync-toolbar-left">
-            <button
-              className="lyrics-sync-btn is-primary"
-              disabled={searching}
-              onClick={handleSearchOnline}
-              title="Buscar sincronización automática en LRCLIB"
-              type="button"
-            >
-              <Icon name="search" />
-              <span>{searching ? "Buscando..." : "Buscar en LRCLIB"}</span>
-            </button>
-
             <button
               className="lyrics-sync-btn"
               onClick={handleSearchOnWeb}

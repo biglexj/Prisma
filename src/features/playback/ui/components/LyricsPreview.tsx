@@ -70,6 +70,7 @@ export function LyricsPreview({
             {hasLyrics ? (lyrics.isSynced ? "LETRAS SINCRONIZADAS (.LRC)" : "LETRAS DE CANCIÓN") : "LETRAS"}
           </span>
           <h2>{title}</h2>
+          {lyrics?.source && <small>Fuente: {lyrics.source}</small>}
         </div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           {onOpenFullscreen ? (

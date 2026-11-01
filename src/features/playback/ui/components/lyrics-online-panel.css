@@ -1,0 +1,23 @@
+.lyrics-online-panel {
+  padding: .7rem 1.5rem;
+  border-bottom: 1px solid var(--outline-variant);
+  background: var(--surface-container);
+  flex-shrink: 0;
+  max-height: 42vh;
+  overflow: auto;
+  font-size: .85rem;
+}
+.lyrics-online-panel summary { cursor: pointer; padding: .4rem 0; font-weight: 600; }
+.lyrics-online-panel p { margin: .5rem 0; color: var(--on-surface-variant); }
+.lyrics-online-fields { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; }
+.lyrics-online-panel label { display: flex; flex-direction: column; gap: .3rem; flex: 1 1 150px; }
+.lyrics-online-panel input:not([type=checkbox]), .lyrics-online-panel select {
+  background: var(--surface-container-highest); color: var(--on-surface); border: 1px solid var(--outline-variant);
+  border-radius: 10px; padding: .6rem; min-width: 0; width: 100%; box-sizing: border-box;
+}
+.lyrics-online-results article, .lyrics-online-receipt { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; padding: .6rem 0; }
+.lyrics-online-results strong { flex: 1 1 100%; }
+.lyrics-online-selection pre { white-space: pre-wrap; max-height: 130px; overflow: auto; font: inherit; }
+.lyrics-online-contribute { border-top: 1px solid var(--outline-variant); margin-top: .6rem; padding-top: .4rem; }
+.lyrics-online-panel .lyrics-online-confirm { flex-direction: row; align-items: center; margin: .7rem 0; }
+.lyrics-online-panel button { min-height: 36px; }

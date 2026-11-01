@@ -8,6 +8,8 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
+- [ ] **Servicio de letras de Biglex J**: integrado en el editor con candidatos, selección explícita de grabación, alternativa LRCLIB y aportes anónimos con seguimiento. Pruebas del contrato y revisión en navegador aprobadas; pendiente aceptación del guardado y reproducción en Prisma nativo. [Proceso](process/active/2026-11-01_servicio-letras/PLAN.md).
+
 - [ ] **Carátulas y metadatos musicales**: búsqueda en Apple Music y Deezer por pista/carpeta, revisión de coincidencias y guardado selectivo de carátula, artista, título y álbum. Implementación local en preview; pendiente aceptación en Prisma nativo. [Proceso](process/active/2026-11-01_carátulas_y_metadatos/PLAN.md).
 
 - [ ] **Cesión de fondos Stable / Dev — 2.0.1**: coordinación exclusiva del escritorio, suspensión de Stable mientras Dev está abierto y recuperación al salir de Dev. Implementados y probados ambos órdenes de arranque con dos procesos nativos y composición 3D; instalador Inno 2.0.1 generado y notas de lanzamiento preparadas. [Proceso](process/active/2026-10-26_cesion_fondos_stable_dev/PLAN.md).

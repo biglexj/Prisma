@@ -10,6 +10,7 @@ export interface ParsedLyrics {
   title?: string;
   artist?: string;
   album?: string;
+  source?: string;
   raw?: string;
 }
 
@@ -25,11 +26,12 @@ export function parseLrc(rawLrc: string): ParsedLyrics {
   let title: string | undefined;
   let artist: string | undefined;
   let album: string | undefined;
+  let source: string | undefined;
   let nextId = 0;
 
   // Regex para timestamps estándar: [00:12.34], [01:23.456], [01:23]
   const timeRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
-  const tagRegex = /^\[(ti|ar|al|by|offset):(.*)\]$/i;
+  const tagRegex = /^\[(ti|ar|al|by|offset|source):(.*)\]$/i;
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
@@ -43,6 +45,7 @@ export function parseLrc(rawLrc: string): ParsedLyrics {
       if (key === "ti") title = val;
       if (key === "ar") artist = val;
       if (key === "al") album = val;
+      if (key === "source") source = val;
       continue;
     }
 
@@ -88,6 +91,7 @@ export function parseLrc(rawLrc: string): ParsedLyrics {
     title,
     artist,
     album,
+    source,
     raw: rawLrc,
   };
 }
