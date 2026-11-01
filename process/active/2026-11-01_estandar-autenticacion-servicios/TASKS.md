@@ -11,16 +11,18 @@
 - [ ] T04 — Construir el hook y UI en React (`useAuthSession`, diálogo/botón en la barra lateral o ajustes con estado del perfil, avatar y cierre de sesión).
 
 ### Fase 2: Atribución en el Servicio de Letras
-- [ ] T05 — Conectar `TrackLyricsService` y el modal de aportes de letras para inyectar la cabecera `Authorization: Bearer <token>` cuando la sesión esté activa.
-- [ ] T06 — Añadir vista/panel de «Mis aportes de letras» que consulte los envíos realizados por el usuario y su estado de revisión en Biglex J.
+- [ ] T05 — Mantener el envío anónimo de letras cuando no hay sesión iniciada.
+- [ ] T06 — Conectar `TrackLyricsService` y el modal de aportes de letras para inyectar `Authorization: Bearer <token>` cuando la sesión esté activa, asociando autoría al usuario.
+- [ ] T07 — Añadir vista/panel de «Mis aportes de letras» que consulte los envíos realizados por el usuario y su estado de revisión en Biglex J.
 
-### Fase 3: Aurora Wallpapers (Catálogo y Subida Comunitaria)
-- [ ] T07 — Integrar sincronización de favoritos en el catálogo de Aurora Wallpapers (`/api/v1/wallpapers` o `/api/v2/catalog`).
-- [ ] T08 — Crear diálogo/modal de subida de wallpapers comunitarios hacia el catálogo público de Aurora.
+### Fase 3: Aurora Wallpapers (VIP, +18 y Subida Comunitaria)
+- [ ] T08 — Adaptar el cliente de Aurora Wallpapers (`WallpapersView.tsx` / API client) para enviar el token de sesión en las peticiones de catálogo.
+- [ ] T09 — Habilitar la visualización y descarga de versiones VIP y wallpapers +18 según los permisos (`isAuthorized !== false`) y preferencias de la cuenta.
+- [ ] T10 — Integrar sincronización de favoritos y crear diálogo/modal para subida comunitaria de wallpapers hacia Aurora.
 
 ### Fase 4: Validación y Cierre
-- [ ] T09 — Ejecutar pruebas automatizadas de estados de sesión, tokens expirados y revocación.
-- [ ] T10 — Documentar el estándar de autenticación en Core (`Docs/features/authentication/`) para su reutilización en futuras apps del ecosistema.
-- [ ] T11 — Preparar la validación y aprobación final.
+- [ ] T11 — Ejecutar pruebas automatizadas de estados de sesión, tokens expirados y revocación.
+- [ ] T12 — Documentar el estándar de autenticación en Core (`Docs/features/authentication/`) para su reutilización en futuras apps del ecosistema.
+- [ ] T13 — Preparar la validación y aprobación final.
 
 Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.

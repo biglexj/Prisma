@@ -7,22 +7,33 @@
 
 ## Objetivo
 
-Establecer un estándar unificado y reusable de autenticación cliente (OAuth 2.0 PKCE con esquema URI `prisma://auth/callback` y respaldo por Device Code) y conectar exclusivamente dos servicios clave con la identidad de Biglex J: atribución de aportes de letras y el catálogo/subida comunitaria de Aurora Wallpapers. La música se gestiona y escucha directamente en la web de Aurora.
+Establecer un estándar unificado y reusable de autenticación cliente (OAuth 2.0 PKCE con esquema URI `prisma://auth/callback` y respaldo por Device Code) y conectar exclusivamente dos servicios clave con la identidad de Biglex J:
+1. **Letras**: Aportes anónimos sin login; aportes con autoría de usuario y seguimiento con sesión activa.
+2. **Aurora Wallpapers**: Exploración y descarga pública sin login; desbloqueo de versiones VIP, acceso a contenido +18 (según reglas y permisos de la cuenta) y subida comunitaria con sesión activa.
+
+La música se gestiona y escucha directamente en la web de Aurora.
+
+## Modelo de Experiencia (Anónimo vs. Autenticado)
+
+| Capacidad | Sin Iniciar Sesión (Anónimo / Público) | Con Sesión Iniciada (Usuario Biglex J) |
+|---|---|---|
+| **Aportes de Letras** | Aporte anónimo libre (como opera actualmente) | Aportes asociados a tu perfil (`user_id` / nombre) y panel de seguimiento de estado |
+| **Aurora Wallpapers (Catálogo)** | Exploración y descarga de wallpapers públicos estándar | Desbloqueo de versiones **VIP** y contenido **+18** (sujeto a cumplimiento de reglas/permisos de la cuenta) |
+| **Aurora Wallpapers (Comunidad)** | Solo lectura y descarga | Subida de wallpapers comunitarios al catálogo con autoría |
+| **Música** | 100% local en Prisma (reproducción local-first) | 100% local en Prisma (la música remota vive en la web de Aurora) |
 
 ## Alcance
 
 - Incluye:
   - Estándar de autenticación cliente con navegador del sistema (PKCE), callback por protocolo de enlace profundo `prisma://auth/callback` y respaldo por código de vinculación (`biglexj.com/vincular`).
   - Almacenamiento seguro en bóveda del sistema operativo (`keyring` / DPAPI en Rust) para tokens de refresco y token de acceso en memoria volátil.
-  - Servicio 1: Identificación y trazabilidad de aportes de letras (asociación de autoría a `user_id`, historial de estado de revisiones y visualización pública del colaborador).
-  - Servicio 2: Aurora Wallpapers (catálogo online `/api/v1/wallpapers` o `/api/v2/catalog`, favoritos del usuario y diálogo para subida comunitaria de wallpapers hacia Aurora).
+  - Servicio 1: Identificación y trazabilidad de aportes de letras cuando la sesión esté activa (preservando el envío anónimo cuando no lo esté).
+  - Servicio 2: Aurora Wallpapers con soporte para cabecera de autenticación (`Authorization: Bearer <token>`) en `/api/v1/wallpapers` o `/api/v2/catalog`, visualización de contenido VIP y filtros/desbloqueo +18 (validando `isAuthorized !== false`), y modal para subida comunitaria.
   - Estados de sesión canónicos: `signedOut`, `authenticating`, `active`, `renewing`, `expired`, `networkError`.
 - No incluye:
-  - Servicios de música online, streaming o catálogos musicales remotos (la música se escucha y sube exclusivamente desde el portal web oficial de Aurora; Prisma permanece 100% local-first para reproducción de audio).
-  - Transmisiones en vivo (streams) ni servicios de retransmisión.
-  - El motor local de Fondos Vivos (el servicio online corresponde exclusivamente al catálogo y subida de Aurora Wallpapers).
-  - Sistema de créditos, cobros ni pasarelas de facturación (postergado para fases posteriores).
-  - Almacenamiento de tokens en texto plano, bases de datos no cifradas o `localStorage`.
+  - Servicios de música online o streaming (preservado 100% en la web de Aurora).
+  - Sistema de créditos o compras integradas (los roles VIP se administran desde Aurora/Ecosistema).
+  - Almacenamiento de tokens en texto plano o `localStorage`.
 
 ## Enfoque
 
@@ -32,11 +43,11 @@ Establecer un estándar unificado y reusable de autenticación cliente (OAuth 2.
    - Flujo alternativo de Device Code (código alfanumérico temporal visible en UI para autorizar en navegador móvil o web).
    - Almacén en bóveda segura nativa (Keyring) y difusión de estado de sesión a React mediante eventos Tauri.
 2. **Servicio de Letras (Lyrics Attribution)**:
-   - Migrar el envío anónimo de letras para firmar con token de usuario autenticado cuando la sesión esté activa.
-   - Visualización de autoría y lista de aportes propios pendientes/aprobados en Biglex J.
-3. **Servicio Aurora Wallpapers (Catálogo y Subida Comunitaria)**:
-   - Consulta autenticada de Aurora Wallpapers (`/api/v1/wallpapers` o `/api/v2/catalog`) y sincronización de favoritos del usuario.
-   - Modal adaptado de Aurora para subida de wallpapers comunitarios directos al catálogo.
+   - Preservar envío anónimo si no hay sesión.
+   - Si la sesión está activa, inyectar el token de usuario para asociar autoría y habilitar panel de estado de aportes.
+3. **Servicio Aurora Wallpapers (Niveles VIP y +18)**:
+   - Pasar el token de usuario a la API de Aurora Wallpapers para desbloquear elementos VIP y +18 autorizados según el perfil.
+   - Sincronización de favoritos del usuario y diálogo para subida comunitaria de wallpapers.
 
 ## Criterios de finalización
 
@@ -44,8 +55,9 @@ Establecer un estándar unificado y reusable de autenticación cliente (OAuth 2.
 - [ ] Flujo de login por navegador con PKCE y retorno a `prisma://auth/callback` verificado en Windows.
 - [ ] Flujo de respaldo con código de dispositivo (`biglexj.com/vincular`) operativo ante bloqueos de protocolo.
 - [ ] Tokens almacenados con seguridad en la bóveda del sistema operativo; cierre de sesión revoca credenciales.
-- [ ] Aportes de letras asociados al usuario autenticado.
-- [ ] Consulta de favoritos y subida comunitaria de Aurora Wallpapers funcional.
+- [ ] Aporte anónimo funcional sin sesión; aporte con autoría verificado con sesión activa.
+- [ ] Desbloqueo de wallpapers VIP y +18 comprobado para cuentas con permisos válidos.
+- [ ] Subida comunitaria de wallpapers funcional.
 - [ ] Prisma libre de referencias o peticiones a streaming musical online (música preservada en la web de Aurora).
 
 ## Autorización
