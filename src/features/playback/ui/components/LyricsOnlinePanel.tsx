@@ -2,7 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useSystemSettings } from "../../../../app/useSystemSettings";
 import { searchPublicLyrics, type PublicLyric } from "../../services/publicLyricsClient";
 import { LyricsContributionPanel } from "./LyricsContributionPanel";
+import { CustomSelect, type CustomSelectOption } from "../../../../shared/ui/CustomSelect";
 import "./lyrics-online-panel.css";
+
+const PROVIDER_OPTIONS: CustomSelectOption<string>[] = [
+  { value: "biglexj", label: "Biglex J · biglexj.com", icon: "globe" },
+  { value: "lrclib", label: "LRCLIB", icon: "music" },
+];
 
 interface Candidate { id: string; title: string; artist: string; album?: string | null; plain: string; versions: { id: string; label: string; duration: number | null; text: string; youtubeId?: string | null }[] }
 function toCandidate(item: PublicLyric): Candidate {
@@ -83,9 +89,18 @@ function ConnectedLyricsPanel({ title, artist, album, duration, text, onApply }:
     <div className="lyrics-online-fields">
       <label>Título<input value={queryTitle} onChange={e => { clearResults(); setQueryTitle(e.target.value); }} /></label>
       <label>Artista<input value={queryArtist} onChange={e => { clearResults(); setQueryArtist(e.target.value); }} /></label>
-      <label>Fuente<select value={provider} onChange={e => { clearResults(); setProvider(e.target.value); }}>
-        <option value="biglexj">Biglex J · biglexj.com</option><option value="lrclib">LRCLIB</option>
-      </select></label>
+      <div className="lyrics-online-field-group">
+        <span className="lyrics-online-label-text">Fuente</span>
+        <CustomSelect
+          value={provider}
+          options={PROVIDER_OPTIONS}
+          onChange={(val) => {
+            clearResults();
+            setProvider(val);
+          }}
+          className="lyrics-online-provider-select"
+        />
+      </div>
       <button type="button" className="lyrics-sync-btn" disabled={busy || !queryTitle.trim()} onClick={() => void search()}>Buscar</button>
       {busy && <button type="button" className="lyrics-sync-btn" onClick={() => { searchController.current?.abort(); setBusy(false); }}>Cancelar</button>}
     </div>
