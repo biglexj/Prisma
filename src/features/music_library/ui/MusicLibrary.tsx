@@ -23,7 +23,6 @@ import { MusicCard } from "./MusicCard";
 import { MusicAlbumCard } from "./MusicAlbumCard";
 import { MusicFolderCard } from "./MusicFolderCard";
 import { BatchLyricsModal } from "./BatchLyricsModal";
-import { BatchMetadataModal } from "./BatchMetadataModal";
 import "./music-library.css";
 
 const VISIBLE_ITEM_LIMIT = 400;
@@ -98,7 +97,6 @@ export function MusicLibrary({
     folderName: string;
     items: MusicLibraryItem[];
   } | null>(null);
-  const [metadataTarget, setMetadataTarget] = useState<{ folderName: string; items: MusicLibraryItem[] } | null>(null);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
@@ -475,10 +473,10 @@ export function MusicLibrary({
         },
       });
       menuItems.push({
-        id: "search-metadata-folder",
-        label: "Buscar carátulas y metadatos...",
-        icon: "disc" as const,
-        onSelect: () => setMetadataTarget({ folderName: folder.displayName, items: folder.allRecursiveItems }),
+        id: "edit-tags-folder",
+        label: "Editar etiquetas / Tags...",
+        icon: "edit" as const,
+        onSelect: () => setEditingTagPaths(folder.allRecursiveItems.map(item => item.path)),
       });
     }
 
@@ -579,17 +577,6 @@ export function MusicLibrary({
             items: [fullItem],
           });
         },
-      },
-      {
-        id: "search-metadata-track",
-        label: "Buscar carátula y metadatos...",
-        icon: "disc" as const,
-        onSelect: () => setMetadataTarget({
-          folderName: target.item.title,
-          items: [items.find(item => item.path === target.item.path) || {
-            path: target.item.path, title: target.item.title, sourcePath: target.item.path, relativeFolder: "",
-          }],
-        }),
       },
       {
         id: "send-to-mobile",
@@ -962,7 +949,7 @@ export function MusicLibrary({
                   items: treeLevel.allRecursiveItems,
                 });
               }}
-              onSearchMetadata={() => setMetadataTarget({ folderName: treeLevel.currentDisplayName, items: treeLevel.allRecursiveItems })}
+              onEditTags={() => setEditingTagPaths(treeLevel.allRecursiveItems.map(item => item.path))}
             />
           ) : null}
 
@@ -1092,12 +1079,6 @@ export function MusicLibrary({
         onClose={() => setBatchLyricsTarget(null)}
         onFinished={() => onRefresh && onRefresh()}
       />
-      {metadataTarget ? <BatchMetadataModal
-        folderName={metadataTarget.folderName}
-        items={metadataTarget.items}
-        onClose={() => setMetadataTarget(null)}
-        onFinished={() => onRefresh?.()}
-      /> : null}
     </section>
   );
 }

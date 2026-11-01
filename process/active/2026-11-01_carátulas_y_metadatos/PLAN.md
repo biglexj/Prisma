@@ -6,12 +6,13 @@ Biglex solicita implementar en Prisma el escaneo de carátulas, artistas, títul
 
 ## Alcance
 
-- Opción por canción, carpeta y cabecera de carpeta junto a Letras.
+- Búsqueda integrada en el editor de etiquetas: acceso desde General, Carátula y la pestaña Buscar en línea. Los menús de canción/carpeta y la cabecera de carpeta abren el editor; se retira la herramienta independiente.
 - Consultas HTTP desde Rust: iTunes primero; Deezer cuando falla/no devuelve resultados y bajo petición manual cuando las coincidencias no son útiles.
 - Limpieza del ruido editorial conservando las versiones musicales para que se puedan distinguir.
-- Revisión y selección explícita por canción, consulta editable y elección de campos; completar vacíos por defecto o reemplazar bajo elección del usuario.
+- Revisión y selección explícita por canción, consulta editable y elección de campos. Desde Carátula solo se elige imagen inicialmente; desde General se ofrecen todos los campos. Permite reemplazar datos existentes y ofrece completar únicamente vacíos como opción.
 - Carátula cuadrada validada y descargada en alta resolución; incrustación mediante el escritor de etiquetas existente y actualización de la caché visual.
 - Límites de tiempo, tamaño, destinos de descarga y ritmo de consultas. Detención al finalizar la operación en curso.
+- Las coincidencias y las imágenes descargadas se preparan en memoria. Solo Guardar cambios escribe etiquetas; Cancelar descarta el borrador. El lote conserva una propuesta distinta por archivo, con prevalencia de los campos comunes que el usuario rellene.
 
 ## Adaptación al escritorio
 

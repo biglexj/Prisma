@@ -3,6 +3,10 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Icon } from "../../../shared/ui/Icon";
 import type { AudioTagData, UpdateAudioTagsRequest } from "../model/types";
 import { tagsClient } from "../tauri/client";
+import { MetadataLookupPanel } from "./MetadataLookupPanel";
+import { buildBatchTagRequests } from "../model/metadataDraft";
+import { invalidateMusicArtwork } from "../../music_library/useMusicArtwork";
+import type { MusicLibraryItem } from "../../music_library/model/types";
 import "./tag-editor-modal.css";
 
 interface TagEditorModalProps {
@@ -13,7 +17,12 @@ interface TagEditorModalProps {
 }
 
 export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorModalProps) {
-  const [activeTab, setActiveTab] = useState<"general" | "details" | "artwork" | "lyrics">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "details" | "artwork" | "lyrics" | "online">("general");
+  const [lookupMode, setLookupMode] = useState<"all" | "cover">("all");
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupItems, setLookupItems] = useState<MusicLibraryItem[]>([]);
+  const [metadataDrafts, setMetadataDrafts] = useState<Record<string, UpdateAudioTagsRequest>>({});
+  const [lookupNotice, setLookupNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +43,7 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
   const [artworkDataUrl, setArtworkDataUrl] = useState<string | null>(null);
   const [artworkChanged, setArtworkChanged] = useState(false);
 
-  const pathsKey = paths.join("|");
+  const pathsKey = JSON.stringify(paths);
   const isBatch = paths.length > 1;
   const singlePath = paths[0] || "";
 
@@ -43,11 +52,19 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
     setLoading(true);
     setError(null);
     setArtworkChanged(false);
+    setLookupBusy(false);
+    setMetadataDrafts({});
+    setLookupNotice("");
+    setActiveTab("general");
+    let cancelled = false;
+    setLookupItems(paths.map(path => ({ path, title: path.split(/[\\/]/).pop()!.replace(/\.[^.]+$/, ""), sourcePath: path, relativeFolder: "" })));
 
     if (!isBatch) {
       tagsClient
         .readAudioTags(singlePath, true)
         .then((data: AudioTagData) => {
+          if (cancelled) return;
+          setLookupItems([{ path: singlePath, title: data.title || singlePath.split(/[\\/]/).pop()!.replace(/\.[^.]+$/, ""), titleFromMetadata: !!data.title, artist: data.artist || "", album: data.album || "", sourcePath: singlePath, relativeFolder: "" }]);
           setTitle(data.title || "");
           setArtist(data.artist || "");
           setAlbum(data.album || "");
@@ -62,8 +79,8 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
           setLyrics(data.lyrics || "");
           setArtworkDataUrl(data.artwork_data_url || null);
         })
-        .catch((e) => setError(String(e)))
-        .finally(() => setLoading(false));
+        .catch((e) => { if (!cancelled) setError(String(e)); })
+        .finally(() => { if (!cancelled) setLoading(false); });
     } else {
       // Modo por lotes: inicializar campos comunes vacíos
       setTitle("");
@@ -81,7 +98,38 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
       setArtworkDataUrl(null);
       setLoading(false);
     }
+    return () => { cancelled = true; };
   }, [isOpen, pathsKey]);
+
+  const openLookup = (mode: "all" | "cover") => {
+    setLookupMode(mode);
+    setActiveTab("online");
+  };
+  const readCurrentForLookup = async (path: string): Promise<AudioTagData> => {
+    const current = await tagsClient.readAudioTags(path, false);
+    if (!isBatch) return { ...current, title, artist, album, has_artwork: !!artworkDataUrl };
+    const draft = metadataDrafts[path];
+    return { ...current, title: draft?.title ?? current.title, artist: artist.trim() || draft?.artist || current.artist,
+      album: album.trim() || draft?.album || current.album,
+      has_artwork: artworkChanged ? !!artworkDataUrl : draft?.artwork_base64 !== undefined ? !!draft.artwork_base64 : current.has_artwork };
+  };
+  const prepareMetadata = (updates: UpdateAudioTagsRequest[]) => {
+    if (!isBatch) {
+      const update = updates[0];
+      if (update.title !== undefined) setTitle(update.title || "");
+      if (update.artist !== undefined) setArtist(update.artist || "");
+      if (update.album !== undefined) setAlbum(update.album || "");
+      if (update.artwork_base64 !== undefined) { setArtworkDataUrl(update.artwork_base64 || null); setArtworkChanged(true); }
+      setActiveTab(lookupMode === "cover" ? "artwork" : "general");
+    } else {
+      setMetadataDrafts(old => {
+        const next = { ...old };
+        for (const update of updates) next[update.path] = { ...next[update.path], ...update };
+        return next;
+      });
+    }
+    setLookupNotice("Datos preparados. Revisa los cambios y pulsa «Guardar cambios» para escribirlos en el audio.");
+  };
 
   const handlePickArtwork = async () => {
     try {
@@ -115,6 +163,7 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
   };
 
   const handleSave = async () => {
+    if (saving || loading || lookupBusy) return;
     setSaving(true);
     setError(null);
 
@@ -139,8 +188,7 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
         await tagsClient.writeAudioTags(req);
       } else {
         // Batch write: solo enviar campos que se hayan rellenado
-        const reqs: UpdateAudioTagsRequest[] = paths.map((p) => ({
-          path: p,
+        const reqs = buildBatchTagRequests(paths, metadataDrafts, {
           artist: artist.trim() ? artist.trim() : undefined,
           album: album.trim() ? album.trim() : undefined,
           album_artist: albumArtist.trim() ? albumArtist.trim() : undefined,
@@ -148,9 +196,16 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
           genre: genre.trim() ? genre.trim() : undefined,
           comment: comment.trim() ? comment.trim() : undefined,
           artwork_base64: artworkChanged ? (artworkDataUrl || "") : undefined,
-        }));
-        await tagsClient.batchWriteAudioTags(reqs);
+        }).filter(request => Object.keys(request).some(key => key !== "path" && request[key as keyof UpdateAudioTagsRequest] !== undefined));
+        const errors = await tagsClient.batchWriteAudioTags(reqs);
+        if (errors.length) {
+          await Promise.all(paths.map(invalidateMusicArtwork));
+          onSaved?.();
+          throw new Error(errors.join("\n"));
+        }
       }
+
+      await Promise.all(paths.map(invalidateMusicArtwork));
 
       if (onSaved) onSaved();
       onClose();
@@ -164,19 +219,19 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
   if (!isOpen) return null;
 
   return (
-    <div className="tag-editor-backdrop" onClick={onClose}>
-      <div className="tag-editor-dialog" onClick={(e) => e.stopPropagation()}>
+    <div className="tag-editor-backdrop" onClick={saving || lookupBusy ? undefined : onClose}>
+      <div className="tag-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="tag-editor-title" onClick={(e) => e.stopPropagation()}>
         <header className="tag-editor-header">
           <div className="tag-editor-header-info">
-            <h2>{isBatch ? `Editar ${paths.length} canciones en lote` : "Editor de etiquetas de audio"}</h2>
-            <p>{isBatch ? "Los cambios aplicados afectarán a todas las canciones seleccionadas" : singlePath}</p>
+            <h2 id="tag-editor-title">{isBatch ? `Editar ${paths.length} canciones en lote` : "Editor de etiquetas de audio"}</h2>
+            <p>{isBatch ? "Campos comunes para la selección; búsqueda en línea por canción" : singlePath}</p>
           </div>
-          <button className="tag-editor-close-btn" onClick={onClose} type="button">
+          <button className="tag-editor-close-btn" onClick={onClose} type="button" disabled={saving || lookupBusy} aria-label="Cerrar editor de etiquetas">
             <Icon name="x" />
           </button>
         </header>
 
-        <nav className="tag-editor-tabs">
+        <nav className="tag-editor-tabs" aria-label="Secciones de etiquetas" inert={saving || lookupBusy}>
           <button
             className={`tag-editor-tab-btn ${activeTab === "general" ? "is-active" : ""}`}
             onClick={() => setActiveTab("general")}
@@ -207,6 +262,7 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
               Letras
             </button>
           ) : null}
+          <button className={`tag-editor-tab-btn ${activeTab === "online" ? "is-active" : ""}`} onClick={() => openLookup("all")} type="button">Buscar en línea</button>
         </nav>
 
         <div className="tag-editor-body">
@@ -221,6 +277,12 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
                   {error}
                 </div>
               ) : null}
+              {lookupNotice ? <p className="tag-editor-lookup-notice" role="status">{lookupNotice}</p> : null}
+              {isBatch && Object.keys(metadataDrafts).length ? <p className="tag-editor-lookup-notice">{Object.keys(metadataDrafts).length} canciones con metadatos individuales preparados. Los campos comunes que rellenes en General prevalecen al guardar.</p> : null}
+
+              {activeTab === "online" ? <MetadataLookupPanel key={`${pathsKey}:${lookupMode}`} items={lookupItems} mode={lookupMode} readCurrent={readCurrentForLookup} onPrepared={prepareMetadata} onBusyChange={setLookupBusy} /> : null}
+
+              {activeTab === "general" ? <div className="tag-editor-online-action"><button className="tag-editor-btn is-secondary" type="button" onClick={() => openLookup("all")}><Icon name="search" /><span>Buscar carátula y metadatos en línea</span></button><span>Revisa título, artista, álbum y carátula antes de guardar.</span></div> : null}
 
               {activeTab === "general" ? (
                 <div className="tag-editor-grid">
@@ -355,6 +417,7 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
                     )}
                   </div>
                   <div className="tag-editor-artwork-actions">
+                    <button className="tag-editor-btn is-primary" onClick={() => openLookup("cover")} type="button"><Icon name="search" /><span>Buscar carátula en línea</span></button>
                     <button className="tag-editor-btn is-secondary" onClick={handlePickArtwork} type="button">
                       <Icon name="image" />
                       <span>{artworkDataUrl ? "Cambiar imagen de carátula" : "Cargar carátula"}</span>
@@ -385,10 +448,10 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
         </div>
 
         <footer className="tag-editor-footer">
-          <button className="tag-editor-btn is-secondary" onClick={onClose} type="button" disabled={saving}>
+          <button className="tag-editor-btn is-secondary" onClick={onClose} type="button" disabled={saving || lookupBusy}>
             Cancelar
           </button>
-          <button className="tag-editor-btn is-primary" onClick={handleSave} type="button" disabled={saving || loading}>
+          <button className="tag-editor-btn is-primary" onClick={handleSave} type="button" disabled={saving || loading || lookupBusy}>
             {saving ? "Guardando etiquetas..." : "Guardar cambios"}
           </button>
         </footer>
