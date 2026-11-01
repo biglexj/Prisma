@@ -269,182 +269,178 @@ export function TagEditorModal({ paths, isOpen, onClose, onSaved }: TagEditorMod
               {activeTab === "online" ? <MetadataLookupPanel key={`${pathsKey}:${lookupMode}`} items={lookupItems} mode={lookupMode} readCurrent={readCurrentForLookup} onPrepared={prepareMetadata} onBusyChange={setLookupBusy} /> : null}
 
               {activeTab === "general" ? (
-                <div className="tag-editor-general-layout">
-                  {/* Columna Izquierda: Carátula interactiva */}
-                  <div className="tag-editor-cover-col">
-                    <div className="tag-editor-cover-preview">
-                      {artworkDataUrl ? (
-                        <img src={artworkDataUrl} alt="Carátula" />
-                      ) : (
-                        <div className="tag-editor-cover-placeholder">
-                          <Icon name="disc" />
-                          <span>Sin carátula</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="tag-editor-cover-actions">
-                      <button
-                        className="tag-editor-btn is-secondary"
-                        onClick={handlePickArtwork}
-                        type="button"
-                      >
-                        <Icon name="image" />
-                        <span>{artworkDataUrl ? "Cambiar carátula" : "Cargar carátula"}</span>
-                      </button>
-                      <button
-                        className="tag-editor-btn is-secondary"
-                        onClick={() => openLookup("cover")}
-                        type="button"
-                      >
-                        <Icon name="search" />
-                        <span>Buscar en línea</span>
-                      </button>
-                      {artworkDataUrl ? (
-                        <button
-                          className="tag-editor-btn is-danger"
-                          onClick={handleRemoveArtwork}
-                          type="button"
-                        >
-                          <Icon name="trash" />
-                          <span>Eliminar carátula</span>
-                        </button>
-                      ) : null}
-                    </div>
+                <div className="tag-editor-general-wrapper">
+                  <div className="tag-editor-online-action">
+                    <button
+                      className="tag-editor-btn is-secondary"
+                      type="button"
+                      onClick={() => openLookup("all")}
+                    >
+                      <Icon name="search" />
+                      <span>Buscar carátula y metadatos en línea</span>
+                    </button>
+                    <span>Revisa título, artista, álbum y carátula antes de guardar.</span>
                   </div>
 
-                  {/* Columna Derecha: Metadatos y Detalles */}
-                  <div className="tag-editor-meta-col">
-                    <div className="tag-editor-online-action">
-                      <button
-                        className="tag-editor-btn is-secondary"
-                        type="button"
-                        onClick={() => openLookup("all")}
-                      >
-                        <Icon name="search" />
-                        <span>Buscar carátula y metadatos en línea</span>
-                      </button>
-                      <span>Revisa título, artista, álbum y carátula antes de guardar.</span>
+                  <div className="tag-editor-general-layout">
+                    {/* Columna Izquierda: Carátula interactiva */}
+                    <div className="tag-editor-cover-col">
+                      <div className="tag-editor-cover-preview">
+                        {artworkDataUrl ? (
+                          <img src={artworkDataUrl} alt="Carátula" />
+                        ) : (
+                          <div className="tag-editor-cover-placeholder">
+                            <Icon name="disc" />
+                            <span>Sin carátula</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="tag-editor-cover-actions">
+                        <button
+                          className="tag-editor-btn is-secondary"
+                          onClick={handlePickArtwork}
+                          type="button"
+                        >
+                          <Icon name="image" />
+                          <span>{artworkDataUrl ? "Cambiar carátula" : "Cargar carátula"}</span>
+                        </button>
+                        {artworkDataUrl ? (
+                          <button
+                            className="tag-editor-btn is-danger"
+                            onClick={handleRemoveArtwork}
+                            type="button"
+                          >
+                            <Icon name="trash" />
+                            <span>Eliminar carátula</span>
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
 
-                    <div className="tag-editor-grid">
-                      {!isBatch ? (
-                        <div className="tag-editor-field is-full">
-                          <label>Título de la pista</label>
+                    {/* Columna Derecha: Metadatos y Detalles */}
+                    <div className="tag-editor-meta-col">
+                      <div className="tag-editor-grid">
+                        {!isBatch ? (
+                          <div className="tag-editor-field">
+                            <label>Título de la pista</label>
+                            <input
+                              placeholder="Ej. Yesterday"
+                              type="text"
+                              value={title}
+                              onChange={(e) => setTitle(e.target.value)}
+                            />
+                          </div>
+                        ) : null}
+
+                        <div className="tag-editor-field">
+                          <label>Artista</label>
                           <input
-                            placeholder="Ej. Yesterday"
+                            placeholder={isBatch ? "(Mantener existentes)" : "Ej. The Beatles"}
                             type="text"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
+                            value={artist}
+                            onChange={(e) => setArtist(e.target.value)}
                           />
                         </div>
-                      ) : null}
 
-                      <div className="tag-editor-field">
-                        <label>Artista</label>
-                        <input
-                          placeholder={isBatch ? "(Mantener existentes)" : "Ej. The Beatles"}
-                          type="text"
-                          value={artist}
-                          onChange={(e) => setArtist(e.target.value)}
-                        />
-                      </div>
+                        <div className="tag-editor-field">
+                          <label>Álbum</label>
+                          <input
+                            placeholder={isBatch ? "(Mantener existentes)" : "Ej. Help!"}
+                            type="text"
+                            value={album}
+                            onChange={(e) => setAlbum(e.target.value)}
+                          />
+                        </div>
 
-                      <div className="tag-editor-field">
-                        <label>Álbum</label>
-                        <input
-                          placeholder={isBatch ? "(Mantener existentes)" : "Ej. Help!"}
-                          type="text"
-                          value={album}
-                          onChange={(e) => setAlbum(e.target.value)}
-                        />
-                      </div>
+                        <div className="tag-editor-field">
+                          <label>Artista del Álbum</label>
+                          <input
+                            placeholder={isBatch ? "(Mantener existentes)" : "Ej. The Beatles"}
+                            type="text"
+                            value={albumArtist}
+                            onChange={(e) => setAlbumArtist(e.target.value)}
+                          />
+                        </div>
 
-                      <div className="tag-editor-field">
-                        <label>Artista del Álbum</label>
-                        <input
-                          placeholder={isBatch ? "(Mantener existentes)" : "Ej. The Beatles"}
-                          type="text"
-                          value={albumArtist}
-                          onChange={(e) => setAlbumArtist(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="tag-editor-field">
-                        <label>Año de lanzamiento</label>
-                        <input
-                          placeholder={isBatch ? "(Mantener)" : "Ej. 1965"}
-                          type="number"
-                          value={year}
-                          onChange={(e) => setYear(e.target.value ? parseInt(e.target.value, 10) : "")}
-                        />
-                      </div>
-
-                      <div className="tag-editor-field">
-                        <label>Género</label>
-                        <input
-                          placeholder={isBatch ? "(Mantener existentes)" : "Ej. Rock, Pop, Clásica"}
-                          type="text"
-                          value={genre}
-                          onChange={(e) => setGenre(e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Detalles técnicos (2 filas) */}
-                    <div className="tag-editor-details-section">
-                      {!isBatch ? (
-                        <div className="tag-editor-track-disc-grid">
+                        {/* Fila a dos columnas: Género a la izquierda, Año a la derecha */}
+                        <div className="tag-editor-row-2col">
                           <div className="tag-editor-field">
-                            <label>Pista (Nº / Total)</label>
-                            <div className="tag-editor-pair-inputs">
-                              <input
-                                placeholder="1"
-                                type="number"
-                                value={trackNumber}
-                                onChange={(e) => setTrackNumber(e.target.value ? parseInt(e.target.value, 10) : "")}
-                                aria-label="Número de pista"
-                              />
-                              <span className="tag-editor-pair-sep">/</span>
-                              <input
-                                placeholder="12"
-                                type="number"
-                                value={trackTotal}
-                                onChange={(e) => setTrackTotal(e.target.value ? parseInt(e.target.value, 10) : "")}
-                                aria-label="Total de pistas"
-                              />
-                            </div>
+                            <label>Género</label>
+                            <input
+                              placeholder={isBatch ? "(Mantener existentes)" : "Ej. Rock, Pop, Clásica"}
+                              type="text"
+                              value={genre}
+                              onChange={(e) => setGenre(e.target.value)}
+                            />
                           </div>
                           <div className="tag-editor-field">
-                            <label>Disco (Nº / Total)</label>
-                            <div className="tag-editor-pair-inputs">
-                              <input
-                                placeholder="1"
-                                type="number"
-                                value={discNumber}
-                                onChange={(e) => setDiscNumber(e.target.value ? parseInt(e.target.value, 10) : "")}
-                                aria-label="Número de disco"
-                              />
-                              <span className="tag-editor-pair-sep">/</span>
-                              <input
-                                placeholder="1"
-                                type="number"
-                                value={discTotal}
-                                onChange={(e) => setDiscTotal(e.target.value ? parseInt(e.target.value, 10) : "")}
-                                aria-label="Total de discos"
-                              />
-                            </div>
+                            <label>Año de lanzamiento</label>
+                            <input
+                              placeholder={isBatch ? "(Mantener)" : "Ej. 1965"}
+                              type="number"
+                              value={year}
+                              onChange={(e) => setYear(e.target.value ? parseInt(e.target.value, 10) : "")}
+                            />
                           </div>
                         </div>
-                      ) : null}
+                      </div>
 
-                      <div className="tag-editor-field is-full">
-                        <label>Comentarios / Descripción</label>
-                        <input
-                          placeholder={isBatch ? "(Mantener existentes)" : "Información adicional o notas..."}
-                          type="text"
-                          value={comment}
-                          onChange={(e) => setComment(e.target.value)}
-                        />
+                      {/* Detalles técnicos (2 filas) */}
+                      <div className="tag-editor-details-section">
+                        {!isBatch ? (
+                          <div className="tag-editor-track-disc-grid">
+                            <div className="tag-editor-field">
+                              <label>Pista (Nº / Total)</label>
+                              <div className="tag-editor-pair-inputs">
+                                <input
+                                  placeholder="1"
+                                  type="number"
+                                  value={trackNumber}
+                                  onChange={(e) => setTrackNumber(e.target.value ? parseInt(e.target.value, 10) : "")}
+                                  aria-label="Número de pista"
+                                />
+                                <span className="tag-editor-pair-sep">/</span>
+                                <input
+                                  placeholder="12"
+                                  type="number"
+                                  value={trackTotal}
+                                  onChange={(e) => setTrackTotal(e.target.value ? parseInt(e.target.value, 10) : "")}
+                                  aria-label="Total de pistas"
+                                />
+                              </div>
+                            </div>
+                            <div className="tag-editor-field">
+                              <label>Disco (Nº / Total)</label>
+                              <div className="tag-editor-pair-inputs">
+                                <input
+                                  placeholder="1"
+                                  type="number"
+                                  value={discNumber}
+                                  onChange={(e) => setDiscNumber(e.target.value ? parseInt(e.target.value, 10) : "")}
+                                  aria-label="Número de disco"
+                                />
+                                <span className="tag-editor-pair-sep">/</span>
+                                <input
+                                  placeholder="1"
+                                  type="number"
+                                  value={discTotal}
+                                  onChange={(e) => setDiscTotal(e.target.value ? parseInt(e.target.value, 10) : "")}
+                                  aria-label="Total de discos"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div className="tag-editor-field is-full">
+                          <label>Comentarios / Descripción</label>
+                          <input
+                            placeholder={isBatch ? "(Mantener existentes)" : "Información adicional o notas..."}
+                            type="text"
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
