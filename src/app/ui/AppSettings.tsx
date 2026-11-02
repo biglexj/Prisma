@@ -183,13 +183,6 @@ export function AppSettings({
             <span>Herramientas</span>
           </button>
           <button
-            className={activeTab === "progress" ? "is-active" : ""}
-            onClick={() => setActiveTab("progress")}
-          >
-            <Icon name="sliders" />
-            <span>Barra de Progreso</span>
-          </button>
-          <button
             className={activeTab === "synapse" ? "is-active" : ""}
             onClick={() => setActiveTab("synapse")}
           >
@@ -202,6 +195,13 @@ export function AppSettings({
           >
             <Icon name="sparkles" />
             <span>Ecosistema Online</span>
+          </button>
+          <button
+            className={activeTab === "progress" ? "is-active" : ""}
+            onClick={() => setActiveTab("progress")}
+          >
+            <Icon name="sliders" />
+            <span>Barra de Progreso</span>
           </button>
           <button
             className={activeTab === "shortcuts" ? "is-active" : ""}
