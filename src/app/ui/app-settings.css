@@ -1440,6 +1440,8 @@
   flex-shrink: 0;
   width: 52px;
   height: 30px;
+  /* El resaltado nativo al pulsar sigue la forma del label, no la del slider. */
+  border-radius: 999px;
   cursor: pointer;
   user-select: none;
 }
