@@ -181,6 +181,7 @@ pub fn run() {
     // Detección de argumento --synapse-send para envío directo a través de la red LAN
     let all_args: Vec<String> = std::env::args().collect();
     if let Some(callback) = infrastructure::auth::deeplink::extract_callback(&all_args) {
+        if infrastructure::auth::deeplink::forward_to_running(&callback) { return; }
         infrastructure::auth::deeplink::stash(callback);
     }
     let initial_synapse_send_file = all_args

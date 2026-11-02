@@ -83,7 +83,7 @@ export function useAuthSession() {
     return prismaAuth.getAccessToken();
   }, []);
 
-  const isAuthenticated = session.state === "active" && Boolean(session.userId);
+  const isAuthenticated = session.state === "active" && session.verified && Boolean(session.userId);
 
   return {
     session,

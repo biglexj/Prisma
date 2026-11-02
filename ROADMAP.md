@@ -8,7 +8,7 @@ Plan de trabajo, objetivos de producto y hoja de ruta estratégica del proyecto.
 
 ## 🔴 Pendientes activos
 
-- [ ] **Estándar de Autenticación y Servicios Conectados**: inicio de sesión unificado OAuth 2.0 PKCE con esquema URI `prisma://auth/callback` y respaldo por Device Code (`biglexj.com/vincular`). Modelo de 2 servicios: letras (anónimo sin login; con autoría y seguimiento logueado) y Aurora Wallpapers (público sin login; desbloqueo de versiones VIP, +18 según reglas y subida comunitaria logueado). [Proceso](process/active/2026-11-01_estandar-autenticacion-servicios/PLAN.md).
+- [ ] **Estándar de Autenticación y Servicios Conectados**: callbacks PKCE corregidos para `prisma://auth/callback` y `prisma-dev://auth/callback`, adaptador Supabase y componente reutilizable en Core. Compilación y pruebas técnicas aprobadas; pendientes login real en ambas ediciones y respaldo Device Code. Modelo de 2 servicios: letras (anónimo sin login; con autoría y seguimiento logueado) y Aurora Wallpapers (público sin login; desbloqueo de versiones VIP, +18 según reglas y subida comunitaria logueado). [Proceso](process/active/2026-11-01_estandar-autenticacion-servicios/PLAN.md).
 
 - [ ] **Fondos vivos — vídeos y capas Aurora**: catálogo de 25 efectos, galería, controles por efecto, ambiente independiente como capa 2, dinámicos, escenarios, partículas 3D/2D y parallax opcional. Coexistencia con imagen/vídeo y pausas comprobadas en WebView2; capturas PNG 1080p reutilizables. Pendientes ecualizador real, políticas automáticas, recuperación de Explorer, aceptación física final y rendimiento. [Proceso](process/active/2026-10-25_motor_wallpapers_nativo/PLAN.md).
 

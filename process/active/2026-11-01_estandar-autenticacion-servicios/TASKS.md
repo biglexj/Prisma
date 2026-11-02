@@ -22,7 +22,15 @@
 
 ### Fase 4: Validación y Cierre
 - [ ] T11 — Ejecutar pruebas automatizadas de estados de sesión, tokens expirados y revocación.
-- [ ] T12 — Documentar el estándar de autenticación en Core (`Docs/features/authentication/`) para su reutilización en futuras apps del ecosistema.
+- [x] T12 — Documentar el estándar de autenticación nativa y componente Rust de callbacks en Core (`Docs/features/authentication/`) para su reutilización en futuras apps del ecosistema.
 - [ ] T13 — Preparar la validación y aprobación final.
 
 Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.
+
+## Corrección de redirecciones y adaptador
+
+- [x] Conservar el callback original, validar la ruta exacta y separar Stable/Dev conforme a los argumentos de ejecución.
+- [x] Usar por defecto el proveedor real, configuración pública distribuible y formato PKCE/renovación compatible con Supabase.
+- [x] Sustituir la prueba basada en reloj por entropía criptográfica y recuperar el retorno en la instancia que inició el flujo.
+- [x] Exigir sesión verificada antes de habilitar acceso y evitar afirmar permisos VIP por tener sesión.
+- [ ] Verificar con Biglex un login real de cada edición y su retorno completo. No equivale a compilación o prueba HTTP simulada.

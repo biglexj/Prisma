@@ -57,4 +57,4 @@ Establecer un estándar unificado y reusable de autenticación cliente (OAuth 2.
 
 ## Autorización
 
-- [ ] Plan aprobado para ejecución.
+- [x] Alcance autorizado por Biglex: corregir autenticación y redirecciones de Prisma/Prisma Dev, contrastar Intelligence/Hub y promover el componente reutilizable a Core. Sin publicación ni cambio remoto de permisos.

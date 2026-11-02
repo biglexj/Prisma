@@ -96,6 +96,22 @@ fn handle_client(stream: TcpStream, app: AppHandle) {
 
     let trimmed_first_line = first_line.trim();
 
+    if let Some(callback) = trimmed_first_line.strip_prefix("PRISMA_AUTH_CALLBACK ") {
+        let local_peer = reader.get_ref().peer_addr().is_ok_and(|address| address.ip().is_loopback());
+        if !local_peer || callback.len() > 8192 || !crate::infrastructure::auth::deeplink::is_callback_url(callback) { return; }
+        let Some(session) = app.try_state::<crate::infrastructure::auth::session::SessionManager>() else { return; };
+        if !session.has_pending_login() { return; }
+        // Confirmar entrega antes de la operación de red; nunca devolver tokens por IPC.
+        let _ = writeln!(reader.get_mut(), "PRISMA_AUTH_CALLBACK_DELIVERED");
+        bring_main_window_to_front(&app);
+        if let Some(code) = crate::infrastructure::auth::deeplink::query_param(callback, "code") {
+            let _ = tauri::async_runtime::block_on(session.complete_login(&app, &code));
+        } else {
+            session.cancel_login(&app);
+        }
+        return;
+    }
+
     // ── Soporte de Deep Link / Raw IPC string (prisma://... o aurora-synapse://...) ──
     if trimmed_first_line.starts_with("prisma://")
         || trimmed_first_line.starts_with("aurora-synapse://")

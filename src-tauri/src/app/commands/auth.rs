@@ -6,8 +6,12 @@ use crate::infrastructure::auth::deeplink;
 use crate::infrastructure::auth::session::{SessionManager, SessionSnapshot};
 
 #[tauri::command]
-pub fn auth_session_status(session: State<'_, SessionManager>) -> SessionSnapshot {
-    session.snapshot()
+pub async fn auth_session_status(app: AppHandle, session: State<'_, SessionManager>) -> Result<SessionSnapshot, String> {
+    let snapshot = session.snapshot();
+    if !snapshot.verified && session.has_session() {
+        return session.refresh(&app).await;
+    }
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -46,8 +50,11 @@ pub async fn auth_session_logout(
 }
 
 #[tauri::command]
-pub fn auth_session_access_token(session: State<'_, SessionManager>) -> Option<String> {
-    session.access_token()
+pub async fn auth_session_access_token(app: AppHandle, session: State<'_, SessionManager>) -> Result<Option<String>, String> {
+    if session.access_token().is_none() && session.has_session() {
+        session.refresh(&app).await?;
+    }
+    Ok(session.access_token())
 }
 
 /// Comprueba si hay una URL profunda pendiente consumida durante el arranque
@@ -62,6 +69,7 @@ pub async fn auth_consume_pending_callback(
             let snap = session.complete_login(&app, &code).await?;
             return Ok(Some(snap));
         }
+        session.cancel_login(&app);
     }
     Ok(None)
 }

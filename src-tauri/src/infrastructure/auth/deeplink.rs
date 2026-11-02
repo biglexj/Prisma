@@ -8,7 +8,6 @@
 use std::sync::{Mutex, OnceLock};
 
 /// Callback que el proveedor debe devolver a esta app.
-pub const CALLBACK_PATH: &str = "auth/callback";
 
 /// Esquema por entorno: producción y desarrollo no comparten callback.
 pub fn scheme() -> &'static str {
@@ -21,15 +20,17 @@ pub fn scheme() -> &'static str {
 
 /// Callback completo que se registra en el proveedor de identidad.
 pub fn callback_url() -> String {
-    format!("{}://{CALLBACK_PATH}", scheme())
+    super::callback_contract::callback_url_for(scheme())
 }
 
 fn dev_flavor() -> bool {
     std::env::var("PRISMA_FLAVOR")
-        .or_else(|_| std::env::var("AURORA_HUB_FLAVOR"))
         .ok()
         .is_some_and(|value| value.trim().eq_ignore_ascii_case("dev"))
         || cfg!(debug_assertions)
+        || std::env::args().any(|arg| matches!(arg.as_str(), "--dev" | "--multi-instance" | "-d"))
+        || std::env::var_os("PRISMA_DEV").is_some()
+        || std::env::var_os("PRISMA_MULTI_INSTANCE").is_some()
 }
 
 /// Callback pendiente de ser consumido por el motor de sesión.
@@ -51,24 +52,34 @@ pub fn take() -> Option<String> {
     pending_slot().lock().ok().and_then(|mut slot| slot.take())
 }
 
+/// Entrega el retorno al proceso abierto. La confirmación solo acredita entrega,
+/// no autenticación: la sesión verifica el código con el proveedor y su PKCE.
+pub fn forward_to_running(url: &str) -> bool {
+    use std::io::{BufRead, BufReader, Write};
+    use std::net::{SocketAddr, TcpStream};
+    use std::time::Duration;
+    if !is_callback_url(url) || url.contains(['\r', '\n']) || url.len() > 8192 { return false; }
+    for port in [49290, 49292, 49293] {
+        let address = SocketAddr::from(([127, 0, 0, 1], port));
+        let Ok(mut stream) = TcpStream::connect_timeout(&address, Duration::from_millis(150)) else { continue; };
+        let _ = stream.set_write_timeout(Some(Duration::from_secs(1)));
+        let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
+        if writeln!(stream, "PRISMA_AUTH_CALLBACK {}", url.trim()).is_err() { continue; }
+        let mut reply = String::new();
+        let mut reader = BufReader::new(stream);
+        if reader.read_line(&mut reply).is_ok() && reply.trim() == "PRISMA_AUTH_CALLBACK_DELIVERED" { return true; }
+    }
+    false
+}
+
 /// Extrae la URL de callback de los argumentos de arranque o single-instance.
 pub fn extract_callback(args: &[String]) -> Option<String> {
-    args.iter()
-        .find_map(|argument| argument.trim().strip_prefix(scheme()))
-        .map(|rest| format!("{}://{rest}", scheme()))
-        .filter(|url| is_callback_url(url))
+    super::callback_contract::extract_callback_for(args, scheme())
 }
 
 /// ¿La URL apunta al callback esperado de esta app?
 pub fn is_callback_url(url: &str) -> bool {
-    let Some(rest) = url.trim().strip_prefix(scheme()) else {
-        return false;
-    };
-    let without_query = rest.split('?').next().unwrap_or_default();
-    without_query
-        .trim_start_matches("://")
-        .trim_end_matches('/')
-        .eq_ignore_ascii_case(CALLBACK_PATH)
+    super::callback_contract::is_callback_for(url, scheme())
 }
 
 /// Lee un parámetro de la query del callback.
@@ -131,7 +142,8 @@ pub fn ensure_protocol_registered() -> Result<(), String> {
     let current_scheme = scheme();
     let key = format!("HKCU\\Software\\Classes\\{current_scheme}");
     let executable = std::env::current_exe().map_err(|error| error.to_string())?;
-    let command = format!("\"{}\" \"%1\"", executable.display());
+    let flavor_argument = if current_scheme == "prisma-dev" { " --dev" } else { "" };
+    let command = format!("\"{}\"{flavor_argument} \"%1\"", executable.display());
 
     let _ = std::process::Command::new("reg")
         .args([

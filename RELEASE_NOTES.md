@@ -2,6 +2,10 @@
 
 Registro de cambios y versiones de Prisma.
 
+## En desarrollo
+
+El inicio de sesión corrige el retorno del navegador a Prisma y Prisma Dev, mantiene sus sesiones separadas y recupera la autenticación en la aplicación abierta. La cuenta permite identificar tus aportes; el contenido disponible continúa dependiendo de tus permisos.
+
 ## [2.0.1] - 2026-11-01
 
 El editor de etiquetas de audio estrena una distribución ergonómica 60/40 que amplía la carátula al 40% del ancho con visualización 1:1, integra los detalles técnicos en la pestaña General y organiza los metadatos en una columna limpia con disposición a dos columnas para género y año de lanzamiento. La pestaña de letras añade un acceso directo a la sincronización interactiva, mientras que la búsqueda en línea permite consultar y seleccionar carátulas, títulos y álbumes en Apple Music y Deezer antes de aplicar los cambios en el archivo.

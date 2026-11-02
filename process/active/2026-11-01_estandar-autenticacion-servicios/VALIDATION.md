@@ -1,5 +1,19 @@
 # Estándar de Autenticación y Servicios Conectados — Validación
 
+## Corrección verificada de redirecciones — 2026-11-01
+
+- Referencias actuales: Hub utiliza Supabase con canje JSON `grant_type=pkce`; Intelligence tiene callbacks propios y configuración de proveedor independiente. No se copió el requisito admin de Hub.
+- Se corrigieron la reconstrucción defectuosa del callback, el emisor predeterminado que apuntaba a un endpoint propio no implementado, el formato de canje/renovación y la prueba PKCE basada en reloj. Stable y Dev conservan callbacks y bóvedas diferentes.
+- Lectura real de HKCU: `prisma` apunta al ejecutable instalado; `prisma-dev` al ejecutable de desarrollo con `--dev`. Comprobación de solo lectura, sin sobrescribir el registro manualmente.
+- Lectura de `/auth/v1/settings` del proveedor configurado, con clave publicable: Google, GitHub y Discord habilitados. No se inició sesión ni se cambiaron redirecciones remotas.
+- `cargo check --manifest-path src-tauri/Cargo.toml --lib`: aprobado. `bun run build`: aprobado, aviso de tamaño de chunks existente.
+- `scripts/test-wallpapers.ps1 -Filter infrastructure::auth`: **7 pruebas aprobadas**. Tres prueban extracción/aislamiento/rechazo de callbacks; cuatro prueban canje JSON, renovación, errores sin reflejar cuerpos, sesión completa y entropía/vector RFC de PKCE. El script prepara una copia del harness con manifiesto Windows, sin modificar el artefacto de Cargo.
+- El harness directo de Cargo compiló, pero no arrancó por `STATUS_ENTRYPOINT_NOT_FOUND`; se resolvió su ejecución mediante el lanzador existente con manifiesto. La variante `--no-default-features` no compila las pruebas previas de wallpapers que referencian `mpv`; se ejecutó la configuración normal.
+- Componente independiente de Core: **3 pruebas aprobadas** con `rustc --test`, sin dependencias de Prisma.
+- Pendiente: login real y retorno Stable/Dev, renovación tras reinicio y cierre/revocación contra una sesión real. El ACK del transporte local solo confirma entrega; no acredita autenticación. Las marcas históricas de pruebas de recursos más abajo no se han vuelto a validar con una sesión real en esta corrección.
+
+Guía local: `docs/features/authentication.md`. Contrato y componente reutilizable: `Docs/features/authentication/native-desktop-auth.md`.
+
 - Estado: `PENDING`
 
 ## Comprobaciones

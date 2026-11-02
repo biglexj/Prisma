@@ -90,7 +90,7 @@ export function AuthSessionCard() {
               <Icon name="sparkles" />
               <div>
                 <strong>Aurora Wallpapers</strong>
-                <p>Versiones VIP y filtros de catálogo desbloqueados.</p>
+                <p>Contenido disponible según los permisos de tu cuenta.</p>
               </div>
             </div>
           </div>

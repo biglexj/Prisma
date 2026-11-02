@@ -18,6 +18,9 @@ use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::vault;
+#[path = "provider_tokens.rs"]
+mod provider_tokens;
+use provider_tokens::provider_token_request;
 
 const PENDING_TTL_SECS: u64 = 300;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
@@ -89,6 +92,7 @@ impl SessionConfig {
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty())
             .unwrap_or_else(|| super::deeplink::callback_url());
+        if !super::deeplink::is_callback_url(&redirect_uri) || redirect_uri.contains('?') { return None; }
         let client_id = std::env::var("PRISMA_AUTH_CLIENT_ID")
             .ok()
             .map(|value| value.trim().to_string())
@@ -110,17 +114,21 @@ impl SessionConfig {
                 })
             }
             AuthIssuer::Provider => {
+                let public: serde_json::Value = serde_json::from_str(include_str!("../../../auth.public.json")).ok()?;
                 let supabase_url = std::env::var("PRISMA_SUPABASE_URL")
                     .or_else(|_| std::env::var("AURORA_SUPABASE_URL"))
                     .ok()
                     .map(|v| v.trim().to_string())
                     .filter(|v| !v.is_empty())
-                    .unwrap_or_else(|| "https://api.biglexj.com".to_string());
+                    .or_else(|| public["supabaseUrl"].as_str().map(str::to_string))?;
                 let publishable_key = std::env::var("PRISMA_SUPABASE_PUBLISHABLE_KEY")
                     .or_else(|_| std::env::var("AURORA_SUPABASE_PUBLISHABLE_KEY"))
                     .ok()
                     .map(|v| v.trim().to_string())
-                    .filter(|v| !v.is_empty());
+                    .filter(|v| !v.is_empty())
+                    .or_else(|| public["publishableKey"].as_str().map(str::to_string));
+                if !publishable_key.as_deref().is_some_and(|key| key.starts_with("sb_publishable_")) { return None; }
+                if !supabase_url.starts_with("https://") { return None; }
                 Some(Self {
                     issuer,
                     base_url: supabase_url.trim_end_matches('/').to_string(),
@@ -145,7 +153,7 @@ impl SessionConfig {
 
     fn logout_url(&self) -> String {
         match self.issuer {
-            AuthIssuer::Provider => format!("{}/logout", self.auth_base()),
+            AuthIssuer::Provider => format!("{}/logout?scope=local", self.auth_base()),
             AuthIssuer::Backend => format!("{}/revoke", self.auth_base()),
         }
     }
@@ -196,8 +204,8 @@ fn resolve_issuer() -> AuthIssuer {
         .ok()
         .map(|value| value.trim().to_ascii_lowercase());
     match configured.as_deref() {
-        Some("provider") | Some("supabase") => AuthIssuer::Provider,
-        _ => AuthIssuer::Backend,
+        Some("backend") => AuthIssuer::Backend,
+        _ => AuthIssuer::Provider,
     }
 }
 
@@ -365,6 +373,7 @@ impl SessionManager {
 
     pub fn access_token(&self) -> Option<String> {
         let inner = self.lock();
+        if !inner.verified || inner.state != SessionState::Active { return None; }
         inner
             .tokens
             .as_ref()
@@ -377,6 +386,16 @@ impl SessionManager {
         self.lock().tokens.is_some()
     }
 
+    pub fn has_pending_login(&self) -> bool {
+        self.lock().pending.as_ref().is_some_and(|flow| !flow_is_expired(flow))
+    }
+
+    pub fn cancel_login(&self, app: &AppHandle) {
+        self.lock().pending = None;
+        let _ = self.persist(app);
+        self.fail(app, SessionState::Absent, "El inicio de sesión se canceló o no devolvió un código válido.");
+    }
+
     pub fn begin_login(&self, app: &AppHandle, provider: &str) -> Result<String, String> {
         let provider = provider.trim().to_ascii_lowercase();
         if !SUPPORTED_PROVIDERS.contains(&provider.as_str()) {
@@ -384,7 +403,7 @@ impl SessionManager {
         }
         let config = SessionConfig::resolve()
             .ok_or_else(|| "Prisma no tiene configurado el proveedor de identidad.".to_string())?;
-        let verifier = new_code_verifier();
+        let verifier = new_code_verifier()?;
         let challenge = code_challenge(&verifier);
         let url = config.authorize_url(&provider, &challenge);
 
@@ -607,21 +626,18 @@ impl SessionManager {
             inner.pending = None;
         }
 
-        let _ = clear_vault(app);
+        clear_vault(app)?;
         self.notify(app);
 
-        // Intento de revocación remota en background (best effort)
+        // Distinguir cierre local de revocación confirmada por el proveedor.
         if let Some(config) = SessionConfig::resolve() {
-            if let Some(token) = access_token.or(refresh_token) {
-                let client = self.client.clone();
-                let url = config.logout_url();
-                tokio::spawn(async move {
-                    let _ = client
-                        .post(&url)
-                        .header("Authorization", format!("Bearer {token}"))
-                        .send()
-                        .await;
-                });
+            if let Some(token) = access_token {
+                let mut request = self.client.post(config.logout_url()).header("Authorization", format!("Bearer {token}"));
+                if let Some(key) = config.publishable_key { request = request.header("apikey", key); }
+                let revoked = request.send().await.is_ok_and(|response| response.status().is_success());
+                if !revoked { return Err("La sesión se borró de este equipo, pero no se pudo confirmar la revocación remota.".into()); }
+            } else if refresh_token.is_some() {
+                return Err("La sesión se borró de este equipo; la revocación remota no se pudo confirmar.".into());
             }
         }
 
@@ -679,17 +695,21 @@ fn flow_is_expired(flow: &PendingFlow) -> bool {
     flow.created_at + PENDING_TTL_SECS <= now_epoch_secs()
 }
 
-fn new_code_verifier() -> String {
-    use std::time::SystemTime;
+fn new_code_verifier() -> Result<String, String> {
     let mut random = [0u8; 32];
-    let seed = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    for (i, b) in random.iter_mut().enumerate() {
-        *b = ((seed >> (i * 3)) ^ (i as u128 * 0x5bd1e995)) as u8;
+    #[cfg(windows)]
+    unsafe {
+        use windows::Win32::Security::Cryptography::{BCryptGenRandom, BCRYPT_USE_SYSTEM_PREFERRED_RNG};
+        BCryptGenRandom(None, &mut random, BCRYPT_USE_SYSTEM_PREFERRED_RNG).ok()
+            .map_err(|_| "No se pudo generar una prueba PKCE segura.".to_string())?;
     }
-    base64_url_encode(&random)
+    #[cfg(not(windows))]
+    {
+        use std::io::Read;
+        std::fs::File::open("/dev/urandom").and_then(|mut file| file.read_exact(&mut random))
+            .map_err(|_| "No se pudo generar una prueba PKCE segura.".to_string())?;
+    }
+    Ok(base64_url_encode(&random))
 }
 
 fn code_challenge(verifier: &str) -> String {
@@ -717,6 +737,7 @@ fn percent_encode(input: &str) -> String {
     out
 }
 
+#[derive(Debug)]
 enum TokenError {
     Invalid(String),
     Network(String),
@@ -753,6 +774,9 @@ async fn exchange_code(
     code: &str,
     verifier: &str,
 ) -> Result<StoredTokens, TokenError> {
+    if config.issuer == AuthIssuer::Provider {
+        return provider_token_request(client, config, "pkce", serde_json::json!({"auth_code": code, "code_verifier": verifier})).await;
+    }
     let mut params = vec![
         ("grant_type", "authorization_code"),
         ("code", code),
@@ -798,6 +822,9 @@ async fn renew_tokens(
     config: &SessionConfig,
     refresh_token: &str,
 ) -> Result<StoredTokens, TokenError> {
+    if config.issuer == AuthIssuer::Provider {
+        return provider_token_request(client, config, "refresh_token", serde_json::json!({"refresh_token": refresh_token})).await;
+    }
     let mut params = vec![
         ("grant_type", "refresh_token"),
         ("refresh_token", refresh_token),

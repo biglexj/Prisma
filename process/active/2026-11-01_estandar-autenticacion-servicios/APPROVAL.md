@@ -2,6 +2,8 @@
 
 - Estado: `PENDING`
 
+Corrección de 2026-11-01 autorizada por la petición de Biglex: redirecciones Stable/Dev, adaptador de proveedor y componente reutilizable en Core. Compilación y siete pruebas de autenticación aprobadas; tres pruebas del componente Core aprobadas. No se atribuye aceptación funcional: login real en ambas ediciones, Device Code y demás servicios pendientes permanecen abiertos. Sin publicación ni cambios de permisos remotos.
+
 ## Controles
 
 - [ ] Validación técnica del agente.
