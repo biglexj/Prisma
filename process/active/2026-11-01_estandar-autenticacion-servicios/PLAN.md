@@ -62,3 +62,7 @@ Establecer un estándar unificado y reusable de autenticación cliente (OAuth 2.
 ## Ajuste acotado del 2 de noviembre de 2026
 
 Cuenta disponible sin interruptor global; Letras y Wallpapers independientes, conservando la elección anterior al migrar. Servidor personalizado secundario y exclusivo del catálogo. Perfil de presentación desde public.users por el UUID autenticado, igual que la web; no crear cuentas ni emparejarlas por correo. Consulta con token del usuario y clave pública, respetando RLS; no modifica permisos. Implementación y revisión locales, sin publicar. Device Code, favoritos y subida comunitaria siguen fuera de este ajuste.
+
+## Catálogo y proveedores externos — 2026-11-02
+
+Se retira el selector de servidor personalizado y se organiza el panel con cuenta a la izquierda y servicios a la derecha. El catálogo usa Biglex J. La evaluación y explicación de posibles proveedores externos queda en `docs/wallpaper-providers.md`; Pexels es una propuesta condicionada, sin integración ni credenciales creadas.

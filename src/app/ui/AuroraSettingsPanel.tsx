@@ -26,7 +26,7 @@ export function AuroraSettingsPanel({ auroraLyricsEnabled, setAuroraLyricsEnable
       <section className="settings-card ecosystem-service">
         <div className="settings-card-header-row"><div className="ecosystem-service-title"><Icon name="sparkles" /><h3>Wallpapers</h3></div>
           <label className="toggle-switch"><input type="checkbox" checked={auroraWallpapersEnabled} onChange={event => setAuroraWallpapersEnabled(event.target.checked)} aria-label="Activar catálogo de wallpapers" /><span className="toggle-slider" /></label></div>
-        <p>Explora el catálogo de biglexj.com y aplica fondos en Prisma.</p>
+        <p>Catálogo de Biglex J. Explora wallpapers públicos y contenido exclusivo según los permisos de tu cuenta.</p>
         <ul><li>Wallpapers públicos disponibles sin cuenta.</li><li>Contenido exclusivo según los permisos de tu cuenta.</li><li>La misma cuenta Biglex J que utilizas en Super Galería.</li></ul>
       </section>
     </div>
