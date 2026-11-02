@@ -4,6 +4,8 @@ Registro de cambios y versiones de Prisma.
 
 ## En desarrollo
 
+Cerrar sesión solicita confirmación con las opciones Cerrar sesión y Cancelar, reutilizando el diálogo compartido de Prisma.
+
 El catálogo de wallpapers añade filtros combinables de formato y visibilidad: General, Mostrar todo, Premium y +18, con General como opción inicial. Respeta los permisos del servidor y permite reiniciar los filtros. Ecosistema Online organiza la cuenta a la izquierda y los servicios a la derecha, y retira la selección de servidor personalizado.
 
 Configuración reúne la cuenta Biglex J y los interruptores independientes de Letras y Wallpapers en Ecosistema Online. El perfil muestra el nombre y la foto guardados en la web, con Google como método de acceso. Los intentos de inicio de sesión se pueden cancelar y el retorno indica el botón que debe pulsarse en el navegador.

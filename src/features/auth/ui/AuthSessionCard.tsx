@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
+import { ConfirmDialog } from "../../../shared/ui/ConfirmDialog";
 import { useAuthSession } from "../useAuthSession";
 import { invoke } from "@tauri-apps/api/core";
 import "./auth-session-card.css";
@@ -8,6 +9,8 @@ export function AuthSessionCard() {
   const { session, loading, isAuthenticated, login, logout, refresh, cancelLogin } = useAuthSession();
   const [busyProvider, setBusyProvider] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogin = async (provider: "google" | "github" | "discord" | "biglexj") => {
     try {
@@ -22,11 +25,16 @@ export function AuthSessionCard() {
   };
 
   const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setShowLogoutConfirm(false);
+    setIsLoggingOut(true);
     try {
       setErrorMsg(null);
       await logout();
     } catch (e) {
       setErrorMsg(String(e));
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
@@ -102,10 +110,11 @@ export function AuthSessionCard() {
             <button
               type="button"
               className="auth-btn is-danger"
-              onClick={handleLogout}
+              onClick={() => setShowLogoutConfirm(true)}
+              disabled={isLoggingOut}
             >
               <Icon name="close" />
-              <span>Cerrar sesión</span>
+              <span>{isLoggingOut ? "Cerrando sesión…" : "Cerrar sesión"}</span>
             </button>
           </div>
         </div>
@@ -173,6 +182,18 @@ export function AuthSessionCard() {
             }}>Crear o gestionar mi cuenta en biglexj.com</button>
           </div>
         </div>
+      )}
+      {showLogoutConfirm && isAuthenticated && (
+        <ConfirmDialog
+          title="¿Cerrar sesión?"
+          message="Se cerrará tu sesión en este dispositivo. Tus letras locales, archivos y preferencias se conservarán."
+          confirmLabel="Cerrar sesión"
+          cancelLabel="Cancelar"
+          icon="user"
+          initialFocus="cancel"
+          onConfirm={() => void handleLogout()}
+          onCancel={() => setShowLogoutConfirm(false)}
+        />
       )}
     </div>
   );

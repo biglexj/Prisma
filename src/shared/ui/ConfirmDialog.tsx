@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
-import { Icon } from "./Icon";
+import { Icon, type IconName } from "./Icon";
 import "./media-menu.css";
 
 interface ConfirmDialogProps {
@@ -9,6 +9,8 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
+  icon?: IconName;
+  initialFocus?: "confirm" | "cancel";
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -19,19 +21,22 @@ export function ConfirmDialog({
   confirmLabel = "Eliminar",
   cancelLabel = "Cancelar",
   danger = true,
+  icon = "trash",
+  initialFocus = "confirm",
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   const confirmRef = useRef<HTMLButtonElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    confirmRef.current?.focus();
+    (initialFocus === "cancel" ? cancelRef : confirmRef).current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCancel();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
+  }, [onCancel, initialFocus]);
 
   return (
     <div className="media-dialog-backdrop" onClick={onCancel} role="presentation">
@@ -43,12 +48,12 @@ export function ConfirmDialog({
         aria-labelledby="media-dialog-title"
       >
         <span className={`media-dialog-icon${danger ? " is-danger" : ""}`}>
-          <Icon name="trash" />
+          <Icon name={icon} />
         </span>
         <h3 id="media-dialog-title">{title}</h3>
         <div className="media-dialog-message">{message}</div>
         <div className="media-dialog-actions">
-          <button className="media-dialog-cancel" onClick={onCancel}>
+          <button className="media-dialog-cancel" onClick={onCancel} ref={cancelRef}>
             {cancelLabel}
           </button>
           <button
