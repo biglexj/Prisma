@@ -1440,8 +1440,9 @@
   flex-shrink: 0;
   width: 52px;
   height: 30px;
-  /* El resaltado nativo al pulsar sigue la forma del label, no la del slider. */
   border-radius: 999px;
+  /* WebView puede dibujar su resaltado fuera de la cápsula, aun con radius. */
+  -webkit-tap-highlight-color: transparent;
   cursor: pointer;
   user-select: none;
 }
@@ -1508,6 +1509,12 @@
 
 .toggle-switch:hover input:checked+.toggle-slider::before {
   background: #ffffff;
+}
+
+/* La respuesta al pulsar se pinta en la propia cápsula, sin una capa rectangular. */
+.toggle-switch:active .toggle-slider,
+.toggle-switch:active input:checked+.toggle-slider {
+  filter: brightness(0.94);
 }
 
 .toggle-switch input:focus-visible+.toggle-slider {
