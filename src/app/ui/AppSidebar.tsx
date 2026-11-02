@@ -68,7 +68,7 @@ export function AppSidebar({
   density = "standard",
 }: AppSidebarProps) {
   const { activeLibraries } = useCustomLibraries();
-  const { auroraOnlineServicesEnabled, auroraWallpapersEnabled, enabledTools } = useSystemSettings();
+  const { auroraWallpapersEnabled, enabledTools } = useSystemSettings();
   const version = useAppVersion();
 
   const dynamicLibraryItems: SidebarItem[] = [
@@ -83,7 +83,7 @@ export function AppSidebar({
   const isToolVisible = (key: keyof typeof enabledTools) => {
     if (!enabledTools[key]) return false;
     if (key === "wallpapers") {
-      return auroraOnlineServicesEnabled && auroraWallpapersEnabled;
+      return auroraWallpapersEnabled;
     }
     return true;
   };

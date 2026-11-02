@@ -58,3 +58,7 @@ Establecer un estándar unificado y reusable de autenticación cliente (OAuth 2.
 ## Autorización
 
 - [x] Alcance autorizado por Biglex: corregir autenticación y redirecciones de Prisma/Prisma Dev, contrastar Intelligence/Hub y promover el componente reutilizable a Core. Sin publicación ni cambio remoto de permisos.
+
+## Ajuste acotado del 2 de noviembre de 2026
+
+Cuenta disponible sin interruptor global; Letras y Wallpapers independientes, conservando la elección anterior al migrar. Servidor personalizado secundario y exclusivo del catálogo. Perfil de presentación desde public.users por el UUID autenticado, igual que la web; no crear cuentas ni emparejarlas por correo. Consulta con token del usuario y clave pública, respetando RLS; no modifica permisos. Implementación y revisión locales, sin publicar. Device Code, favoritos y subida comunitaria siguen fuera de este ajuste.

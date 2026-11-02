@@ -116,7 +116,7 @@ export function AppSettings({
     confirmDeletion,
     progressBarStyle,
     sidebarDensity,
-    auroraOnlineServicesEnabled,
+    auroraLyricsEnabled,
     auroraWallpapersEnabled,
     auroraServerUrl,
     setQuickLookShortcut,
@@ -125,7 +125,7 @@ export function AppSettings({
     setConfirmDeletion,
     setProgressBarStyle,
     setSidebarDensity,
-    setAuroraOnlineServicesEnabled,
+    setAuroraLyricsEnabled,
     setAuroraWallpapersEnabled,
     setAuroraServerUrl,
     systemDropZoneEnabled,
@@ -201,7 +201,7 @@ export function AppSettings({
             onClick={() => setActiveTab("aurora")}
           >
             <Icon name="sparkles" />
-            <span>Servicios Online</span>
+            <span>Ecosistema Online</span>
           </button>
           <button
             className={activeTab === "shortcuts" ? "is-active" : ""}
@@ -735,8 +735,8 @@ export function AppSettings({
         ══════════════════════════════════════════════════════════════════════════ */}
         {activeTab === "aurora" && (
           <AuroraSettingsPanel
-            auroraOnlineServicesEnabled={auroraOnlineServicesEnabled}
-            setAuroraOnlineServicesEnabled={setAuroraOnlineServicesEnabled}
+            auroraLyricsEnabled={auroraLyricsEnabled}
+            setAuroraLyricsEnabled={setAuroraLyricsEnabled}
             auroraWallpapersEnabled={auroraWallpapersEnabled}
             setAuroraWallpapersEnabled={setAuroraWallpapersEnabled}
             auroraServerUrl={auroraServerUrl}

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Icon } from "../../../shared/ui/Icon";
 import { useAuthSession } from "../useAuthSession";
+import { invoke } from "@tauri-apps/api/core";
 import "./auth-session-card.css";
 
 export function AuthSessionCard() {
-  const { session, loading, isAuthenticated, login, logout, refresh } = useAuthSession();
+  const { session, loading, isAuthenticated, login, logout, refresh, cancelLogin } = useAuthSession();
   const [busyProvider, setBusyProvider] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -39,6 +40,7 @@ export function AuthSessionCard() {
   };
 
   const isAuthenticating = session.state === "authenticating";
+  const displayedError = errorMsg || session.error;
 
   return (
     <div className="settings-card auth-session-card">
@@ -48,9 +50,9 @@ export function AuthSessionCard() {
             <Icon name="user" />
           </div>
           <div>
-            <h3>Cuenta y Sesión del Ecosistema</h3>
+            <h3>Cuenta Biglex J</h3>
             <p>
-              Inicia sesión una sola vez para sincronizar tus aportes de letras y desbloquear el catálogo VIP de Aurora Wallpapers.
+              Identifica tus aportes y accede al contenido disponible para tu cuenta. Puedes entrar aunque los servicios estén desactivados.
             </p>
           </div>
         </div>
@@ -85,24 +87,7 @@ export function AuthSessionCard() {
             </div>
           </div>
 
-          <div className="auth-services-status">
-            <div className="auth-service-item">
-              <Icon name="music" />
-              <div>
-                <strong>Servicio de Letras</strong>
-                <p>Tus aportes se envían con autoría pública de tu perfil.</p>
-              </div>
-            </div>
-            <div className="auth-service-item">
-              <Icon name="sparkles" />
-              <div>
-                <strong>Aurora Wallpapers</strong>
-                <p>Catálogo VIP y filtros desbloqueados según tu cuenta.</p>
-              </div>
-            </div>
-          </div>
-
-          {errorMsg && <div className="auth-error-banner">{errorMsg}</div>}
+          {displayedError && <div className="auth-error-banner" role="alert">{displayedError}</div>}
 
           <div className="auth-profile-actions">
             <button
@@ -132,7 +117,7 @@ export function AuthSessionCard() {
               <div>
                 <strong>Inicio de sesión en curso</strong>
                 <p>
-                  Completa la selección de cuenta en el navegador. Cuando finalices verás la pantalla de <em>«¡Bienvenido a Prisma!»</em> y volverás automáticamente a la aplicación.
+                  Completa el acceso en el navegador y pulsa «Volver a Prisma» en biglexj.com. Si el navegador pregunta si puede abrir Prisma, permite esa apertura.
                 </p>
               </div>
             </div>
@@ -140,7 +125,7 @@ export function AuthSessionCard() {
             <div className="auth-guest-notice">
               <Icon name="sparkles" />
               <div>
-                <strong>Modo Anónimo Activo</strong>
+                <strong>También puedes usar Prisma sin cuenta</strong>
                 <p>
                   Puedes enviar letras de canciones de forma anónima y descargar wallpapers públicos. Inicia sesión para registrar autoría en tus letras y acceder a wallpapers exclusivos.
                 </p>
@@ -148,7 +133,7 @@ export function AuthSessionCard() {
             </div>
           )}
 
-          {errorMsg && <div className="auth-error-banner">{errorMsg}</div>}
+          {displayedError && <div className="auth-error-banner" role="alert">{displayedError}</div>}
 
           <div className="auth-login-buttons">
             <button
@@ -178,6 +163,14 @@ export function AuthSessionCard() {
               <Icon name="sparkles" />
               <span>{busyProvider === "discord" ? "Conectando..." : "Discord"}</span>
             </button>
+          </div>
+          <div className="auth-account-links">
+            {isAuthenticating && <button type="button" className="auth-btn is-secondary" onClick={() => {
+              void cancelLogin().catch(error => setErrorMsg(String(error)));
+            }}>Cancelar este intento</button>}
+            <button type="button" className="auth-btn is-secondary" onClick={() => {
+              void invoke("open_external_url", { url: "https://biglexj.com/login" }).catch(error => setErrorMsg(String(error)));
+            }}>Crear o gestionar mi cuenta en biglexj.com</button>
           </div>
         </div>
       )}

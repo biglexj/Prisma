@@ -35,3 +35,13 @@ Guía local: `docs/features/authentication.md`. Contrato y componente reutilizab
 - Entorno bloqueado → registrar el bloqueo sin marcar la validación.
 
 Al aprobar una comprobación, cambia `[ ]` por `[x]`. Si falla, mantenla pendiente y añade una sola línea con el motivo y la tarea relacionada.
+
+## Evidencia local — 2026-11-02
+
+- Build frontend TypeScript/Vite correcto; avisos existentes de tamaño de chunks.
+- 14 pruebas frontend, 51 assertions: migración de servicios y letras públicas/coincidencias.
+- 11 pruebas nativas de autenticación correctas: callbacks Stable/Dev, PKCE, errores y perfil. Incluyen consulta HTTP con bearer de usuario, filtro UUID, campos mínimos, perfil ajeno y fallback ante 403/vacío/malformado.
+- Supabase confirmó ambas redirecciones native-return para prisma y prisma-dev después de la actualización de la allowlist por Biglex.
+- Consulta de solo lectura confirmó SELECT de public.users restringido a auth.uid() = id. La identidad del perfil coincide con Auth.
+- Prisma Dev ejecutado con cambios: sesión recuperada y renovada; interfaz muestra Biglex J y su avatar de la web. Panel con cuenta disponible, dos servicios y servidor colapsado comprobado visualmente.
+- Pendiente: nuevo login completo por navegador en ambas ediciones, cancelación y caducidad en UI, catálogo privado en Prisma. No declarar esas comprobaciones cubiertas por las pruebas simuladas. Sin publicación ni reemplazo de Stable.

@@ -14,7 +14,7 @@ const ONLINE_SELECTION_EVENT = "prisma-track-lyrics-selected";
  * Busca automáticamente archivos compañero .lrc o tags incrustados mediante el backend.
  */
 export function useTrackLyrics(path: string | null, title = "", artist = "") {
-  const { auroraOnlineServicesEnabled, setAuroraOnlineServicesEnabled } = useSystemSettings();
+  const { auroraLyricsEnabled, setAuroraLyricsEnabled } = useSystemSettings();
   const [candidates, setCandidates] = useState<PublicLyric[]>([]);
   const [onlineMessage, setOnlineMessage] = useState("");
   const [hasLocalLyrics, setHasLocalLyrics] = useState(false);
@@ -47,21 +47,21 @@ export function useTrackLyrics(path: string | null, title = "", artist = "") {
   }, [path]);
 
   const selectOnlineLyrics = useCallback((raw: string) => {
-    if (!path || !auroraOnlineServicesEnabled) return;
+    if (!path || !auroraLyricsEnabled) return;
     const previous = onlineCache.get(cacheKey);
     onlineCache.set(cacheKey, { items: previous?.items ?? [], selected: raw });
     setLyrics(parseLrc(raw));
     window.dispatchEvent(new CustomEvent(ONLINE_SELECTION_EVENT, { detail: { cacheKey, raw } }));
-  }, [path, auroraOnlineServicesEnabled, cacheKey]);
+  }, [path, auroraLyricsEnabled, cacheKey]);
 
   useEffect(() => {
     const handleSelection = (event: Event) => {
       const detail = (event as CustomEvent<{ cacheKey: string; raw: string }>).detail;
-      if (detail.cacheKey === cacheKey && auroraOnlineServicesEnabled && !hasLocalLyrics) setLyrics(parseLrc(detail.raw));
+      if (detail.cacheKey === cacheKey && auroraLyricsEnabled && !hasLocalLyrics) setLyrics(parseLrc(detail.raw));
     };
     window.addEventListener(ONLINE_SELECTION_EVENT, handleSelection);
     return () => window.removeEventListener(ONLINE_SELECTION_EVENT, handleSelection);
-  }, [cacheKey, auroraOnlineServicesEnabled, hasLocalLyrics]);
+  }, [cacheKey, auroraLyricsEnabled, hasLocalLyrics]);
 
   useEffect(() => {
     if (!path) {
@@ -95,7 +95,7 @@ export function useTrackLyrics(path: string | null, title = "", artist = "") {
           setHasLocalLyrics(true);
           return;
         }
-        if (!auroraOnlineServicesEnabled || !title.trim()) return;
+        if (!auroraLyricsEnabled || !title.trim()) return;
         let remote = onlineCache.get(cacheKey);
         if (!remote) {
           const result = await searchPublicLyrics(title, artist, 0, controller.signal);
@@ -122,8 +122,8 @@ export function useTrackLyrics(path: string | null, title = "", artist = "") {
       cancelled = true;
       controller.abort();
     };
-  }, [path, title, artist, cacheKey, refreshCount, auroraOnlineServicesEnabled]);
+  }, [path, title, artist, cacheKey, refreshCount, auroraLyricsEnabled]);
 
   return { lyrics, loading, refetch, updateLyrics, candidates, onlineMessage, hasLocalLyrics,
-    onlineEnabled: auroraOnlineServicesEnabled, enableOnline: () => setAuroraOnlineServicesEnabled(true), selectOnlineLyrics };
+    onlineEnabled: auroraLyricsEnabled, enableOnline: () => setAuroraLyricsEnabled(true), selectOnlineLyrics };
 }

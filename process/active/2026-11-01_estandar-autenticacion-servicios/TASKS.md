@@ -34,3 +34,11 @@ Las pruebas no se documentan aquí. Deben registrarse en `VALIDATION.md`.
 - [x] Sustituir la prueba basada en reloj por entropía criptográfica y recuperar el retorno en la instancia que inició el flujo.
 - [x] Exigir sesión verificada antes de habilitar acceso y evitar afirmar permisos VIP por tener sesión.
 - [ ] Verificar con Biglex un login real de cada edición y su retorno completo. No equivale a compilación o prueba HTTP simulada.
+
+## Ecosistema Online y perfil web — 2026-11-02
+
+- [x] Cuenta siempre disponible y servicios independientes con migración y sincronización entre ventanas.
+- [x] Cancelación de login y recuperación de intentos caducados; indicación del retorno explícito desde la web.
+- [x] Cargar nombre/avatar del perfil web al iniciar y renovar sesión, por UUID y sin crear identidades nuevas.
+- [x] Revisar en Prisma Dev el perfil de la sesión real y la distribución del panel.
+- [ ] Verificar un nuevo recorrido completo de login en Stable y Dev; sesión recuperada no prueba ese recorrido.

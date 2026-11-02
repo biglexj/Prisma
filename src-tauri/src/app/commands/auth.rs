@@ -3,11 +3,15 @@
 use tauri::{AppHandle, State};
 
 use crate::infrastructure::auth::deeplink;
-use crate::infrastructure::auth::session::{SessionManager, SessionSnapshot};
+use crate::infrastructure::auth::session::{SessionManager, SessionSnapshot, SessionState};
 
 #[tauri::command]
 pub async fn auth_session_status(app: AppHandle, session: State<'_, SessionManager>) -> Result<SessionSnapshot, String> {
     let snapshot = session.snapshot();
+    if snapshot.state == SessionState::Authenticating && !session.has_pending_login() {
+        session.cancel_login(&app);
+        return Ok(session.snapshot());
+    }
     if !snapshot.verified && session.has_session() {
         return session.refresh(&app).await;
     }
@@ -20,8 +24,14 @@ pub fn auth_session_login(
     session: State<'_, SessionManager>,
     provider: Option<String>,
 ) -> Result<String, String> {
+    deeplink::ensure_protocol_registered()?;
     let prov = provider.unwrap_or_else(|| "google".to_string());
     session.begin_login(&app, &prov)
+}
+
+#[tauri::command]
+pub fn auth_session_cancel_login(app: AppHandle, session: State<'_, SessionManager>) -> Result<SessionSnapshot, String> {
+    session.abort_login(&app)
 }
 
 #[tauri::command]

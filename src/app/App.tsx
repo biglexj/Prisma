@@ -136,7 +136,7 @@ function AppContent() {
     lightBackgroundVariant, darkBackgroundVariant,
     dynamicMusicTheme, setDynamicMusicTheme, applyMusicPalette, isMusicPaletteActive,
   } = useTheme();
-  const { confirmDeletion, sidebarDensity, auroraOnlineServicesEnabled } = useSystemSettings();
+  const { confirmDeletion, sidebarDensity, auroraWallpapersEnabled } = useSystemSettings();
   // El atajo global del capturador vive en el backend: se consulta al arrancar
   // para conocer el estado real y transferir la preferencia heredada.
   useCaptureShortcut();
@@ -266,10 +266,10 @@ function AppContent() {
   const resumeTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (activeView === "wallpapers" && !auroraOnlineServicesEnabled) {
+    if (activeView === "wallpapers" && !auroraWallpapersEnabled) {
       setActiveView("home");
     }
-  }, [activeView, auroraOnlineServicesEnabled]);
+  }, [activeView, auroraWallpapersEnabled]);
 
   useEffect(() => {
     if (library.items.length === 0) return;

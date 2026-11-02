@@ -59,6 +59,17 @@ export function useAuthSession() {
     };
   }, [fetchStatus]);
 
+  useEffect(() => {
+    if (session.state !== "authenticating") return;
+    const timer = window.setInterval(() => { void fetchStatus(); }, 2000);
+    return () => window.clearInterval(timer);
+  }, [session.state, fetchStatus]);
+
+  const cancelLogin = useCallback(async () => {
+    const current = await prismaAuth.cancelLogin();
+    setSession(current);
+  }, []);
+
   const login = useCallback(async (provider: "google" | "github" | "discord" | "biglexj" = "google") => {
     return prismaAuth.login(provider);
   }, []);
@@ -90,6 +101,7 @@ export function useAuthSession() {
     loading,
     isAuthenticated,
     login,
+    cancelLogin,
     logout,
     refresh,
     getAccessToken,

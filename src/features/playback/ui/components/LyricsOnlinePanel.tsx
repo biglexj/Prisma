@@ -22,9 +22,9 @@ export function LyricsOnlinePanel({ title, artist = "", album, duration, text, o
   title: string; artist?: string; album?: string; duration: number; text: string;
   onApply: (text: string, source: string) => void;
 }) {
-  const { auroraOnlineServicesEnabled: enabled, setAuroraOnlineServicesEnabled } = useSystemSettings();
+  const { auroraLyricsEnabled: enabled, setAuroraLyricsEnabled } = useSystemSettings();
   if (!enabled) return <div className="lyrics-online-panel"><p>La consulta a Biglex J está desactivada. Al activar los servicios conectados podrás buscar y aportar letras.</p>
-    <button type="button" className="lyrics-sync-btn" onClick={() => setAuroraOnlineServicesEnabled(true)}>Activar servicios conectados</button></div>;
+    <button type="button" className="lyrics-sync-btn" onClick={() => setAuroraLyricsEnabled(true)}>Activar servicios conectados</button></div>;
   return <ConnectedLyricsPanel title={title} artist={artist} album={album} duration={duration} text={text} onApply={onApply} />;
 }
 

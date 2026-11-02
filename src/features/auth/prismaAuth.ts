@@ -20,6 +20,10 @@ export const prismaAuth = {
     return invoke<SessionSnapshot>("auth_session_complete", { code });
   },
 
+  async cancelLogin(): Promise<SessionSnapshot> {
+    return invoke<SessionSnapshot>("auth_session_cancel_login");
+  },
+
   async refresh(): Promise<SessionSnapshot> {
     return invoke<SessionSnapshot>("auth_session_refresh");
   },

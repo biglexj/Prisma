@@ -9,6 +9,8 @@
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
+.auth-account-links { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
+
 .auth-card-header {
   display: flex;
   align-items: flex-start;

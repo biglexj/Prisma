@@ -1,5 +1,6 @@
 import { resolveCaptureFormat, type CaptureFormat } from "../shared/captureFormat";
 import { OFFICIAL_AURORA_ORIGIN, normalizeAuroraServerUrl } from "../shared/auroraServer";
+import { ecosystemServices, resolveEcosystemServices } from "../shared/ecosystemServices";
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
@@ -60,6 +61,7 @@ interface SystemSettings {
   progressBarStyle: ProgressBarStyle;
   sidebarDensity: SidebarDensity;
   auroraOnlineServicesEnabled: boolean;
+  auroraLyricsEnabled: boolean;
   auroraWallpapersEnabled: boolean;
   auroraServerUrl: string;
   videoSnapshotFolder?: string;
@@ -89,7 +91,8 @@ const DEFAULT_SETTINGS: SystemSettings = {
   progressBarStyle: "wavy",
   sidebarDensity: "standard",
   auroraOnlineServicesEnabled: false,
-  auroraWallpapersEnabled: true,
+  auroraLyricsEnabled: false,
+  auroraWallpapersEnabled: false,
   auroraServerUrl: OFFICIAL_AURORA_ORIGIN,
   videoSnapshotFolder: "",
   videoSnapshotFormat: "png",
@@ -110,6 +113,7 @@ function loadStoredSettings(): SystemSettings {
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
+      ...resolveEcosystemServices(parsed),
       auroraServerUrl: normalizeAuroraServerUrl(parsed.auroraServerUrl),
       videoSnapshotFormat: resolveCaptureFormat(parsed.videoSnapshotFormat).id,
       enabledTools: {
@@ -195,8 +199,7 @@ export function useSystemSettings() {
               confirmDeletion: stored.confirmDeletion ?? prev.confirmDeletion,
               progressBarStyle: stored.progressBarStyle ?? prev.progressBarStyle,
               sidebarDensity: stored.sidebarDensity ?? prev.sidebarDensity,
-              auroraOnlineServicesEnabled: stored.auroraOnlineServicesEnabled ?? prev.auroraOnlineServicesEnabled,
-              auroraWallpapersEnabled: stored.auroraWallpapersEnabled ?? prev.auroraWallpapersEnabled,
+              ...resolveEcosystemServices(stored),
               auroraServerUrl: stored.auroraServerUrl ?? prev.auroraServerUrl,
               videoSnapshotFolder: stored.videoSnapshotFolder ?? prev.videoSnapshotFolder,
               videoSnapshotFormat: stored.videoSnapshotFormat ?? prev.videoSnapshotFormat,
@@ -232,9 +235,10 @@ export function useSystemSettings() {
 
     const unlistenTauriPromise = listen<SystemSettings>(TAURI_SYNC_EVENT, (event) => {
       if (isMounted && event.payload) {
-        setSettings(event.payload);
+        const incoming = { ...event.payload, ...resolveEcosystemServices(event.payload) };
+        setSettings(incoming);
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(event.payload));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(incoming));
         } catch {}
       }
     });
@@ -318,7 +322,16 @@ export function useSystemSettings() {
 
   const setAuroraOnlineServicesEnabled = useCallback((enabled: boolean) => {
     setSettings((prev) => {
-      const next = { ...prev, auroraOnlineServicesEnabled: enabled };
+      const next = { ...prev, ...ecosystemServices(enabled, enabled) };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      notifySettingsChanged(next);
+      return next;
+    });
+  }, []);
+
+  const setAuroraLyricsEnabled = useCallback((enabled: boolean) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...ecosystemServices(enabled, prev.auroraWallpapersEnabled) };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       notifySettingsChanged(next);
       return next;
@@ -327,7 +340,7 @@ export function useSystemSettings() {
 
   const setAuroraWallpapersEnabled = useCallback((enabled: boolean) => {
     setSettings((prev) => {
-      const next = { ...prev, auroraWallpapersEnabled: enabled };
+      const next = { ...prev, ...ecosystemServices(prev.auroraLyricsEnabled, enabled) };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       notifySettingsChanged(next);
       return next;
@@ -423,6 +436,7 @@ export function useSystemSettings() {
     progressBarStyle: settings.progressBarStyle,
     sidebarDensity: settings.sidebarDensity,
     auroraOnlineServicesEnabled: settings.auroraOnlineServicesEnabled,
+    auroraLyricsEnabled: settings.auroraLyricsEnabled,
     auroraWallpapersEnabled: settings.auroraWallpapersEnabled,
     auroraServerUrl: settings.auroraServerUrl,
     videoSnapshotFolder: settings.videoSnapshotFolder || "",
@@ -441,6 +455,7 @@ export function useSystemSettings() {
     setProgressBarStyle,
     setSidebarDensity,
     setAuroraOnlineServicesEnabled,
+    setAuroraLyricsEnabled,
     setAuroraWallpapersEnabled,
     setAuroraServerUrl,
     setVideoSnapshotFolder,

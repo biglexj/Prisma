@@ -30,3 +30,7 @@ Corrección de 2026-11-01 autorizada por la petición de Biglex: redirecciones S
 - `REWORK` → permanece en `process/active/`.
 
 Mueve la carpeta completa y no conserves una copia duplicada en `active`.
+
+## Entrega parcial local — 2026-11-02
+
+Ecosistema Online y recuperación del perfil web implementados y revisados en Dev. Biglex confirmó guardadas ambas URLs de retorno. No implica aprobación final del plan completo: Device Code, sincronización de favoritos, subida comunitaria y aceptación de las dos ediciones continúan pendientes. Sin autorización nueva de despliegue; no se publicó este ajuste.

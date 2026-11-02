@@ -18,7 +18,7 @@ function getWallpaperRatio(wallpaper: AuroraWallpaper): number {
 }
 
 export function WallpapersView() {
-  const { auroraOnlineServicesEnabled, setAuroraOnlineServicesEnabled } = useSystemSettings();
+  const { auroraWallpapersEnabled, setAuroraWallpapersEnabled } = useSystemSettings();
   const [wallpapers, setWallpapers] = useState<AuroraWallpaper[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export function WallpapersView() {
   const loadData = useCallback(async () => {
     activeRequestRef.current?.abort();
     activeRequestRef.current = null;
-    if (!auroraOnlineServicesEnabled) {
+    if (!auroraWallpapersEnabled) {
       setLoading(false);
       return;
     }
@@ -72,7 +72,7 @@ export function WallpapersView() {
         setLoading(false);
       }
     }
-  }, [auroraOnlineServicesEnabled, selectedRatio, selectedSort, debouncedSearchQuery]);
+  }, [auroraWallpapersEnabled, selectedRatio, selectedSort, debouncedSearchQuery]);
 
   useEffect(() => {
     void loadData();
@@ -260,7 +260,7 @@ export function WallpapersView() {
       )}
 
       {/* Grid de Wallpapers */}
-      {!auroraOnlineServicesEnabled ? (
+      {!auroraWallpapersEnabled ? (
         <div style={{ textAlign: "center", padding: "80px 20px", maxWidth: "480px", margin: "0 auto" }}>
           <div style={{ fontSize: "3rem", marginBottom: "16px" }}>☁️</div>
           <h2 style={{ fontSize: "1.25rem", marginBottom: "8px", fontWeight: "600" }}>Servicios Online Desactivados</h2>
@@ -269,7 +269,7 @@ export function WallpapersView() {
           </p>
           <button
             className="wallpaper-btn wallpaper-btn-primary"
-            onClick={() => setAuroraOnlineServicesEnabled(true)}
+            onClick={() => setAuroraWallpapersEnabled(true)}
             style={{ margin: "0 auto" }}
           >
             <Icon name="sparkles" />

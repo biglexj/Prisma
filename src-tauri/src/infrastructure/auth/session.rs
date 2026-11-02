@@ -21,6 +21,8 @@ use super::vault;
 #[path = "provider_tokens.rs"]
 mod provider_tokens;
 use provider_tokens::provider_token_request;
+#[path = "ecosystem_profile.rs"]
+mod ecosystem_profile;
 
 const PENDING_TTL_SECS: u64 = 300;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
@@ -405,6 +407,26 @@ impl SessionManager {
         self.fail(app, SessionState::Absent, "El inicio de sesión se canceló o no devolvió un código válido.");
     }
 
+    /// Cancelación solicitada por el usuario, sin revocar una sesión anterior válida.
+    pub fn abort_login(&self, app: &AppHandle) -> Result<SessionSnapshot, String> {
+        {
+            let mut inner = self.lock();
+            inner.pending = None;
+            inner.error = None;
+            let previous = inner.tokens.clone();
+            inner.state = if inner.verified && previous.as_ref().is_some_and(|tokens| tokens.expires_at > now_epoch_secs() + EXPIRY_MARGIN_SECS) {
+                inner.provider = previous.and_then(|tokens| tokens.provider);
+                SessionState::Active
+            } else { SessionState::Absent };
+        }
+        if let Err(error) = self.persist(app) {
+            self.fail(app, SessionState::StorageError, &error);
+            return Err(error);
+        }
+        self.notify(app);
+        Ok(self.snapshot())
+    }
+
     pub fn begin_login(&self, app: &AppHandle, provider: &str) -> Result<String, String> {
         let provider = provider.trim().to_ascii_lowercase();
         if !SUPPORTED_PROVIDERS.contains(&provider.as_str()) {
@@ -464,7 +486,7 @@ impl SessionManager {
 
         let response = exchange_code(&self.client, &config, code, &pending.verifier).await;
 
-        let tokens = match response {
+        let mut tokens = match response {
             Ok(tokens) => tokens,
             Err(error) => {
                 let message = error.message().to_string();
@@ -473,6 +495,7 @@ impl SessionManager {
             }
         };
 
+        ecosystem_profile::hydrate(&self.client, &config, &mut tokens).await;
         let _guard = RenewalGuard::acquire()?;
 
         {
@@ -564,6 +587,7 @@ impl SessionManager {
             }
         };
 
+        ecosystem_profile::hydrate(&self.client, &config, &mut renewed).await;
         if renewed.user_id.is_empty() {
             renewed.user_id = tokens.user_id;
         }

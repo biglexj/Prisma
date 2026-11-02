@@ -1174,6 +1174,7 @@ pub fn run() {
             vault_toggle_pin,
             app::commands::auth::auth_session_status,
             app::commands::auth::auth_session_login,
+            app::commands::auth::auth_session_cancel_login,
             app::commands::auth::auth_session_complete,
             app::commands::auth::auth_session_refresh,
             app::commands::auth::auth_session_logout,
