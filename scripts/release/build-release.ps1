@@ -52,7 +52,12 @@ function Invoke-AuroraAdmin {
         $request.ContentType = 'application/json; charset=utf-8'
         $request.Body = [Text.Encoding]::UTF8.GetBytes(($Body | ConvertTo-Json -Depth 10))
     }
-    try { Invoke-RestMethod @request }
+    $request.UseBasicParsing = $true
+    try {
+        $response = Invoke-WebRequest @request
+        $bytes = if ($response.RawContentStream) { $response.RawContentStream.ToArray() } else { [Text.Encoding]::UTF8.GetBytes($response.Content) }
+        [Text.Encoding]::UTF8.GetString($bytes) | ConvertFrom-Json
+    }
     catch {
         $status = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 'unavailable' }
         throw "Aurora admin request failed (HTTP $status)."
@@ -159,7 +164,7 @@ if (-not $SkipAuroraUpload) {
     if (-not $result.success) { throw 'Aurora rejected release metadata.' }
     $history = Invoke-AuroraAdmin GET "/api/admin/developer-app-releases?appId=$appId" $null
     $record = @($history.releases | Where-Object versionName -eq $Version)
-    if ($record.Count -ne 1 -or $record[0].versionCode -ne $versionCode -or $record[0].sha256Checksum -ne $hash -or $record[0].releaseNotes.Trim() -ne $notes.Trim() -or $record[0].downloadUrl -ne $assetUrl -or $record[0].status -ne 'published') { throw 'Aurora metadata readback failed.' }
+    if ($record.Count -ne 1 -or $record[0].versionCode -ne $versionCode -or $record[0].sha256Checksum -ne $hash -or (($record[0].releaseNotes -replace "`r`n","`n").Trim() -ne ($notes -replace "`r`n","`n").Trim()) -or $record[0].downloadUrl -ne $assetUrl -or $record[0].status -ne 'published') { throw 'Aurora metadata readback failed.' }
     $script:auroraServiceKey = $null
     Write-Host "Aurora metadata verified: $baseUrl/desarrollo/prisma"
 }
