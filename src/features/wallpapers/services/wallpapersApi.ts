@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { OFFICIAL_AURORA_ORIGIN, normalizeAuroraServerUrl } from "../../../shared/auroraServer";
+import { OFFICIAL_AURORA_ORIGIN } from "../../../shared/auroraServer";
 import type { AuroraWallpaper, AuroraWallpapersResponse, WallpaperFilterOptions } from "../model/types";
 import { prismaAuth } from "../../auth";
 
@@ -22,15 +22,6 @@ export class AuroraWallpapersApiError extends Error {
 }
 
 function getAuroraServerUrl(): string {
-  try {
-    const raw = localStorage.getItem("prisma.system-settings.v1");
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed.auroraServerUrl) {
-        return normalizeAuroraServerUrl(parsed.auroraServerUrl);
-      }
-    }
-  } catch {}
   return OFFICIAL_AURORA_ORIGIN;
 }
 
@@ -180,17 +171,6 @@ export async function fetchAuroraWallpapers(
     return await requestWallpapersCatalogWithAuthFallback(primaryUrl, queryString, signal);
   } catch (err: unknown) {
     if (isAbortError(err)) throw err;
-    if (primaryUrl !== OFFICIAL_AURORA_ORIGIN) {
-      try {
-        return await requestWallpapersCatalogWithAuthFallback(
-          OFFICIAL_AURORA_ORIGIN,
-          queryString,
-          signal,
-        );
-      } catch (fallbackError: unknown) {
-        if (isAbortError(fallbackError)) throw fallbackError;
-      }
-    }
     throw err instanceof Error
       ? err
       : new AuroraWallpapersApiError("Error al consultar el catálogo de Aurora");

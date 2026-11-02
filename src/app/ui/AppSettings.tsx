@@ -118,7 +118,6 @@ export function AppSettings({
     sidebarDensity,
     auroraLyricsEnabled,
     auroraWallpapersEnabled,
-    auroraServerUrl,
     setQuickLookShortcut,
     setAutostart,
     setMinimizeToTray,
@@ -127,7 +126,6 @@ export function AppSettings({
     setSidebarDensity,
     setAuroraLyricsEnabled,
     setAuroraWallpapersEnabled,
-    setAuroraServerUrl,
     systemDropZoneEnabled,
     systemDropZoneFolder,
     setSystemDropZoneEnabled,
@@ -739,8 +737,6 @@ export function AppSettings({
             setAuroraLyricsEnabled={setAuroraLyricsEnabled}
             auroraWallpapersEnabled={auroraWallpapersEnabled}
             setAuroraWallpapersEnabled={setAuroraWallpapersEnabled}
-            auroraServerUrl={auroraServerUrl}
-            setAuroraServerUrl={setAuroraServerUrl}
           />
         )}
 

@@ -1,5 +1,4 @@
 import { resolveCaptureFormat, type CaptureFormat } from "../shared/captureFormat";
-import { OFFICIAL_AURORA_ORIGIN, normalizeAuroraServerUrl } from "../shared/auroraServer";
 import { ecosystemServices, resolveEcosystemServices } from "../shared/ecosystemServices";
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -63,7 +62,6 @@ interface SystemSettings {
   auroraOnlineServicesEnabled: boolean;
   auroraLyricsEnabled: boolean;
   auroraWallpapersEnabled: boolean;
-  auroraServerUrl: string;
   videoSnapshotFolder?: string;
   videoSnapshotFormat?: CaptureFormat;
   /** @deprecated El atajo global del capturador vive ahora en el backend. */
@@ -93,7 +91,6 @@ const DEFAULT_SETTINGS: SystemSettings = {
   auroraOnlineServicesEnabled: false,
   auroraLyricsEnabled: false,
   auroraWallpapersEnabled: false,
-  auroraServerUrl: OFFICIAL_AURORA_ORIGIN,
   videoSnapshotFolder: "",
   videoSnapshotFormat: "png",
   screenCaptureEnabled: false,
@@ -114,7 +111,6 @@ function loadStoredSettings(): SystemSettings {
       ...DEFAULT_SETTINGS,
       ...parsed,
       ...resolveEcosystemServices(parsed),
-      auroraServerUrl: normalizeAuroraServerUrl(parsed.auroraServerUrl),
       videoSnapshotFormat: resolveCaptureFormat(parsed.videoSnapshotFormat).id,
       enabledTools: {
         ...DEFAULT_SETTINGS.enabledTools,
@@ -200,7 +196,6 @@ export function useSystemSettings() {
               progressBarStyle: stored.progressBarStyle ?? prev.progressBarStyle,
               sidebarDensity: stored.sidebarDensity ?? prev.sidebarDensity,
               ...resolveEcosystemServices(stored),
-              auroraServerUrl: stored.auroraServerUrl ?? prev.auroraServerUrl,
               videoSnapshotFolder: stored.videoSnapshotFolder ?? prev.videoSnapshotFolder,
               videoSnapshotFormat: stored.videoSnapshotFormat ?? prev.videoSnapshotFormat,
               screenCaptureEnabled: stored.screenCaptureEnabled ?? prev.screenCaptureEnabled,
@@ -347,15 +342,6 @@ export function useSystemSettings() {
     });
   }, []);
 
-  const setAuroraServerUrl = useCallback((url: string) => {
-    setSettings((prev) => {
-      const next = { ...prev, auroraServerUrl: normalizeAuroraServerUrl(url) };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      notifySettingsChanged(next);
-      return next;
-    });
-  }, []);
-
   const setVideoSnapshotFolder = useCallback((folder: string) => {
     setSettings((prev) => {
       const next = { ...prev, videoSnapshotFolder: folder };
@@ -438,7 +424,6 @@ export function useSystemSettings() {
     auroraOnlineServicesEnabled: settings.auroraOnlineServicesEnabled,
     auroraLyricsEnabled: settings.auroraLyricsEnabled,
     auroraWallpapersEnabled: settings.auroraWallpapersEnabled,
-    auroraServerUrl: settings.auroraServerUrl,
     videoSnapshotFolder: settings.videoSnapshotFolder || "",
     videoSnapshotFormat: settings.videoSnapshotFormat || "png",
     captureFormat: settings.videoSnapshotFormat || "png",
@@ -457,7 +442,6 @@ export function useSystemSettings() {
     setAuroraOnlineServicesEnabled,
     setAuroraLyricsEnabled,
     setAuroraWallpapersEnabled,
-    setAuroraServerUrl,
     setVideoSnapshotFolder,
     setVideoSnapshotFormat,
     setScreenCaptureFolder,
