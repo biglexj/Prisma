@@ -4,6 +4,8 @@ Registro de cambios y versiones de Prisma.
 
 ## En desarrollo
 
+Los aportes de letras conservan su historial y sus reintentos por cuenta. La interfaz distingue la publicación de una letra nueva y la asociación con una ya existente; la resolución automática requiere la nueva revisión del servicio.
+
 El inicio de sesión corrige el retorno del navegador a Prisma y Prisma Dev, mantiene sus sesiones separadas y recupera la autenticación en la aplicación abierta. La cuenta permite identificar tus aportes; el contenido disponible continúa dependiendo de tus permisos.
 
 ## [2.0.1] - 2026-11-01
