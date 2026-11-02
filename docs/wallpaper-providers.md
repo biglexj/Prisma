@@ -10,6 +10,12 @@ El antiguo «Servidor del catálogo» cambiaba la URL base para un servidor loca
 
 Texto de interfaz: «Catálogo de Biglex J. Explora wallpapers públicos y contenido exclusivo según los permisos de tu cuenta».
 
+### Formato y visibilidad
+
+El catálogo permite combinar formato, búsqueda, tendencias y visibilidad. General es la selección inicial y excluye Premium y +18. Mostrar todo incluye lo autorizado para la cuenta; Premium muestra contenido premium no adulto; +18 solicita contenido adulto, sujeto a identidad y edad verificadas por el servidor. La petición usa `vis=general|all|premium|nsfw` y añade `nsfw=true` para Mostrar todo y +18, igual que Super Galería. Reiniciar filtros vuelve a General, todos los formatos, orden reciente y búsqueda vacía.
+
+Los filtros solo organizan el catálogo: no conceden permisos. El cliente exige `isAuthorized: true`, descarta resultados que no correspondan al filtro y renueva la consulta al cambiar la identidad de sesión. El formato Cuadrado usa `ratio=1:1`.
+
 ## Proveedores externos: propuesta sin implementar
 
 Si se añaden fuentes externas, presentarlas como «Proveedores de wallpapers», con nombre, descripción, atribución y estado de conexión propios. Evitar pedir una URL genérica o sugerir que cualquier página sirve como catálogo. Mantener Biglex J como proveedor disponible; no mostrar Pexels como integrado.

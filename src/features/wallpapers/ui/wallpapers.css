@@ -102,9 +102,10 @@
 .wallpapers-filter-row {
   display: flex;
   gap: 10px;
-  overflow-x: auto;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  overflow: visible;
   padding-bottom: 4px;
-  scrollbar-width: thin;
 }
 
 .wallpaper-filter-chip {
@@ -694,3 +695,7 @@
   color: white;
   font-size: 0.8rem;
 }
+
+.wallpaper-filter-field { display: grid; gap: 6px; min-width: 180px; }
+.wallpaper-filter-field > span { color: var(--on-surface-variant); font-size: .8rem; }
+.wallpapers-filter-hint { margin: 0; color: var(--on-surface-variant); font-size: .85rem; }

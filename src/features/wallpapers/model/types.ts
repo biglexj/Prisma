@@ -31,6 +31,7 @@ export interface AuroraWallpapersResponse {
 }
 
 export interface WallpaperFilterOptions {
+  visibility?: WallpaperVisibility;
   page?: number;
   limit?: number;
   ratio?: string;
@@ -38,3 +39,5 @@ export interface WallpaperFilterOptions {
   sort?: "recent" | "trending" | "views" | "downloads";
   query?: string;
 }
+
+export type WallpaperVisibility = "general" | "all" | "premium" | "nsfw";

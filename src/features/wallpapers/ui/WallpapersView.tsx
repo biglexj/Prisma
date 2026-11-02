@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
-import type { AuroraWallpaper } from "../model/types";
+import type { AuroraWallpaper, WallpaperVisibility } from "../model/types";
+import { WALLPAPER_VISIBILITY_OPTIONS } from "../model/catalogFilters";
+import { CustomSelect } from "../../../shared/ui/CustomSelect";
+import { useAuthSession } from "../../auth/useAuthSession";
 import { fetchAuroraWallpapers, setWindowsWallpaper, downloadWallpaperHd, toggleAuroraFavorite } from "../services/wallpapersApi";
 import { useSystemSettings } from "../../../app/useSystemSettings";
 import { Icon } from "../../../shared/ui/Icon";
@@ -19,11 +22,14 @@ function getWallpaperRatio(wallpaper: AuroraWallpaper): number {
 
 export function WallpapersView() {
   const { auroraWallpapersEnabled, setAuroraWallpapersEnabled } = useSystemSettings();
+  const { session } = useAuthSession();
+  const viewerIdentity = session.verified ? session.userId : null;
   const [wallpapers, setWallpapers] = useState<AuroraWallpaper[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedRatio, setSelectedRatio] = useState<string | undefined>(undefined);
+  const [selectedVisibility, setSelectedVisibility] = useState<WallpaperVisibility>("general");
   const [selectedSort, setSelectedSort] = useState<"recent" | "trending" | "views">("recent");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -45,6 +51,8 @@ export function WallpapersView() {
   const loadData = useCallback(async () => {
     activeRequestRef.current?.abort();
     activeRequestRef.current = null;
+    setWallpapers([]);
+    setSelectedWallpaper(null);
     if (!auroraWallpapersEnabled) {
       setLoading(false);
       return;
@@ -60,11 +68,13 @@ export function WallpapersView() {
         ratio: selectedRatio,
         sort: selectedSort,
         query: debouncedSearchQuery || undefined,
+        visibility: selectedVisibility,
       }, controller.signal);
+      if (controller.signal.aborted) return;
       const nextWallpapers = res.wallpapers || [];
       setWallpapers(nextWallpapers);
     } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
+      if (controller.signal.aborted || (err instanceof DOMException && err.name === "AbortError")) return;
       setError(err instanceof Error ? err.message : "Error al conectar con Aurora");
     } finally {
       if (activeRequestRef.current === controller) {
@@ -72,7 +82,7 @@ export function WallpapersView() {
         setLoading(false);
       }
     }
-  }, [auroraWallpapersEnabled, selectedRatio, selectedSort, debouncedSearchQuery]);
+  }, [auroraWallpapersEnabled, selectedRatio, selectedSort, selectedVisibility, debouncedSearchQuery, viewerIdentity]);
 
   useEffect(() => {
     void loadData();
@@ -216,38 +226,47 @@ export function WallpapersView() {
 
       {/* Barra de Filtros */}
       <div className="wallpapers-filter-row">
-        <button
-          className={`wallpaper-filter-chip ${!selectedRatio ? "is-active" : ""}`}
-          onClick={() => setSelectedRatio(undefined)}
-        >
-          Todos los formatos
-        </button>
-        <button
-          className={`wallpaper-filter-chip ${selectedRatio === "16:9" ? "is-active" : ""}`}
-          onClick={() => setSelectedRatio(selectedRatio === "16:9" ? undefined : "16:9")}
-        >
-          💻 PC (16:9)
-        </button>
-        <button
-          className={`wallpaper-filter-chip ${selectedRatio === "21:9" ? "is-active" : ""}`}
-          onClick={() => setSelectedRatio(selectedRatio === "21:9" ? undefined : "21:9")}
-        >
-          🖥️ Ultrawide (21:9)
-        </button>
-        <button
-          className={`wallpaper-filter-chip ${selectedRatio === "9:16" ? "is-active" : ""}`}
-          onClick={() => setSelectedRatio(selectedRatio === "9:16" ? undefined : "9:16")}
-        >
-          📱 Móvil (9:16)
-        </button>
-
+        <div className="wallpaper-filter-field">
+          <span>Formato</span>
+          <CustomSelect<string>
+            aria-label="Formato del wallpaper"
+            value={selectedRatio ?? ""}
+            onChange={value => setSelectedRatio(value || undefined)}
+            options={[
+              { value: "", label: "Todos los formatos" },
+              { value: "16:9", label: "PC (16:9)" },
+              { value: "21:9", label: "Ultrapanorámico (21:9)" },
+              { value: "9:16", label: "Móvil (9:16)" },
+              { value: "1:1", label: "Cuadrado (1:1)" },
+            ]}
+          />
+        </div>
+        <div className="wallpaper-filter-field">
+          <span>Visibilidad</span>
+          <CustomSelect<WallpaperVisibility>
+            aria-label="Visibilidad de wallpapers"
+            value={selectedVisibility}
+            onChange={setSelectedVisibility}
+            options={WALLPAPER_VISIBILITY_OPTIONS}
+          />
+        </div>
         <button
           className={`wallpaper-filter-chip ${selectedSort === "trending" ? "is-active" : ""}`}
+          aria-pressed={selectedSort === "trending"}
           onClick={() => setSelectedSort(selectedSort === "trending" ? "recent" : "trending")}
         >
-          🔥 Tendencias
+          Tendencias
         </button>
+        <button className="wallpaper-filter-chip" onClick={() => {
+          setSelectedRatio(undefined);
+          setSelectedVisibility("general");
+          setSelectedSort("recent");
+          setSearchQuery("");
+        }}>Reiniciar filtros</button>
       </div>
+      <p className="wallpapers-filter-hint">
+        Mostrar todo incluye el contenido permitido para tu cuenta. El contenido +18 requiere acceso y edad verificados.
+      </p>
 
       {/* Feedback Toast */}
       {actionStatus && (

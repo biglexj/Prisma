@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { OFFICIAL_AURORA_ORIGIN } from "../../../shared/auroraServer";
 import type { AuroraWallpaper, AuroraWallpapersResponse, WallpaperFilterOptions } from "../model/types";
 import { prismaAuth } from "../../auth";
+import { matchesWallpaperFilter, wallpaperCatalogQuery } from "../model/catalogFilters";
 
 const WALLPAPERS_PATH = "/api/v1/wallpapers";
 const FAVORITE_PATH = "/api/v1/wallpapers/favorite";
@@ -78,7 +79,7 @@ function normalizeWallpaper(raw: unknown): AuroraWallpaper {
     thumbnailSrc:
       typeof item.thumbnailSrc === "string" && item.thumbnailSrc.trim() ? item.thumbnailSrc : null,
     isPremium: item.isPremium === true,
-    isAuthorized: item.isAuthorized !== false,
+    isAuthorized: item.isAuthorized === true,
     isNsfw: item.isNsfw === true,
     isFavorite: item.isFavorite === true,
     viewsCount: typeof item.viewsCount === "number" ? item.viewsCount : 0,
@@ -155,20 +156,15 @@ export async function fetchAuroraWallpapers(
   options: WallpaperFilterOptions = {},
   signal?: AbortSignal,
 ): Promise<AuroraWallpapersResponse> {
-  const params = new URLSearchParams();
-  if (options.page) params.set("page", String(options.page));
-  if (options.limit) params.set("limit", String(options.limit));
-  if (options.ratio) params.set("ratio", options.ratio);
-  if (options.category) params.set("category", options.category);
-  if (options.sort) params.set("sort", options.sort);
-  if (options.query) params.set("q", options.query);
+  const params = wallpaperCatalogQuery(options);
 
   const primaryUrl = getAuroraServerUrl();
   const queryString = params.toString() ? `?${params.toString()}` : "";
 
   // El catálogo usa la API web versionada de Aurora. Synapse queda reservado para IPC entre aplicaciones.
   try {
-    return await requestWallpapersCatalogWithAuthFallback(primaryUrl, queryString, signal);
+    const response = await requestWallpapersCatalogWithAuthFallback(primaryUrl, queryString, signal);
+    return { ...response, wallpapers: response.wallpapers.filter(wallpaper => matchesWallpaperFilter(wallpaper, options.visibility ?? "general")) };
   } catch (err: unknown) {
     if (isAbortError(err)) throw err;
     throw err instanceof Error

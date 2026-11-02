@@ -45,3 +45,10 @@ Al aprobar una comprobación, cambia `[ ]` por `[x]`. Si falla, mantenla pendien
 - Consulta de solo lectura confirmó SELECT de public.users restringido a auth.uid() = id. La identidad del perfil coincide con Auth.
 - Prisma Dev ejecutado con cambios: sesión recuperada y renovada; interfaz muestra Biglex J y su avatar de la web. Panel con cuenta disponible, dos servicios y servidor colapsado comprobado visualmente.
 - Pendiente: nuevo login completo por navegador en ambas ediciones, cancelación y caducidad en UI, catálogo privado en Prisma. No declarar esas comprobaciones cubiertas por las pruebas simuladas. Sin publicación ni reemplazo de Stable.
+
+## Filtros de wallpapers — 2026-11-02
+
+- Formato y visibilidad combinables, General por defecto; contrato y semántica contrastados con el endpoint de Aurora y WallpaperAudience de Super Galería.
+- Build TypeScript/Vite correcto; 7 pruebas de filtros/servicios, 40 assertions. Cubren parámetros de petición, solicitud explícita de adulto, combinación con búsqueda y formato, clasificación y denegación con autorización falsa/ausente.
+- Consulta HTTP real sin credenciales a las cuatro variantes: endpoint devolvió el visibilityFilter solicitado; General y Mostrar todo retornaron muestras públicas sin adulto, Premium y +18 devolvieron cero resultados. Esto no prueba el acceso de una cuenta Premium/adulta.
+- Cambio/cierre de identidad provoca vaciado del listado y la vista previa, cancelación y recarga para evitar conservar resultados de la cuenta anterior. Pendiente: comprobación visual e interacción autenticada en Prisma Dev; la ventana estaba minimizada durante la inspección. Sin publicación.
