@@ -9,6 +9,11 @@
   }
 }
 
+/* Ajustes ya aporta el espacio entre las pestañas y su contenido. */
+.app-settings-page .library-sources {
+  padding-top: 0;
+}
+
 .library-sources .section-heading {
   margin-bottom: 24px;
 }
