@@ -2,17 +2,16 @@
 
 Registro de cambios y versiones de Prisma.
 
-## En desarrollo
+## [2.0.2] - 2026-11-02
 
-Cerrar sesión solicita confirmación con las opciones Cerrar sesión y Cancelar, reutilizando el diálogo compartido de Prisma.
+Prisma amplía la integración del servicio de letras en línea con auditoría y trazabilidad por identidad: los aportes sincronizados o de texto plano conservan su historial, recibos y reintentos asociados a la cuenta activa, evitando degradaciones accidentales a envíos anónimos si la sesión no está verificada. El editor de letras distingue con claridad la publicación de una letra nueva frente a la asociación con una obra existente, permitiendo la publicación y sincronización inmediata de coincidencias exactas, además de mantener la búsqueda y visualización de letras tanto en modo anónimo como identificado.
 
-El catálogo de wallpapers añade filtros combinables de formato y visibilidad: General, Mostrar todo, Premium y +18, con General como opción inicial. Respeta los permisos del servidor y permite reiniciar los filtros. Ecosistema Online organiza la cuenta a la izquierda y los servicios a la derecha, y retira la selección de servidor personalizado.
+Configuración reúne la cuenta Biglex J y los interruptores independientes de Letras y Wallpapers en la nueva sección Ecosistema Online, organizando el perfil a la izquierda y los servicios a la derecha y retirando la selección innecesaria de servidor manual. El perfil muestra el nombre y la foto guardados en la web con Google como método de acceso, incorpora retorno asistido desde el navegador (`native-return`) con cierre automático de la pestaña OAuth, mantiene sesiones independientes entre Prisma y Prisma Dev, permite cancelar intentos de inicio de sesión y solicita confirmación con diálogo compartido al cerrar sesión.
 
-Configuración reúne la cuenta Biglex J y los interruptores independientes de Letras y Wallpapers en Ecosistema Online. El perfil muestra el nombre y la foto guardados en la web, con Google como método de acceso. Los intentos de inicio de sesión se pueden cancelar y el retorno indica el botón que debe pulsarse en el navegador.
+El catálogo de fondos vivos y wallpapers de Aurora se conecta directamente mediante peticiones autenticadas nativas y añade filtros combinables de formato y visibilidad: General (predeterminado), Mostrar todo, Premium y contenido para adultos (+18). La galería respeta las autorizaciones otorgadas por el servidor a la cuenta iniciada, ofrece reinicio rápido de filtros y garantiza que las búsquedas y selecciones no expongan credenciales en el cliente web.
 
-Los aportes de letras conservan su historial y sus reintentos por cuenta. La interfaz distingue la publicación de una letra nueva y la asociación con una ya existente; la resolución automática requiere la nueva revisión del servicio.
+La vista de Configuración optimiza su ergonomía reubicando el bloque de Barra de Progreso hacia el final de la lista de ajustes e igualando el espaciado superior en la gestión de carpetas, mientras que todos los interruptores y controles interactivos eliminan recuadros nativos y adoptan estados de pulsación redondeados y fluidos conforme al sistema de diseño Material 3 Expressive.
 
-El inicio de sesión corrige el retorno del navegador a Prisma y Prisma Dev, mantiene sus sesiones separadas y recupera la autenticación en la aplicación abierta. La cuenta permite identificar tus aportes; el contenido disponible continúa dependiendo de tus permisos.
 
 ## [2.0.1] - 2026-11-01
 

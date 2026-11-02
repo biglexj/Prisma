@@ -1,12 +1,11 @@
-# ⚡ Prisma 2.0.1
+# ⚡ Prisma 2.0.2
 
-Esta actualización incorpora el nuevo diseño del editor de etiquetas de audio en proporción 60/40 con búsqueda de metadatos en línea, el servicio público de letras federado de Biglex J, selectores Material 3 Expressive y mejoras en Fondos Vivos y Synapse.
+Esta actualización profundiza la integración de letras federadas con autoría e historial por identidad, introduce la sección Ecosistema Online con inicio de sesión unificado de Biglex J, filtros avanzados en el catálogo de Wallpapers y refinamientos ergonómicos en la interfaz.
 
-- 🏷️ **Editor de etiquetas renovado**: distribución 60/40 con carátula ampliada a formato 1:1, edición unificada de metadatos, género y año a dos columnas, acceso directo a la sincronización de letras y consulta en línea desde Apple Music y Deezer.
-- 🎵 **Servicio de letras en línea**: búsqueda y selección de letras sincronizadas desde Biglex J (biglexj.com) y LRCLIB, con alternancia fluida entre texto plano y tiempos sincronizados.
-- 🎨 **Selectores Material 3 Expressive**: menús desplegables con chevrones tonales, bordes redondeados y estilo integrado con el tema de la aplicación.
-- 🔄 **Coordinación de Fondos Vivos**: cesión automática de pantalla entre ediciones y conmutador unificado de carpetas para rotación de fondos.
-- ⚡ **Synapse y fluidez nativa**: soporte para arrastre de imágenes web sin archivo local, interacción optimizada con lápiz óptico y resolución de capturas accidentales en tarjetas de música.
+- 🎵 **Aportes de letras con autoría e historial**: trazabilidad de contribuciones, recibos locales e historial por cuenta, publicación automática de letras y sincronizaciones coincidentes, y distinción clara entre nueva letra y vinculación a obra existente.
+- 👤 **Ecosistema Online unificado**: nueva distribución en Configuración que organiza tu cuenta Biglex J y los interruptores independientes de Letras y Wallpapers, con autenticación PKCE fluida, retorno automático de navegador (`native-return`) y confirmación segura al cerrar sesión.
+- 🖼️ **Catálogo de Wallpapers con filtros combinables**: explora fondos con filtros de formato y visibilidad (General, Premium, +18 y Mostrar todo) respaldados por consultas nativas seguras y permisos de cuenta.
+- 🎨 **Ergonomía y Material 3 Expressive**: interruptores con área de pulsación redondeada sin recuadros nativos y reubicación ergonómica de la barra de progreso en ajustes.
 
 ## Actualización desde el instalador anterior
 
@@ -14,7 +13,7 @@ Si migras desde una edición de Prisma que usaba el instalador heredado (NSIS), 
 
 ## 📦 Windows x64
 
-[Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v2.0.1/Prisma_2.0.1-setup.exe)
+[Descargar Instalador (Windows x64)](https://github.com/biglexj/Prisma/releases/download/v2.0.2/Prisma_2.0.2-setup.exe)
 
 ## 💖 Apoya el desarrollo
 

@@ -58,6 +58,22 @@ Ideas de evolución registradas el 1 de octubre de 2026 para el uso personal de 
 
 ## 🟢 Completado
 
+- [x] **v2.0.2 — 2026-11-02**
+  - **Aportes y Servicio de Letras con Identidad**:
+    - Aportes de letras con auditoría e historial por identidad activa (sin degradación silenciosa a anónimo).
+    - Distinción entre publicación de nueva letra y vinculación a obra existente, con publicación y sincronización inmediata de coincidencias exactas.
+    - Búsqueda y sincronización de letras tanto en modo anónimo como identificado.
+  - **Ecosistema Online y Cuenta Biglex J**:
+    - Unificación de cuenta e interruptores independientes de Letras y Wallpapers en Configuración.
+    - Autenticación PKCE fluida con retorno asistido `native-return`, cierre automático de pestaña OAuth y confirmación compartida al cerrar sesión.
+    - Aislamiento total de sesiones y credenciales entre Prisma y Prisma Dev.
+  - **Catálogo de Wallpapers Aurora con Sesión Nativa**:
+    - Filtros combinables de formato y visibilidad (General, Mostrar todo, Premium y +18) con reinicio rápido.
+    - Canalización nativa de peticiones con cabeceras de sesión seguras y respeto a permisos de servidor.
+  - **Refinamiento UI y Material 3 Expressive**:
+    - Reorganización ergonómica de la Barra de Progreso en Configuración.
+    - Interruptores con pulsación redondeada eliminando recuadros nativos.
+
 - [x] **v2.0.1 — 2026-11-01**
   - **Rediseño del Editor de Etiquetas de Audio**:
     - Distribución 60/40 ergonómica con carátula al 40% (1:1 hasta 350px) y edición en columna única.
