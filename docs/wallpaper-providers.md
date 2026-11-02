@@ -16,6 +16,12 @@ El catálogo permite combinar formato, búsqueda, tendencias y visibilidad. Gene
 
 Los filtros solo organizan el catálogo: no conceden permisos. El cliente exige `isAuthorized: true`, descarta resultados que no correspondan al filtro y renueva la consulta al cambiar la identidad de sesión. El formato Cuadrado usa `ratio=1:1`.
 
+### Transporte de escritorio y sesión
+
+El 2 de noviembre se confirmó que OPTIONS del catálogo con Origin de Tauri y cabecera Authorization devolvía 404, sin cabeceras de preflight. El transporte WebView anterior ocultaba el error y repetía la consulta sin identidad, perdiendo el catálogo Premium/adulto. Prisma consulta ahora el endpoint oficial desde un comando nativo, con la sesión nativa vigente. No acepta una URL de destino, no sigue redirecciones y limita el tamaño y tiempo de respuesta. Los errores de sesión se muestran en vez de degradar silenciosamente a invitado. El cliente descarta resultados de solicitudes canceladas.
+
+La opción Mostrar todo aparece primero en el menú, pero la selección inicial y Reiniciar filtros siguen siendo General.
+
 ## Proveedores externos: propuesta sin implementar
 
 Si se añaden fuentes externas, presentarlas como «Proveedores de wallpapers», con nombre, descripción, atribución y estado de conexión propios. Evitar pedir una URL genérica o sugerir que cualquier página sirve como catálogo. Mantener Biglex J como proveedor disponible; no mostrar Pexels como integrado.

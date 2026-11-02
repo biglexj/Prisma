@@ -22,3 +22,4 @@ pub mod video_takes;
 pub mod visual_library;
 pub mod wallpapers;
 pub mod screen_capture;
+pub mod aurora_catalog;

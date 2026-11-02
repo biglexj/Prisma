@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { matchesWallpaperFilter, wallpaperCatalogQuery } from "../src/features/wallpapers/model/catalogFilters";
+import { matchesWallpaperFilter, wallpaperCatalogQuery, WALLPAPER_VISIBILITY_OPTIONS } from "../src/features/wallpapers/model/catalogFilters";
 import type { WallpaperVisibility } from "../src/features/wallpapers/model/types";
 
 describe("filtros del catálogo compartidos con web y móvil", () => {
   test("General es el valor inicial y no solicita contenido adulto", () => {
+    expect(WALLPAPER_VISIBILITY_OPTIONS[0].value).toBe("all");
     const query = wallpaperCatalogQuery({});
     expect(query.get("vis")).toBe("general");
     expect(query.has("nsfw")).toBe(false);

@@ -1173,6 +1173,7 @@ pub fn run() {
             vault_remove,
             vault_toggle_pin,
             app::commands::auth::auth_session_status,
+            app::commands::aurora_catalog::aurora_wallpapers_catalog,
             app::commands::auth::auth_session_login,
             app::commands::auth::auth_session_cancel_login,
             app::commands::auth::auth_session_complete,

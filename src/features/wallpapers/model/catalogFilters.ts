@@ -1,8 +1,8 @@
 import type { AuroraWallpaper, WallpaperFilterOptions, WallpaperVisibility } from "./types";
 
 export const WALLPAPER_VISIBILITY_OPTIONS: { value: WallpaperVisibility; label: string }[] = [
-  { value: "general", label: "General" },
   { value: "all", label: "Mostrar todo" },
+  { value: "general", label: "General" },
   { value: "premium", label: "Premium" },
   { value: "nsfw", label: "+18" },
 ];

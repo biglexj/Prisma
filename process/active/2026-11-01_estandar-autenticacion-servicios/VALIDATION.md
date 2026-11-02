@@ -52,3 +52,11 @@ Al aprobar una comprobación, cambia `[ ]` por `[x]`. Si falla, mantenla pendien
 - Build TypeScript/Vite correcto; 7 pruebas de filtros/servicios, 40 assertions. Cubren parámetros de petición, solicitud explícita de adulto, combinación con búsqueda y formato, clasificación y denegación con autorización falsa/ausente.
 - Consulta HTTP real sin credenciales a las cuatro variantes: endpoint devolvió el visibilityFilter solicitado; General y Mostrar todo retornaron muestras públicas sin adulto, Premium y +18 devolvieron cero resultados. Esto no prueba el acceso de una cuenta Premium/adulta.
 - Cambio/cierre de identidad provoca vaciado del listado y la vista previa, cancelación y recarga para evitar conservar resultados de la cuenta anterior. Pendiente: comprobación visual e interacción autenticada en Prisma Dev; la ventana estaba minimizada durante la inspección. Sin publicación.
+
+## Corrección de sesión del catálogo y controles — 2026-11-02
+
+- Fallo confirmado: OPTIONS real a /api/v1/wallpapers con Origin http://tauri.localhost y petición de cabecera authorization devolvió 404 sin Access-Control-Allow-Origin/Headers. El antiguo fallback anónimo ocultaba el fallo.
+- Consulta del catálogo trasladada a comando nativo con destino oficial fijo, sesión de SessionManager, redirecciones bloqueadas, timeout y límite de respuesta. Quitado fallback silencioso de la consulta autenticada del WebView.
+- Dos pruebas nativas de destino/filtros correctas y siete pruebas frontend (41 assertions), incluyendo llamada al comando, error de sesión sin reintento anónimo y descarte de resultados cancelados. Build frontend y ejecutable Dev correctos.
+- Verificación real en Prisma Dev: General muestra catálogo, menú ordenado Mostrar todo/General/Premium/+18; Premium muestra únicamente Biglex y Ely con distintivo Fan bajo la sesión actual. Captura revisada: cuatro controles alineados, altura 38px y radio 19px. No se aplicó ni descargó un wallpaper ni se modificaron favoritos.
+- +18 con cuenta: pendiente de interacción específica; no se continuó tocando la ventana al detectar entrada del usuario. Las opciones y el parámetro adulto están probados, pero no equivalen a esta aceptación visual. Sin despliegue web ni reemplazo de Stable.

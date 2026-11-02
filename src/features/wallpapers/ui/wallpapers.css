@@ -699,3 +699,13 @@
 .wallpaper-filter-field { display: grid; gap: 6px; min-width: 180px; }
 .wallpaper-filter-field > span { color: var(--on-surface-variant); font-size: .8rem; }
 .wallpapers-filter-hint { margin: 0; color: var(--on-surface-variant); font-size: .85rem; }
+
+.wallpaper-filter-field .prisma-custom-select-trigger,
+.wallpapers-filter-row > .wallpaper-filter-chip {
+  height: 38px;
+  min-height: 38px;
+  border-radius: 19px;
+  padding: 6px 14px;
+  box-sizing: border-box;
+}
+.wallpaper-filter-field .prisma-custom-select-menu { border-radius: 19px; }

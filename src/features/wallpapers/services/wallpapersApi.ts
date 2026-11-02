@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { OFFICIAL_AURORA_ORIGIN } from "../../../shared/auroraServer";
 import type { AuroraWallpaper, AuroraWallpapersResponse, WallpaperFilterOptions } from "../model/types";
 import { prismaAuth } from "../../auth";
@@ -135,7 +135,7 @@ async function requestWallpapersCatalog(
   return normalizeWallpapersResponse(payload);
 }
 
-async function requestWallpapersCatalogWithAuthFallback(
+async function requestSessionWallpapersCatalog(
   serverUrl: string,
   queryString: string,
   signal: AbortSignal | undefined,
@@ -143,13 +143,7 @@ async function requestWallpapersCatalogWithAuthFallback(
   const token = await getAuroraAccessToken();
   if (!token) return requestWallpapersCatalog(serverUrl, queryString, signal, null);
 
-  try {
-    return await requestWallpapersCatalog(serverUrl, queryString, signal, token);
-  } catch (error) {
-    if (isAbortError(error)) throw error;
-    // Aurora puede seguir sirviendo el catálogo público mientras se actualiza CORS/autorización.
-    return requestWallpapersCatalog(serverUrl, queryString, signal, null);
-  }
+  return requestWallpapersCatalog(serverUrl, queryString, signal, token);
 }
 
 export async function fetchAuroraWallpapers(
@@ -163,7 +157,11 @@ export async function fetchAuroraWallpapers(
 
   // El catálogo usa la API web versionada de Aurora. Synapse queda reservado para IPC entre aplicaciones.
   try {
-    const response = await requestWallpapersCatalogWithAuthFallback(primaryUrl, queryString, signal);
+    signal?.throwIfAborted();
+    const response = isTauri()
+      ? normalizeWallpapersResponse(await invoke("aurora_wallpapers_catalog", { options }))
+      : await requestSessionWallpapersCatalog(primaryUrl, queryString, signal);
+    signal?.throwIfAborted();
     return { ...response, wallpapers: response.wallpapers.filter(wallpaper => matchesWallpaperFilter(wallpaper, options.visibility ?? "general")) };
   } catch (err: unknown) {
     if (isAbortError(err)) throw err;
