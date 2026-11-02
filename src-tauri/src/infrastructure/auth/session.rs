@@ -161,9 +161,18 @@ impl SessionConfig {
     fn authorize_url(&self, provider: &str, challenge: &str) -> String {
         match self.issuer {
             AuthIssuer::Provider => {
+                let redirect_to = std::env::var("PRISMA_AUTH_REDIRECT_TO")
+                    .ok()
+                    .filter(|val| !val.trim().is_empty())
+                    .unwrap_or_else(|| {
+                        format!(
+                            "https://biglexj.com/auth/native-return?app={}",
+                            super::deeplink::scheme()
+                        )
+                    });
                 let mut query = vec![
                     ("provider", provider.to_string()),
-                    ("redirect_to", self.redirect_uri.clone()),
+                    ("redirect_to", redirect_to),
                     ("code_challenge", challenge.to_string()),
                     ("code_challenge_method", "S256".to_string()),
                 ];

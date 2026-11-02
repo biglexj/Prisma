@@ -38,6 +38,8 @@ export function AuthSessionCard() {
     }
   };
 
+  const isAuthenticating = session.state === "authenticating";
+
   return (
     <div className="settings-card auth-session-card">
       <div className="auth-card-header">
@@ -61,6 +63,11 @@ export function AuthSessionCard() {
         </div>
       ) : isAuthenticated ? (
         <div className="auth-card-profile">
+          <div className="auth-welcome-banner">
+            <Icon name="sparkles" />
+            <span>¡Bienvenido a Prisma, {session.displayName || session.email?.split("@")[0] || "Usuario"}!</span>
+          </div>
+
           <div className="auth-profile-main">
             {session.avatarUrl ? (
               <img src={session.avatarUrl} alt={session.displayName || "Avatar"} className="auth-avatar" />
@@ -90,7 +97,7 @@ export function AuthSessionCard() {
               <Icon name="sparkles" />
               <div>
                 <strong>Aurora Wallpapers</strong>
-                <p>Contenido disponible según los permisos de tu cuenta.</p>
+                <p>Catálogo VIP y filtros desbloqueados según tu cuenta.</p>
               </div>
             </div>
           </div>
@@ -119,15 +126,27 @@ export function AuthSessionCard() {
         </div>
       ) : (
         <div className="auth-card-guest">
-          <div className="auth-guest-notice">
-            <Icon name="sparkles" />
-            <div>
-              <strong>Modo Anónimo Activo</strong>
-              <p>
-                Puedes enviar letras de canciones de forma anónima y descargar wallpapers públicos. Inicia sesión para registrar autoría en tus letras y acceder a wallpapers exclusivos.
-              </p>
+          {isAuthenticating ? (
+            <div className="auth-authenticating-banner">
+              <Icon name="refresh" />
+              <div>
+                <strong>Inicio de sesión en curso</strong>
+                <p>
+                  Completa la selección de cuenta en el navegador. Cuando finalices verás la pantalla de <em>«¡Bienvenido a Prisma!»</em> y volverás automáticamente a la aplicación.
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="auth-guest-notice">
+              <Icon name="sparkles" />
+              <div>
+                <strong>Modo Anónimo Activo</strong>
+                <p>
+                  Puedes enviar letras de canciones de forma anónima y descargar wallpapers públicos. Inicia sesión para registrar autoría en tus letras y acceder a wallpapers exclusivos.
+                </p>
+              </div>
+            </div>
+          )}
 
           {errorMsg && <div className="auth-error-banner">{errorMsg}</div>}
 
@@ -135,16 +154,16 @@ export function AuthSessionCard() {
             <button
               type="button"
               className="auth-btn is-primary"
-              disabled={Boolean(busyProvider)}
+              disabled={Boolean(busyProvider) || isAuthenticating}
               onClick={() => handleLogin("google")}
             >
               <Icon name="user" />
-              <span>{busyProvider === "google" ? "Conectando..." : "Entrar con Google"}</span>
+              <span>{busyProvider === "google" || isAuthenticating ? "Esperando navegador..." : "Entrar con Google"}</span>
             </button>
             <button
               type="button"
               className="auth-btn is-secondary"
-              disabled={Boolean(busyProvider)}
+              disabled={Boolean(busyProvider) || isAuthenticating}
               onClick={() => handleLogin("github")}
             >
               <Icon name="code" />
@@ -153,7 +172,7 @@ export function AuthSessionCard() {
             <button
               type="button"
               className="auth-btn is-secondary"
-              disabled={Boolean(busyProvider)}
+              disabled={Boolean(busyProvider) || isAuthenticating}
               onClick={() => handleLogin("discord")}
             >
               <Icon name="sparkles" />
