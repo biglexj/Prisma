@@ -33,6 +33,8 @@ export interface ContributionReceipt {
   status: "pending" | "publishing" | "approved" | "rejected";
   lyricId: string | null;
   receiptToken: string;
+  resolution?: "matched" | "created" | null;
+  recordingId?: string | null;
 }
 
 let retryAfter = 0;

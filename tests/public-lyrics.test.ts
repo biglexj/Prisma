@@ -63,6 +63,9 @@ describe("contrato público de letras", () => {
     expect(result.status).toBe("pending");
     saveContribution({ ...first, receipt: result });
     expect(prepareContribution(body).key).toBe(first.key);
+    const otherUser = prepareContribution(body, "other-user");
+    expect(otherUser.key).not.toBe(first.key);
+    expect(prepareContribution(body, "other-user").key).toBe(otherUser.key);
     expect(prepareContribution({ ...body, plainLyrics: "Cambio" }).key).not.toBe(first.key);
     expect(loadContributions()[0].receipt?.receiptToken).toBe("privado");
     expect((await getContribution(receipt, new AbortController().signal)).status).toBe("approved");

@@ -1,5 +1,12 @@
 # Validación
 
+## Ampliación: aportes automáticos y auditoría por identidad
+
+- Las claves de reintento e historial quedan separadas por identidad; un fallo de sesión no se convierte silenciosamente en envío anónimo.
+- Los recibos muestran publicación o asociación según `status` y `resolution`; HTTP 202 no se interpreta como publicación por sí solo.
+- `bun test tests/public-lyrics.test.ts tests/track-lyrics-match.test.ts`: 11 pruebas y 45 aserciones aprobadas. Build TypeScript/Vite aprobado.
+- La publicación automática nueva/coincidente está implementada en el proveedor local, pendiente de despliegue; no se han enviado aportes de prueba a producción.
+
 - [x] `bun test tests/public-lyrics.test.ts`: 8 pruebas, 34 aserciones. Consultas sin identidad, versiones separadas, fallo no JSON, cancelación, persistencia/idempotencia/comprobante, fallo de almacenamiento, validación de LRC, procedencia y 429.
 - [x] `bun run build`: TypeScript y Vite aprobados. Aviso de chunks superiores a 500 kB; sin errores.
 - [x] Lectura real del endpoint público: búsqueda HTTP 200 y respuesta de candidatos con grabaciones. La documentación del proveedor aún decía pendiente de activación; se comprobó el estado efectivo.

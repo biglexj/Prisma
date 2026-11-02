@@ -6,7 +6,7 @@ import { useAuthSession } from "../../../auth";
 const statuses = {
   pending: "Recibido para revisión",
   publishing: "Publicación en proceso",
-  approved: "Aprobado",
+  approved: "Publicada",
   rejected: "Rechazado",
 };
 
@@ -25,7 +25,8 @@ export function LyricsContributionPanel({
   duration: number;
   signal: AbortSignal;
 }) {
-  const { session, isAuthenticated, getAccessToken } = useAuthSession();
+  const { session, isAuthenticated, getAccessToken, loading } = useAuthSession();
+  const actorId = isAuthenticated && session.userId ? session.userId : "anonymous";
   const [label, setLabel] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [items, setItems] = useState(loadContributions);
@@ -40,7 +41,10 @@ export function LyricsContributionPanel({
     setBusy(true);
     setMessage("");
     try {
-      const token = isAuthenticated ? await getAccessToken().catch(() => null) : null;
+      if (!refresh && (item.actorId ?? "anonymous") !== actorId) throw new Error("Este aporte pertenece a otra cuenta. Inicia sesión con su autor para reintentarlo.");
+      if (!refresh && session.userId && !isAuthenticated) throw new Error("Verifica tu sesión antes de enviar el aporte con autoría.");
+      const token = isAuthenticated && !refresh ? await getAccessToken() : null;
+      if (!refresh && isAuthenticated && !token) throw new Error("No se pudo verificar la sesión. El aporte no se envió anónimamente.");
       const receipt =
         refresh && item.receipt
           ? { ...item.receipt, ...(await getContribution(item.receipt, signal)) }
@@ -48,7 +52,7 @@ export function LyricsContributionPanel({
       saveContribution({ ...item, receipt });
       if (!signal.aborted) {
         setItems(loadContributions());
-        setMessage(statuses[receipt.status]);
+        setMessage(receipt.status === "approved" && receipt.resolution === "matched" ? "Asociada a la letra existente" : statuses[receipt.status]);
       }
     } catch (error) {
       if (!signal.aborted) {
@@ -62,7 +66,7 @@ export function LyricsContributionPanel({
   const contribute = () => {
     try {
       const body = buildContribution(title, artist, album, text, label, duration);
-      const item = prepareContribution(body);
+      const item = prepareContribution(body, actorId);
       setItems(loadContributions());
       void execute(item, Boolean(item.receipt));
     } catch (error) {
@@ -71,6 +75,7 @@ export function LyricsContributionPanel({
   };
 
   const authorName = session.displayName || session.email?.split("@")[0] || "mi usuario";
+  const visibleItems = items.filter(item => (item.actorId ?? "anonymous") === actorId);
 
   return (
     <details className="lyrics-online-contribute">
@@ -78,8 +83,9 @@ export function LyricsContributionPanel({
       <p>
         Se enviarán el texto actual del editor, título, artista, álbum y, si hay tiempos, versión y duración.{" "}
         {isAuthenticated
-          ? `Tu aporte se registrará con autoría pública de tu cuenta (${authorName}) tras su revisión.`
-          : "El aporte es anónimo y se revisará antes de publicarlo. Puedes iniciar sesión en Ajustes para asociar tu autoría."}
+          ? `Tu aporte conservará la autoría de tu cuenta (${authorName}).`
+          : "El aporte es anónimo. Puedes iniciar sesión en Ajustes para asociar tu autoría."}
+        {" "}Las letras nuevas y las sincronizaciones que coincidan se publican automáticamente. Los cambios de palabras de una letra existente requieren revisión.
       </p>
       <label>
         Versión de la grabación (para letras sincronizadas)
@@ -95,12 +101,12 @@ export function LyricsContributionPanel({
           checked={confirmed}
           onChange={(e) => setConfirmed(e.target.checked)}
         />
-        He revisado la letra y quiero enviarla para su revisión.
+        He revisado la letra y quiero publicarla.
       </label>
       <button
         type="button"
         className="lyrics-sync-btn"
-        disabled={!confirmed || busy}
+        disabled={!confirmed || busy || loading}
         onClick={contribute}
       >
         {busy
@@ -110,10 +116,10 @@ export function LyricsContributionPanel({
           : "Enviar aporte anónimo"}
       </button>
       <p role="status">{message}</p>
-      {items.length > 0 && (
+      {visibleItems.length > 0 && (
         <details>
-          <summary>Mis aportes guardados en este equipo ({items.length})</summary>
-          {items.map((item) => (
+          <summary>Mis aportes guardados en este equipo ({visibleItems.length})</summary>
+          {visibleItems.map((item) => (
             <div key={item.key} className="lyrics-online-receipt">
               <span>
                 {item.body.artist} — {item.body.title}:{" "}

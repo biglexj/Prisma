@@ -4,6 +4,7 @@ export interface SavedContribution {
   key: string;
   body: ContributionBody;
   receipt?: ContributionReceipt;
+  actorId?: string;
 }
 
 const STORAGE_KEY = "prisma.lyrics.contributions.v1";
@@ -24,9 +25,9 @@ export function saveContribution(item: SavedContribution) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
 }
 
-export function prepareContribution(body: ContributionBody): SavedContribution {
-  const previous = loadContributions().find(item => JSON.stringify(item.body) === JSON.stringify(body));
-  const item = previous ?? { key: crypto.randomUUID(), body };
+export function prepareContribution(body: ContributionBody, actorId = "anonymous"): SavedContribution {
+  const previous = loadContributions().find(item => (item.actorId ?? "anonymous") === actorId && JSON.stringify(item.body) === JSON.stringify(body));
+  const item = previous ?? { key: crypto.randomUUID(), body, actorId };
   saveContribution(item);
   return item;
 }
