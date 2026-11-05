@@ -1,5 +1,6 @@
 {
   "source": "Aurora---Blog/frontend/src/features/Comunidad/EspacioVtuber/islands/three/dynamic-backgrounds",
+  "verification": "`sha256` es el hash del archivo de origen en Aurora; `vendoredSha256` es el hash de la copia adaptada que vive en Prisma. La copia vendorizada se verifica con `vendoredSha256` y no requiere el repositorio vecino. La comparación con el origen informa de la deriva de Aurora y no falla la comprobación.",
   "adaptations": [
     "controls.ts: tipos, valores y normalización sin store React",
     "fábricas JS: extensión TS sin checkJs; lógica original",
@@ -56,10 +57,59 @@
     "cybercity/createCityScene.js": "724f00bbdb97eafc74bf246e64b51b25b5c1f9d5dc6821b8535a9ba03af28eda",
     "deepsea/DeepSeaBackground.ts": "fb1b698056a750f57e927622a29e23e6b730010a602cc2e662b636adc7ce5544"
   },
+  "vendoredSha256": {
+    "LayeredBackgroundComposer.ts": "9fe62676ca04f9cada876753a2ec5023276c72e487b960218eb1af89f8a22645",
+    "index.ts": "09dce37594691769593acf7dd835f6958094db867f7c09959b49651cb3d229f0",
+    "particleScenes.ts": "e65598c4ddbcccc42f148451b2a6d13349e94c914f9ca003e7b65545181b665a",
+    "ParticleBackground.ts": "3793e67993c66ee9788050d0cfa214cfd846d660f01ddad9bf86bc941ad48540",
+    "particleTextures.ts": "7b1784d4cf44dc6f09f24a78bd326e6eafb9b63de65d065ae813960f2b9569e3",
+    "Interaction/textures.ts": "a1febcb19274d392bb1a343ca11f8f663ce3efdf7ae7eb50ceb423e95f1a5e78",
+    "controls.ts": "8deeeb139bd817c5f77530340766f565dc493e1703ad599abd3061efa9de89bb",
+    "catalog.ts": "5537ad8f2c04a3d70d94b798acc0f470ac7fe0ffb8ff9fd645eb1543eadbd194",
+    "Backgrounds/themes.ts": "265230319b0c7f958ae6d09aa0bb9b643808f11aed7e61bd389258b9114ab847",
+    "BackgroundCamera.ts": "0795c01818f28ca8f7dbd03e47b8c23b9b437245ea5f9e702c2e1e04d1d32d09",
+    "resources.ts": "7beb5d40a8f562c645fc819deef8295402ad91ed963aabcc7e3ec04410f8e167",
+    "blackholepro/BlackHoleProBackground.js": "98b8ea6b5869e2a67558ef0634a8128adcf44ed1a764f340e1023f7f3bfb3113",
+    "interstellarparticles/Interstellar3DBackground.js": "4948d8baed23175c542f3e3fc7c2d8f9a8a1ce393291970a462560ac0d760ebd",
+    "milkyway/MilkyWayBackground.js": "55b6950925e32c79a624166cebdafc1c64be915ba6b3a0ccc18a7c25af2efa02",
+    "binarybh/BinaryBlackHoleBackground.js": "14bbb3965b8903c7ccc51c9471681d51b1d747634b4f848577b3d907087190a9",
+    "morphclick/QuantumNexusBackground.js": "f1ee6ec05c57a2772241d2ee668b20701e1a54df8367a292dbe7769d1c28c9c4",
+    "nebula/NebulaBackground.js": "6b9e2c32ca2dc276d9b56d6f78ec2afbdde064028ed56a3d98ac5f9117ea8d52",
+    "dnahelix/DNAHelixBackground.js": "13ec301a699d0531ab2d00022706a0e53f103be36dbdce6e08f373e745b96aa3",
+    "wormhole/WormholeBackground.js": "3ae93a16aae9626f245a8fb92d0b0ad211721342a4f7d3bb63a966eef6dbdc80",
+    "supernova/SupernovaBackground.js": "6f9c6297efcf947e2d03ea65b68e08eb199e626ecdcbf48d9bc4d2fb400eeca0",
+    "quasar/QuasarBackground.js": "0eaab579f0faf94db6b1d62758560318cd25a97ada6a00c0c51da6d51ce65fd5",
+    "bubbles/BubblesBackground.js": "141e4459720fd7b7a2b53273573c579fed61adc5433e5f17e3d407d800297c16",
+    "microbes/MicrobesBackground.js": "f154765f4646bedd891cd6df3e5c7055c9ebefcb36248d6f1753caab67a0bfc5",
+    "soundwave/SoundWaveBackground.js": "b063388962d9ca31e6b4a457fdba0782215f2c7114e81ed666a3de48971fcdd7",
+    "jellyfish/JellyfishBackground.js": "3bb6b025ce75ac8acb42a3b264e69be0f256a257144bbd5fca2a30ea2a25e6d9",
+    "synapse/SynapseBackground.js": "0741455b7a855ed408879ce99bf8411dbb08da36a4bd67dffd2bcdee4e1f8417",
+    "aurora/AuroraCurtainsBackground.js": "5a0ec4d69dd7942af6ad7a036919b0f9e0672f8004f5b2aeac27b8323fd9bd3d",
+    "BackgroundLayer.ts": "5c2e9fc545b92f541b6226fdbce29768d1c1346ca632203afd654ecabd8e1f48",
+    "BackgroundProjection.ts": "d640cca1f76d6bdea25b30a1b8aa92f2a764efac3bb5dfa35fce9ec5a41286dd",
+    "Backgrounds/AmbientBackground.ts": "e336bcc9df7b3685694a3a6cb21a24eed96c5e6c4c8b70a74e86421046a86a89",
+    "Backgrounds/sky.frag.ts": "ccfb924dadcd5bf6bbfdf1673be611454dfe6bcbf0d92323f1094fb9259fb976",
+    "Interaction/BackgroundInteraction.ts": "437c5dc0063217aefde9a555f1a946cc62a04f5c56b780cf4658c5d4c1448b97",
+    "Interaction/ClickEffects.ts": "9c87d1e35e5261384589cebcf6918a9d51246e105ef1a4dfccf5fa3889930e44",
+    "Gargantua/GargantuaScene.ts": "d3874a0fc543d89f30b518be6d9e6d03209d879d9dce2b8f9a9c594133bf90dd",
+    "Gargantua/shaders/blackhole.vert.ts": "6fb9b78479a81c2c0506870091d37e121ee3ec5f7b86736331b48d01f41bac65",
+    "Gargantua/shaders/blackhole.frag.ts": "681812af9bf0816445b49ed4a8084af90006400b6284d7fac8fae6cae934cbe7",
+    "prisma/PrismaBackground.ts": "3dbecfa10225dcfada3e08f318fc2dd48f0d99b7043029adcfeb9d9fe8c94d52",
+    "borealis/BorealisBackground.ts": "ef22dcd572b73cb5b655750ac161f233e3cad9e728c41f1a17cdd80b812cf57f",
+    "blackhole/BlackHoleBackground.ts": "cefbf811c8f5174c65d524673fcec3b351426c8c45e8c3f11b90fa10c0d2d230",
+    "matrix/MatrixRainBackground.ts": "f7665b7cdb174539210fa8ca7cac338eb0daa230ede8b0a414e58f44ce5a5e4c",
+    "liquid/LiquidVortexBackground.ts": "d708804f2648fe0f5303e9b447c93d483e205f38371fdfe9422ab60a85395193",
+    "tunnel/SpaceWormholeBackground.ts": "8e063979d4531d3303bc888d8131304585dbaeb43a2616784487bb0a79a724fc",
+    "tunnel/createTunnelScene.js": "4ed80e75f58f0192f09513fbc7fb3fc7424fac66324b3aa6b84647bd7b3d792c",
+    "cybercity/CyberCityBackground.ts": "a26d008fb279e59d3324aeec4c49a3ce91cfb02deb1e8bec1af01d6bbdcfd4c4",
+    "cybercity/createCityScene.js": "92ecc4171a8548530d9e56dc426f9524bc3807b2f6bee90e142dcfe10898e3ca",
+    "deepsea/DeepSeaBackground.ts": "5dface03e811eb1a4c633ce96d619881107c36251f21885228f189bd1f38b2d0"
+  },
   "external": {
     "particles/ParticleLayer.tsx": {
       "source": "../../particles/ParticleLayer.tsx",
-      "sha256": "c610b827c6e89bf090975d24306607f4aa546f83714c0b8eb5b4936762a18284"
+      "sha256": "c610b827c6e89bf090975d24306607f4aa546f83714c0b8eb5b4936762a18284",
+      "vendoredSha256": "7210051797f95038d30171b58e4d1ee50b6ce22943fcce6ce278ccceff30f419"
     }
   }
 }
