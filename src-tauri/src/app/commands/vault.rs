@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 
 /// Máximo de elementos que caben en la bóveda.
 pub const MAX_ITEMS: usize = 5;
-pub const MAX_PINNED: usize = 2;
+pub const MAX_PINNED: usize = MAX_ITEMS - 1;
+pub const TEMPORARY_SLOT: usize = MAX_ITEMS - 1;
 
 /// Un elemento guardado en la bóveda.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,6 +72,17 @@ impl VaultState {
             item.slot = slot;
             if let Some(slot) = slot { used[slot] = true; }
         }
+        // Migrar un fijado antiguo de la última casilla sin perder tarjetas.
+        if let Some(index) = inner.items.iter().position(|item| item.slot == Some(TEMPORARY_SLOT) && item.pinned) {
+            if let Some(slot) = (0..TEMPORARY_SLOT).find(|slot| !inner.items.iter().any(|item| item.slot == Some(*slot) && item.pinned)) {
+                if let Some(other) = inner.items.iter_mut().find(|item| item.slot == Some(slot)) {
+                    other.slot = Some(TEMPORARY_SLOT);
+                }
+                inner.items[index].slot = Some(slot);
+            } else {
+                inner.items[index].pinned = false;
+            }
+        }
         Self { inner: Mutex::new(inner), file_path }
     }
 
@@ -117,7 +129,10 @@ impl VaultState {
             path.is_some() && item.path == path || url.is_some() && item.url == url
         }).map(|item| item.id.clone());
         if pinned && guard.items.iter().filter(|item| item.pinned && Some(&item.id) != existing_id.as_ref()).count() >= MAX_PINNED {
-            return Err("Puedes fijar hasta dos elementos".into());
+            return Err("Puedes fijar hasta cuatro elementos".into());
+        }
+        if pinned && (target_slot == Some(TEMPORARY_SLOT) || guard.items.iter().any(|item| Some(&item.id) == existing_id.as_ref() && item.slot == Some(TEMPORARY_SLOT))) {
+            return Err("La última casilla está reservada para temporales".into());
         }
         let timestamp = now_millis().max(guard.items.iter().map(|item| item.added_at).max().unwrap_or(0) + 1);
 
@@ -172,10 +187,10 @@ impl VaultState {
             }
             guard.items.retain(|item| item.slot != Some(slot));
             slot
-        } else if let Some(slot) = (0..MAX_ITEMS).find(|slot| !guard.items.iter().any(|item| item.slot == Some(*slot))) {
+        } else if let Some(slot) = (0..if pinned { MAX_PINNED } else { MAX_ITEMS }).find(|slot| !guard.items.iter().any(|item| item.slot == Some(*slot))) {
             slot
         } else {
-            let victim = guard.items.iter().enumerate().filter(|(_, item)| !item.pinned)
+            let victim = guard.items.iter().enumerate().filter(|(_, item)| !item.pinned && (!pinned || item.slot != Some(TEMPORARY_SLOT)))
                 .min_by_key(|(_, item)| item.added_at).map(|(index, _)| index)
                 .ok_or("No hay casillas libres")?;
             guard.items.remove(victim).slot.unwrap_or(0)
@@ -248,7 +263,7 @@ impl VaultState {
         self.list()
     }
 
-    /// Permite hasta dos fijados y conserva los demás espacios para temporales.
+    /// Permite cuatro fijados y reserva siempre la última casilla para temporales.
     pub fn toggle_pin(&self, id: &str) -> Result<Vec<VaultItem>, String> {
         let mut guard = self.inner.lock().unwrap_or_else(|error| error.into_inner());
         let was_pinned = guard
@@ -258,7 +273,10 @@ impl VaultState {
             .map(|item| item.pinned)
             .unwrap_or(false);
         if !was_pinned && guard.items.iter().filter(|item| item.pinned).count() >= MAX_PINNED {
-            return Err("Puedes fijar hasta dos elementos".into());
+            return Err("Puedes fijar hasta cuatro elementos".into());
+        }
+        if !was_pinned && guard.items.iter().any(|item| item.id == id && item.slot == Some(TEMPORARY_SLOT)) {
+            return Err("La última casilla está reservada para temporales".into());
         }
         if let Some(item) = guard.items.iter_mut().find(|item| item.id == id) {
             item.pinned = !was_pinned;
@@ -456,12 +474,12 @@ mod tests {
     }
 
     #[test]
-    fn dos_fijados_sobreviven_y_el_temporal_mas_antiguo_se_reemplaza() {
+    fn cuatro_fijados_sobreviven_y_la_ultima_casilla_rota_temporales() {
         let (state, path) = vault();
-        for index in 0..2 {
+        for index in 0..4 {
             state.add_with_pin(Some(format!("fijo{index}.pdf")), None, true).unwrap();
         }
-        assert!(state.add_with_pin(Some("tercero.pdf".into()), None, true).is_err());
+        assert!(state.add_with_pin(Some("quinto.pdf".into()), None, true).is_err());
         state.add(Some("viejo.txt".into()), None);
         let old_id = state.list().iter().find(|item| item.name == "viejo.txt").unwrap().id.clone();
         assert!(state.toggle_pin(&old_id).is_err());
@@ -469,11 +487,53 @@ mod tests {
         state.add(Some("anterior.png".into()), None);
         state.add(Some("nuevo.txt".into()), None);
         assert_eq!(state.list().len(), 5);
-        assert_eq!(state.list().iter().filter(|item| item.pinned).count(), 2);
+        assert_eq!(state.list().iter().filter(|item| item.pinned).count(), 4);
         assert!(state.list().iter().any(|item| item.name == "nuevo.txt"));
         assert!(!state.list().iter().any(|item| item.name == "viejo.txt"));
         assert_eq!(state.list().iter().map(|item| item.name.clone()).collect::<Vec<_>>(),
-            ["fijo0.pdf", "fijo1.pdf", "intermedio.txt", "anterior.png", "nuevo.txt"]);
+            ["fijo0.pdf", "fijo1.pdf", "fijo2.pdf", "fijo3.pdf", "nuevo.txt"]);
+        assert_eq!(state.list().iter().find(|item| item.name == "nuevo.txt").unwrap().slot, Some(TEMPORARY_SLOT));
+        let restored = VaultState::new(path.clone()).list();
+        assert_eq!(restored.iter().filter(|item| item.pinned).count(), 4);
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn la_ultima_casilla_no_admite_fijados_por_ninguna_entrada() {
+        let (state, path) = vault();
+        let items = state.add_at_slot(Some("temporal.png".into()), None, false, None, Some(TEMPORARY_SLOT), None).unwrap();
+        assert!(state.toggle_pin(&items[0].id).is_err());
+        assert!(state.add_with_pin(Some("temporal.png".into()), None, true).is_err());
+        assert!(state.add_at_slot(Some("fijo.png".into()), None, true, None, Some(TEMPORARY_SLOT), None).is_err());
+        assert_eq!(state.list().len(), 1);
+        assert!(!state.list()[0].pinned);
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn fijar_al_importar_reemplaza_un_temporal_de_las_primeras_cuatro() {
+        let (state, path) = vault();
+        state.add_at_slot(Some("reservado.png".into()), None, false, None, Some(TEMPORARY_SLOT), None).unwrap();
+        for index in 0..4 { state.add(Some(format!("temporal{index}.png")), None); }
+        let items = state.add_with_pin(Some("fijo.png".into()), None, true).unwrap();
+        assert!(items.iter().any(|item| item.name == "reservado.png" && item.slot == Some(TEMPORARY_SLOT) && !item.pinned));
+        assert!(items.iter().any(|item| item.name == "fijo.png" && item.slot == Some(0) && item.pinned));
+        assert_eq!(items.len(), MAX_ITEMS);
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn un_fijado_antiguo_en_la_ultima_casilla_se_reubica_sin_perder_tarjetas() {
+        let (state, path) = vault();
+        for index in 0..5 { state.add(Some(format!("tarjeta{index}.png")), None); }
+        let mut file = state.inner.lock().unwrap().clone();
+        file.items.iter_mut().find(|item| item.slot == Some(TEMPORARY_SLOT)).unwrap().pinned = true;
+        state.save(&file);
+        let restored = VaultState::new(path.clone());
+        let items = restored.list();
+        assert_eq!(items.len(), MAX_ITEMS);
+        assert!(items.iter().any(|item| item.name == "tarjeta4.png" && item.pinned && item.slot == Some(0)));
+        assert!(items.iter().any(|item| item.name == "tarjeta0.png" && !item.pinned && item.slot == Some(TEMPORARY_SLOT)));
         let _ = std::fs::remove_file(path);
     }
 

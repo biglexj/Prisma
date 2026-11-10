@@ -150,3 +150,12 @@ El doble clic izquierdo sobre una tarjeta de imagen con ruta local invoca el vis
 - [x] `bun run build`: correcto.
 - [x] `git diff --check -- src/app/ui/SystemDropZone.tsx`: correcto.
 - Pendiente: comprobar el doble clic físico y la apertura de Quick Look en Windows; no se presenta la compilación como esa comprobación.
+
+### Cuatro fijados y quinta casilla temporal — 2026-11-09
+
+La nueva instrucción sustituye el límite anterior de dos fijados: se permiten cuatro en las primeras cuatro casillas. La quinta es exclusivamente temporal, con el botón de fijado desactivado y protección equivalente al importar y fijar desde el backend. Los temporales pueden seguir ocupando los huecos de las primeras cuatro. Un estado antiguo con un fijado en la quinta casilla lo reubica, intercambiándolo con un temporal si hace falta, sin eliminar tarjetas.
+
+- [x] `mise exec -- bun run build:web`: tipos y compilación web correctos.
+- [x] `mise exec -- cargo test --manifest-path temp/vault-tests/Cargo.toml`: 16 pruebas del archivo real `src-tauri/src/app/commands/vault.rs`, compilado como módulo aislado con Serde. Incluyen cuatro fijados, rechazo del quinto, protección de la casilla temporal por todas las entradas, rotación, persistencia y migración de un fijado antiguo.
+- La prueba de la aplicación Rust completa se canceló al quedar esperando el bloqueo de otra compilación de desarrollo. La prueba aislada no verifica la integración nativa de Tauri.
+- Pendiente: aceptación física en la barra de Windows.

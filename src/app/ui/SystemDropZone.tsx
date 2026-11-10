@@ -143,9 +143,10 @@ export function SystemDropZone() {
       {vault.pendingPaths.length ? <PhoneTransfer paths={vault.pendingPaths} onClose={() => vault.setPendingPaths([])} /> : <div className="vault-items">
         {Array.from({ length: SLOT_COUNT }, (_, index) => {
           const item = itemAtSlot(vault.items, index);
-          if (!item) return <div key={`empty-${index}`} className="vault-card vault-empty" aria-label={`Espacio ${index + 1} vacío`}
-            onPointerEnter={() => { hoveredSlot.current = index; setHoverHint("Ctrl+V para pegar en esta casilla"); }}
-            onPointerLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}><Icon name="plus" width={24} height={24} /><span>Ctrl+V</span></div>;
+          const temporaryOnly = index === SLOT_COUNT - 1;
+          if (!item) return <div key={`empty-${index}`} className="vault-card vault-empty" aria-label={temporaryOnly ? "Espacio temporal reservado vacío" : `Espacio ${index + 1} vacío`}
+            onPointerEnter={() => { hoveredSlot.current = index; setHoverHint(temporaryOnly ? "Casilla reservada para temporales · Ctrl+V para pegar" : "Ctrl+V para pegar en esta casilla"); }}
+            onPointerLeave={() => { hoveredSlot.current = null; setHoverHint(""); }}><Icon name="plus" width={24} height={24} /><span>{temporaryOnly ? "Temporal" : "Ctrl+V"}</span></div>;
           return <div key={item.id} data-vault-id={item.id} className={`vault-card ${item.pinned ? "is-pinned" : ""} ${browserDrag.hoveredId === item.id ? "is-native-hover" : ""}`}
             onDoubleClick={(event) => {
               if (event.defaultPrevented || event.button !== 0 || (event.target instanceof Element && event.target.closest("button"))) return;
@@ -174,7 +175,7 @@ export function SystemDropZone() {
                 aria-label={item.locationPath ? `Mostrar ${item.name} en su carpeta` : `Guardar ${item.name}`}>
                 <Icon name={item.locationPath ? "folder" : "save"} width={15} height={15} />
               </button>
-              <button type="button" onClick={() => void mutate("vault_toggle_pin", item.id)} onMouseEnter={() => setHoverHint(item.pinned ? "Desfijar" : "Fijar")} onFocus={() => setHoverHint(item.pinned ? "Desfijar" : "Fijar")} aria-label={`${item.pinned ? "Desfijar" : "Fijar"} ${item.name}`} aria-pressed={item.pinned}><Icon name="pin" width={15} height={15} /></button>
+              <button type="button" disabled={temporaryOnly} title={temporaryOnly ? "Casilla reservada para temporales" : undefined} onClick={() => void mutate("vault_toggle_pin", item.id)} onMouseEnter={() => setHoverHint(item.pinned ? "Desfijar" : "Fijar")} onFocus={() => setHoverHint(item.pinned ? "Desfijar" : "Fijar")} aria-label={temporaryOnly ? "Casilla reservada para temporales" : `${item.pinned ? "Desfijar" : "Fijar"} ${item.name}`} aria-pressed={item.pinned}><Icon name="pin" width={15} height={15} /></button>
               <button type="button" onClick={() => void mutate("vault_remove", item.id)} onMouseEnter={() => setHoverHint("Quitar de la barra")} onFocus={() => setHoverHint("Quitar de la barra")} aria-label={`Quitar ${item.name}`}><Icon name="close" width={15} height={15} /></button>
             </div>
           </div>;
