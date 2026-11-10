@@ -2,6 +2,10 @@
 
 Registro de cambios y versiones de Prisma.
 
+## [2.0.3] - 2026-11-09
+
+Synapse permite cuatro elementos fijados, reserva la quinta casilla para temporales y muestra el progreso de envío. Se corrigen animaciones de progreso y se incorpora la pausa automática de fondos vivos ante ventanas maximizadas o a pantalla completa.
+
 ## [2.0.2] - 2026-11-02
 
 Prisma amplía la integración del servicio de letras en línea con auditoría y trazabilidad por identidad: los aportes sincronizados o de texto plano conservan su historial, recibos y reintentos asociados a la cuenta activa, evitando degradaciones accidentales a envíos anónimos si la sesión no está verificada. El editor de letras distingue con claridad la publicación de una letra nueva frente a la asociación con una obra existente, permitiendo la publicación y sincronización inmediata de coincidencias exactas, además de mantener la búsqueda y visualización de letras tanto en modo anónimo como identificado.
