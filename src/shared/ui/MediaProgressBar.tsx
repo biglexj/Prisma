@@ -32,7 +32,7 @@ export function MediaProgressBar({
   className = "",
   ariaLabel = "Posición de reproducción",
 }: MediaProgressBarProps) {
-  const { progressBarStyle: globalStyle } = useSystemSettings();
+  const { progressBarStyle: globalStyle } = useSystemSettings({ initializeBackend: false });
   const effectiveMode: ProgressBarStyle = styleMode ?? globalStyle ?? "wavy";
 
   const containerRef = useRef<HTMLDivElement | null>(null);

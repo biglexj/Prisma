@@ -182,3 +182,15 @@ El efecto emite ahora en ambos extremos mientras está activo, con el emisor den
 - [x] Captura del panel al 100% revisada visualmente: llama visible en el extremo derecho.
 - [x] `mise exec -- bun run build:web` y `git diff --check`: correctos.
 - Pendiente: aceptación del efecto en un nuevo envío físico desde la beta.
+
+### Desaparición de la ventana al montar el progreso — 2026-11-09
+
+Biglex precisó que el panel desaparece antes de mostrar el avance, incluso con Clásica. La integración de `MediaProgressBar` montaba `useSystemSettings`, que inicializaba preferencias nativas e invocaba `system_drop_zone_set_visible(true)`. Ese comando ejecuta `place(100, 3)` aunque la ventana ya esté desplegada: React conservaba el panel abierto mientras la ventana nativa quedaba recortada a la franja. El envío continuaba fuera de la vista. Las pruebas anteriores de `PhoneTransfer` aislado no verificaban ese efecto nativo.
+
+`useSystemSettings` permite ahora omitir la inicialización del backend; la barra de progreso utiliza esa modalidad y conserva la lectura de preferencias y sus eventos de sincronización. Los consumidores existentes mantienen la inicialización predeterminada.
+
+- [x] Regresión en Chromium del componente completo `SystemDropZone`, bajo StrictMode, con IPC y tamaño nativo simulados según los comandos reales. Antes de corregir: dos órdenes de visibilidad al montar el progreso, tamaño final 100×3 pese a `expanded=true` y `revealed=true`.
+- [x] Después: tamaño 600×207, ninguna orden de reinicialización de visibilidad y un solo envío. Soltado → importación → panel de envío → 42% → confirmación → cierre del panel.
+- [x] Cambio de estilo por el evento real `prisma:settings-sync`: Clásica conserva el relleno al 42%, Fuego vuelve a dibujarse y ninguno reinicia el tamaño nativo.
+- [x] `mise exec -- bun run build:web` y `git diff --check`: correctos.
+- Pendiente: comprobar un nuevo envío físico en la beta. La reproducción simula la operación nativa de tamaño; no acredita una transferencia real.

@@ -143,7 +143,7 @@ export function loadDropZonePreferences(): { enabled: boolean; folder: string } 
   };
 }
 
-export function useSystemSettings() {
+export function useSystemSettings({ initializeBackend = true }: { initializeBackend?: boolean } = {}) {
   const [settings, setSettings] = useState<SystemSettings>(loadStoredSettings);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -217,7 +217,10 @@ export function useSystemSettings() {
       }
     }
 
-    syncWithBackend();
+    // Los consumidores visuales solo necesitan leer y escuchar preferencias.
+    // Reinicializar la visibilidad nativa al montarlos colapsaría Synapse.
+    if (initializeBackend) void syncWithBackend();
+    else setIsLoaded(true);
 
     const handleExternalChange = () => {
       if (isMounted) {
@@ -244,7 +247,7 @@ export function useSystemSettings() {
       window.removeEventListener("storage", handleExternalChange);
       unlistenTauriPromise.then((unlisten) => unlisten());
     };
-  }, []);
+  }, [initializeBackend]);
 
   const setQuickLookShortcut = useCallback(async (mode: QuickLookShortcutMode) => {
     try {
