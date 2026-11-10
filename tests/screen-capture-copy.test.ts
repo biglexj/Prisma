@@ -1,5 +1,16 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, mock, test } from "bun:test";
 import { screenCaptureClient } from "../src/features/screen_capture/services/screenCaptureClient";
+
+// El módulo `@tauri-apps/api/core` se sustituye a nivel de proceso en otros
+// archivos de prueba, y ese reemplazo sobrevive entre archivos. Aquí se fija
+// un `invoke` propio que delega en `window.__TAURI_INTERNALS__`, de modo que
+// este archivo no dependa del orden de ejecución ni del mock de otro archivo.
+mock.module("@tauri-apps/api/core", () => ({
+  convertFileSrc: (path: string) => path,
+  isTauri: () => true,
+  invoke: async (cmd: string, args: unknown) =>
+    (globalThis as any).window?.__TAURI_INTERNALS__?.invoke(cmd, args),
+}));
 
 const saved = new Map<string, PropertyDescriptor | undefined>();
 let writes: string[];
