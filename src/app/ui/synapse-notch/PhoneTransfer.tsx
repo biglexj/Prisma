@@ -48,6 +48,8 @@ export function PhoneTransfer({ paths, onClose }: { paths: string[]; onClose: ()
     mounted.current = true;
     let disposed = false;
     let inFlight = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    let unlistenProgress: (() => void) | undefined;
     const refresh = async () => {
       if (inFlight) return;
       inFlight = true;
@@ -61,12 +63,25 @@ export function PhoneTransfer({ paths, onClose }: { paths: string[]; onClose: ()
       } catch (err) { if (!disposed) setError(String(err)); }
       finally { inFlight = false; }
     };
-    void refresh();
-    const timer = setInterval(() => void refresh(), 2000);
-    const progressListener = listen<{ fileName: string; progress: number }>("prisma://upload-progress", ({ payload }) => {
-      if (currentPath.current.split(/[/\\]/).at(-1) === payload.fileName && mounted.current) setProgress(Math.round(payload.progress * 100));
-    });
-    return () => { disposed = true; mounted.current = false; clearInterval(timer); void progressListener.then((fn) => fn()); };
+    const initialize = async () => {
+      try {
+        // El envío automático puede completar en milisegundos. No descubrir ni
+        // habilitar destinos hasta que el backend confirme la escucha de progreso.
+        const unlisten = await listen<{ fileName: string; progress: number }>("prisma://upload-progress", ({ payload }) => {
+          if (!disposed && currentPath.current.split(/[/\\]/).at(-1) === payload.fileName) {
+            setProgress(Math.round(Math.min(1, Math.max(0, payload.progress)) * 100));
+          }
+        });
+        if (disposed) { unlisten(); return; }
+        unlistenProgress = unlisten;
+        void refresh();
+        timer = setInterval(() => void refresh(), 2000);
+      } catch (err) {
+        if (!disposed) setError(`No se pudo iniciar el seguimiento del envío: ${String(err)}`);
+      }
+    };
+    void initialize();
+    return () => { disposed = true; mounted.current = false; clearInterval(timer); unlistenProgress?.(); };
   }, [send]);
 
   return <section className="vault-phone" aria-label="Enviar al teléfono">

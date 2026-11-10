@@ -159,3 +159,14 @@ La nueva instrucción sustituye el límite anterior de dos fijados: se permiten 
 - [x] `mise exec -- cargo test --manifest-path temp/vault-tests/Cargo.toml`: 16 pruebas del archivo real `src-tauri/src/app/commands/vault.rs`, compilado como módulo aislado con Serde. Incluyen cuatro fijados, rechazo del quinto, protección de la casilla temporal por todas las entradas, rotación, persistencia y migración de un fijado antiguo.
 - La prueba de la aplicación Rust completa se canceló al quedar esperando el bloqueo de otra compilación de desarrollo. La prueba aislada no verifica la integración nativa de Tauri.
 - Pendiente: aceptación física en la barra de Windows.
+
+### Progreso de envío rápido — 2026-11-09
+
+Biglex confirmó que el teléfono recibe el archivo, pero la nueva barra no refleja el avance. Se reprodujo una carrera del panel: el descubrimiento podía lanzar el envío automático antes de completarse el registro asíncrono de `prisma://upload-progress`. La prueba anterior inyectaba el evento después del montaje y no cubría este orden.
+
+`PhoneTransfer` espera ahora la confirmación de la escucha antes de descubrir destinos y habilitar el envío automático. Al desmontarse descarta eventos y retira la escucha incluso si su registro termina tarde. Un fallo de registro se muestra sin iniciar una transferencia sin seguimiento.
+
+- [x] Prueba Chromium del componente real con IPC simulado: retraso de 300 ms al registrar la escucha y primer avance del 42% emitido al iniciar el envío. Antes de corregir, la aserción falló con 0%; después recibe 42% y termina en 100%.
+- [x] El mismo caso bajo React StrictMode realiza un único envío; un registro de escucha rechazado presenta el error y no envía. Sin errores de página.
+- [x] `mise exec -- bun run build:web`: tipos y compilación correctos.
+- Pendiente: repetir el envío real al teléfono para confirmar el síntoma observado; estas pruebas no constituyen aceptación física.
