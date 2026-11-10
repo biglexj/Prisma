@@ -7,6 +7,7 @@ pub mod window;
 mod desktop_lease;
 mod handoff;
 mod startup;
+mod visibility;
 pub mod handoff_diagnostics;
 
 /// Serializa las pruebas que crean una ventana del escritorio y una sesión de
@@ -59,6 +60,7 @@ struct InnerState {
     window: Option<DesktopWallpaperWindow>,
     engine: Option<MediaWallpaperEngine>,
     is_paused: bool,
+    auto_paused: bool,
     /// Si la superficie web de la composición está montada sobre el escritorio.
     compositor_enabled: bool,
     compositor_config: compositor::CompositorConfig,
@@ -104,6 +106,7 @@ impl WallpaperController {
                 window: None,
                 engine: None,
                 is_paused: false,
+                auto_paused: false,
                 compositor_enabled: false,
                 compositor_config,
                 compositor_app: None,
@@ -138,8 +141,9 @@ impl WallpaperController {
 
         // Si ya está activo, reanudar
         if inner.engine.is_some() && inner.window.is_some() {
+            let covered = inner.auto_paused;
             if let Some(engine) = &mut inner.engine {
-                let _ = engine.resume();
+                if covered { engine.pause()?; } else { engine.resume()?; }
             }
             inner.is_paused = false;
             inner.source_manager.settings_mut().is_active = true;
@@ -166,6 +170,7 @@ impl WallpaperController {
         };
 
         eng.load_media(&media_path, single, fit_str)?;
+        if inner.auto_paused { eng.pause()?; }
 
         inner.engine = Some(eng);
         inner.is_paused = false;
@@ -198,6 +203,9 @@ impl WallpaperController {
             engine.load_media(&clean, single, fit_str)?;
         }
 
+        if inner.auto_paused {
+            if let Some(engine) = inner.engine.as_mut() { engine.pause()?; }
+        }
         inner.is_paused = false;
         inner.source_manager.settings_mut().is_active = true;
         let _ = inner.source_manager.save_to_disk();
@@ -218,8 +226,9 @@ impl WallpaperController {
     pub fn resume(&self) -> Result<WallpaperStateSnapshot, String> {
         let mut inner = self.inner.lock().map_err(|e| e.to_string())?;
         self.ensure_wallpaper_control()?;
+        let covered = inner.auto_paused;
         if let Some(engine) = &mut inner.engine {
-            engine.resume()?;
+            if covered { engine.pause()?; } else { engine.resume()?; }
         }
         inner.is_paused = false;
         Ok(self.build_snapshot(&inner))
@@ -234,7 +243,7 @@ impl WallpaperController {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
-        let is_paused = inner.is_paused;
+        let is_paused = inner.is_paused || inner.auto_paused;
 
         if let (Some(media), Some(engine)) = (next_media, &mut inner.engine) {
             let _ = engine.load_media(&media, single, fit_str);
@@ -254,7 +263,7 @@ impl WallpaperController {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
-        let is_paused = inner.is_paused;
+        let is_paused = inner.is_paused || inner.auto_paused;
 
         if let (Some(media), Some(engine)) = (prev_media, &mut inner.engine) {
             let _ = engine.load_media(&media, single, fit_str);
@@ -419,8 +428,10 @@ impl WallpaperController {
             WallpaperFit::Contain => "contain",
             WallpaperFit::Cover => "cover",
         };
+        let paused = inner.is_paused || inner.auto_paused;
         if let Some(engine) = &mut inner.engine {
             engine.load_media(&current, single, fit_str)?;
+            if paused { engine.pause()?; }
         }
         Ok(())
     }
@@ -559,7 +570,7 @@ impl WallpaperController {
     pub fn compositor_config(&self) -> Result<compositor::CompositorConfig, String> {
         let inner = self.inner.lock().map_err(|e| e.to_string())?;
         let mut config = inner.compositor_config.clone();
-        config.paused = inner.is_paused;
+        config.paused = inner.is_paused || inner.auto_paused;
         config.enabled = inner.compositor_enabled && inner.window.is_some();
         // Esta entrega no fabrica un nivel de audio: la capa reactiva sigue pendiente.
         config.audio_level = 0.0;
@@ -568,13 +579,13 @@ impl WallpaperController {
 
     pub fn poll_interaction(&self)->Result<Vec<[f32;2]>,String> {
         let inner=self.inner.lock().map_err(|e|e.to_string())?;
-        let active=inner.compositor_enabled && !inner.is_paused && interaction::supported(&inner.compositor_config);
+        let active=inner.compositor_enabled && !inner.is_paused && !inner.auto_paused && interaction::supported(&inner.compositor_config);
         interaction::poll(inner.window.as_ref().map_or(0,|window|window.host_handle()),active)
     }
 
     pub fn update_base_parallax(&self, position: [f32;2]) -> Result<(),String> {
         let mut inner=self.inner.lock().map_err(|e|e.to_string())?;
-        if inner.is_paused { return Ok(()); }
+        if inner.is_paused || inner.auto_paused { return Ok(()); }
         let config=&inner.compositor_config;
         let strength=if config.parallax.enabled && config.parallax.base { config.parallax.strength } else {0.0};
         if let Some(engine)=inner.engine.as_mut() { engine.set_parallax(position[0],position[1],strength)?; }
@@ -618,7 +629,7 @@ impl WallpaperController {
             control_blocked: self.handoff.enabled.load(Ordering::SeqCst) && self.handoff.blocked.load(Ordering::SeqCst),
             control_message: self.handoff.message.lock().ok().and_then(|m| m.clone()),
             is_active: inner.window.is_some() && (inner.engine.is_some() || inner.compositor_enabled),
-            is_paused: inner.is_paused,
+            is_paused: inner.is_paused || inner.auto_paused,
             base_active: inner.engine.is_some(),
             current_media,
             current_folder,
@@ -650,7 +661,16 @@ impl WallpaperController {
                 };
 
                 if let Ok(mut inner) = inner_arc.lock() {
-                    if !inner.is_paused && inner.engine.is_some() {
+                    inner.auto_paused = inner.window.is_some() && visibility::desktop_covered();
+                    let paused = inner.is_paused || inner.auto_paused;
+                    if let Some(engine) = inner.engine.as_mut() {
+                        if engine.is_paused() != paused {
+                            let result = if paused { engine.pause() } else { engine.resume() };
+                            if let Err(error) = result { eprintln!("[Fondos Vivos] {error}"); }
+                        }
+                    }
+                    if paused { interaction::disable(); }
+                    if !paused && inner.engine.is_some() {
                         // El motor decide si el medio actual ya terminó: un
                         // vídeo cuando mpv llega al final, una imagen cuando se
                         // cumple su duración en pantalla.

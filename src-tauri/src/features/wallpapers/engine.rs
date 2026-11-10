@@ -269,7 +269,7 @@ impl MediaWallpaperEngine {
     }
 
     pub fn pause(&mut self) -> Result<(), String> {
-        self.paused_at = Some(std::time::Instant::now());
+        self.paused_at.get_or_insert_with(std::time::Instant::now);
         #[cfg(feature = "mpv")]
         {
             self.mpv
@@ -303,7 +303,7 @@ impl MediaWallpaperEngine {
             self.mpv.get_property::<bool>("pause").unwrap_or(false)
         }
         #[cfg(not(feature = "mpv"))]
-        false
+        self.paused_at.is_some()
     }
 
     #[allow(dead_code)]

@@ -208,3 +208,15 @@ La cola simulada y la prueba de suscripción no equivalen a una prueba física c
 Referencias de API: Microsoft, RegisterRawInputDevices y WM_INPUT; consultadas para conservar entrada normal y limpieza del mensaje.
 
 Confirmación física de Biglex el 2026-10-26: «Sí, responde al clic», en respuesta a seleccionar Nexo/Burbujas y hacer clic fuera de Prisma sobre el escritorio. Se confirma la ruta física ratón → escritorio → efecto. Las 3 pruebas de interacción nativa vuelven a pasar tras incluir pausa individual de la capa en el filtro.
+
+### Pausa automática por ventana activa — 2026-11-09
+
+Biglex detuvo el lanzamiento y pidió priorizar esta función en preview. El monitor del controlador consulta cada 150 ms la ventana activa de Windows: excluye el escritorio y la barra de tareas, detecta maximización y compara el rectángulo con su monitor para pantalla completa, incluidos juegos sin bordes y coordenadas negativas. La política es global para el fondo que abarca el escritorio virtual.
+
+La pausa automática vive solo en memoria, separada de la intención manual. Se aplica a libmpv y al temporizador de imágenes; el compositor y las interacciones reciben el estado efectivo de pausa. Al desaparecer la cobertura se reanuda únicamente si no existe pausa manual. Cambiar de medio conserva la pausa efectiva. Pausar repetidamente no reinicia el instante usado para descontar tiempo detenido. El fundido no se implementa en esta entrega.
+
+- Correcto: cargo check del backend completo con libmpv, después de todos los cambios.
+- Correcto: prueba aislada del archivo real visibility.rs con windows 0.58, misma versión que el producto; cubre pantalla completa, bordes exteriores, ventana pequeña y monitores con coordenadas negativas.
+- El test del backend completo compiló, pero su ejecutable no arrancó: STATUS_ENTRYPOINT_NOT_FOUND (0xc0000139). No se presenta como prueba superada.
+- Pendiente: recorrido físico con vídeo, imágenes y capas: maximizar, restaurar, minimizar, volver al escritorio y probar un juego en pantalla completa; comprobar también pausa manual y tiempo restante de la imagen.
+- Publicación detenida por petición de Biglex; no se incrementó la versión ni se lanzó una actualización.
