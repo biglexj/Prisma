@@ -895,7 +895,10 @@ export function renderFire(rc: RenderContext) {
     ctx.fillRect(0, centerY - 2, progressX, 4);
   }
 
-  if (isPlaying && progressX > 0 && progressX < width && state.fireParticles.length < 90) {
+  // El envío puede pasar de 0 a 100% antes del primer cuadro. La llama indica
+  // actividad también en los extremos; mantener el emisor dentro del lienzo.
+  if (isPlaying && width > 0 && state.fireParticles.length < 90) {
+    const emitterX = Math.min(Math.max(progressX, Math.min(6, width / 2)), Math.max(width - 6, width / 2));
     const spawn = (x: number) => {
       state.fireParticles.push({
         x: x - 5 + Math.random() * 10,
@@ -908,7 +911,7 @@ export function renderFire(rc: RenderContext) {
       });
     };
 
-    for (let i = 0; i < 3; i++) spawn(progressX);
+    for (let i = 0; i < 3; i++) spawn(emitterX);
     if (Math.random() > 0.55) spawn(Math.random() * progressX);
   }
 

@@ -170,3 +170,15 @@ Biglex confirmó que el teléfono recibe el archivo, pero la nueva barra no refl
 - [x] El mismo caso bajo React StrictMode realiza un único envío; un registro de escucha rechazado presenta el error y no envía. Sin errores de página.
 - [x] `mise exec -- bun run build:web`: tipos y compilación correctos.
 - Pendiente: repetir el envío real al teléfono para confirmar el síntoma observado; estas pruebas no constituyen aceptación física.
+
+### Fuego Cinético sin animación en los extremos — 2026-11-09
+
+La siguiente prueba de Biglex confirmó que la animación seguía ausente; su captura identifica Fuego Cinético como estilo seleccionado. La corrección de la escucha no cubría el renderizado: `renderFire` solo emitía partículas con progreso estrictamente entre 0% y 100%, y el panel detenía el efecto inmediatamente al completar el envío. Una transferencia instantánea podía no producir ninguna llama.
+
+El efecto emite ahora en ambos extremos mientras está activo, con el emisor dentro del lienzo para evitar recortes. Synapse conserva la actividad durante el segundo de confirmación final que ya existía, sin retrasar el envío ni modificar el porcentaje real.
+
+- [x] Regresión en Chromium con el componente real e IPC simulado: el envío instantáneo fallaba antes por producir cuadros idénticos; después muestra movimiento con porcentaje real al 100% y cierra correctamente.
+- [x] Comparación de cuadros a 0%, 42% y 100%, dejando transcurrir 650 ms para descartar partículas residuales: Fuego permanece en movimiento y el valor accesible conserva el porcentaje real. Sin errores de página.
+- [x] Captura del panel al 100% revisada visualmente: llama visible en el extremo derecho.
+- [x] `mise exec -- bun run build:web` y `git diff --check`: correctos.
+- Pendiente: aceptación del efecto en un nuevo envío físico desde la beta.

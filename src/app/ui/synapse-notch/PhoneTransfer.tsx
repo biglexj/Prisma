@@ -90,7 +90,7 @@ export function PhoneTransfer({ paths, onClose }: { paths: string[]; onClose: ()
     </div>
     <p role="status">{message}</p>
     {(sending || completed) && <div className="vault-phone-transfer-progress">
-      <MediaProgressBar position={progress} duration={100} isPlaying={sending} readOnly ariaLabel="Progreso de envío" />
+      <MediaProgressBar position={progress} duration={100} isPlaying={sending || completed} readOnly ariaLabel="Progreso de envío" />
       <span className="vault-phone-transfer-percent">{progress}%</span>
     </div>}
     {error && <p role="alert" className="vault-error">{error}</p>}
