@@ -7,7 +7,8 @@ export interface MediaProgressBarProps {
   position: number;
   duration: number;
   isPlaying: boolean;
-  onSeek: (seconds: number) => void;
+  onSeek?: (seconds: number) => void;
+  readOnly?: boolean;
   disabled?: boolean;
   styleMode?: ProgressBarStyle;
   activeColor?: string;
@@ -22,6 +23,7 @@ export function MediaProgressBar({
   duration,
   isPlaying,
   onSeek,
+  readOnly = false,
   disabled = false,
   styleMode,
   activeColor,
@@ -244,7 +246,7 @@ export function MediaProgressBar({
     }
     const newProgress = computeProgressFromEvent(e);
     setIsDragging(false);
-    onSeek(newProgress * duration);
+    onSeek?.(newProgress * duration);
     animStateRef.current.elasticAmp = 6;
   };
 
@@ -259,26 +261,26 @@ export function MediaProgressBar({
     const step = 5; // 5 segundos de salto
     if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
       e.preventDefault();
-      onSeek(Math.max((position || 0) - step, 0));
+      onSeek?.(Math.max((position || 0) - step, 0));
       animStateRef.current.elasticAmp = 6;
     } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
       e.preventDefault();
-      onSeek(Math.min((position || 0) + step, duration));
+      onSeek?.(Math.min((position || 0) + step, duration));
       animStateRef.current.elasticAmp = 6;
     } else if (e.key === "Home") {
       e.preventDefault();
-      onSeek(0);
+      onSeek?.(0);
     } else if (e.key === "End") {
       e.preventDefault();
-      onSeek(duration);
+      onSeek?.(duration);
     }
   };
 
   return (
     <div
       ref={containerRef}
-      role="slider"
-      tabIndex={disabled ? -1 : 0}
+      role={readOnly ? "progressbar" : "slider"}
+      tabIndex={readOnly ? undefined : disabled ? -1 : 0}
       aria-label={ariaLabel}
       aria-valuemin={0}
       aria-valuemax={Math.round(duration)}
@@ -286,13 +288,13 @@ export function MediaProgressBar({
       aria-disabled={disabled}
       className={`media-progress-bar-root is-${effectiveMode} ${
         isDragging ? "is-dragging" : ""
-      } ${disabled ? "is-disabled" : ""} ${className}`}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      onPointerEnter={handlePointerEnter}
-      onKeyDown={handleKeyDown}
+      } ${disabled ? "is-disabled" : ""} ${readOnly ? "is-readonly" : ""} ${className}`}
+      onPointerDown={readOnly ? undefined : handlePointerDown}
+      onPointerMove={readOnly ? undefined : handlePointerMove}
+      onPointerUp={readOnly ? undefined : handlePointerUp}
+      onPointerCancel={readOnly ? undefined : handlePointerUp}
+      onPointerEnter={readOnly ? undefined : handlePointerEnter}
+      onKeyDown={readOnly ? undefined : handleKeyDown}
     >
       {effectiveMode === "classic" ? (
         <div className="media-progress-classic-track">

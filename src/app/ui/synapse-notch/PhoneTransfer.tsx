@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Icon } from "../../../shared/ui/Icon";
+import { MediaProgressBar } from "../../../shared/ui/MediaProgressBar";
 import type { SynapseDiscoveredDevice } from "../SendToSuperGalleryModal";
 
 export function PhoneTransfer({ paths, onClose }: { paths: string[]; onClose: () => void }) {
@@ -73,7 +74,10 @@ export function PhoneTransfer({ paths, onClose }: { paths: string[]; onClose: ()
       <button type="button" disabled={sending} onClick={onClose} aria-label="Volver a la barra"><Icon name="close" width={18} height={18} /></button>
     </div>
     <p role="status">{message}</p>
-    {sending && <progress max={100} value={progress} aria-label="Progreso de envío" />}
+    {(sending || completed) && <div className="vault-phone-transfer-progress">
+      <MediaProgressBar position={progress} duration={100} isPlaying={sending} readOnly ariaLabel="Progreso de envío" />
+      <span className="vault-phone-transfer-percent">{progress}%</span>
+    </div>}
     {error && <p role="alert" className="vault-error">{error}</p>}
     {!sending && (!started.current || error) && devices.map((device) => <button className="vault-device" type="button" key={device.deviceId} onClick={() => { started.current = false; void send(device); }}>{device.deviceName}</button>)}
     {!sending && <small>Los archivos permanecen en la barra.</small>}

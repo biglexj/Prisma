@@ -384,7 +384,6 @@ export function QuickLookVideo({ payload, onDimensionsLoad, onTimeUpdate, onOpen
           onSeek={handleSeek}
           className="quicklook-seek-bar"
           ariaLabel="Posición de vídeo"
-          activeColor="var(--primary, #e06b9b)"
           inactiveColor="rgba(255, 255, 255, 0.32)"
           thumbColor="#ffffff"
         />

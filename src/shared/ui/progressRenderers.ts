@@ -995,19 +995,20 @@ export function renderLaser(rc: RenderContext) {
   ctx.fillStyle = "rgba(17, 24, 39, 0.9)";
   ctx.fillRect(0, centerY - 2, width, 4);
 
-  if (progressX <= 0) return;
-
   // Empuñadura
-  const hiltWidth = 20;
+  const hiltWidth = Math.min(20, width);
   ctx.fillStyle = "#cbd5e1";
   ctx.fillRect(0, centerY - 5, hiltWidth, 10);
   ctx.fillStyle = "#475569";
   ctx.fillRect(5, centerY - 6, 4, 12);
   ctx.fillRect(15, centerY - 6, 2, 12);
 
-  if (progressX <= hiltWidth) return;
+  if (progressX <= 0 || width <= hiltWidth) return;
 
-  const bladeWidth = progressX - hiltWidth;
+  // La empuñadura es decorativa: el progreso recorre toda la zona de la hoja,
+  // sin consumir los primeros segundos bajo el mango.
+  const bladeWidth = Math.min(width - hiltWidth, Math.max(2, (progressX / width) * (width - hiltWidth)));
+  const bladeTipX = hiltWidth + bladeWidth;
 
   // Resplandor exterior
   ctx.save();
@@ -1025,11 +1026,7 @@ export function renderLaser(rc: RenderContext) {
   ctx.shadowBlur = 0;
   ctx.fillStyle = "#ffffff";
   ctx.beginPath();
-  ctx.moveTo(hiltWidth, centerY - 1);
-  ctx.lineTo(progressX - 3, centerY - 1);
-  ctx.arc(progressX - 3, centerY, 1.5, -Math.PI / 2, Math.PI / 2);
-  ctx.lineTo(hiltWidth, centerY + 1);
-  ctx.closePath();
+  ctx.roundRect(hiltWidth, centerY - 1, bladeWidth, 2, 1);
   ctx.fill();
 
   // Zumbido en la punta
@@ -1037,7 +1034,7 @@ export function renderLaser(rc: RenderContext) {
     const breath = Math.sin(state.animationTime * (2 * Math.PI / 2.8)) * 0.5 + 0.5;
     ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + breath * 0.15})`;
     ctx.beginPath();
-    ctx.arc(progressX - 1.5, centerY, 2.3 + breath * 0.3, 0, Math.PI * 2);
+    ctx.arc(Math.max(hiltWidth + 1, bladeTipX - 1.5), centerY, 2.3 + breath * 0.3, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
