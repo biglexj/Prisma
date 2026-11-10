@@ -6,6 +6,10 @@ Esta actualización mejora Synapse, las barras de progreso y los fondos vivos.
 - 🎨 **Barras de progreso**: correcciones para Estela Cósmica y Sable Láser en Quick Look.
 - 🖥️ **Fondos vivos**: pausa automática con aplicaciones maximizadas o a pantalla completa y reanudación al volver al escritorio.
 
+## Actualización desde el instalador anterior
+
+Si usas una versión con el instalador heredado NSIS, desinstálala antes de instalar esta versión. [Consulta la guía de migración](https://github.com/biglexj/Prisma/blob/v2.0.3/packaging/windows/MIGRATION.md).
+
 ## 📦 Windows x64
 
 [Descargar instalador de Prisma 2.0.3](https://github.com/biglexj/Prisma/releases/download/v2.0.3/Prisma_2.0.3-setup.exe)
