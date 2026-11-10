@@ -148,7 +148,10 @@ export async function main(args = Bun.argv.slice(2)): Promise<number> {
     }
 
     if (action === "publish") {
-        return handlePublish(rest);
+        if (!rest.includes("--confirm")) return handlePublish(rest);
+        const psArgs = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "./scripts/release/build-release.ps1", "-SkipBuild", "-BuildManifest", "temp/BUILD_MANIFEST.json"];
+        const child = Bun.spawn(psArgs, { cwd: root, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+        return (await child.exited) ?? 0;
     }
 
     const isPlan = rest.includes("--plan");
